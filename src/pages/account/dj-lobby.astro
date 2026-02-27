@@ -325,6 +325,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </a>
         </div>
 
+        <!-- Browser Go Live Link -->
+        <div class="setup-link-section">
+          <a href="/account/go-live/" class="setup-link-btn" style="border-color: #dc2626; background: rgba(220, 38, 38, 0.08);">
+            <span class="setup-text" style="display: flex; align-items: center; gap: 6px;">
+              <svg viewBox="0 0 24 24" fill="#dc2626" width="16" height="16"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+              Go Live from Browser
+            </span>
+            <span class="setup-arrow">→</span>
+          </a>
+          <p style="font-size: 11px; color: #a3a3a3; margin: 4px 0 0 4px;">No OBS needed — use your phone camera</p>
+        </div>
+
         <!-- DJs Online Box -->
         <div class="djs-online-box">
           <div class="box-header">
@@ -1453,6 +1465,149 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     getOnlineDjs
   } from '/dj-lobby-pusher.js?v=3.5';
 
+  // Extracted modules (DJ lobby code split)
+  import * as audioMeters from '/dj-lobby/audio-meters.js';
+  import * as lobbyChat from '/dj-lobby/chat.js';
+  import * as lobbyDm from '/dj-lobby/dm.js';
+  import * as scheduling from '/dj-lobby/scheduling.js';
+  import * as shareModule from '/dj-lobby/share.js';
+  import * as videoPlayer from '/dj-lobby/video-player.js';
+
+  // ============================================
+  // MODULE FUNCTION ALIASES
+  // Keeps existing call sites working without renaming every reference.
+  // State-modifying functions sync main-script variables after calling the module.
+  // ============================================
+
+  // --- video-player.js aliases ---
+  var setupHlsPlayer = videoPlayer.setupHlsPlayer;
+  var cleanupHlsPlayer = videoPlayer.cleanupHlsPlayer;
+  var updateServerIndicator = videoPlayer.updateServerIndicator;
+  var updateObsIndicator = videoPlayer.updateObsIndicator;
+  var updateBroadcastModeUI = videoPlayer.updateBroadcastModeUI;
+  var setBroadcastMode = videoPlayer.setBroadcastMode;
+  var initBroadcastModeToggle = videoPlayer.initBroadcastModeToggle;
+  var updateButtIndicator = videoPlayer.updateButtIndicator;
+  var checkIcecastStatus = videoPlayer.checkIcecastStatus;
+  var startIcecastCheck = videoPlayer.startIcecastCheck;
+  var stopIcecastCheck = videoPlayer.stopIcecastCheck;
+  var setPreviewSource = function(source) {
+    videoPlayer.setPreviewSource(source);
+    currentPreviewSource = videoPlayer.getCurrentPreviewSource();
+    broadcastMode = videoPlayer.getBroadcastMode();
+    obsConnected = videoPlayer.getObsConnected();
+  };
+  var initSourceToggle = videoPlayer.initSourceToggle;
+  var switchAudioSource = videoPlayer.switchAudioSource;
+  var updateAudioSourceIndicator = videoPlayer.updateAudioSourceIndicator;
+  var setupIcecastAnalysers = function(audioElement) {
+    videoPlayer.setupIcecastAnalysers(audioElement);
+    // Sync local icecast variables from the module after setup
+    icecastAudioContext = videoPlayer.getIcecastAudioContext();
+    icecastAnalyserL = videoPlayer.getIcecastAnalyserL();
+    icecastAnalyserR = videoPlayer.getIcecastAnalyserR();
+    icecastKWeightedAnalyserL = videoPlayer.getIcecastKWeightedAnalyserL();
+    icecastKWeightedAnalyserR = videoPlayer.getIcecastKWeightedAnalyserR();
+    icecastGainNode = videoPlayer.getIcecastGainNode();
+  };
+  var updateYoutubeIndicator = videoPlayer.updateYoutubeIndicator;
+  var updateTwitchIndicator = videoPlayer.updateTwitchIndicator;
+  var showRelayIndicators = videoPlayer.showRelayIndicators;
+  var checkRelayHealth = videoPlayer.checkRelayHealth;
+  var checkObsPreview = videoPlayer.checkObsPreview;
+  var initObsPreviewPlayer = videoPlayer.initObsPreviewPlayer;
+  var destroyObsPreviewPlayer = videoPlayer.destroyObsPreviewPlayer;
+  var startObsPreviewCheck = videoPlayer.startObsPreviewCheck;
+  var stopObsPreviewCheck = videoPlayer.stopObsPreviewCheck;
+  var updateMuteButtonState = videoPlayer.updateMuteButtonState;
+  var updateCenterStats = videoPlayer.updateCenterStats;
+  var updateStreamHealth = videoPlayer.updateStreamHealth;
+  var startHealthMonitoring = videoPlayer.startHealthMonitoring;
+  var stopHealthMonitoring = videoPlayer.stopHealthMonitoring;
+  var saveTwitchSettings = videoPlayer.saveTwitchSettings;
+  var loadTwitchSettings = videoPlayer.loadTwitchSettings;
+  var copyOutputUrlToClipboard = videoPlayer.copyOutputUrlToClipboard;
+  var updateTimeRemaining = videoPlayer.updateTimeRemaining;
+  var startGradualFadeOut = videoPlayer.startGradualFadeOut;
+  var triggerStreamFadeOut = videoPlayer.triggerStreamFadeOut;
+  var triggerStreamFadeIn = videoPlayer.triggerStreamFadeIn;
+  var cleanupAllIntervals = videoPlayer.cleanupAllIntervals;
+
+  // --- audio-meters.js aliases ---
+  var initBroadcastMeters = audioMeters.initBroadcastMeters;
+  var stopBroadcastMeters = audioMeters.stopBroadcastMeters;
+  var animateBroadcastMeters = audioMeters.animateBroadcastMeters;
+  var calculateRMS = audioMeters.calculateRMS;
+
+  // --- share.js aliases ---
+  var captureVideoThumbnail = shareModule.captureVideoThumbnail;
+  var clearThumbnail = shareModule.clearThumbnail;
+  var shareToTwitter = shareModule.shareToTwitter;
+  var shareToFacebook = shareModule.shareToFacebook;
+  var openShareModal = shareModule.openShareModal;
+  var closeShareModal = shareModule.closeShareModal;
+  var captureShareThumbnail = shareModule.captureShareThumbnail;
+  var clearShareThumbnail = shareModule.clearShareThumbnail;
+  var updateCharCount = shareModule.updateCharCount;
+  var shareToTwitterFromModal = shareModule.shareToTwitterFromModal;
+  var shareToFacebookFromModal = shareModule.shareToFacebookFromModal;
+  var copyStreamLink = shareModule.copyStreamLink;
+
+  // --- scheduling.js aliases (with state sync) ---
+  var loadMySlot = async function() {
+    await scheduling.loadMySlot();
+    mySlot = scheduling.getMySlot();
+    currentStreamKey = scheduling.getCurrentStreamKey();
+  };
+  var loadAllSlots = async function() {
+    await scheduling.loadAllSlots();
+    allDjSlots = scheduling.getAllDjSlots();
+  };
+  var calculateContinuousEndTime = scheduling.calculateContinuousEndTime;
+  var hasSameDjNextSlot = scheduling.hasSameDjNextSlot;
+  var isEventSession = scheduling.isEventSession;
+  var calculateMaxStreamEndTime = scheduling.calculateMaxStreamEndTime;
+  var isInEventMode = scheduling.isInEventMode;
+  var formatDuration = scheduling.formatDuration;
+  var showKeyNotAvailable = scheduling.showKeyNotAvailable;
+  var checkStreamKeyAvailability = function() {
+    scheduling.checkStreamKeyAvailability();
+    mySlot = scheduling.getMySlot();
+    currentStreamKey = scheduling.getCurrentStreamKey();
+  };
+  var fetchStreamKey = async function() {
+    await scheduling.fetchStreamKey();
+    mySlot = scheduling.getMySlot();
+    currentStreamKey = scheduling.getCurrentStreamKey();
+  };
+  var openGoLiveInline = scheduling.openGoLiveInline;
+  var loadStreamKeyForGoLive = async function() {
+    await scheduling.loadStreamKeyForGoLive();
+    currentStreamKey = scheduling.getCurrentStreamKey();
+  };
+  var handleGoLiveReady = scheduling.handleGoLiveReady;
+
+  // --- dm.js aliases ---
+  var getDmChannelId = lobbyDm.getDmChannelId;
+  var openDmModal = lobbyDm.openDmModal;
+  var closeDmModal = lobbyDm.closeDmModal;
+  var populateDmDjList = lobbyDm.populateDmDjList;
+  var selectDmTarget = lobbyDm.selectDmTarget;
+  var goBackToDmList = lobbyDm.goBackToDmList;
+  var renderDmMessages = lobbyDm.renderDmMessages;
+  var sendDmMessage = lobbyDm.sendDmMessage;
+  var cleanupDmMessages = lobbyDm.cleanupDmMessages;
+  var showDmNotification = lobbyDm.showDmNotification;
+  var openDmFromNotification = lobbyDm.openDmFromNotification;
+
+  // --- chat.js aliases ---
+  var initLivestreamChat = lobbyChat.initLivestreamChat;
+  var renderLivestreamMessages = lobbyChat.renderLivestreamMessages;
+  var appendLivestreamMessage = lobbyChat.appendLivestreamMessage;
+  var formatLivestreamMessage = lobbyChat.formatLivestreamMessage;
+  var setupLivestreamChatSend = lobbyChat.setupLivestreamChatSend;
+  var cleanupLivestreamChat = lobbyChat.cleanupLivestreamChat;
+
   const app = initializeApp(window.FIREBASE_CONFIG);
 
   const auth = getAuth(app);
@@ -1503,7 +1658,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   let currentPreviewSource = 'obs';
   let buttAudioSource = 'obs'; // Which audio source to use for BUTT spectrum: 'obs' or 'live'
 
-  // Icecast/BUTT audio state - all declarations here to avoid timing issues
+  // Icecast/BUTT audio state - synced from video-player module via syncIcecastState()
   let icecastConnected = false;
   let icecastAudioContext = null;
   let icecastAnalyserL = null;
@@ -1511,6 +1666,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   let icecastKWeightedAnalyserL = null;
   let icecastKWeightedAnalyserR = null;
   let icecastGainNode = null; // GainNode to control volume without breaking analyser
+
+  // Sync icecast state from the video-player module (which owns the real values)
+  function syncIcecastState() {
+    icecastAudioContext = videoPlayer.getIcecastAudioContext();
+    icecastAnalyserL = videoPlayer.getIcecastAnalyserL();
+    icecastAnalyserR = videoPlayer.getIcecastAnalyserR();
+    icecastKWeightedAnalyserL = videoPlayer.getIcecastKWeightedAnalyserL();
+    icecastKWeightedAnalyserR = videoPlayer.getIcecastKWeightedAnalyserR();
+    icecastGainNode = videoPlayer.getIcecastGainNode();
+  }
 
   // LED meter animation IDs - declared here to avoid timing issues
   let liveMeterAnimationId = null;
@@ -1531,6 +1696,20 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // Broadcast mode: 'placeholder' or 'video' - determines what visual to show on live stream
   let broadcastMode = 'placeholder';
   let obsConnected = false; // Track if OBS is connected
+
+  // Audio analyser state - OBS and Live (set by setupAudioMeter)
+  let obsAnalyserL = null;
+  let obsAnalyserR = null;
+  let liveAnalyserL = null;
+  let liveAnalyserR = null;
+
+  // Streaming state
+  let userIsStreaming = false;
+  let healthInterval = null;
+  let peakHoldTimer = null;
+  let broadcastMeterAnimationId = null;
+  let broadcastAudioSource = 'obs';
+  let livestreamChatChannel = null;
 
   // Stream key for preview (can be set via ?testPreview=key for testing)
   const urlParams = new URLSearchParams(window.location.search);
@@ -2790,7 +2969,84 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     return name.charAt(0).toUpperCase();
   }
   
+  // ============================================
+  // MODULE INITIALIZATION
+  // ============================================
+  // Mutable references set later by setupEventListeners
+  var _setupAudioMeterRef = null;
+  var _animateLiveMetersRef = null;
+
+  function initModules() {
+    // Shared context object passed to all modules
+    var sharedCtx = {
+      getCurrentUser: function() { return currentUser; },
+      getUserInfo: function() { return userInfo; },
+      getUserSubscription: function() { return userSubscription; },
+      getCurrentStream: function() { return currentStream; },
+      getStaleStreamIds: function() { return staleStreamIds; },
+      getOnlineDjsCache: function() { return onlineDjsCache; },
+      escapeHtml: escapeHtml,
+      log: log,
+      updateButtPassword: updateButtPassword,
+      startObsPreviewCheck: function() { return videoPlayer.startObsPreviewCheck(); },
+      loadStreamStatus: loadStreamStatus,
+      updateEndStreamButton: updateEndStreamButton,
+      initBroadcastMeters: function() { return audioMeters.initBroadcastMeters(); },
+      animateLiveMeters: function() { if (_animateLiveMetersRef) _animateLiveMetersRef(); },
+      getBroadcastMeterAnimationId: function() { return audioMeters.getBroadcastMeterAnimationId(); },
+      getLiveMeterAnimationId: function() { return liveMeterAnimationId; },
+      getCurrentStreamMode: function() { return currentStreamMode; },
+      getSelectedRelaySource: function() { return selectedRelaySource; },
+      getBroadcastMode: function() { return videoPlayer.getBroadcastMode(); },
+      getCurrentPreviewSource: function() { return videoPlayer.getCurrentPreviewSource(); },
+      getIcecastAudioContext: function() { return videoPlayer.getIcecastAudioContext(); },
+      getIcecastAnalyserL: function() { return videoPlayer.getIcecastAnalyserL(); },
+      getIcecastAnalyserR: function() { return videoPlayer.getIcecastAnalyserR(); },
+      getIcecastGainNode: function() { return videoPlayer.getIcecastGainNode(); },
+      getCurrentStreamKey: function() { return scheduling.getCurrentStreamKey(); },
+      getAnalyserState: function() {
+        return {
+          obsAnalyserL: obsAnalyserL,
+          obsAnalyserR: obsAnalyserR,
+          liveAnalyserL: liveAnalyserL,
+          liveAnalyserR: liveAnalyserR,
+          icecastAnalyserL: videoPlayer.getIcecastAnalyserL(),
+          icecastAnalyserR: videoPlayer.getIcecastAnalyserR(),
+          icecastAudioContext: videoPlayer.getIcecastAudioContext(),
+          icecastKWeightedAnalyserL: videoPlayer.getIcecastKWeightedAnalyserL(),
+          icecastKWeightedAnalyserR: videoPlayer.getIcecastKWeightedAnalyserR(),
+          icecastGainNode: videoPlayer.getIcecastGainNode(),
+          icecastConnected: videoPlayer.getIcecastConnected(),
+          obsKWeightedAnalyserL: obsKWeightedAnalyserL,
+          obsKWeightedAnalyserR: obsKWeightedAnalyserR,
+          liveKWeightedAnalyserL: liveKWeightedAnalyserL,
+          liveKWeightedAnalyserR: liveKWeightedAnalyserR
+        };
+      },
+      updateAudioSourceIndicator: function(s, m) { return videoPlayer.updateAudioSourceIndicator(s, m); },
+      setupAudioMeter: function(el, label) { if (_setupAudioMeterRef) _setupAudioMeterRef(el, label); },
+      openDmConversation: openDmConversation,
+      sendDm: sendDm,
+      updateCenterStats: function(stats) { return videoPlayer.updateCenterStats(stats); },
+      setStreamMode: function(mode) { return setStreamMode(mode); },
+      updateRelayPreview: function() { return updateRelayPreview(); },
+      hasSameDjNextSlot: function(djId, endTime) { return scheduling.hasSameDjNextSlot(djId, endTime); },
+      calculateContinuousEndTime: function(djId, endTime) { return scheduling.calculateContinuousEndTime(djId, endTime); },
+      isInEventMode: function() { return scheduling.isInEventMode(); }
+    };
+
+    audioMeters.init(sharedCtx);
+    lobbyChat.init(sharedCtx);
+    lobbyDm.init(sharedCtx);
+    scheduling.init(sharedCtx);
+    shareModule.init(sharedCtx);
+    videoPlayer.init(sharedCtx);
+  }
+
   async function initLobby() {
+    // Initialize extracted modules with shared context
+    initModules();
+
     // DEBUG: Monitor audioPreview visibility changes
     const audioPreviewEl = document.getElementById('audioPreview');
     if (audioPreviewEl) {
@@ -2977,1810 +3233,28 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }).join('');
   }
 
-  // Setup HLS player for video streams
-  function setupHlsPlayer(stream) {
-    const videoElement = document.getElementById('hlsVideo');
-    // Use hlsUrl (from status API) or fall back to videoStreamUrl/streamUrl
-    // Normalize to correct base URL (fixes old trycloudflare.com URLs)
-    const rawHlsUrl = stream?.hlsUrl || stream?.videoStreamUrl || stream?.streamUrl;
-    const hlsUrl = normalizeHlsUrl(rawHlsUrl);
-
-    if (!videoElement || !hlsUrl) {
-      log('[HLS] No video element or stream URL. Stream:', stream);
-      return;
-    }
-
-    // If same stream URL and player exists, check if actually playing
-    if (currentHlsUrl === hlsUrl && hlsPlayer) {
-      // Only skip if actually playing, otherwise try to play
-      if (!videoElement.paused && isVideoPlaying) {
-        log('[HLS] Already playing this stream, skipping re-init');
-        return;
-      }
-      // Not playing yet, try to play
-      log('[HLS] Same stream but not playing, attempting to play...');
-      videoElement.play().catch(e => {
-        log('[HLS] Auto-play blocked, user interaction required:', e.message);
-      });
-      return;
-    }
-
-    log('[HLS] Setting up player for:', hlsUrl);
-    currentHlsUrl = hlsUrl;
-
-    // Clean up existing player
-    if (hlsPlayer) {
-      log('[HLS] Destroying existing player');
-      hlsPlayer.destroy();
-      hlsPlayer = null;
-    }
-
-    const nativeHlsSupport = videoElement.canPlayType('application/vnd.apple.mpegurl');
-
-    // Only use native HLS if "probably" - "maybe" means browser might not actually support it
-    if (nativeHlsSupport === 'probably') {
-      log('[HLS] Using native HLS support');
-      videoElement.src = hlsUrl;
-      // Auto-play for native HLS
-      videoElement.play().catch(e => {
-        log('[HLS] Auto-play blocked (native), user interaction required:', e.message);
-      });
-    } else if (window.Hls && Hls.isSupported()) {
-      log('[HLS] Using HLS.js library');
-      hlsPlayer = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 90,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60
-      });
-
-      hlsPlayer.loadSource(hlsUrl);
-      hlsPlayer.attachMedia(videoElement);
-
-      hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        log('[HLS] Manifest parsed, auto-playing...');
-        // Trigger fade-in for smooth transition
-        triggerStreamFadeIn();
-        // Auto-play when manifest is ready
-        videoElement.play().catch(e => {
-          log('[HLS] Auto-play blocked, user interaction required:', e.message);
-        });
-      });
-
-      hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
-        console.error('[HLS] Error:', data.type, data.details);
-        if (data.fatal) {
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            log('[HLS] Network error, will retry...');
-            setTimeout(() => {
-              if (hlsPlayer) {
-                hlsPlayer.loadSource(hlsUrl);
-              }
-            }, 3000);
-          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            log('[HLS] Media error, recovering...');
-            hlsPlayer.recoverMediaError();
-          }
-        }
-      });
-    } else {
-      console.error('[HLS] Not supported');
-    }
-
-    // Sync video events with UI
-    videoElement.addEventListener('play', () => {
-      isVideoPlaying = true;
-      document.getElementById('playIcon')?.classList.add('hidden');
-      document.getElementById('pauseIcon')?.classList.remove('hidden');
-      startHealthMonitoring();
-    });
-
-    videoElement.addEventListener('pause', () => {
-      isVideoPlaying = false;
-      document.getElementById('playIcon')?.classList.remove('hidden');
-      document.getElementById('pauseIcon')?.classList.add('hidden');
-      stopHealthMonitoring();
-    });
-  }
-
-  // Stream health monitoring interval
-  let healthInterval = null;
-
-  // OBS Preview - Check and play DJ's own test stream before going live
-  function updateServerIndicator(isConnected) {
-    const dot = document.getElementById('serverDot');
-    if (dot) {
-      dot.className = 'indicator-dot ' + (isConnected ? 'connected' : 'disconnected');
-    }
-  }
-
-  function updateObsIndicator(isConnected) {
-    const dot = document.getElementById('obsDot');
-    const box = document.getElementById('obsIndicator');
-    const previewDot = document.getElementById('previewObsDot');
-    if (dot) {
-      dot.className = 'indicator-dot ' + (isConnected ? 'connected' : 'disconnected');
-    }
-    if (previewDot) {
-      previewDot.className = 'indicator-dot ' + (isConnected ? 'connected' : 'disconnected');
-    }
-    if (box) {
-      box.classList.toggle('connected', isConnected);
-      box.classList.toggle('disconnected', !isConnected);
-    }
-    // Track OBS connection and update Video broadcast mode button
-    obsConnected = isConnected;
-    updateBroadcastModeUI();
-  }
-
-  function updateBroadcastModeUI() {
-    const toggleContainer = document.getElementById('broadcastModeToggle');
-    const toggleBtn = document.getElementById('liveOutputToggleBtn');
-    const toggleLabel = document.getElementById('liveOutputToggleLabel');
-    const isButtActive = currentPreviewSource === 'butt';
-
-    // Determine which mode to use based on what's connected
-    if (isButtActive && obsConnected) {
-      // Both BUTT and OBS connected - show toggle
-      toggleContainer?.classList.remove('hidden');
-      toggleLabel.textContent = broadcastMode === 'placeholder' ? 'Placeholder' : 'OBS Video';
-    } else if (isButtActive && !obsConnected) {
-      // BUTT only - force placeholder, hide toggle
-      toggleContainer?.classList.add('hidden');
-      if (broadcastMode !== 'placeholder') {
-        setBroadcastMode('placeholder');
-      }
-    } else if (!isButtActive && obsConnected) {
-      // OBS only - force video mode, hide toggle
-      toggleContainer?.classList.add('hidden');
-      if (broadcastMode !== 'video') {
-        setBroadcastMode('video');
-      }
-    } else {
-      // Nothing connected
-      toggleContainer?.classList.add('hidden');
-    }
-  }
-
-  async function setBroadcastMode(mode) {
-    broadcastMode = mode;
-    const toggleLabel = document.getElementById('liveOutputToggleLabel');
-
-    if (toggleLabel) {
-      toggleLabel.textContent = mode === 'placeholder' ? 'Placeholder' : 'OBS Video';
-    }
-    console.debug('[Broadcast] Mode set to:', mode);
-
-    // If we're live, update Firestore with the new mode and hlsUrl
-    if (currentStream && currentStream.id) {
-      try {
-        const hlsBaseUrl = 'https://stream.freshwax.co.uk/live';
-        let hlsUrl;
-
-        if (mode === 'placeholder') {
-          // Placeholder mode uses freshwax-main stream
-          hlsUrl = hlsBaseUrl + "/freshwax-main/index.m3u8";
-        } else {
-          // Video mode uses the OBS stream key directly
-          hlsUrl = hlsBaseUrl + "/" + currentStream.streamKey + "/index.m3u8";
-        }
-
-        const token = await currentUser?.getIdToken();
-        if (!token) throw new Error('No auth token');
-
-        const response = await fetch('/api/dj-lobby/broadcast-mode/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ slotId: currentStream.id, mode, hlsUrl })
-        });
-        const result = await response.json();
-        if (!result.success) throw new Error(result.error);
-        console.debug('[Broadcast] Updated via API:', { mode, hlsUrl });
-      } catch (error) {
-        console.error('[Broadcast] Failed to update broadcast mode:', error);
-      }
-    }
-  }
-
-  function initBroadcastModeToggle() {
-    const toggleBtn = document.getElementById('liveOutputToggleBtn');
-
-    toggleBtn?.addEventListener('click', () => {
-      // Toggle between placeholder and video modes
-      // Only works when both BUTT and OBS are connected
-      if (currentPreviewSource === 'butt' && obsConnected) {
-        const newMode = broadcastMode === 'placeholder' ? 'video' : 'placeholder';
-        setBroadcastMode(newMode);
-      }
-    });
-  }
-
-  function updateButtIndicator(isConnected) {
-    const dot = document.getElementById('buttDot');
-    const box = document.getElementById('buttIndicator');
-    const previewDot = document.getElementById('previewButtDot');
-    if (dot) {
-      dot.className = 'indicator-dot ' + (isConnected ? 'connected' : 'disconnected');
-    }
-    if (previewDot) {
-      previewDot.className = 'indicator-dot ' + (isConnected ? 'connected' : 'disconnected');
-    }
-    if (box) {
-      box.classList.toggle('connected', isConnected);
-      box.classList.toggle('disconnected', !isConnected);
-    }
-  }
 
   // Check Icecast connection status using audio element probe
   let icecastCheckInterval = null;
   let icecastStreamConnected = false;
   let icecastProbeAudio = null;
 
-  async function checkIcecastStatus() {
-    // Use API proxy to avoid CORS issues and browser console errors
-    try {
-      const response = await fetch('/api/icecast-status/', {
-        cache: 'no-store'
-      });
-      const data = await response.json();
-
-      // Always update the connection state based on API response
-      const wasConnected = icecastStreamConnected;
-      icecastStreamConnected = data.streaming === true;
-
-      if (icecastStreamConnected && !wasConnected) {
-        updateButtIndicator(true);
-        console.debug('[Icecast] Stream detected');
-        // Auto-switch to BUTT preview if OBS is not connected
-        if (currentPreviewSource !== 'butt' && !currentObsPreviewUrl) {
-          console.debug('[Icecast] Auto-switching to BUTT preview');
-          setPreviewSource('butt');
-        }
-      } else if (!icecastStreamConnected && wasConnected) {
-        updateButtIndicator(false);
-        console.debug('[Icecast] No stream');
-      }
-
-      // Update BUTT stream title from Icecast metadata
-      if (data.streaming && data.title && currentPreviewSource === 'butt') {
-        const buttStreamTitle = document.getElementById('buttStreamTitle');
-        if (buttStreamTitle) {
-          buttStreamTitle.textContent = data.title;
-        }
-      }
-
-      return icecastStreamConnected;
-    } catch {
-      // Silently handle - API may not be available
-      if (icecastStreamConnected) {
-        icecastStreamConnected = false;
-        updateButtIndicator(false);
-      }
-      return false;
-    }
-  }
-
-  function startIcecastCheck() {
-    checkIcecastStatus();
-    if (!icecastCheckInterval) {
-      icecastCheckInterval = setInterval(checkIcecastStatus, 3000);
-    }
-  }
-
-  function stopIcecastCheck() {
-    if (icecastCheckInterval) {
-      clearInterval(icecastCheckInterval);
-      icecastCheckInterval = null;
-    }
-    if (icecastProbeAudio) {
-      icecastProbeAudio.src = '';
-      icecastProbeAudio = null;
-    }
-  }
-
-  function setPreviewSource(source) {
-    currentPreviewSource = source;
-    const obsIndicator = document.getElementById('obsIndicator');
-    const buttIndicator = document.getElementById('buttIndicator');
-    const relayIndicator = document.getElementById('relayIndicator');
-    const obsVideoPreview = document.getElementById('obsVideoPreview');
-    const buttAudioPreview = document.getElementById('buttAudioPreview');
-    const relayPreview = document.getElementById('relayPreview');
-    const obsOfflineState = document.getElementById('obsOfflineState');
-
-    // Reset all indicators
-    obsIndicator?.classList.remove('active');
-    buttIndicator?.classList.remove('active');
-    relayIndicator?.classList.remove('active');
-
-    if (source === 'obs') {
-      // OBS mode - show video or offline state
-      obsIndicator?.classList.add('active');
-      buttAudioPreview?.classList.add('hidden');
-      relayPreview?.classList.add('hidden');
-      // Direct mode: OBS and BUTT enabled, Relay disabled
-      obsIndicator?.classList.remove('disabled');
-      buttIndicator?.classList.remove('disabled');
-      relayIndicator?.classList.add('disabled');
-      // Show OBS content if streaming, otherwise show offline
-      if (currentObsPreviewUrl && obsHlsPlayer) {
-        obsVideoPreview?.classList.remove('hidden');
-        obsOfflineState?.classList.add('hidden');
-      } else {
-        obsVideoPreview?.classList.add('hidden');
-        obsOfflineState?.classList.remove('hidden');
-      }
-    } else if (source === 'butt') {
-      // BUTT mode - show audio-only placeholder
-      buttIndicator?.classList.add('active');
-      obsVideoPreview?.classList.add('hidden');
-      obsOfflineState?.classList.add('hidden');
-      buttAudioPreview?.classList.remove('hidden');
-      relayPreview?.classList.add('hidden');
-      // Direct mode: OBS and BUTT enabled, Relay disabled
-      obsIndicator?.classList.remove('disabled');
-      buttIndicator?.classList.remove('disabled');
-      relayIndicator?.classList.add('disabled');
-      // Update BUTT placeholder with DJ name and avatar
-      const buttPreviewDjName = document.getElementById('buttPreviewDjName');
-      const buttVinylAvatar = document.getElementById('buttVinylAvatar');
-      const buttVinylAvatar2 = document.getElementById('buttVinylAvatar2');
-      if (buttPreviewDjName && userInfo) {
-        buttPreviewDjName.textContent = userInfo.name || 'DJ';
-      }
-      if (userInfo?.avatar) {
-        if (buttVinylAvatar) buttVinylAvatar.src = userInfo.avatar;
-        if (buttVinylAvatar2) buttVinylAvatar2.src = userInfo.avatar;
-      }
-      // Show broadcast audio panel for BUTT mode
-      const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');
-      broadcastAudioPanel?.classList.remove('hidden');
-      // Start broadcast meters if not already running
-      if (!broadcastMeterAnimationId) {
-        initBroadcastMeters();
-      }
-    } else if (source === 'relay') {
-      // Relay mode - show relay placeholder with turntables
-      relayIndicator?.classList.add('active');
-      obsVideoPreview?.classList.add('hidden');
-      obsOfflineState?.classList.add('hidden');
-      buttAudioPreview?.classList.add('hidden');
-      relayPreview?.classList.remove('hidden');
-      // Disable OBS and BUTT tabs in relay mode
-      obsIndicator?.classList.add('disabled');
-      buttIndicator?.classList.add('disabled');
-      // Update relay preview with user info
-      updateRelayPreview();
-      // Also switch to relay mode in the stream mode toggle
-      setStreamMode('relay');
-      // Show broadcast audio panel for relay mode
-      const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');
-      broadcastAudioPanel?.classList.remove('hidden');
-      // Start broadcast meters if not already running
-      if (!broadcastMeterAnimationId) {
-        initBroadcastMeters();
-      }
-    }
-    // Switch audio analyser source for meters
-    switchAudioSource(source);
-    // Update live output toggle visibility based on source
-    updateBroadcastModeUI();
-  }
-
-  function initSourceToggle() {
-    const obsIndicator = document.getElementById('obsIndicator');
-    const buttIndicator = document.getElementById('buttIndicator');
-    const relayIndicator = document.getElementById('relayIndicator');
-
-    obsIndicator?.addEventListener('click', () => {
-      if (!obsIndicator.classList.contains('disabled')) setPreviewSource('obs');
-    });
-    buttIndicator?.addEventListener('click', () => {
-      if (!buttIndicator.classList.contains('disabled')) setPreviewSource('butt');
-    });
-    relayIndicator?.addEventListener('click', () => {
-      if (!relayIndicator.classList.contains('disabled')) setPreviewSource('relay');
-    });
-
-    // Update BUTT placeholder when title changes
-    const titleInput = document.getElementById('inlineStreamTitle');
-    titleInput?.addEventListener('input', () => {
-      if (currentPreviewSource === 'butt') {
-        const buttStreamTitle = document.getElementById('buttStreamTitle');
-        if (buttStreamTitle) {
-          buttStreamTitle.textContent = titleInput.value || '';
-        }
-      }
-    });
-
-    // Setup Icecast audio event listeners for connection status
-    const icecastAudio = document.getElementById('icecastAudio');
-    if (icecastAudio) {
-      icecastAudio.addEventListener('error', () => {
-        console.debug('[Icecast] Audio error - stream disconnected');
-        icecastConnected = false;
-        updateButtIndicator(false);
-      });
-      icecastAudio.addEventListener('ended', () => {
-        console.debug('[Icecast] Audio ended - stream stopped');
-        icecastConnected = false;
-        updateButtIndicator(false);
-      });
-      icecastAudio.addEventListener('stalled', () => {
-        console.debug('[Icecast] Audio stalled - connection issues');
-      });
-    }
-  }
-
-  function switchAudioSource(source) {
-    // Switch between OBS and BUTT audio sources for broadcast panel
-    buttAudioSource = source;
-    console.debug('[Audio] Switching audio source to:', source);
-
-    const icecastAudio = document.getElementById('icecastAudio');
-
-    if (source === 'butt') {
-      // Switch to BUTT/Icecast audio
-      // Always try to connect/play the Icecast stream
-      if (icecastAudio) {
-        // Set source if not already set or if paused
-        if (!icecastAudio.src || icecastAudio.paused) {
-          console.debug('[Audio] Connecting to Icecast stream...');
-          icecastAudio.src = 'https://icecast.freshwax.co.uk/live';
-          icecastAudio.load();
-        }
-
-        icecastAudio.play().then(() => {
-          console.debug('[Audio] Icecast stream playing');
-          icecastConnected = true;
-          updateButtIndicator(true);
-          // Setup analysers if not already done
-          if (!icecastAudioContext) {
-            setupIcecastAnalysers(icecastAudio);
-          }
-          // Start LED meter animation if not already running
-          if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
-              // Start live output LED meters for relay mode
-              if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
-                animateLiveMeters();
-              }
-          // Start live output meters for BUTT mode
-          if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
-            animateLiveMeters();
-          }
-        }).catch(err => {
-          console.debug('[Audio] Icecast play error:', err.message);
-          // Try again with muted (for autoplay policy)
-          icecastAudio.muted = true;
-          icecastAudio.play().then(() => {
-            icecastAudio.muted = false;
-            icecastConnected = true;
-            updateButtIndicator(true);
-            if (!icecastAudioContext) {
-              setupIcecastAnalysers(icecastAudio);
-            }
-            // Start LED meter animation if not already running
-            if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
-              // Start live output LED meters for relay mode
-              if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
-                animateLiveMeters();
-              }
-            // Start live output meters for BUTT mode
-            if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
-              animateLiveMeters();
-            }
-          }).catch(() => {
-            console.debug('[Audio] Icecast autoplay blocked - needs user interaction');
-            updateButtIndicator(false);
-          });
-        });
-      }
-    } else {
-      // Switch to OBS audio - pause Icecast stream
-      if (icecastAudio && icecastConnected) {
-        icecastAudio.pause();
-        console.debug('[Audio] Paused Icecast stream');
-      }
-    }
-
-    // Update source toggle button label to reflect current mode (PREVIEW/LIVE)
-    const label = document.querySelector('#audioSourceToggle .source-label');
-    if (label) {
-      // Always show current audio source mode (PREVIEW/LIVE), regardless of input type
-      label.textContent = broadcastAudioSource.toUpperCase();
-    }
-
-    // Update audio source indicator in broadcast panel
-    updateAudioSourceIndicator(source, broadcastAudioSource);
-  }
-
-  function updateAudioSourceIndicator(source, audioMode = null) {
-    const indicator = document.getElementById('audioSourceIndicator');
-    const sourceName = indicator?.querySelector('.source-name');
-    if (indicator && sourceName) {
-      const mode = audioMode || broadcastAudioSource;
-      if (source === 'relay') {
-        indicator.classList.add('butt'); // Use same style as BUTT (red dot)
-        // Show mode (PREVIEW/LIVE) for relay source
-        sourceName.textContent = mode === 'live' ? 'RELAY LIVE' : 'RELAY';
-      } else if (source === 'butt') {
-        indicator.classList.add('butt');
-        // Show mode (PREVIEW/LIVE) for BUTT source
-        sourceName.textContent = mode === 'live' ? 'BUTT LIVE' : 'BUTT';
-      } else {
-        indicator.classList.remove('butt');
-        // Show whether analyzing preview or live audio
-        sourceName.textContent = mode === 'live' ? 'OBS LIVE' : 'OBS';
-      }
-    }
-  }
-
-  function setupIcecastAnalysers(audioElement) {
-    try {
-      icecastAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const source = icecastAudioContext.createMediaElementSource(audioElement);
-      const splitter = icecastAudioContext.createChannelSplitter(2);
-
-      // Regular analysers for visualization (unfiltered)
-      icecastAnalyserL = icecastAudioContext.createAnalyser();
-      icecastAnalyserR = icecastAudioContext.createAnalyser();
-      icecastAnalyserL.fftSize = 256;
-      icecastAnalyserR.fftSize = 256;
-      icecastAnalyserL.smoothingTimeConstant = 0.5;
-      icecastAnalyserR.smoothingTimeConstant = 0.5;
-
-      // K-weighted analysers for accurate LUFS (ITU-R BS.1770-4)
-      icecastKWeightedAnalyserL = icecastAudioContext.createAnalyser();
-      icecastKWeightedAnalyserR = icecastAudioContext.createAnalyser();
-      icecastKWeightedAnalyserL.fftSize = 2048; // Larger for better low-freq resolution
-      icecastKWeightedAnalyserR.fftSize = 2048;
-      icecastKWeightedAnalyserL.smoothingTimeConstant = 0;
-      icecastKWeightedAnalyserR.smoothingTimeConstant = 0;
-
-      // K-weighting Stage 1: High shelf filter (+4dB at high frequencies)
-      // f0 = 1681.974450955533 Hz, Q = 0.7071752369554196, gain = +4dB
-      const highShelfL = icecastAudioContext.createBiquadFilter();
-      const highShelfR = icecastAudioContext.createBiquadFilter();
-      highShelfL.type = 'highshelf';
-      highShelfR.type = 'highshelf';
-      highShelfL.frequency.value = 1681.97;
-      highShelfR.frequency.value = 1681.97;
-      highShelfL.gain.value = 4;
-      highShelfR.gain.value = 4;
-
-      // K-weighting Stage 2: High-pass filter (remove low frequencies)
-      // f0 = 38.13547087602444 Hz, Q = 0.5003270373238773
-      const highPassL = icecastAudioContext.createBiquadFilter();
-      const highPassR = icecastAudioContext.createBiquadFilter();
-      highPassL.type = 'highpass';
-      highPassR.type = 'highpass';
-      highPassL.frequency.value = 38.14;
-      highPassR.frequency.value = 38.14;
-      highPassL.Q.value = 0.5;
-      highPassR.Q.value = 0.5;
-
-      // Connect audio chain
-      source.connect(splitter);
-
-      // Unfiltered path for visualization
-      splitter.connect(icecastAnalyserL, 0);
-      splitter.connect(icecastAnalyserR, 1);
-
-      // K-weighted path for LUFS: splitter -> highshelf -> highpass -> analyser
-      splitter.connect(highShelfL, 0);
-      splitter.connect(highShelfR, 1);
-      highShelfL.connect(highPassL);
-      highShelfR.connect(highPassR);
-      highPassL.connect(icecastKWeightedAnalyserL);
-      highPassR.connect(icecastKWeightedAnalyserR);
-
-      // Output to speakers through GainNode (allows muting without breaking analyser)
-      icecastGainNode = icecastAudioContext.createGain();
-      icecastGainNode.gain.value = 1; // Start at full volume
-
-      // Brick wall limiter to prevent clipping and protect ears
-      const limiter = icecastAudioContext.createDynamicsCompressor();
-      limiter.threshold.value = -1;   // Catch peaks near 0dB
-      limiter.knee.value = 0;         // Hard knee for true limiting
-      limiter.ratio.value = 20;       // High ratio = limiting behavior
-      limiter.attack.value = 0.001;   // 1ms attack
-      limiter.release.value = 0.1;    // 100ms release
-
-      source.connect(icecastGainNode);
-      icecastGainNode.connect(limiter);
-      limiter.connect(icecastAudioContext.destination);
-
-      console.debug('[Audio] Icecast analysers initialized with K-weighting, GainNode, and limiter');
-    } catch (e) {
-      console.error('[Audio] Icecast analyser setup error:', e);
-    }
-  }
-
-  function updateYoutubeIndicator(status) {
-    const dot = document.getElementById('youtubeDot');
-    if (dot) {
-      // status: 'connected', 'connecting', 'disconnected', 'error'
-      dot.className = 'indicator-dot ' + status;
-    }
-  }
-
-  function updateTwitchIndicator(status) {
-    const dot = document.getElementById('twitchDot');
-    if (dot) {
-      dot.className = 'indicator-dot ' + status;
-    }
-  }
-
-  function showRelayIndicators(show) {
-    const relayIndicators = document.getElementById('relayIndicators');
-    if (relayIndicators) {
-      if (show) {
-        relayIndicators.classList.remove('hidden');
-      } else {
-        relayIndicators.classList.add('hidden');
-      }
-    }
-  }
-
-  // Check relay health by querying the streaming server API
-  async function checkRelayHealth() {
-    try {
-      // Check MediaMTX API for active relay paths
-      const response = await fetch('https://stream.freshwax.co.uk:9997/v3/paths/list', {
-        signal: AbortSignal.timeout(5000)
-      }).catch(() => null);
-
-      if (response && response.ok) {
-        const data = await response.json();
-        const paths = data.items || [];
-
-        // Check for YouTube relay (freshwax-main or youtube path)
-        const youtubeRelay = paths.find(p =>
-          p.name?.includes('youtube') || p.name?.includes('freshwax-main')
-        );
-        updateYoutubeIndicator(youtubeRelay?.ready ? 'connected' : 'disconnected');
-
-        // Check for Twitch relay
-        const twitchRelay = paths.find(p => p.name?.includes('twitch'));
-        updateTwitchIndicator(twitchRelay?.ready ? 'connected' : 'disconnected');
-      } else {
-        // API not available, assume relays are running if stream is live
-        updateYoutubeIndicator('connected');
-        updateTwitchIndicator('connected');
-      }
-    } catch (e) {
-      console.debug('[RelayHealth] Check failed:', e instanceof Error ? e.message : String(e));
-      // On error, assume connected if stream is live
-      if (currentStream) {
-        updateYoutubeIndicator('connected');
-        updateTwitchIndicator('connected');
-      }
-    }
-  }
-
-  let obsPreviewFailCount = 0;
-  const OBS_PREVIEW_MAX_FAILS = 30; // Very tolerant - keep trying for ~90 seconds before giving up
-  let userIsStreaming = false; // Set when user clicks "I'm Ready" - never destroy while streaming
-
-  async function checkObsPreview() {
-    // Check if DJ's own stream is available at their stream key
-    if (!currentStreamKey) {
-      // Silently wait for stream key
-      updateServerIndicator(false);
-      updateObsIndicator(false);
-      return;
-    }
-
-    // Build the HLS URL for the DJ's own preview stream
-    const baseUrl = window.HLS_BASE_URL || 'https://stream.freshwax.co.uk';
-    const previewUrl = `${baseUrl}/live/${currentStreamKey}/index.m3u8`;
-
-    try {
-      // Check if server is reachable
-      updateServerIndicator(true);
-
-      // Check if HLS stream exists
-      const response = await fetch(previewUrl, {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000)
-      });
-
-      if (response.ok) {
-        console.debug('[ObsPreview] Stream available at:', previewUrl);
-        updateObsIndicator(true);
-        obsPreviewFailCount = 0; // Reset fail counter on success
-
-        // Only initialize if URL changed
-        if (currentObsPreviewUrl !== previewUrl) {
-          currentObsPreviewUrl = previewUrl;
-          initObsPreviewPlayer(previewUrl);
-          document.querySelector('.obs-panel')?.classList.add('streaming');
-        }
-      } else {
-        handleObsPreviewFailure('HTTP ' + response.status);
-      }
-    } catch (e) {
-      handleObsPreviewFailure(e instanceof Error ? e.message : String(e));
-    }
-  }
-
-  function handleObsPreviewFailure(reason) {
-    // Silently handle - server may not be running or stream not started yet
-
-    // If user is actively streaming (clicked I'm Ready), never destroy - just keep trying
-    if (userIsStreaming) {
-      updateObsIndicator(false);
-      // Keep currentObsPreviewUrl so we can recover
-      return;
-    }
-
-    // If player is already running, be tolerant of temporary failures
-    if (currentObsPreviewUrl && obsHlsPlayer) {
-      obsPreviewFailCount++;
-
-      // Only destroy after many consecutive failures (and not actively streaming)
-      if (obsPreviewFailCount >= OBS_PREVIEW_MAX_FAILS) {
-        console.debug('[ObsPreview] Too many failures, destroying player');
-        updateObsIndicator(false);
-        currentObsPreviewUrl = null;
-        obsPreviewFailCount = 0;
-        destroyObsPreviewPlayer();
-        document.querySelector('.obs-panel')?.classList.remove('streaming');
-      }
-    } else {
-      // No player running yet, just update indicator
-      updateObsIndicator(false);
-    }
-  }
-
-  function initObsPreviewPlayer(url) {
-    const videoEl = document.getElementById('obsVideo');
-    const offlineState = document.getElementById('obsOfflineState');
-    const videoPreview = document.getElementById('obsVideoPreview');
-    const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');
-    const buttAudioPreview = document.getElementById('buttAudioPreview');
-
-    if (!videoEl) return;
-
-    // Show video, hide offline state, show broadcast audio panel
-    // But only if OBS is the selected source (not BUTT mode)
-    offlineState?.classList.add('hidden');
-    if (currentPreviewSource === 'obs') {
-      videoPreview?.classList.remove('hidden');
-      buttAudioPreview?.classList.add('hidden');
-    }
-    broadcastAudioPanel?.classList.remove('hidden');
-
-    if (Hls.isSupported()) {
-      if (obsHlsPlayer) {
-        obsHlsPlayer.destroy();
-      }
-      obsHlsPlayer = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 30
-      });
-      obsHlsPlayer.loadSource(url);
-      obsHlsPlayer.attachMedia(videoEl);
-      obsHlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        videoEl.play().catch(() => {});
-      });
-      obsHlsPlayer.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          console.debug('[ObsPreview] Fatal HLS error:', data.type, data.details);
-          // Try to recover from fatal errors
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              console.debug('[ObsPreview] Network error, attempting recovery...');
-              obsHlsPlayer.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              console.debug('[ObsPreview] Media error, attempting recovery...');
-              obsHlsPlayer.recoverMediaError();
-              break;
-            default:
-              console.debug('[ObsPreview] Unrecoverable error, destroying player');
-              destroyObsPreviewPlayer();
-              break;
-          }
-        }
-      });
-    } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-      videoEl.src = url;
-      videoEl.play().catch(() => {});
-    }
-  }
-
-  function destroyObsPreviewPlayer() {
-    const offlineState = document.getElementById('obsOfflineState');
-    const videoPreview = document.getElementById('obsVideoPreview');
-    const broadcastAudioPanel = document.getElementById('broadcastAudioPanel');
-    const buttAudioPreview = document.getElementById('buttAudioPreview');
-
-    if (obsHlsPlayer) {
-      obsHlsPlayer.destroy();
-      obsHlsPlayer = null;
-    }
-
-    // Hide video preview
-    videoPreview?.classList.add('hidden');
-
-    // If in OBS mode, show offline state; if in BUTT mode, keep BUTT placeholder
-    if (currentPreviewSource === 'obs') {
-      offlineState?.classList.remove('hidden');
-      buttAudioPreview?.classList.add('hidden');
-    } else if (currentPreviewSource === 'butt') {
-      offlineState?.classList.add('hidden');
-      buttAudioPreview?.classList.remove('hidden');
-    }
-
-    // Audio panel is now always visible - no longer hide it
-  }
-
-  function startObsPreviewCheck() {
-    // Check immediately
-    checkObsPreview();
-    // Then check every 3 seconds
-    if (obsPreviewCheckInterval) clearInterval(obsPreviewCheckInterval);
-    obsPreviewCheckInterval = setInterval(checkObsPreview, 3000);
-  }
-
-  function stopObsPreviewCheck() {
-    if (obsPreviewCheckInterval) {
-      clearInterval(obsPreviewCheckInterval);
-      obsPreviewCheckInterval = null;
-    }
-    destroyObsPreviewPlayer();
-  }
-
-  // Update mute button visual state
-  function updateMuteButtonState(player, isMuted) {
-    const btn = document.getElementById(`${player}MuteBtn`);
-    if (!btn) return;
-
-    const mutedIcon = btn.querySelector('.muted-icon');
-    const unmutedIcon = btn.querySelector('.unmuted-icon');
-
-    if (isMuted) {
-      mutedIcon?.classList.remove('hidden');
-      unmutedIcon?.classList.add('hidden');
-    } else {
-      mutedIcon?.classList.add('hidden');
-      unmutedIcon?.classList.remove('hidden');
-    }
-  }
-
-  // Update center stats panel
-  function updateCenterStats(stats) {
-    if (stats.viewers !== undefined) {
-      const el = document.getElementById('centerViewers');
-      if (el) el.textContent = stats.viewers;
-    }
-    if (stats.bitrate !== undefined) {
-      const el = document.getElementById('centerBitrate');
-      if (el) el.textContent = stats.bitrate;
-    }
-    if (stats.resolution !== undefined) {
-      const el = document.getElementById('centerResolution');
-      if (el) el.textContent = stats.resolution;
-    }
-    if (stats.fps !== undefined) {
-      const el = document.getElementById('centerFps');
-      if (el) el.textContent = stats.fps;
-    }
-    if (stats.latency !== undefined) {
-      const el = document.getElementById('centerLatency');
-      if (el) el.textContent = stats.latency;
-    }
-    if (stats.uptime !== undefined) {
-      const el = document.getElementById('centerUptime');
-      if (el) el.textContent = stats.uptime;
-    }
-  }
-
-  // Update stream health stats from HLS.js
-  function updateStreamHealth() {
-    const healthEl = document.getElementById('streamHealth');
-    const previewSection = document.querySelector('.preview-section');
-    const liveIndicator = document.getElementById('healthLiveIndicator');
-
-    if (!hlsPlayer || !isVideoPlaying) {
-      healthEl?.classList.add('hidden');
-      liveIndicator?.classList.add('hidden');
-      return;
-    }
-
-    healthEl?.classList.remove('hidden');
-
-    // Show live indicator if this is our stream
-    const isMyStream = currentStream?.djId === currentUser?.uid;
-    if (isMyStream) {
-      liveIndicator?.classList.remove('hidden');
-    } else {
-      liveIndicator?.classList.add('hidden');
-    }
-
-    // Get HLS.js stats
-    const bitrateEl = document.getElementById('healthBitrate');
-    const qualityEl = document.getElementById('healthQuality');
-    const droppedEl = document.getElementById('healthDropped');
-    const bufferEl = document.getElementById('healthBuffer');
-    const latencyEl = document.getElementById('healthLatency');
-    const uptimeEl = document.getElementById('healthUptime');
-
-    // Get current level info
-    const currentLevel = hlsPlayer.levels?.[hlsPlayer.currentLevel];
-    const videoEl = document.getElementById('hlsVideo');
-
-    if (currentLevel) {
-      // Bitrate in Mbps
-      const bitrate = currentLevel.bitrate ? (currentLevel.bitrate / 1000000).toFixed(1) : '--';
-      if (bitrateEl) {
-        bitrateEl.textContent = bitrate !== '--' ? `${bitrate}Mb` : '--';
-        bitrateEl.className = 'stat-value' + (currentLevel.bitrate < 1000000 ? ' warn' : currentLevel.bitrate < 500000 ? ' bad' : '');
-      }
-
-      // Resolution
-      const width = currentLevel.width || videoEl?.videoWidth || 0;
-      const height = currentLevel.height || videoEl?.videoHeight || 0;
-      if (qualityEl) {
-        if (height > 0) {
-          qualityEl.textContent = `${width}x${height}`;
-          qualityEl.className = 'stat-value' + (height < 480 ? ' bad' : height < 720 ? ' warn' : '');
-        } else {
-          qualityEl.textContent = '--';
-          qualityEl.className = 'stat-value';
-        }
-      }
-    }
-
-    // Dropped frames from video element
-    if (videoEl) {
-      const quality = videoEl.getVideoPlaybackQuality?.();
-      if (quality && droppedEl) {
-        const dropped = quality.droppedVideoFrames || 0;
-        droppedEl.textContent = dropped.toString();
-        droppedEl.className = 'stat-value' + (dropped > 100 ? ' bad' : dropped > 20 ? ' warn' : '');
-      }
-
-      // Buffer amount
-      if (videoEl.buffered?.length > 0 && bufferEl) {
-        const buffered = videoEl.buffered.end(videoEl.buffered.length - 1) - videoEl.currentTime;
-        bufferEl.textContent = `${buffered.toFixed(1)}s`;
-        bufferEl.className = 'stat-value' + (buffered < 2 ? ' bad' : buffered < 5 ? ' warn' : '');
-      }
-    }
-
-    // Latency estimate from HLS.js
-    if (latencyEl) {
-      if (hlsPlayer.latency !== undefined) {
-        const latency = hlsPlayer.latency;
-        latencyEl.textContent = `${latency.toFixed(1)}s`;
-        latencyEl.className = 'stat-value' + (latency > 15 ? ' bad' : latency > 8 ? ' warn' : '');
-      } else if (hlsPlayer.targetLatency !== undefined) {
-        latencyEl.textContent = `~${hlsPlayer.targetLatency.toFixed(0)}s`;
-        latencyEl.className = 'stat-value';
-      } else {
-        latencyEl.textContent = '--';
-      }
-    }
-
-    // Uptime from stream start
-    let uptimeStr = '--';
-    if (streamStartTime) {
-      const elapsed = Math.floor((Date.now() - streamStartTime.getTime()) / 1000);
-      const hours = Math.floor(elapsed / 3600);
-      const mins = Math.floor((elapsed % 3600) / 60);
-      const secs = elapsed % 60;
-      if (hours > 0) {
-        uptimeStr = `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-      } else {
-        uptimeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
-      }
-      if (uptimeEl) {
-        uptimeEl.textContent = uptimeStr;
-        uptimeEl.className = 'stat-value';
-      }
-    } else if (uptimeEl) {
-      uptimeEl.textContent = '--';
-    }
-
-    // Update center stats panel
-    const centerStats = {};
-    if (currentLevel) {
-      const bitrate = currentLevel.bitrate ? (currentLevel.bitrate / 1000000).toFixed(1) : '--';
-      centerStats.bitrate = bitrate !== '--' ? `${bitrate}Mb` : '--';
-      const width = currentLevel.width || videoEl?.videoWidth || 0;
-      const height = currentLevel.height || videoEl?.videoHeight || 0;
-      centerStats.resolution = height > 0 ? `${height}p` : '--';
-      // FPS - get from HLS level or estimate
-      const fps = currentLevel.frameRate || currentLevel.attrs?.['FRAME-RATE'] || '--';
-      centerStats.fps = fps !== '--' ? Math.round(fps) : '--';
-    }
-    if (hlsPlayer.latency !== undefined) {
-      centerStats.latency = `${hlsPlayer.latency.toFixed(1)}s`;
-    } else if (hlsPlayer.targetLatency !== undefined) {
-      centerStats.latency = `~${hlsPlayer.targetLatency.toFixed(0)}s`;
-    }
-    centerStats.uptime = uptimeStr;
-    updateCenterStats(centerStats);
-  }
-
-  // Start health monitoring
-  function startHealthMonitoring() {
-    if (healthInterval) clearInterval(healthInterval);
-    healthInterval = setInterval(updateStreamHealth, 5000);
-  }
-
-  // Stop health monitoring
-  function stopHealthMonitoring() {
-    if (healthInterval) {
-      clearInterval(healthInterval);
-      healthInterval = null;
-    }
-    document.getElementById('streamHealth')?.classList.add('hidden');
-  }
-
-  // Save Twitch settings to localStorage
-  function saveTwitchSettings() {
-    const username = document.getElementById('twitchUsername')?.value?.trim() || '';
-    const streamKey = document.getElementById('twitchStreamKey')?.value?.trim() || '';
-    const saveBtn = document.getElementById('saveTwitchBtn');
-
-    if (!username && !streamKey) {
-      // Clear settings
-      sessionStorage.removeItem('freshwax_twitch_username');
-      sessionStorage.removeItem('freshwax_twitch_key');
-    } else {
-      if (username) sessionStorage.setItem('freshwax_twitch_username', username);
-      if (streamKey) sessionStorage.setItem('freshwax_twitch_key', streamKey);
-    }
-
-    // Show success feedback
-    if (saveBtn) {
-      const originalText = saveBtn.textContent;
-      saveBtn.textContent = 'Saved!';
-      saveBtn.style.background = '#16a34a';
-      setTimeout(() => {
-        saveBtn.textContent = originalText;
-        saveBtn.style.background = '';
-      }, 1500);
-    }
-  }
-
-  // Load saved Twitch settings
-  function loadTwitchSettings() {
-    const username = sessionStorage.getItem('freshwax_twitch_username');
-    const streamKey = sessionStorage.getItem('freshwax_twitch_key');
-
-    if (username) {
-      const usernameInput = document.getElementById('twitchUsername');
-      if (usernameInput) usernameInput.value = username;
-    }
-    if (streamKey) {
-      const keyInput = document.getElementById('twitchStreamKey');
-      if (keyInput) keyInput.value = streamKey;
-    }
-  }
-
-  // Copy output URL to clipboard
-  function copyOutputUrlToClipboard() {
-    const outputUrl = document.getElementById('outputUrl')?.textContent?.trim();
-    const copyBtn = document.getElementById('copyOutputUrl');
-
-    if (!outputUrl) return;
-
-    navigator.clipboard.writeText(outputUrl).then(() => {
-      if (copyBtn) {
-        const originalText = copyBtn.textContent;
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => {
-          copyBtn.textContent = originalText;
-        }, 1500);
-      }
-    }).catch(() => {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = outputUrl;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      if (copyBtn) {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => {
-          copyBtn.textContent = 'Copy';
-        }, 1500);
-      }
-    });
-  }
-
-  // Store captured thumbnail data
-  let capturedThumbnailBlob = null;
-  let capturedThumbnailUrl = null;
-
-  // Capture thumbnail from video
-  function captureVideoThumbnail() {
-    const video = document.getElementById('hlsVideo');
-    const btn = document.getElementById('captureThumbBtn');
-    const preview = document.getElementById('thumbnailPreview');
-    const previewImg = document.getElementById('capturedThumb');
-    const twitterBtn = document.getElementById('shareTwitterBtn');
-    const facebookBtn = document.getElementById('shareFacebookBtn');
-
-    if (!video || video.paused || !video.videoWidth) {
-      alert('No video playing to capture');
-      return;
-    }
-
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Convert to blob and show preview
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-
-        // Store the blob for sharing
-        capturedThumbnailBlob = blob;
-
-        // Clean up previous URL if exists
-        if (capturedThumbnailUrl) {
-          URL.revokeObjectURL(capturedThumbnailUrl);
-        }
-
-        // Create new URL for preview
-        capturedThumbnailUrl = URL.createObjectURL(blob);
-
-        // Show preview
-        if (previewImg && preview) {
-          previewImg.src = capturedThumbnailUrl;
-          preview.classList.remove('hidden');
-        }
-
-        // Enable share buttons
-        if (twitterBtn) twitterBtn.disabled = false;
-        if (facebookBtn) facebookBtn.disabled = false;
-
-        // Show success feedback
-        const captureText = btn.querySelector('.capture-text');
-        if (captureText) {
-          captureText.textContent = '✓ Captured';
-          setTimeout(() => {
-            captureText.textContent = 'Capture';
-          }, 1500);
-        }
-      }, 'image/jpeg', 0.9);
-    } catch (e) {
-      console.error('Thumbnail capture failed:', e);
-      alert('Failed to capture thumbnail');
-    }
-  }
-
-  // Clear captured thumbnail
-  function clearThumbnail() {
-    const preview = document.getElementById('thumbnailPreview');
-    const previewImg = document.getElementById('capturedThumb');
-    const twitterBtn = document.getElementById('shareTwitterBtn');
-    const facebookBtn = document.getElementById('shareFacebookBtn');
-
-    if (capturedThumbnailUrl) {
-      URL.revokeObjectURL(capturedThumbnailUrl);
-      capturedThumbnailUrl = null;
-    }
-    capturedThumbnailBlob = null;
-
-    if (preview) preview.classList.add('hidden');
-    if (previewImg) previewImg.src = '';
-    if (twitterBtn) twitterBtn.disabled = true;
-    if (facebookBtn) facebookBtn.disabled = true;
-  }
-
-  // Share to Twitter/X
-  function shareToTwitter() {
-    const postText = document.getElementById('socialPostText')?.value || '';
-    const text = encodeURIComponent(postText || 'Live now on Fresh Wax! 🎧🔊');
-    const url = encodeURIComponent(window.location.origin + '/live');
-    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
-  }
-
-  // Share to Facebook
-  function shareToFacebook() {
-    const url = encodeURIComponent(window.location.origin + '/live');
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
-  }
 
   // ========== SHARE MODAL FUNCTIONS ==========
 
   // Store share modal thumbnail data
-  let shareThumbBlob = null;
-  let shareThumbUrl = null;
 
-  function openShareModal() {
-    const modal = document.getElementById('shareStreamModal');
-    if (!modal) return;
-
-    // Populate stream info
-    const djNameEl = document.getElementById('shareDjName');
-    const titleEl = document.getElementById('shareStreamTitle');
-    const genreEl = document.getElementById('shareStreamGenre');
-    const postTextEl = document.getElementById('sharePostText');
-
-    if (djNameEl) djNameEl.textContent = userInfo?.name || 'DJ';
-    if (titleEl) titleEl.textContent = document.getElementById('inlineStreamTitle')?.value || 'Live Session';
-    if (genreEl) genreEl.textContent = document.getElementById('inlineStreamGenre')?.value || 'Jungle / D&B';
-
-    // Set default post text
-    if (postTextEl && !postTextEl.value) {
-      const djName = userInfo?.name || 'DJ';
-      const title = document.getElementById('inlineStreamTitle')?.value || 'Live Session';
-      postTextEl.value = `🎧 I'm live on Fresh Wax!\n\n${title}\n\nTune in now 🔊`;
-      updateCharCount();
-    }
-
-    modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeShareModal() {
-    const modal = document.getElementById('shareStreamModal');
-    if (modal) {
-      modal.classList.add('hidden');
-      document.body.style.overflow = '';
-    }
-  }
-
-  function captureShareThumbnail() {
-    const video = document.getElementById('hlsVideo');
-    const previewEl = document.getElementById('shareThumbPreview');
-    const placeholder = document.getElementById('shareThumbPlaceholder');
-    const imgEl = document.getElementById('shareThumbImg');
-    const captureBtn = document.getElementById('shareCaptureBtn');
-    const clearBtn = document.getElementById('shareClearThumbBtn');
-
-    if (!video || video.paused || !video.videoWidth) {
-      alert('No video stream available to capture');
-      return;
-    }
-
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0);
-
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert('Failed to capture thumbnail');
-          return;
-        }
-
-        // Clean up previous URL
-        if (shareThumbUrl) {
-          URL.revokeObjectURL(shareThumbUrl);
-        }
-
-        shareThumbBlob = blob;
-        shareThumbUrl = URL.createObjectURL(blob);
-
-        // Update UI
-        if (imgEl) {
-          imgEl.src = shareThumbUrl;
-          imgEl.classList.remove('hidden');
-        }
-        if (placeholder) placeholder.classList.add('hidden');
-        if (previewEl) previewEl.classList.add('has-image');
-        if (clearBtn) clearBtn.classList.remove('hidden');
-
-        // Visual feedback
-        if (captureBtn) {
-          const originalText = captureBtn.innerHTML;
-          captureBtn.innerHTML = '<span>✓</span> Captured!';
-          setTimeout(() => {
-            captureBtn.innerHTML = '<span>📸</span> Capture from Stream';
-          }, 1500);
-        }
-      }, 'image/jpeg', 0.9);
-    } catch (e) {
-      console.error('Share thumbnail capture failed:', e);
-      alert('Failed to capture thumbnail');
-    }
-  }
-
-  function clearShareThumbnail() {
-    const previewEl = document.getElementById('shareThumbPreview');
-    const placeholder = document.getElementById('shareThumbPlaceholder');
-    const imgEl = document.getElementById('shareThumbImg');
-    const clearBtn = document.getElementById('shareClearThumbBtn');
-
-    if (shareThumbUrl) {
-      URL.revokeObjectURL(shareThumbUrl);
-      shareThumbUrl = null;
-    }
-    shareThumbBlob = null;
-
-    if (imgEl) {
-      imgEl.src = '';
-      imgEl.classList.add('hidden');
-    }
-    if (placeholder) placeholder.classList.remove('hidden');
-    if (previewEl) previewEl.classList.remove('has-image');
-    if (clearBtn) clearBtn.classList.add('hidden');
-  }
-
-  function updateCharCount() {
-    const textEl = document.getElementById('sharePostText');
-    const countEl = document.getElementById('shareCharCount');
-    if (textEl && countEl) {
-      countEl.textContent = textEl.value.length.toString();
-    }
-  }
-
-  function shareToTwitterFromModal() {
-    const postText = document.getElementById('sharePostText')?.value || '';
-    const text = encodeURIComponent(postText || 'Live now on Fresh Wax! 🎧🔊');
-    const url = encodeURIComponent(window.location.origin + '/live');
-    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
-  }
-
-  function shareToFacebookFromModal() {
-    const url = encodeURIComponent(window.location.origin + '/live');
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
-  }
-
-  function copyStreamLink() {
-    const btn = document.getElementById('shareCopyLink');
-    const url = window.location.origin + '/live';
-
-    navigator.clipboard.writeText(url).then(() => {
-      if (btn) {
-        btn.classList.add('copied');
-        const originalHTML = btn.innerHTML;
-        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg><span>Copied!</span>';
-        setTimeout(() => {
-          btn.classList.remove('copied');
-          btn.innerHTML = originalHTML;
-        }, 2000);
-      }
-    }).catch(err => {
-      console.error('Failed to copy:', err);
-      alert('Failed to copy link');
-    });
-  }
-
-  // ========== END SHARE MODAL FUNCTIONS ==========
-
-  // Cleanup HLS player
-  function cleanupHlsPlayer() {
-    stopHealthMonitoring();
-    if (hlsPlayer) {
-      hlsPlayer.destroy();
-      hlsPlayer = null;
-    }
-    isVideoPlaying = false;
-    currentHlsUrl = null;
-    const videoElement = document.getElementById('hlsVideo');
-    if (videoElement) {
-      videoElement.src = '';
-    }
-  }
-
-  // Audio analyser references (initialized later when audio context is created)
-  let obsAnalyserL = null;
-  let obsAnalyserR = null;
-  let liveAnalyserL = null;
-  let liveAnalyserR = null;
-  // Note: Icecast/BUTT audio analysers declared at top with other preview state
-
-  // =============== BROADCAST AUDIO PANEL ===============
-  let broadcastMeterAnimationId = null;
-  let broadcastAudioSource = 'preview'; // 'preview' or 'live'
-  let lufsHistory = [];
-  let peakHoldL = -Infinity, peakHoldR = -Infinity;
-  let peakHoldTimer = null;
-  let stereoCanvasCtx = null;
-
-  // Calibration settings (stored in localStorage)
-  let calGainOffset = 0;
-  let calRefLevel = -14;
-  try {
-    calGainOffset = parseFloat(localStorage.getItem('calGainOffset') || '0');
-    calRefLevel = parseInt(localStorage.getItem('calRefLevel') || '-14');
-  } catch (e) {
-    // localStorage may throw in Safari private browsing
-  }
-
-  function initBroadcastMeters() {
-    const canvas = document.getElementById('stereoCanvas');
-    if (canvas) {
-      stereoCanvasCtx = canvas.getContext('2d');
-    }
-
-    // Panel minimize button
-    document.getElementById('panelMinimize')?.addEventListener('click', () => {
-      const panel = document.getElementById('broadcastAudioPanel');
-      const btn = document.getElementById('panelMinimize');
-      if (panel?.classList.contains('minimized')) {
-        panel.classList.remove('minimized');
-        btn.textContent = '−';
-        // Restart meters when expanding panel (they may have stopped)
-        if (!broadcastMeterAnimationId) {
-          console.debug('[BroadcastMeters] Restarting meters after panel expand');
-          animateBroadcastMeters();
-        }
-      } else {
-        panel?.classList.add('minimized');
-        btn.textContent = '+';
-      }
-    });
-
-    // Source toggle button - switches between preview and live audio sources
-    document.getElementById('audioSourceToggle')?.addEventListener('click', () => {
-      // In BUTT/RELAY mode, check if we have the appropriate audio playing
-      if (currentPreviewSource === 'butt' || currentPreviewSource === 'relay') {
-        // For relay mode, check audioElement (not HLS video)
-        const liveAudio = document.getElementById('audioElement');
-        const hlsVid = document.getElementById('hlsVideo');
-        const hasLiveAnalysers = liveAnalyserL && liveAnalyserR;
-        const hasIcecastAnalysers = icecastAnalyserL && icecastAnalyserR;
-
-        // Allow toggle if we have at least one set of analysers
-        if (!hasIcecastAnalysers && !hasLiveAnalysers) {
-          console.debug('[AudioToggle] Cannot toggle - no analysers available');
-          return;
-        }
-
-        // Set up live analysers if needed when switching to live mode
-        if (broadcastAudioSource === 'preview' && !hasLiveAnalysers && liveAudio && !liveAudio.paused) {
-          console.debug('[AudioToggle] Setting up live analysers for relay mode');
-          const result = setupAudioMeter(liveAudio, 'LiveAudio');
-          if (result) {
-            liveAudioContext = result.audioContext;
-            liveAnalyserL = result.analyserL;
-            liveAnalyserR = result.analyserR;
-          }
-        }
-      }
-      broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
-      console.debug('[AudioToggle] Switched to:', broadcastAudioSource);
-      const label = document.querySelector('#audioSourceToggle .source-label');
-      if (label) label.textContent = broadcastAudioSource.toUpperCase();
-
-      // Sync the main audio toggle to match
-      activeAudioSource = broadcastAudioSource;
-      updateAudioSourceUI();
-
-      // Update indicator based on current preview source
-      if (currentPreviewSource === 'relay') {
-        updateAudioSourceIndicator('relay', broadcastAudioSource);
-      } else if (currentPreviewSource === 'butt') {
-        updateAudioSourceIndicator('butt', broadcastAudioSource);
-      } else {
-        updateAudioSourceIndicator('obs', broadcastAudioSource);
-      }
-    });
-
-    // Calibration button - toggle panel
-    document.getElementById('calibrateBtn')?.addEventListener('click', () => {
-      const calPanel = document.getElementById('calibrationPanel');
-      calPanel?.classList.toggle('hidden');
-    });
-
-    // Calibration gain offset slider
-    const gainSlider = document.getElementById('calGainOffset');
-    const gainValue = document.getElementById('calGainValue');
-    if (gainSlider) {
-      gainSlider.value = calGainOffset;
-      if (gainValue) gainValue.textContent = `${calGainOffset > 0 ? '+' : ''}${calGainOffset} dB`;
-      gainSlider.addEventListener('input', (e) => {
-        calGainOffset = parseFloat(e.target.value);
-        if (gainValue) gainValue.textContent = `${calGainOffset > 0 ? '+' : ''}${calGainOffset} dB`;
-        try { localStorage.setItem('calGainOffset', calGainOffset.toString()); } catch (e) {}
-      });
-    }
-
-    // Reference level selector
-    const refSelect = document.getElementById('calRefLevel');
-    if (refSelect) {
-      refSelect.value = calRefLevel.toString();
-      refSelect.addEventListener('change', (e) => {
-        calRefLevel = parseInt(e.target.value);
-        try { localStorage.setItem('calRefLevel', calRefLevel.toString()); } catch (e) {}
-        // Update LUFS target marker position
-        const marker = document.querySelector('.lufs-target-marker');
-        if (marker) {
-          const percent = ((calRefLevel + 59) / 59) * 100;
-          marker.style.left = `${Math.max(0, Math.min(100, percent))}%`;
-          marker.title = `${calRefLevel} LUFS Target`;
-        }
-      });
-    }
-
-    // Reset calibration
-    document.getElementById('calReset')?.addEventListener('click', () => {
-      calGainOffset = 0;
-      calRefLevel = -14;
-      try { localStorage.removeItem('calGainOffset'); localStorage.removeItem('calRefLevel'); } catch (e) {}
-      if (gainSlider) gainSlider.value = 0;
-      if (gainValue) gainValue.textContent = '0 dB';
-      if (refSelect) refSelect.value = '-23';
-    });
-
-    // Close calibration panel
-    document.getElementById('calClose')?.addEventListener('click', () => {
-      document.getElementById('calibrationPanel')?.classList.add('hidden');
-    });
-
-    // Start animation loop
-    if (!broadcastMeterAnimationId) {
-      animateBroadcastMeters();
-    }
-
-    // Reset peak hold every 2 seconds
-    peakHoldTimer = setInterval(() => {
-      peakHoldL = -Infinity;
-      peakHoldR = -Infinity;
-    }, 2000);
-
-    // Restart meters when tab becomes visible (browser may stop requestAnimationFrame in background)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        const panel = document.getElementById('broadcastAudioPanel');
-        if (panel && !panel.classList.contains('hidden') && !broadcastMeterAnimationId) {
-          console.debug('[BroadcastMeters] Restarting meters after tab visible');
-          animateBroadcastMeters();
-        }
-      }
-    });
-  }
-
-  function stopBroadcastMeters() {
-    if (broadcastMeterAnimationId) {
-      cancelAnimationFrame(broadcastMeterAnimationId);
-      broadcastMeterAnimationId = null;
-    }
-    if (peakHoldTimer) {
-      clearInterval(peakHoldTimer);
-      peakHoldTimer = null;
-    }
-    lufsHistory = [];
-    lufsBlockHistory = [];
-    lastLufsBlockTime = 0;
-  }
 
   // Debug counter for broadcast meters
   let broadcastMeterFrameCount = 0;
   let lastBroadcastDebugTime = 0;
 
-  function animateBroadcastMeters() {
-    try {
-    // Keep AudioContext active - browsers may suspend it after inactivity
-    if (icecastAudioContext && icecastAudioContext.state === 'suspended') {
-      console.debug('[BroadcastMeters] Resuming suspended icecastAudioContext');
-      icecastAudioContext.resume().catch(() => {});
-    }
-
-    // Debug logging every 5 seconds
-    broadcastMeterFrameCount++;
-    const now = Date.now();
-    if (now - lastBroadcastDebugTime > 5000) {
-      // Check audio element status
-      const relayAudio = document.getElementById('relayAudio');
-      const audioPlaying = relayAudio && !relayAudio.paused && relayAudio.currentTime > 0;
-
-      // Sample analyser data to check if it's updating
-      let peakL = 0, peakR = 0;
-      if (icecastAnalyserL && icecastAnalyserR) {
-        const testDataL = new Uint8Array(icecastAnalyserL.frequencyBinCount);
-        const testDataR = new Uint8Array(icecastAnalyserR.frequencyBinCount);
-        icecastAnalyserL.getByteFrequencyData(testDataL);
-        icecastAnalyserR.getByteFrequencyData(testDataR);
-        peakL = Math.max(...testDataL);
-        peakR = Math.max(...testDataR);
-      }
-
-      console.debug('[BroadcastMeters] Status:', {
-        frames: broadcastMeterFrameCount,
-        animationId: broadcastMeterAnimationId,
-        icecastState: icecastAudioContext?.state,
-        hasIcecastAnalysers: !!(icecastAnalyserL && icecastAnalyserR),
-        currentPreviewSource,
-        broadcastAudioSource,
-        audioPlaying,
-        audioCurrentTime: relayAudio?.currentTime?.toFixed(1),
-        peakL,
-        peakR
-      });
-      lastBroadcastDebugTime = now;
-      broadcastMeterFrameCount = 0;
-    }
-
-    // Get the active analyser based on OBS/BUTT/Relay tab and preview/live toggle
-    let analyserL, analyserR;
-    let kWeightedL = null, kWeightedR = null;
-
-    if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && broadcastAudioSource === 'preview' && icecastAnalyserL && icecastAnalyserR) {
-      // BUTT/Relay in preview mode - use Icecast audio (relay input)
-      analyserL = icecastAnalyserL;
-      analyserR = icecastAnalyserR;
-      // Use K-weighted analysers for accurate LUFS when available
-      kWeightedL = icecastKWeightedAnalyserL;
-      kWeightedR = icecastKWeightedAnalyserR;
-    } else if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && broadcastAudioSource === 'live' && liveAnalyserL && liveAnalyserR) {
-      // BUTT/Relay in live mode - use HLS video audio (stream output)
-      analyserL = liveAnalyserL;
-      analyserR = liveAnalyserR;
-      kWeightedL = liveKWeightedAnalyserL;
-      kWeightedR = liveKWeightedAnalyserR;
-    } else if (currentPreviewSource === 'obs') {
-      // OBS mode - use preview or live based on toggle
-      analyserL = broadcastAudioSource === 'preview' ? obsAnalyserL : liveAnalyserL;
-      analyserR = broadcastAudioSource === 'preview' ? obsAnalyserR : liveAnalyserR;
-      // K-weighted analysers for accurate LUFS
-      kWeightedL = broadcastAudioSource === 'preview' ? obsKWeightedAnalyserL : liveKWeightedAnalyserL;
-      kWeightedR = broadcastAudioSource === 'preview' ? obsKWeightedAnalyserR : liveKWeightedAnalyserR;
-    } else {
-      // Fallback - use icecast if available
-      analyserL = icecastAnalyserL;
-      analyserR = icecastAnalyserR;
-      kWeightedL = icecastKWeightedAnalyserL;
-      kWeightedR = icecastKWeightedAnalyserR;
-    }
-
-    if (analyserL && analyserR) {
-      // Get frequency data
-      const dataL = new Uint8Array(analyserL.frequencyBinCount);
-      const dataR = new Uint8Array(analyserR.frequencyBinCount);
-      analyserL.getByteFrequencyData(dataL);
-      analyserR.getByteFrequencyData(dataR);
-
-      // Calculate RMS levels
-      const rmsL = calculateRMS(dataL);
-      const rmsR = calculateRMS(dataR);
-
-      // Convert to dB and apply calibration offset
-      const dbL = 20 * Math.log10(Math.max(rmsL, 0.0001)) + calGainOffset;
-      const dbR = 20 * Math.log10(Math.max(rmsR, 0.0001)) + calGainOffset;
-
-      // Update True Peak meters
-      updateTruePeakMeter('L', dbL);
-      updateTruePeakMeter('R', dbR);
-
-      // Update PPM meters
-      updatePPMMeter('L', dbL);
-      updatePPMMeter('R', dbR);
-
-      // Update VU meters
-      updateVUMeter('L', rmsL);
-      updateVUMeter('R', rmsR);
-
-      // Update LUFS with K-weighted analysers for accurate measurement
-      updateLUFS(rmsL, rmsR, kWeightedL, kWeightedR);
-
-      // Update Correlation meter
-      updateCorrelation(dataL, dataR);
-
-      // Update Stereo Scope
-      updateStereoScope(dataL, dataR);
-
-      // Update BUTT spectrum if visible - use Icecast audio when available
-      const buttPreview = document.getElementById('buttAudioPreview');
-      if (buttPreview && !buttPreview.classList.contains('hidden')) {
-        // Use Icecast analysers when BUTT mode and connected, otherwise fallback to OBS
-        let buttSpectrumL, buttSpectrumR;
-        if (icecastAnalyserL && icecastAnalyserR && icecastConnected) {
-          buttSpectrumL = icecastAnalyserL;
-          buttSpectrumR = icecastAnalyserR;
-        } else {
-          buttSpectrumL = obsAnalyserL;
-          buttSpectrumR = obsAnalyserR;
-        }
-
-        if (buttSpectrumL && buttSpectrumR) {
-          const buttDataL = new Uint8Array(buttSpectrumL.frequencyBinCount);
-          const buttDataR = new Uint8Array(buttSpectrumR.frequencyBinCount);
-          buttSpectrumL.getByteFrequencyData(buttDataL);
-          buttSpectrumR.getByteFrequencyData(buttDataR);
-          updateButtSpectrum(buttDataL, buttDataR);
-        }
-      }
-    }
-
-    } catch (err) {
-      console.error('[BroadcastMeters] ERROR:', err);
-    }
-    broadcastMeterAnimationId = requestAnimationFrame(animateBroadcastMeters);
-  }
-
-  function calculateRMS(data) {
-    let sum = 0;
-    for (let i = 0; i < data.length; i++) {
-      const normalized = data[i] / 255;
-      sum += normalized * normalized;
-    }
-    return Math.sqrt(sum / data.length);
-  }
-
-  function updateTruePeakMeter(channel, db) {
-    const segments = document.querySelectorAll(`#truePeak${channel} .segment`);
-    const holdEl = document.getElementById(`truePeakHold${channel}`);
-    const valEl = document.getElementById(`truePeakVal${channel}`);
-
-    // Map dB to segments (16 segments, -60 to 0 dB range)
-    const normalizedLevel = Math.max(0, Math.min(1, (db + 60) / 60));
-    const litCount = Math.round(normalizedLevel * 16);
-
-    // Update peak hold
-    if (channel === 'L') {
-      if (db > peakHoldL) peakHoldL = db;
-      if (holdEl) holdEl.style.bottom = `${Math.max(0, (peakHoldL + 60) / 60 * 100)}%`;
-    } else {
-      if (db > peakHoldR) peakHoldR = db;
-      if (holdEl) holdEl.style.bottom = `${Math.max(0, (peakHoldR + 60) / 60 * 100)}%`;
-    }
-
-    // Light up segments from bottom to top
-    segments.forEach((seg, i) => {
-      const segIndex = 15 - i; // Reverse index (bottom = 15, top = 0)
-      if (segIndex < litCount) {
-        seg.classList.add('lit');
-      } else {
-        seg.classList.remove('lit');
-      }
-    });
-
-    // Update value display
-    if (valEl) {
-      valEl.textContent = db > -60 ? db.toFixed(1) : '-∞';
-    }
-  }
 
   // PPM debug tracking
   let lastPPMDebugTime = 0;
   let ppmUpdateCount = 0;
   let lastPPMValue = { L: 0, R: 0 };
-  function updatePPMMeter(channel, db) {
-    const fillEl = document.getElementById(`ppmFill${channel}`);
-    const peakEl = document.getElementById(`ppmPeak${channel}`);
-    const valEl = document.getElementById(`ppmVal${channel}`);
 
-    // Map dB to percentage (PPM scale: -60 to +3 dB)
-    const normalizedLevel = Math.max(0, Math.min(1, (db + 60) / 63));
-    const percentage = normalizedLevel * 100;
-
-    // Track PPM updates for debugging
-    ppmUpdateCount++;
-    lastPPMValue[channel] = percentage;
-    const ppmNow = Date.now();
-    if (ppmNow - lastPPMDebugTime > 5000 && channel === 'L') {
-      console.debug('[PPM Debug]', { updates: ppmUpdateCount, fillElExists: !!fillEl, peakElExists: !!peakEl, ppmL: lastPPMValue.L?.toFixed(1), ppmR: lastPPMValue.R?.toFixed(1), dbL: db?.toFixed(1) });
-      lastPPMDebugTime = ppmNow;
-      ppmUpdateCount = 0;
-    }
-
-    if (fillEl) fillEl.style.height = `${percentage}%`;
-    if (peakEl) peakEl.style.bottom = `${percentage}%`;
-    if (valEl) valEl.textContent = db > -60 ? db.toFixed(1) : '-∞';
-  }
-
-  function updateVUMeter(channel, rms) {
-    const needleEl = document.getElementById(`vuNeedle${channel}`);
-    if (!needleEl) return;
-
-    // VU meter calibration: -6 dBFS digital should read around 0 VU
-    // At RMS 0.5 (-6 dBFS): 20 * log10(0.5) = -6, +6 offset = 0 VU
-    const vuDb = 20 * Math.log10(Math.max(rms, 0.0001)) + 6;
-    const clampedVu = Math.max(-20, Math.min(3, vuDb));
-
-    // Map -20 to +3 VU to -45 to +45 degrees
-    const angle = ((clampedVu + 20) / 23) * 90 - 45;
-    needleEl.style.transform = `translateX(-50%) rotate(${angle}deg)`;
-  }
 
   // LUFS calculation using K-weighted analysers (ITU-R BS.1770-4 compliant)
   // Store block-based measurements for proper time windowing
@@ -4788,333 +3262,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   const LUFS_BLOCK_SIZE = 100; // ms per block (10 blocks per second)
   let lastLufsBlockTime = 0;
 
-  function updateLUFS(rmsL, rmsR, kWeightedAnalyserL = null, kWeightedAnalyserR = null) {
-    const now = performance.now();
-
-    // Use K-weighted analysers if available, otherwise fall back to RMS approximation
-    let msL, msR;
-
-    if (kWeightedAnalyserL && kWeightedAnalyserR) {
-      // Get time-domain data from K-weighted analysers
-      const bufferLength = kWeightedAnalyserL.fftSize;
-      const dataL = new Float32Array(bufferLength);
-      const dataR = new Float32Array(bufferLength);
-      kWeightedAnalyserL.getFloatTimeDomainData(dataL);
-      kWeightedAnalyserR.getFloatTimeDomainData(dataR);
-
-      // Calculate mean-square from K-weighted samples
-      let sumL = 0, sumR = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        sumL += dataL[i] * dataL[i];
-        sumR += dataR[i] * dataR[i];
-      }
-      msL = sumL / bufferLength;
-      msR = sumR / bufferLength;
-    } else {
-      // Fallback: approximate K-weighting with simple multiplier
-      const kWeightingFactor = 1.2;
-      msL = rmsL * rmsL * kWeightingFactor;
-      msR = rmsR * rmsR * kWeightingFactor;
-    }
-
-    // ITU-R BS.1770-4: Sum channels without attenuation for stereo
-    const summedMs = msL + msR;
-
-    // Convert to LUFS: -0.691 + 10 * log10(sum)
-    // The -0.691 offset aligns with ITU reference
-    const momentaryLufs = summedMs > 1e-10 ? -0.691 + 10 * Math.log10(summedMs) : -70;
-    const calibratedMomentary = momentaryLufs + calGainOffset;
-
-    // Store block measurements every LUFS_BLOCK_SIZE ms
-    if (now - lastLufsBlockTime >= LUFS_BLOCK_SIZE) {
-      lufsBlockHistory.push({ ms: summedMs, time: now });
-      lastLufsBlockTime = now;
-
-      // Keep 30 seconds of history for integrated measurement
-      const thirtySecondsAgo = now - 30000;
-      lufsBlockHistory = lufsBlockHistory.filter(b => b.time > thirtySecondsAgo);
-    }
-
-    // Momentary loudness: 400ms sliding window
-    const fourHundredMsAgo = now - 400;
-    const momentaryBlocks = lufsBlockHistory.filter(b => b.time > fourHundredMsAgo);
-    const momentaryMs = momentaryBlocks.length > 0
-      ? momentaryBlocks.reduce((sum, b) => sum + b.ms, 0) / momentaryBlocks.length
-      : summedMs;
-    const momentaryLufsDisplay = momentaryMs > 1e-10 ? -0.691 + 10 * Math.log10(momentaryMs) + calGainOffset : -70;
-
-    // Short-term loudness: 3 second sliding window
-    const threeSecondsAgo = now - 3000;
-    const shortTermBlocks = lufsBlockHistory.filter(b => b.time > threeSecondsAgo);
-    const shortTermMs = shortTermBlocks.length > 0
-      ? shortTermBlocks.reduce((sum, b) => sum + b.ms, 0) / shortTermBlocks.length
-      : summedMs;
-    const shortTermLufs = shortTermMs > 1e-10 ? -0.691 + 10 * Math.log10(shortTermMs) + calGainOffset : -70;
-
-    // Integrated loudness with ITU-R BS.1770-4 gating
-    // Stage 1: Absolute gate at -70 LUFS
-    const absoluteGate = Math.pow(10, (-70 + 0.691) / 10);
-    const stage1Blocks = lufsBlockHistory.filter(b => b.ms > absoluteGate);
-
-    // Stage 2: Relative gate at -10 LU below ungated average
-    let integratedLufs = -70;
-    if (stage1Blocks.length > 0) {
-      const ungatedMs = stage1Blocks.reduce((sum, b) => sum + b.ms, 0) / stage1Blocks.length;
-      const ungatedLufs = -0.691 + 10 * Math.log10(ungatedMs);
-      const relativeGate = Math.pow(10, (ungatedLufs - 10 + 0.691) / 10);
-
-      const stage2Blocks = stage1Blocks.filter(b => b.ms > relativeGate);
-      if (stage2Blocks.length > 0) {
-        const gatedMs = stage2Blocks.reduce((sum, b) => sum + b.ms, 0) / stage2Blocks.length;
-        integratedLufs = -0.691 + 10 * Math.log10(gatedMs) + calGainOffset;
-      }
-    }
-
-    // Loudness Range (LRA) - difference between 95th and 10th percentile of short-term
-    // Using simplified calculation from block history
-    const sortedMs = lufsBlockHistory.map(b => b.ms).sort((a, b) => a - b);
-    let lufsRange = 0;
-    if (sortedMs.length >= 10) {
-      const p10 = sortedMs[Math.floor(sortedMs.length * 0.1)];
-      const p95 = sortedMs[Math.floor(sortedMs.length * 0.95)];
-      if (p10 > 1e-10 && p95 > 1e-10) {
-        const p10Lufs = -0.691 + 10 * Math.log10(p10);
-        const p95Lufs = -0.691 + 10 * Math.log10(p95);
-        lufsRange = Math.max(0, p95Lufs - p10Lufs);
-      }
-    }
-
-    // Update display
-    const intEl = document.getElementById('lufsIntegrated');
-    const shortEl = document.getElementById('lufsShort');
-    const momEl = document.getElementById('lufsMomentary');
-    const rangeEl = document.getElementById('lufsRange');
-    const barEl = document.getElementById('lufsBarFill');
-
-    if (intEl) intEl.textContent = integratedLufs > -60 ? integratedLufs.toFixed(1) : '-∞';
-    if (shortEl) shortEl.textContent = shortTermLufs > -60 ? shortTermLufs.toFixed(1) : '-∞';
-    if (momEl) momEl.textContent = momentaryLufsDisplay > -60 ? momentaryLufsDisplay.toFixed(1) : '-∞';
-    if (rangeEl) rangeEl.textContent = isFinite(lufsRange) && lufsRange < 40 ? lufsRange.toFixed(1) + ' LU' : '0.0 LU';
-
-    // Update bar (map -60 to 0 LUFS to 0-100%)
-    if (barEl) {
-      const barPercent = Math.max(0, Math.min(100, ((integratedLufs + 60) / 60) * 100));
-      barEl.style.width = `${barPercent}%`;
-    }
-
-    // Color the main value based on DJ streaming safe zone (-18 to -10 LUFS, optimal -14)
-    if (intEl) {
-      intEl.classList.remove('lufs-safe', 'lufs-warning', 'lufs-danger', 'lufs-quiet');
-
-      if (integratedLufs > -8) {
-        intEl.classList.add('lufs-danger'); // Way too loud - red
-      } else if (integratedLufs > -10) {
-        intEl.classList.add('lufs-warning'); // Getting too loud - yellow
-      } else if (integratedLufs > -18) {
-        intEl.classList.add('lufs-safe'); // Safe zone -18 to -10 (optimal -14) - green
-      } else {
-        intEl.classList.add('lufs-quiet'); // Too quiet - grey
-      }
-    }
-  }
-
-  function updateCorrelation(dataL, dataR) {
-    // Calculate correlation coefficient
-    let sumL = 0, sumR = 0, sumLR = 0, sumL2 = 0, sumR2 = 0;
-    const n = Math.min(dataL.length, dataR.length);
-
-    for (let i = 0; i < n; i++) {
-      sumL += dataL[i];
-      sumR += dataR[i];
-      sumLR += dataL[i] * dataR[i];
-      sumL2 += dataL[i] * dataL[i];
-      sumR2 += dataR[i] * dataR[i];
-    }
-
-    const meanL = sumL / n;
-    const meanR = sumR / n;
-    const stdL = Math.sqrt(sumL2 / n - meanL * meanL);
-    const stdR = Math.sqrt(sumR2 / n - meanR * meanR);
-    const covariance = sumLR / n - meanL * meanR;
-
-    let correlation = 0;
-    if (stdL > 0 && stdR > 0) {
-      correlation = covariance / (stdL * stdR);
-    }
-
-    // Update correlation needle (-1 to +1 maps to 0% to 100%)
-    const needleEl = document.getElementById('correlationNeedle');
-    const fillEl = document.getElementById('correlationFill');
-
-    if (needleEl) {
-      const percent = ((correlation + 1) / 2) * 100;
-      needleEl.style.left = `${percent}%`;
-    }
-
-    // Fill shows deviation from mono (center)
-    if (fillEl) {
-      const fillWidth = Math.abs(correlation) * 50;
-      fillEl.style.width = `${fillWidth}%`;
-      if (correlation >= 0) {
-        fillEl.style.left = '50%';
-        fillEl.style.background = '#22c55e';
-      } else {
-        fillEl.style.left = `${50 - fillWidth}%`;
-        fillEl.style.background = '#ef4444';
-      }
-    }
-  }
-
-  function updateStereoScope(dataL, dataR) {
-    if (!stereoCanvasCtx) return;
-
-    const canvas = stereoCanvasCtx.canvas;
-    const w = canvas.width;
-    const h = canvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-
-    // Fade previous frame
-    stereoCanvasCtx.fillStyle = 'rgba(5, 5, 5, 0.3)';
-    stereoCanvasCtx.fillRect(0, 0, w, h);
-
-    // Draw crosshairs
-    stereoCanvasCtx.strokeStyle = '#222';
-    stereoCanvasCtx.lineWidth = 1;
-    stereoCanvasCtx.beginPath();
-    stereoCanvasCtx.moveTo(cx, 0);
-    stereoCanvasCtx.lineTo(cx, h);
-    stereoCanvasCtx.moveTo(0, cy);
-    stereoCanvasCtx.lineTo(w, cy);
-    stereoCanvasCtx.stroke();
-
-    // Draw Lissajous figure
-    stereoCanvasCtx.strokeStyle = '#22c55e';
-    stereoCanvasCtx.lineWidth = 1;
-    stereoCanvasCtx.beginPath();
-
-    const step = Math.max(1, Math.floor(dataL.length / 100));
-    for (let i = 0; i < dataL.length; i += step) {
-      const l = (dataL[i] / 255 - 0.5) * 2;
-      const r = (dataR[i] / 255 - 0.5) * 2;
-
-      // Rotate 45 degrees for M/S display
-      const x = cx + (l - r) * (w / 3);
-      const y = cy - (l + r) * (h / 3);
-
-      if (i === 0) {
-        stereoCanvasCtx.moveTo(x, y);
-      } else {
-        stereoCanvasCtx.lineTo(x, y);
-      }
-    }
-    stereoCanvasCtx.stroke();
-
-    // Draw glow dots at points
-    stereoCanvasCtx.fillStyle = 'rgba(34, 197, 94, 0.5)';
-    for (let i = 0; i < dataL.length; i += step * 2) {
-      const l = (dataL[i] / 255 - 0.5) * 2;
-      const r = (dataR[i] / 255 - 0.5) * 2;
-      const x = cx + (l - r) * (w / 3);
-      const y = cy - (l + r) * (h / 3);
-      stereoCanvasCtx.beginPath();
-      stereoCanvasCtx.arc(x, y, 2, 0, Math.PI * 2);
-      stereoCanvasCtx.fill();
-    }
-  }
-
-  // BUTT Waveform Visualizer
-  let buttWaveformCtx = null;
-  const buttWaveformSmoothed = new Array(64).fill(0);
-  const buttWaveformAttack = 0.08;
-  const buttWaveformDecay = 0.94;
-
-  function updateButtSpectrum(dataL, dataR) {
-    const canvas = document.getElementById('buttWaveformCanvas');
-    if (!canvas) return;
-
-    if (!buttWaveformCtx) {
-      buttWaveformCtx = canvas.getContext('2d');
-    }
-
-    const w = canvas.width;
-    const h = canvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-
-    // Clear with fade effect
-    buttWaveformCtx.fillStyle = 'rgba(5, 5, 5, 0.3)';
-    buttWaveformCtx.fillRect(0, 0, w, h);
-
-    // Combine L+R channels
-    const combined = new Uint8Array(dataL.length);
-    for (let i = 0; i < dataL.length; i++) {
-      combined[i] = Math.max(dataL[i], dataR[i]);
-    }
-
-    const numBars = 16;
-    const gap = 4;
-    const barWidth = (w - (numBars - 1) * gap) / numBars;
-    const binCount = combined.length;
-
-    // Draw mirrored bars from center
-    for (let i = 0; i < numBars; i++) {
-      const startBin = Math.floor((i / numBars) * binCount * 0.5);
-      const endBin = Math.floor(((i + 1) / numBars) * binCount * 0.5);
-
-      let sum = 0;
-      let count = 0;
-      for (let j = startBin; j <= endBin && j < binCount; j++) {
-        sum += combined[j];
-        count++;
-      }
-      const avg = count > 0 ? sum / count : 0;
-      const normalized = Math.pow(avg / 255, 0.85) * 0.9;
-      const targetHeight = normalized * (h / 2 - 6);
-
-      // Smooth
-      const smoothIdx = i;
-      buttWaveformSmoothed[smoothIdx] += (targetHeight - buttWaveformSmoothed[smoothIdx]) * buttWaveformAttack;
-      if (buttWaveformSmoothed[smoothIdx] > targetHeight) {
-        buttWaveformSmoothed[smoothIdx] *= buttWaveformDecay;
-      }
-
-      const barHeight = buttWaveformSmoothed[smoothIdx];
-      const x = i * (barWidth + gap);
-
-      // Create gradient for each bar
-      const gradient = buttWaveformCtx.createLinearGradient(0, cy - barHeight, 0, cy + barHeight);
-      gradient.addColorStop(0, '#dc2626');
-      gradient.addColorStop(0.3, '#ea580c');
-      gradient.addColorStop(0.5, '#eab308');
-      gradient.addColorStop(0.7, '#ea580c');
-      gradient.addColorStop(1, '#dc2626');
-
-      buttWaveformCtx.fillStyle = gradient;
-
-      // Draw bar going up with rounded ends
-      buttWaveformCtx.beginPath();
-      buttWaveformCtx.roundRect(x, cy - barHeight, barWidth, barHeight, 2);
-      buttWaveformCtx.fill();
-      // Draw bar going down (mirror)
-      buttWaveformCtx.beginPath();
-      buttWaveformCtx.roundRect(x, cy, barWidth, barHeight, 2);
-      buttWaveformCtx.fill();
-    }
-
-    // Draw center line
-    buttWaveformCtx.strokeStyle = 'rgba(220, 38, 38, 0.3)';
-    buttWaveformCtx.lineWidth = 1;
-    buttWaveformCtx.beginPath();
-    buttWaveformCtx.moveTo(0, cy);
-    buttWaveformCtx.lineTo(w, cy);
-    buttWaveformCtx.stroke();
-
-    // Add glow effect
-    buttWaveformCtx.shadowColor = '#dc2626';
-    buttWaveformCtx.shadowBlur = 10;
-  }
-  // =============== END BROADCAST AUDIO PANEL ===============
 
   async function loadStreamStatus(skipCache = false) {
     try {
@@ -5191,6 +3338,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Parse stream times
         if (currentStream.startedAt) {
           streamStartTime = new Date(currentStream.startedAt);
+          videoPlayer.setStreamStartTime(streamStartTime);
         }
 
         // Determine if this DJ has a booked slot
@@ -5221,6 +3369,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (baseEndTime > streamEndTime) {
           streamEndTime = baseEndTime;
         }
+        videoPlayer.setStreamEndTime(streamEndTime);
 
         const eventMode = isInEventMode();
         log(`[Stream] End time: ${streamEndTime.toLocaleTimeString()} | Event mode: ${eventMode} | Base: ${baseEndTime.toLocaleTimeString()}`);
@@ -5477,6 +3626,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         currentStream = null;
         streamStartTime = null;
         streamEndTime = null;
+        videoPlayer.setStreamStartTime(null);
+        videoPlayer.setStreamEndTime(null);
 
         // Cleanup livestream chat when stream ends
         cleanupLivestreamChat();
@@ -5758,595 +3909,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
   });
   
-  function updateTimeRemaining() {
-    const timeLeft = document.getElementById('timeLeft');
-    const headerTimeLeft = document.getElementById('headerTimeLeft');
-    const headerTimeRemaining = document.getElementById('headerTimeRemaining');
-
-    if (!streamEndTime) {
-      if (timeLeft) timeLeft.textContent = '--:--:--';
-      if (headerTimeLeft) headerTimeLeft.textContent = '--:--:--';
-      if (headerTimeRemaining) headerTimeRemaining.classList.add('hidden');
-      return;
-    }
-
-    const now = new Date();
-    const diff = streamEndTime - now;
-
-    if (diff <= 0) {
-      // Check if same DJ has next slot (continuous streaming)
-      if (currentStream && hasSameDjNextSlot(currentStream.djId, streamEndTime)) {
-        // Same DJ continues - recalculate end time and skip fade
-        log('[Stream] Same DJ has next slot, extending without transition');
-        const newEndTime = calculateContinuousEndTime(currentStream.djId, streamEndTime);
-        if (newEndTime > streamEndTime) {
-          streamEndTime = newEndTime;
-          // Reset fade state
-          isFadingOut = false;
-          const playerWrapper = document.querySelector('.preview-player');
-          if (playerWrapper) {
-            playerWrapper.classList.remove('fading-out', 'faded-out');
-          }
-          return; // Continue without fade
-        }
-      }
-
-      if (timeLeft) {
-        timeLeft.textContent = '00:00:00.0';
-        timeLeft.style.color = '#dc2626';
-      }
-      if (headerTimeLeft) {
-        headerTimeLeft.textContent = '00:00:00.0';
-        headerTimeLeft.classList.add('urgent');
-      }
-      // Skip fade if current user is the streaming DJ (they can see their own stream regardless of schedule)
-      // Also skip if the stream is a relay (relay streams continue until manually ended)
-      if (currentStream && (currentStream.djId === currentUser?.uid || currentStream.isRelay)) {
-        console.debug('[Stream DEBUG] Skipping fade - own stream or relay, djId:', currentStream.djId, 'isRelay:', currentStream.isRelay);
-        return;
-      }
-      // Trigger fade out when time is up (only if DJ is actually changing)
-      triggerStreamFadeOut();
-      return;
-    }
-
-    const hours = Math.floor(diff / 3600000);
-    const mins = Math.floor((diff % 3600000) / 60000);
-    const secs = Math.floor((diff % 60000) / 1000);
-    const tenths = Math.floor((diff % 1000) / 100); // 1-digit tenths of a second
-    const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${tenths}`;
-
-    if (timeLeft) timeLeft.textContent = timeStr;
-    if (headerTimeLeft) {
-      headerTimeLeft.textContent = timeStr;
-      if (hours === 0 && mins < 5) {
-        headerTimeLeft.classList.add('urgent');
-      } else {
-        headerTimeLeft.classList.remove('urgent');
-      }
-    }
-    if (headerTimeRemaining) headerTimeRemaining.classList.remove('hidden');
-
-    // Check if same DJ continues or if in event mode - skip countdown/fade animations
-    const sameDjContinues = currentStream && hasSameDjNextSlot(currentStream.djId, streamEndTime);
-    const inEventMode = isInEventMode();
-
-    // In event mode, never show mid-session transitions (only at very end of entire event)
-    // Also skip if viewing own stream or relay stream
-    const isOwnStreamOrRelay = currentStream && (currentStream.djId === currentUser?.uid || currentStream.isRelay);
-    const skipTransitions = sameDjContinues || inEventMode || isOwnStreamOrRelay;
-
-    // Start fade out in last 10 seconds (only if DJ changing and not in event mode mid-session)
-    if (diff <= 10000 && diff > 0 && !skipTransitions) {
-      startGradualFadeOut(diff / 10000);
-    }
-
-    if (mins < 5) {
-      if (timeLeft) timeLeft.style.color = '#dc2626';
-    } else {
-      if (timeLeft) timeLeft.style.color = '#fff';
-    }
-  }
 
   // Fade out video and audio gradually
   let isFadingOut = false;
-  function startGradualFadeOut(progress) {
-    console.debug('[Stream DEBUG] startGradualFadeOut called! progress:', progress);
-    const videoEl = document.getElementById('hlsVideo');
-    const audioEl = document.getElementById('audioElement');
-    const playerWrapper = document.querySelector('.preview-player');
 
-    // Calculate opacity and volume based on remaining time (1 = full, 0 = none)
-    const opacity = Math.max(0, progress);
-    const volume = Math.max(0, progress);
 
-    if (videoEl) {
-      videoEl.style.opacity = opacity;
-      videoEl.volume = volume;
-    }
-    if (audioEl) {
-      audioEl.volume = volume;
-    }
-    if (playerWrapper && !isFadingOut) {
-      playerWrapper.classList.add('fading-out');
-    }
-  }
-
-  // Trigger full fade out
-  function triggerStreamFadeOut() {
-    console.debug('[Stream DEBUG] triggerStreamFadeOut called! Stack:', new Error().stack?.split('\n').slice(0, 5));
-    console.debug('[Stream DEBUG] streamEndTime:', streamEndTime, 'now:', new Date());
-    if (isFadingOut) return;
-    isFadingOut = true;
-
-    const videoEl = document.getElementById('hlsVideo');
-    const audioEl = document.getElementById('audioElement');
-    const playerWrapper = document.querySelector('.preview-player');
-
-    if (playerWrapper) {
-      playerWrapper.classList.add('faded-out');
-    }
-    if (videoEl) {
-      videoEl.style.opacity = '0';
-      videoEl.volume = 0;
-    }
-    if (audioEl) {
-      audioEl.volume = 0;
-    }
-  }
-
-  // Fade in new stream
-  function triggerStreamFadeIn() {
-    isFadingOut = false;
-    const videoEl = document.getElementById('hlsVideo');
-    const audioEl = document.getElementById('audioElement');
-    const playerWrapper = document.querySelector('.preview-player');
-
-    if (playerWrapper) {
-      playerWrapper.classList.remove('fading-out', 'faded-out');
-      playerWrapper.classList.add('fading-in');
-    }
-    if (videoEl) {
-      videoEl.style.opacity = '0';
-      videoEl.style.transition = 'opacity 2s ease-in';
-      setTimeout(() => {
-        videoEl.style.opacity = '1';
-        videoEl.volume = 1;
-      }, 100);
-    }
-    if (audioEl) {
-      audioEl.volume = 0;
-      // Gradually increase volume over 2 seconds
-      let vol = 0;
-      const fadeInInterval = setInterval(() => {
-        vol += 0.05;
-        if (vol >= 1) {
-          vol = 1;
-          clearInterval(fadeInInterval);
-        }
-        audioEl.volume = vol;
-      }, 100);
-    }
-
-    // Remove fade-in class after animation
-    setTimeout(() => {
-      playerWrapper?.classList.remove('fading-in');
-    }, 2000);
-  }
-  
-  async function loadMySlot() {
-    try {
-      const now = new Date();
-      const end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      
-      const response = await fetch(`/api/livestream/slots/?start=${now.toISOString()}&end=${end.toISOString()}&djId=${currentUser.uid}`);
-      const result = await response.json();
-      
-      if (result.success && result.slots && result.slots.length > 0) {
-        // Sort by startTime to get the earliest upcoming slot
-        const sortedSlots = result.slots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-        mySlot = sortedSlots[0];
-        checkStreamKeyAvailability();
-      } else {
-        mySlot = null;
-        showKeyNotAvailable();
-      }
-    } catch (e) {
-      console.error('Load slot error:', e);
-    }
-  }
-
-  // Load all scheduled slots for today (for consecutive slot detection)
-  async function loadAllSlots() {
-    try {
-      const now = new Date();
-      const end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const response = await fetch(`/api/livestream/slots/?start=${now.toISOString()}&end=${end.toISOString()}`);
-      const result = await response.json();
-      if (result.success && result.slots) {
-        allDjSlots = result.slots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-      }
-    } catch (e) {
-      console.error('Load all slots error:', e);
-    }
-  }
-
-  // Calculate the continuous end time for a DJ (accounting for consecutive slots)
-  function calculateContinuousEndTime(djId, currentEndTime) {
-    if (!allDjSlots || allDjSlots.length === 0) return currentEndTime;
-
-    let endTime = new Date(currentEndTime);
-    const djSlots = allDjSlots.filter(s => s.djId === djId);
-
-    // Sort slots by start time
-    djSlots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-
-    // Find consecutive slots from current end time
-    let extended = true;
-    while (extended) {
-      extended = false;
-      for (const slot of djSlots) {
-        const slotStart = new Date(slot.startTime);
-        const slotEnd = new Date(slot.endTime);
-
-        // Check if this slot starts at or very close to current end time (within 5 min tolerance)
-        const gap = Math.abs(slotStart.getTime() - endTime.getTime());
-        if (gap <= 5 * 60 * 1000 && slotEnd > endTime) {
-          endTime = slotEnd;
-          extended = true;
-          log(`[Slots] Extended end time to ${slotEnd.toLocaleTimeString()} for consecutive slot`);
-        }
-      }
-    }
-
-    return endTime;
-  }
-
-  // Check if same DJ has the next slot (for continuous streaming without fade)
-  function hasSameDjNextSlot(djId, currentEndTime) {
-    if (!allDjSlots || allDjSlots.length === 0) return false;
-
-    const endTime = new Date(currentEndTime);
-
-    // Find slot that starts at or right after current end time
-    for (const slot of allDjSlots) {
-      const slotStart = new Date(slot.startTime);
-      const gap = Math.abs(slotStart.getTime() - endTime.getTime());
-
-      // If there's a slot starting within 5 minutes of end time
-      if (gap <= 5 * 60 * 1000 && slot.djId === djId) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // Check if this is an event session (long booking or multi-hour event)
-  // Events run continuously without any breaks/transitions
-  function isEventSession(djId, streamStart) {
-    if (!allDjSlots || allDjSlots.length === 0) return null;
-
-    const djSlots = allDjSlots.filter(s => s.djId === djId && ['scheduled', 'live', 'in_lobby'].includes(s.status));
-    if (djSlots.length === 0) return null;
-
-    // Sort by start time
-    djSlots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-
-    // Find the slot that covers or is closest to the stream start
-    const start = new Date(streamStart);
-    let eventSlot = null;
-
-    for (const slot of djSlots) {
-      const slotStart = new Date(slot.startTime);
-      const slotEnd = new Date(slot.endTime);
-
-      // Check if stream started during or just before this slot
-      if (start >= new Date(slotStart.getTime() - 15 * 60000) && start < slotEnd) {
-        eventSlot = slot;
-        break;
-      }
-    }
-
-    if (!eventSlot) return null;
-
-    // Check if this is a long booking (2+ hours = event)
-    const duration = eventSlot.duration ||
-      (new Date(eventSlot.endTime) - new Date(eventSlot.startTime)) / 60000;
-
-    if (duration >= 120) {
-      // This is an event - single long booking
-      return {
-        isEvent: true,
-        startTime: new Date(eventSlot.startTime),
-        endTime: new Date(eventSlot.endTime),
-        totalDuration: duration,
-        slots: [eventSlot]
-      };
-    }
-
-    // Check for consecutive slots (multiple hours booked back-to-back = event)
-    let eventEnd = new Date(eventSlot.endTime);
-    let eventSlots = [eventSlot];
-    let totalDuration = duration;
-
-    for (const slot of djSlots) {
-      if (slot.id === eventSlot.id) continue;
-      const slotStart = new Date(slot.startTime);
-      const slotEnd = new Date(slot.endTime);
-      const slotDuration = slot.duration || (slotEnd - slotStart) / 60000;
-
-      // Check if this slot is consecutive (within 5 min)
-      const gap = Math.abs(slotStart.getTime() - eventEnd.getTime());
-      if (gap <= 5 * 60000 && slotEnd > eventEnd) {
-        eventSlots.push(slot);
-        eventEnd = slotEnd;
-        totalDuration += slotDuration;
-      }
-    }
-
-    // If total consecutive time is 2+ hours, treat as event
-    if (totalDuration >= 120 || eventSlots.length >= 2) {
-      return {
-        isEvent: true,
-        startTime: new Date(eventSlot.startTime),
-        endTime: eventEnd,
-        totalDuration,
-        slots: eventSlots
-      };
-    }
-
-    return null;
-  }
-
-  // Calculate max allowed streaming time for a DJ (based on subscription + whether they have next slot)
-  function calculateMaxStreamEndTime(djId, streamStart, hasBookedSlot) {
-    const start = new Date(streamStart);
-    const now = new Date();
-
-    // Check if this is an event session
-    const eventSession = isEventSession(djId, streamStart);
-    if (eventSession && eventSession.isEvent) {
-      currentEventSession = eventSession;
-      log(`[Stream] Event session detected: ${eventSession.totalDuration} minutes total`);
-      return eventSession.endTime;
-    }
-
-    currentEventSession = null;
-
-    // For non-event streams, calculate based on rules:
-    // Free DJ (no booking): current hour + next hour (max 2 hours)
-    // Pro/Paid DJ: current hour + next 2 hours (max 3 hours)
-
-    // End of current hour
-    const endOfCurrentHour = new Date(start);
-    endOfCurrentHour.setMinutes(0, 0, 0);
-    endOfCurrentHour.setHours(endOfCurrentHour.getHours() + 1);
-
-    // If they have booked slots, use those
-    if (hasBookedSlot) {
-      const continuousEnd = calculateContinuousEndTime(djId, endOfCurrentHour);
-      return continuousEnd;
-    }
-
-    // For unbooked streams:
-    const isPro = userSubscription?.isPro || false;
-    const extraHours = isPro ? 2 : 1; // Pro gets +2 hours, Free gets +1 hour
-
-    // Check if they have the next slot(s) booked
-    const hasNextHour = hasSameDjNextSlot(djId, endOfCurrentHour);
-
-    if (hasNextHour) {
-      // They have next hour booked, extend to end of that
-      const continuousEnd = calculateContinuousEndTime(djId, endOfCurrentHour);
-      return continuousEnd;
-    }
-
-    // No booking - allow current hour + extra based on tier
-    const maxEnd = new Date(endOfCurrentHour);
-    maxEnd.setHours(maxEnd.getHours() + extraHours);
-
-    log(`[Stream] Max end time: ${maxEnd.toLocaleTimeString()} (${isPro ? 'Pro' : 'Free'} tier)`);
-    return maxEnd;
-  }
-
-  // Check if stream should have transitions disabled (event mode)
-  function isInEventMode() {
-    return currentEventSession && currentEventSession.isEvent;
-  }
-
-  // Format duration in days, hours, minutes
-  function formatDuration(totalMinutes) {
-    if (totalMinutes <= 0) return '0 minutes';
-    
-    const days = Math.floor(totalMinutes / 1440);
-    const hours = Math.floor((totalMinutes % 1440) / 60);
-    const mins = totalMinutes % 60;
-    
-    const parts = [];
-    if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
-    if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
-    if (mins > 0 || parts.length === 0) parts.push(`${mins} minute${mins !== 1 ? 's' : ''}`);
-    
-    return parts.join(', ');
-  }
-  
-  function showKeyNotAvailable() {
-    // Called when user has no booked slot
-    const slotTimeDisplay = document.getElementById('slotTimeDisplay');
-    const countdownEl = document.getElementById('countdownToSlot');
-    const streamKeyEl = document.getElementById('myStreamKey');
-    const setReadyBtn = document.getElementById('setReadyBtn');
-
-    // If no DJ is currently live, allow instant booking via I'm Ready button
-    if (!currentStream) {
-      if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
-      if (countdownEl) countdownEl.textContent = 'Press I\'m Ready to go live now';
-
-      if (streamKeyEl) {
-        streamKeyEl.classList.remove('key-loading');
-        streamKeyEl.classList.add('key-unavailable');
-        streamKeyEl.innerHTML = '<span class="key-no-slot">Click Spawn</span>';
-      }
-
-      // Enable the Ready button - it will auto-book a slot
-      if (setReadyBtn) {
-        setReadyBtn.disabled = false;
-        setReadyBtn.classList.add('glow');
-        setReadyBtn.title = 'Click to auto-book a slot and go live';
-      }
-    } else {
-      // DJ is live - need to book or wait
-      if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
-      if (countdownEl) countdownEl.textContent = 'Book a slot to go live';
-
-      if (streamKeyEl) {
-        streamKeyEl.classList.remove('key-loading');
-        streamKeyEl.classList.add('key-unavailable');
-        streamKeyEl.innerHTML = '<span class="key-no-slot">Book a slot first</span>';
-      }
-
-      // Disable the Ready button when no slot and DJ is live
-      if (setReadyBtn) {
-        setReadyBtn.disabled = true;
-        setReadyBtn.classList.remove('glow');
-        setReadyBtn.title = 'You need to book a slot first';
-      }
-    }
-  }
-
-  function checkStreamKeyAvailability() {
-    const keyStatus = document.getElementById('keyStatus');
-    const slotTimeDisplay = document.getElementById('slotTimeDisplay');
-    const countdownEl = document.getElementById('countdownToSlot');
-    const streamKeyEl = document.getElementById('myStreamKey');
-
-    // If user has a booked slot, show slot info
-    if (mySlot) {
-      const now = new Date();
-      const slotStart = new Date(mySlot.startTime);
-      const slotEnd = new Date(mySlot.endTime);
-
-      if (slotTimeDisplay) {
-        slotTimeDisplay.textContent =
-          `Your slot: ${slotStart.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${slotEnd.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
-      }
-
-      const minsUntil = Math.ceil((slotStart - now) / 60000);
-      if (countdownEl) {
-        if (minsUntil > 0) {
-          countdownEl.textContent = `Starts in ${formatDuration(minsUntil)}`;
-          countdownEl.classList.remove('slot-now');
-        } else if (now < slotEnd) {
-          countdownEl.textContent = `Your slot is NOW!`;
-          countdownEl.classList.add('slot-now');
-        } else {
-          countdownEl.textContent = '';
-          countdownEl.classList.remove('slot-now');
-        }
-      }
-
-      // If slot has a stream key, use it
-      if (mySlot.streamKey) {
-        currentStreamKey = mySlot.streamKey;
-        updateButtPassword(currentStreamKey); // Update BUTT password field
-        // Only animate if not already displayed
-        if (!streamKeyDisplayed && streamKeyEl) {
-          streamKeyEl.classList.remove('key-loading', 'key-unavailable');
-          streamKeyEl.classList.add('key-reveal');
-          streamKeyEl.textContent = '';
-          const keySpan = document.createElement('span');
-          keySpan.className = 'key-text';
-          keySpan.textContent = mySlot.streamKey;
-          streamKeyEl.appendChild(keySpan);
-          streamKeyDisplayed = true;
-        }
-        // Start checking for OBS preview stream
-        startObsPreviewCheck();
-      } else {
-        // Slot exists but no key yet - generate one
-        log('[checkStreamKeyAvailability] Slot found but no key, generating...');
-        loadStreamKeyForGoLive();
-      }
-
-      // Enable the Ready button when slot is booked
-      const setReadyBtn = document.getElementById('setReadyBtn');
-      if (setReadyBtn && !setReadyBtn.classList.contains('is-ready-state') && !setReadyBtn.classList.contains('is-ready')) {
-        setReadyBtn.disabled = false;
-        setReadyBtn.classList.add('glow');
-        setReadyBtn.title = '';
-      }
-    } else {
-      // No booked slot - check if DJ is live to decide on auto-book
-      const setReadyBtn = document.getElementById('setReadyBtn');
-
-      if (!currentStream) {
-        // No DJ live - allow instant booking via I'm Ready
-        if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
-        if (countdownEl) countdownEl.textContent = 'Press I\'m Ready to go live now';
-
-        if (streamKeyEl) {
-          streamKeyEl.classList.remove('key-loading');
-          streamKeyEl.classList.add('key-unavailable');
-          streamKeyEl.innerHTML = '<span class="key-no-slot">Click Spawn</span>';
-        }
-
-        // Enable the Ready button - it will auto-book a slot
-        if (setReadyBtn && !setReadyBtn.classList.contains('is-ready-state') && !setReadyBtn.classList.contains('is-ready')) {
-          setReadyBtn.disabled = false;
-          setReadyBtn.classList.add('glow');
-          setReadyBtn.title = 'Click to auto-book a slot and go live';
-        }
-      } else {
-        // DJ is live - need to book or wait
-        if (slotTimeDisplay) slotTimeDisplay.textContent = 'No slot booked';
-        if (countdownEl) countdownEl.textContent = 'Book a slot to go live';
-
-        if (streamKeyEl) {
-          streamKeyEl.classList.remove('key-loading');
-          streamKeyEl.classList.add('key-unavailable');
-          streamKeyEl.innerHTML = '<span class="key-no-slot">Book a slot first</span>';
-        }
-
-        // Disable the Ready button when no slot and DJ is live
-        if (setReadyBtn) {
-          setReadyBtn.disabled = true;
-          setReadyBtn.classList.remove('glow');
-          setReadyBtn.title = 'You need to book a slot first';
-        }
-      }
-    }
-  }
-
-  async function fetchStreamKey() {
-    try {
-      const token = await currentUser.getIdToken();
-      const response = await fetch('/api/livestream/slots/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action: 'getStreamKey', slotId: mySlot.id, djId: currentUser.uid })
-      });
-      
-      const result = await response.json();
-      if (result.success && result.streamKey) {
-        const keyEl = document.getElementById('myStreamKey');
-        if (keyEl) {
-          keyEl.classList.remove('key-loading');
-          keyEl.classList.add('key-reveal');
-          keyEl.textContent = '';
-          const keySpan = document.createElement('span');
-          keySpan.className = 'key-text';
-          keySpan.textContent = result.streamKey;
-          keyEl.appendChild(keySpan);
-        }
-        mySlot.streamKey = result.streamKey;
-        currentStreamKey = result.streamKey;
-        updateButtPassword(result.streamKey); // Update BUTT password field
-      }
-    } catch (e) {
-      console.error('Fetch key error:', e);
-    }
-  }
-  
   // REPLACED BY PUSHER MODULE - takeover events now handled via private Pusher channel
   // function subscribeToTakeover() { ... }
   
@@ -6417,37 +3984,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     mic: '🎤', leaf: '🌿', gorilla: '🦍', spider: '🕷️', alien: '👽'
   };
 
-  // ============================================
-  // DM SYSTEM
-  // ============================================
   
-  function getDmChannelId(uid1, uid2) {
-    // Create consistent channel ID regardless of who initiates
-    return [uid1, uid2].sort().join('_');
-  }
-  
-  function openDmModal() {
-    console.debug('[DM] openDmModal called');
-    try {
-      const modal = document.getElementById('dmModal');
-      const selectView = document.getElementById('dmSelectView');
-      const chatView = document.getElementById('dmChatView');
-
-      if (!modal) {
-        console.error('[DM] dmModal element not found');
-        return;
-      }
-
-      console.debug('[DM] Modal found, removing hidden class');
-      modal.classList.remove('hidden');
-      selectView?.classList.remove('hidden');
-      chatView?.classList.add('hidden');
-      populateDmDjList();
-      console.debug('[DM] Modal opened successfully');
-    } catch (e) {
-      console.error('[DM] Error opening modal:', e);
-    }
-  }
   // Attach DM button click handler
   document.getElementById('openDmBtn')?.addEventListener('click', () => {
     console.debug('[DM] Button clicked');
@@ -6455,558 +3992,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   });
   console.debug('[DM] openDmModal listener attached');
   
-  function closeDmModal() {
-    document.getElementById('dmModal')?.classList.add('hidden');
-
-    // Clean up DM messages from Firestore
-    if (dmTargetDj && currentUser) {
-      cleanupDmMessages();
-    }
-
-    // Unsubscribe from DM listener
-    if (dmUnsubscribe) {
-      dmUnsubscribe();
-      dmUnsubscribe = null;
-    }
-
-    // Reset state
-    dmTargetDj = null;
-    dmMessages = [];
-    const dmMessagesEl = document.getElementById('dmMessages');
-    if (dmMessagesEl) {
-      dmMessagesEl.innerHTML = `
-        <div class="dm-welcome">
-          <p>Start a private conversation</p>
-          <p class="hint">Only you and this DJ can see these messages.</p>
-        </div>
-      `;
-    }
-  }
   
-  function populateDmDjList() {
-    const list = document.getElementById('dmDjList');
-    const otherDjs = onlineDjsCache.filter(dj => dj.odamiMa !== currentUser?.uid);
-    
-    if (otherDjs.length === 0) {
-      list.innerHTML = '<p class="empty-state">No other DJs online</p>';
-      return;
-    }
-    
-    list.innerHTML = otherDjs.map(dj => {
-      const avatarLetter = dj.avatarLetter || (dj.name ? dj.name.charAt(0).toUpperCase() : 'D');
-      const hasAvatar = dj.avatar && dj.avatar !== '/place-holder.webp';
-      const isLive = currentStream && currentStream.djId === dj.odamiMa;
-      
-      return `
-        <div class="dm-dj-item" data-dj-id="${dj.odamiMa}" data-dj-name="${escapeHtml(dj.name || 'DJ')}" data-dj-avatar="${escapeHtml(dj.avatar || '')}" data-dj-letter="${escapeHtml(avatarLetter)}">
-          ${hasAvatar
-            ? `<img src="${escapeHtml(dj.avatar)}" alt="" data-fallback="show-next" /><span class="dm-dj-avatar-letter" style="display:none;">${escapeHtml(avatarLetter)}</span>`
-            : `<span class="dm-dj-avatar-letter">${escapeHtml(avatarLetter)}</span>`
-          }
-          <div class="dm-dj-info">
-            <div class="dm-dj-name">${escapeHtml(dj.name || 'DJ')}</div>
-            <div class="dm-dj-status">${isLive ? '🔴 Live now' : 'Online'}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-    
-    // Add click handlers
-    list.querySelectorAll('.dm-dj-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const djId = item.dataset.djId;
-        const djName = item.dataset.djName;
-        const djAvatar = item.dataset.djAvatar;
-        const djLetter = item.dataset.djLetter;
-        selectDmTarget(djId, djName, djAvatar, djLetter);
-      });
-    });
-  }
-  
-  function selectDmTarget(djId, djName, djAvatar, djLetter) {
-    // Use Pusher module to handle DM conversation
-    openDmConversation({ id: djId, name: djName, avatar: djAvatar, letter: djLetter });
-    
-    // Update local reference for UI
-    dmTargetDj = { id: djId, name: djName, avatar: djAvatar, letter: djLetter };
-    
-    // Switch to chat view
-    document.getElementById('dmSelectView').classList.add('hidden');
-    document.getElementById('dmChatView').classList.remove('hidden');
-    document.getElementById('dmChatWithName').textContent = djName;
-  }
-  
-  function goBackToDmList() {
-    // Use Pusher module to close DM
-    closeDmModal();
-    
-    dmTargetDj = null;
-    
-    // Switch to selection view
-    document.getElementById('dmChatView').classList.add('hidden');
-    document.getElementById('dmSelectView').classList.remove('hidden');
-    populateDmDjList();
-  }
-  
-  // REPLACED BY PUSHER MODULE - DM messages now handled via Pusher channel
-  // function subscribeToDmChannel() { ... }
-  
-  // REPLACED BY PUSHER MODULE - DM rendering now handled by dj-lobby-pusher.js
-  // function renderDmMessages() { ... }
-  
-  function renderDmMessages() {
-    const container = document.getElementById('dmMessages');
-    
-    if (dmMessages.length === 0) {
-      container.innerHTML = `
-        <div class="dm-welcome">
-          <p>Start a private conversation</p>
-          <p class="hint">Only you and this DJ can see these messages.</p>
-        </div>
-      `;
-      return;
-    }
-    
-    container.innerHTML = dmMessages.map(msg => {
-      const isSent = msg.senderId === currentUser?.uid;
-      const time = msg.createdAt?.toDate ? 
-        msg.createdAt.toDate().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-      
-      return `
-        <div class="dm-message ${isSent ? 'sent' : ''}">
-          <div class="dm-message-content">
-            <div class="dm-message-name">${isSent ? 'You' : escapeHtml(msg.senderName || 'DJ')}</div>
-            <div class="dm-message-text">${escapeHtml(msg.text)}</div>
-            <div class="dm-message-time">${time}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-    
-    container.scrollTop = container.scrollHeight;
-  }
-  
-  async function sendDmMessage() {
-    const input = document.getElementById('dmInput');
-    const text = input.value.trim();
-    if (!text) return;
-    
-    input.value = '';
-    
-    try {
-      // Use Pusher module to send DM (handles API + Pusher broadcast)
-      await sendDm(text);
-    } catch (e) {
-      console.error('DM send error:', e);
-      input.value = text;
-    }
-  }
-  
-  async function cleanupDmMessages() {
-    if (!dmTargetDj || !currentUser) return;
-
-    try {
-      const channelId = getDmChannelId(currentUser.uid, dmTargetDj.id);
-      const token = await currentUser.getIdToken();
-
-      await fetch('/api/dj-lobby/dm-cleanup/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ channelId })
-      });
-    } catch (e) {
-      console.error('DM cleanup error:', e);
-    }
-  }
-  
-  // REPLACED BY PUSHER MODULE - DM notifications now handled via private Pusher channel
-  // function subscribeToIncomingDms() { ... }
-  
-  function showDmNotification(senderId, senderName, message) {
-    const notif = document.getElementById('dmNotification');
-    const text = document.getElementById('dmNotifText');
-    
-    text.textContent = `New DM from ${senderName}`;
-    notif.dataset.senderId = senderId;
-    notif.dataset.senderName = senderName;
-    notif.classList.remove('hidden');
-    
-    // Auto-hide after 10 seconds
-    setTimeout(() => {
-      notif.classList.add('hidden');
-    }, 10000);
-  }
-  
-  function openDmFromNotification() {
-    const notif = document.getElementById('dmNotification');
-    const senderId = notif.dataset.senderId;
-    const senderName = notif.dataset.senderName;
-    
-    notif.classList.add('hidden');
-    
-    // Find the sender in online DJs cache
-    const senderDj = onlineDjsCache.find(dj => dj.odamiMa === senderId);
-    if (senderDj) {
-      openDmModal();
-      const avatarLetter = senderDj.avatarLetter || (senderDj.name ? senderDj.name.charAt(0).toUpperCase() : 'D');
-      selectDmTarget(senderId, senderDj.name || senderName, senderDj.avatar || '', avatarLetter);
-    } else {
-      // DJ went offline, just open modal
-      openDmModal();
-    }
-  }
-
-  // ==========================================
-  // GO LIVE MODAL
-  // ==========================================
-
-  // currentStreamKey is now initialized earlier (line ~820) with test mode support
-  let streamKeyValidUntil = null;
-  let streamKeyDisplayed = false; // Flag to prevent re-animation of stream key
-  let currentStreamSource = 'obs'; // 'obs' or 'relay'
-  let approvedRelayData = null;
-
-  async function openGoLiveInline() {
-    // Check if someone else is already streaming
-    if (currentStream && currentStream.djId !== currentUser.uid) {
-      alert('Someone is already live! Use the Takeover feature if you want to take over.');
-      return;
-    }
-
-    // Generate/fetch stream key if needed
-    if (!currentStreamKey) {
-      document.getElementById('keyStatus').textContent = 'Loading...';
-      await loadStreamKeyForGoLive();
-    }
-
-    // Scroll to the Go Live section
-    const keySection = document.getElementById('streamKeySection');
-    keySection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Update status
-    document.getElementById('keyStatus').textContent = 'Ready';
-    document.getElementById('keyStatus').className = 'key-status ready';
-  }
-
-  async function loadStreamKeyForGoLive() {
-    const inlineKeyEl = document.getElementById('myStreamKey');
-
-    // FIRST: Check if user has a booked slot - no slot means no key
-    if (!mySlot) {
-      log('[GoLive] No booked slot - showing placeholder');
-      if (inlineKeyEl) {
-        inlineKeyEl.classList.remove('key-loading');
-        inlineKeyEl.classList.add('key-unavailable');
-        // Different message based on whether someone is live
-        if (currentStream) {
-          inlineKeyEl.innerHTML = '<span class="key-no-slot">Book a slot first</span>';
-        } else {
-          inlineKeyEl.innerHTML = '<span class="key-no-slot">Press I\'m Ready to go live</span>';
-        }
-      }
-      return;
-    }
-
-    // If the booked slot already has a stream key, use it
-    if (mySlot.streamKey) {
-      log('[GoLive] Using stream key from booked slot:', mySlot.id);
-      currentStreamKey = mySlot.streamKey;
-      updateButtPassword(mySlot.streamKey); // Update BUTT password field
-      if (inlineKeyEl && !streamKeyDisplayed) {
-        // Show spawning animation first
-        inlineKeyEl.classList.add('key-loading');
-        inlineKeyEl.classList.remove('key-reveal', 'key-unavailable');
-        inlineKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
-        // Wait 5 seconds for animation before revealing
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        inlineKeyEl.classList.remove('key-loading');
-        inlineKeyEl.classList.add('key-reveal');
-        inlineKeyEl.textContent = '';
-        const keySpan = document.createElement('span');
-        keySpan.className = 'key-text';
-        keySpan.textContent = mySlot.streamKey;
-        inlineKeyEl.appendChild(keySpan);
-        streamKeyDisplayed = true;
-      }
-      startObsPreviewCheck();
-      return;
-    }
-
-    // If key is already displayed, don't re-animate but ensure preview check is running
-    if (streamKeyDisplayed && currentStreamKey) {
-      log('[GoLive] Stream key already displayed, skipping animation');
-      startObsPreviewCheck();
-      return;
-    }
-
-    // Show spawning animation - we have a slot but need to generate a key
-    if (inlineKeyEl) {
-      inlineKeyEl.classList.add('key-loading');
-      inlineKeyEl.classList.remove('key-reveal', 'key-unavailable');
-      inlineKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
-    }
-
-    // Minimum animation duration (5 seconds) for visual effect
-    const minAnimationTime = 5000;
-    const animationStart = Date.now();
-
-    try {
-      log('[GoLive] Step 1: Getting ID token...');
-      if (!currentUser) {
-        throw new Error('No authenticated user');
-      }
-      const token = await currentUser.getIdToken();
-      log('[GoLive] Step 2: Got token, preparing request...');
-
-      if (!userInfo || !userInfo.name) {
-        throw new Error('User info not loaded yet');
-      }
-      log('[GoLive] Step 3: User info ready, name:', userInfo.name);
-
-      // Request a new stream key for the booked slot
-      log('[GoLive] Step 4: Making API request for slot:', mySlot.id);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-
-      const response = await fetch('/api/livestream/slots/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          action: 'generate_key',
-          djId: currentUser.uid,
-          djName: userInfo.name,
-          slotId: mySlot.id  // Pass the slot ID so key is tied to this booking
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      log('[GoLive] Step 5: Got response, status:', response.status);
-
-      const result = await response.json();
-      log('[GoLive] Step 6: Parsed response:', result.success ? 'success' : result.error);
-
-      // Wait for minimum animation time before revealing
-      const elapsed = Date.now() - animationStart;
-      if (elapsed < minAnimationTime) {
-        await new Promise(resolve => setTimeout(resolve, minAnimationTime - elapsed));
-      }
-
-      if (result.success && result.streamKey) {
-        currentStreamKey = result.streamKey;
-        streamKeyValidUntil = result.validUntil;
-        updateButtPassword(result.streamKey); // Update BUTT password field
-
-        // Update mySlot with the new key
-        mySlot.streamKey = result.streamKey;
-
-        if (inlineKeyEl) {
-          inlineKeyEl.classList.remove('key-loading');
-          inlineKeyEl.classList.add('key-reveal');
-          inlineKeyEl.textContent = '';
-          const keySpan = document.createElement('span');
-          keySpan.className = 'key-text';
-          keySpan.textContent = result.streamKey;
-          inlineKeyEl.appendChild(keySpan);
-          streamKeyDisplayed = true; // Mark as displayed to prevent re-animation
-        }
-        log('[GoLive] New stream key generated for slot:', mySlot.id, 'valid until:', result.validUntil);
-        // Start checking for OBS preview stream
-        startObsPreviewCheck();
-      } else {
-        if (inlineKeyEl) {
-          inlineKeyEl.classList.remove('key-loading');
-          inlineKeyEl.classList.remove('key-reveal');
-          inlineKeyEl.textContent = 'Error - try again';
-        }
-        console.error('[GoLive] Failed to generate key:', result.error);
-      }
-    } catch (error) {
-      console.error('[GoLive] Error loading stream key:', error);
-      const errMsg = error instanceof Error ? error.message : String(error);
-      const errName = error instanceof Error ? error.name : '';
-      log('[GoLive] ERROR at stream key generation:', errMsg || errName);
-      if (inlineKeyEl) {
-        inlineKeyEl.classList.remove('key-loading');
-        inlineKeyEl.classList.remove('key-reveal');
-        // Show more helpful error message
-        let errorMsg = 'Error - click to retry';
-        if (errName === 'AbortError') {
-          errorMsg = 'Timeout - click to retry';
-        } else if (errMsg?.includes('User info')) {
-          errorMsg = 'Please wait...';
-        } else if (errMsg?.includes('authenticated')) {
-          errorMsg = 'Please log in again';
-        }
-        inlineKeyEl.innerHTML = `<span style="color: #ff6b6b; cursor: pointer;" id="streamKeyRetryBtn">${errorMsg}</span>`;
-        document.getElementById('streamKeyRetryBtn')?.addEventListener('click', () => loadStreamKeyForGoLive());
-      }
-    }
-  }
-
-  async function handleGoLiveReady() {
-    // Use GainNode to silence relay audio without breaking Web Audio API analyser
-    // Setting element.volume=0 can break analyser on some browsers
-    const relayAudio = document.getElementById('relayAudio');
-    console.debug('[GoLive] Relay audio element:', relayAudio, 'paused:', relayAudio?.paused);
-    console.debug('[GoLive] currentPreviewSource:', currentPreviewSource);
-    console.debug('[GoLive] icecastAudioContext:', icecastAudioContext?.state);
-    console.debug('[GoLive] icecastAnalyserL:', !!icecastAnalyserL, 'icecastAnalyserR:', !!icecastAnalyserR);
-    console.debug('[GoLive] icecastGainNode:', !!icecastGainNode);
-
-    if (relayAudio && !relayAudio.paused) {
-      // Use GainNode to mute - keeps audio flowing through analyser
-      if (icecastGainNode) {
-        icecastGainNode.gain.value = 0;
-        console.debug('[GoLive] Set GainNode to 0 (audio still flows to analyser)');
-      } else {
-        // Fallback to volume if GainNode not available
-        relayAudio.volume = 0;
-        console.debug('[GoLive] Fallback: Set relay audio volume to 0');
-      }
-
-      // Resume audio context if suspended (required for meters to work)
-      if (icecastAudioContext && icecastAudioContext.state === 'suspended') {
-        await icecastAudioContext.resume();
-        console.debug('[GoLive] Resumed icecast audio context, new state:', icecastAudioContext.state);
-      }
-
-      // Ensure meters are running for relay mode
-      if (icecastAnalyserL && icecastAnalyserR) {
-        console.debug('[GoLive] Analysers available, liveMeterAnimationId:', liveMeterAnimationId, 'broadcastMeterAnimationId:', broadcastMeterAnimationId);
-        if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
-          animateLiveMeters();
-          console.debug('[GoLive] Started live meters for relay');
-        }
-        if (!broadcastMeterAnimationId) {
-          initBroadcastMeters();
-          console.debug('[GoLive] Started broadcast meters for relay');
-        }
-      } else {
-        console.warn('[GoLive] Icecast analysers not available');
-      }
-    } else {
-      console.debug('[GoLive] Relay audio not playing or not found');
-    }
-
-    // Get title and genre from inline fields
-    let title, genre;
-
-    // Check for relay mode using the mode toggle
-    const isRelayMode = currentStreamMode === 'relay';
-    // Use the configured playback URL for relay (HLS stream from MediaMTX)
-    const userRelayUrl = isRelayMode && selectedRelaySource ? (selectedRelaySource.playbackUrl || `https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8`) : null;
-    const relaySourceName = selectedRelaySource?.name || 'External Source';
-    console.debug('[GoLive] Relay mode:', isRelayMode, 'URL:', userRelayUrl);
-
-    // For relay mode, use now playing as title; for direct mode, use input field
-    if (isRelayMode && selectedRelaySource?.nowPlaying) {
-      title = selectedRelaySource.nowPlaying;
-    } else {
-      title = document.getElementById('inlineStreamTitle')?.value?.trim() || 'Live Session';
-    }
-    genre = document.getElementById('inlineStreamGenre')?.value || 'Jungle / D&B';
-
-    // For Direct mode, check stream key
-    if (!isRelayMode && !currentStreamKey) {
-      throw new Error('No stream key available. Please refresh and try again.');
-    }
-
-    // For Relay mode, check relay source is selected
-    if (isRelayMode && !selectedRelaySource) {
-      throw new Error('Please select a radio station to relay from.');
-    }
-
-    log('[GoLive] Starting go live with key:', currentStreamKey?.substring(0, 10) + '...');
-
-    const token = await currentUser.getIdToken();
-
-    // Get Twitch username and stream key if provided
-    const twitchUsername = document.getElementById('twitchUsername')?.value?.trim() || null;
-    const twitchStreamKey = document.getElementById('twitchStreamKey')?.value?.trim() || null;
-
-    // Build request body based on source type
-    // Get avatar URL - use userInfo.avatar (from API), currentUser.photoURL (Firebase Auth), or placeholder
-    const avatarUrl = userInfo?.avatar || currentUser?.photoURL || '/place-holder.webp';
-
-    const requestBody = {
-      action: isRelayMode ? 'start_relay' : 'go_live',
-      djId: currentUser.uid,
-      djName: userInfo.name,
-      djAvatar: avatarUrl,
-      title: title,
-      genre: genre,
-      twitchUsername: twitchUsername,
-      twitchStreamKey: twitchStreamKey,
-      broadcastMode: broadcastMode // 'placeholder' or 'video'
-    };
-
-    if (isRelayMode) {
-      requestBody.relayUrl = userRelayUrl;
-      requestBody.stationName = relaySourceName;
-    } else {
-      requestBody.streamKey = currentStreamKey;
-    }
-
-    // Send request
-    const response = await fetch('/api/livestream/slots/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      // Stream is live!
-      log('[GoLive] Successfully went live!', result);
-
-      // Refresh stream status immediately
-      await loadStreamStatus();
-
-      // Update UI to show we're live
-      updateEndStreamButton(true, true);
-
-      // Hide ready section since we're now live
-      document.getElementById('readySection')?.classList.add('hidden');
-
-      // Poll more frequently for the next 30 seconds to catch when HLS stream is ready
-      // This helps the "Live Stream" player show the stream faster
-      let fastPollCount = 0;
-      const fastPollInterval = setInterval(async () => {
-        fastPollCount++;
-        log('[GoLive] Fast poll #' + fastPollCount);
-        await loadStreamStatus();
-        // Stop after 10 polls (30 seconds) or if we have a stream with HLS
-        if (fastPollCount >= 10 || (currentStream && currentStream.hlsUrl)) {
-          clearInterval(fastPollInterval);
-          log('[GoLive] Fast polling complete');
-        }
-      }, 3000);
-
-      return true;
-    } else {
-      // Log full error for debugging
-      console.error('[GoLive] API Error:', result);
-
-      // Throw error so caller knows it failed
-      let errorMsg = result.error || 'Failed to go live';
-      if (result.details) errorMsg += ': ' + result.details;
-      if (result.error === 'stream_not_detected') {
-        errorMsg = 'Stream not detected. Make sure OBS is streaming with the correct key.';
-      } else if (result.error === 'relay_failed') {
-        errorMsg = 'Failed to connect to relay stream.';
-      }
-
-      throw new Error(errorMsg);
-    }
-  }
-
   async function sendMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
@@ -7750,6 +4736,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       liveMeterAnimationId = requestAnimationFrame(animateLiveMeters);
     }
 
+    // Wire up late-binding refs for module context
+    _setupAudioMeterRef = setupAudioMeter;
+    _animateLiveMetersRef = animateLiveMeters;
+
     // Setup meters when video plays
     const obsVid = document.getElementById('obsVideo');
     if (obsVid) {
@@ -8085,6 +5075,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             if (activeSlot) {
               existingSlotId = activeSlot.id;
               mySlot = activeSlot;
+              scheduling.setMySlot(activeSlot);
             }
           }
         }
@@ -8108,6 +5099,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           if (keyResult.success && keyResult.streamKey) {
             if (mySlot) mySlot.streamKey = keyResult.streamKey;
             currentStreamKey = keyResult.streamKey;
+            scheduling.setMySlot(mySlot);
+            scheduling.setCurrentStreamKey(keyResult.streamKey);
           } else {
             throw new Error(keyResult.error || 'Failed to get stream key');
           }
@@ -8144,6 +5137,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // Update mySlot with the new booking
           mySlot = bookResult.slot;
           currentStreamKey = mySlot.streamKey;
+          scheduling.setMySlot(mySlot);
+          scheduling.setCurrentStreamKey(currentStreamKey);
         }
 
         // Update displays using currentStreamKey (always set correctly)
@@ -8247,6 +5242,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // Update mySlot with the new booking
           mySlot = bookResult.slot;
           currentStreamKey = mySlot.streamKey;
+          scheduling.setMySlot(mySlot);
+          scheduling.setCurrentStreamKey(currentStreamKey);
           updateButtPassword(mySlot.streamKey); // Update BUTT password field
           console.debug('[DJ Lobby] Auto-booked slot:', mySlot.id);
 
@@ -8544,346 +5541,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     });
   }
 
-  // ============================================
-  // LIVESTREAM CHAT (mirrors main live page)
-  // ============================================
-
-  let livestreamChatChannel = null;
-
-  async function initLivestreamChat(streamId) {
-    if (!streamId) return;
-
-    console.debug('[LivestreamChat] Initializing chat for stream:', streamId);
-    window.livestreamChatInitialized = true;
-
-    // Load initial messages
-    try {
-      const response = await fetch(`/api/livestream/chat/?streamId=${streamId}&limit=50`);
-      const result = await response.json();
-
-      if (result.success && result.messages) {
-        renderLivestreamMessages(result.messages);
-      }
-    } catch (err) {
-      console.error('[LivestreamChat] Failed to load messages:', err);
-    }
-
-    // Subscribe to Pusher channel for new messages
-    if (window.Pusher && window.PUSHER_CONFIG?.key) {
-      if (!window.livestreamPusher) {
-        window.livestreamPusher = new Pusher(window.PUSHER_CONFIG.key, {
-          cluster: window.PUSHER_CONFIG.cluster || 'eu'
-        });
-      }
-
-      const channelName = `stream-${streamId}`;
-      console.debug('[LivestreamChat] Subscribing to channel:', channelName);
-
-      livestreamChatChannel = window.livestreamPusher.subscribe(channelName);
-
-      livestreamChatChannel.bind('new-message', (data) => {
-        console.debug('[LivestreamChat] New message:', data);
-        appendLivestreamMessage(data);
-      });
-
-      // Listen for viewer count updates via Pusher (saves polling)
-      livestreamChatChannel.bind('viewer-update', (data) => {
-        console.debug('[LivestreamChat] Viewer update:', data);
-        const viewerCount = data.count ?? data.currentViewers ?? data.totalViews ?? 0;
-        updateCenterStats({ viewers: viewerCount });
-        // Also update the chat header watching count
-        const chatViewers = document.getElementById('chatViewers');
-        if (chatViewers) chatViewers.textContent = `${viewerCount} watching`;
-      });
-    }
-
-    // Setup send button handler
-    setupLivestreamChatSend(streamId);
-
-    // Show chat form if logged in
-    if (currentUser) {
-      document.getElementById('loginPrompt')?.classList.add('hidden');
-      document.getElementById('chatForm')?.classList.remove('hidden');
-    }
-
-    // Ensure LiveChat emoji/GIF pickers are initialized
-    // (LiveChat component script may have run before chatForm was visible)
-    const emojiBtn = document.getElementById('openEmojiPanel');
-    if (emojiBtn && !emojiBtn.dataset.bound && typeof window.toggleEmojiPanel === 'undefined') {
-      // LiveChat script hasn't initialized yet - dispatch page-load to trigger it
-      document.dispatchEvent(new Event('astro:page-load'));
-    }
-  }
-
-  function renderLivestreamMessages(messages, forceScrollToBottom = true) {
-    const container = document.getElementById('chatMessages');
-    if (!container) return;
-
-    if (!messages || messages.length === 0) {
-      container.innerHTML = '';
-      return;
-    }
-
-    // Sort messages by createdAt - ascending (oldest first at top, newest last at bottom)
-    const sortedMessages = [...messages].sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
-      const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
-      return dateA.getTime() - dateB.getTime();
-    });
-
-    // Check if user was at bottom before rendering
-    const wasAtBottom = forceScrollToBottom || container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
-
-    // Filter out bot messages for DJ Lobby
-    const filteredMessages = sortedMessages.filter(msg => msg.type !== 'bot');
-    container.innerHTML = filteredMessages.map(msg => formatLivestreamMessage(msg)).join('');
-
-    // Scroll to bottom if user was already there
-    if (wasAtBottom) {
-      const scrollToBottom = () => {
-        const lastMessage = container.querySelector('.ls-chat-message:last-of-type');
-        if (lastMessage) {
-          lastMessage.scrollIntoView({ behavior: 'instant', block: 'end' });
-        } else {
-          container.scrollTop = container.scrollHeight;
-        }
-      };
-      // Multiple scroll attempts to ensure it works after DOM paints
-      scrollToBottom();
-      requestAnimationFrame(scrollToBottom);
-      setTimeout(scrollToBottom, 50);
-      setTimeout(scrollToBottom, 150);
-    }
-  }
-
-  function appendLivestreamMessage(msg) {
-    const container = document.getElementById('chatMessages');
-    if (!container) return;
-
-    // Skip bot messages in DJ Lobby
-    if (msg.type === 'bot') return;
-
-    // Check if user was at bottom before adding
-    const wasAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
-
-    // Remove welcome message if present
-    const welcome = container.querySelector('.chat-welcome');
-    if (welcome) welcome.remove();
-
-    const msgHtml = formatLivestreamMessage(msg);
-    container.insertAdjacentHTML('beforeend', msgHtml);
-
-    // Scroll to bottom if user was already there
-    if (wasAtBottom) {
-      const scrollToBottom = () => {
-        const lastMessage = container.querySelector('.ls-chat-message:last-of-type');
-        if (lastMessage) {
-          lastMessage.scrollIntoView({ behavior: 'instant', block: 'end' });
-        } else {
-          container.scrollTop = container.scrollHeight;
-        }
-      };
-      scrollToBottom();
-      requestAnimationFrame(scrollToBottom);
-    }
-  }
-
-  function formatLivestreamMessage(msg) {
-    const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-    const rawInitial = (msg.userName || 'U').charAt(0).toUpperCase();
-    const initial = /^[A-Z0-9]$/.test(rawInitial) ? rawInitial : 'U';
-
-    // Avatar HTML - show image if available, otherwise show letter initial
-    // Validate avatar URL protocol to prevent javascript: injection
-    const safeAvatar = msg.userAvatar && /^https?:\/\//i.test(msg.userAvatar) ? escapeHtml(msg.userAvatar) : '';
-    const avatarHtml = safeAvatar
-      ? `<img src="${safeAvatar}" alt="" class="ls-chat-avatar" data-fallback="html" data-fallback-html="<span class='ls-chat-avatar-letter'>${initial}</span>" />`
-      : `<span class="ls-chat-avatar-letter">${initial}</span>`;
-
-    // Plus badge - convert badge name to emoji (only show for Plus members)
-    const badgeEmoji = msg.isPro ? (BADGE_EMOJIS[msg.badge] || BADGE_EMOJIS.crown) : '';
-    const plusBadgeHtml = badgeEmoji ? `<span class="ls-chat-plus-badge">${badgeEmoji}</span>` : '';
-
-    // Bot badge
-    const botBadgeHtml = msg.type === 'bot' ? `<span class="ls-chat-bot-badge">BOT</span>` : '';
-
-    // Handle GIF messages - validate Giphy URL protocol
-    const safeGiphyUrl = msg.giphyUrl && /^https?:\/\//i.test(msg.giphyUrl) ? escapeHtml(msg.giphyUrl) : '';
-    if (msg.type === 'giphy' && safeGiphyUrl) {
-      return `
-        <div class="ls-chat-message" data-message-id="${escapeHtml(msg.id || '')}">
-          <div class="ls-chat-header">
-            <div class="ls-chat-user">
-              ${avatarHtml}
-              <span class="ls-chat-username">${escapeHtml(msg.userName || 'User')}</span>
-              ${plusBadgeHtml}
-            </div>
-            <span class="ls-chat-time">${time}</span>
-          </div>
-          <div class="ls-chat-gif">
-            <img src="${safeGiphyUrl}" alt="GIF" loading="lazy" />
-          </div>
-        </div>
-      `;
-    }
-
-    const botClass = msg.type === 'bot' ? 'ls-bot-message' : '';
-
-    return `
-      <div class="ls-chat-message ${botClass}" data-message-id="${escapeHtml(msg.id || '')}">
-        <div class="ls-chat-header">
-          <div class="ls-chat-user">
-            ${avatarHtml}
-            <span class="ls-chat-username">${escapeHtml(msg.userName || 'User')}</span>
-            ${plusBadgeHtml}
-            ${botBadgeHtml}
-          </div>
-          <span class="ls-chat-time">${time}</span>
-        </div>
-        <div class="ls-chat-text">${escapeHtml(msg.message || '')}</div>
-      </div>
-    `;
-  }
 
   // Track current chat send handler so we can remove old listeners
   let currentChatSendHandler = null;
   let currentChatKeyHandler = null;
 
-  function setupLivestreamChatSend(streamId) {
-    const chatInput = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('sendBtn');
-
-    if (!chatInput || !sendBtn) return;
-
-    // Remove old listeners to prevent stacking
-    if (currentChatSendHandler) {
-      sendBtn.removeEventListener('click', currentChatSendHandler);
-    }
-    if (currentChatKeyHandler) {
-      chatInput.removeEventListener('keypress', currentChatKeyHandler);
-    }
-
-    const sendMessage = async () => {
-      const message = chatInput.value.trim();
-      if (!message || !currentUser) return;
-
-      const userName = userInfo?.name || userInfo?.displayName || userInfo?.firstName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
-      const userAvatar = userInfo?.avatar || currentUser.photoURL || null;
-      const isPro = userSubscription?.isPro || false;
-
-
-      // Optimistic UI - show message immediately
-      const tempMsg = {
-        id: 'temp_' + Date.now(),
-        userId: currentUser.uid,
-        userName: userName,
-        userAvatar: userAvatar,
-        isPro: isPro,
-        badge: 'crown',
-        message: message,
-        type: 'text',
-        createdAt: new Date().toISOString()
-      };
-      appendLivestreamMessage(tempMsg);
-
-      chatInput.value = '';
-      chatInput.disabled = true;
-      sendBtn.disabled = true;
-
-      try {
-        const token = await currentUser.getIdToken();
-        const activeStreamId = window.currentStreamId || streamId;
-        const response = await fetch('/api/livestream/chat/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            streamId: activeStreamId,
-            userId: currentUser.uid,
-            userName: userName,
-            userAvatar: userAvatar,
-            isPro: isPro,
-            badge: 'crown',
-            message: message,
-            type: 'text'
-          })
-        });
-
-        if (!response.ok) {
-          const err = await response.json();
-          console.error('[LivestreamChat] Send failed:', err);
-          // If stream is no longer live, auto-fallback to playlist-global and retry
-          if (err.error === 'Stream is not live' && activeStreamId !== 'playlist-global') {
-            console.debug('[LivestreamChat] Stream ended, switching to playlist-global');
-            staleStreamIds.add(activeStreamId);
-            window.currentStreamId = 'playlist-global';
-            cleanupLivestreamChat();
-            // Retry with playlist-global
-            const retryResponse = await fetch('/api/livestream/chat/', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                streamId: 'playlist-global',
-                userId: currentUser.uid,
-                userName: userName,
-                userAvatar: userAvatar,
-                isPro: isPro,
-                badge: 'crown',
-                message: message,
-                type: 'text'
-              })
-            });
-            if (!retryResponse.ok) {
-              const retryErr = await retryResponse.json();
-              console.error('[LivestreamChat] Retry also failed:', retryErr);
-            }
-          }
-        }
-      } catch (err) {
-        console.error('[LivestreamChat] Send error:', err);
-      } finally {
-        chatInput.disabled = false;
-        sendBtn.disabled = false;
-        chatInput.focus();
-      }
-    };
-
-    const keyHandler = (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    };
-
-    sendBtn.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', keyHandler);
-
-    // Store refs for cleanup
-    currentChatSendHandler = sendMessage;
-    currentChatKeyHandler = keyHandler;
-  }
-
-  // Cleanup chat and switch to playlist-global when stream ends
-  function cleanupLivestreamChat() {
-    // Unsubscribe from current stream channel
-    if (livestreamChatChannel) {
-      livestreamChatChannel.unbind_all();
-      window.livestreamPusher?.unsubscribe(livestreamChatChannel.name);
-      livestreamChatChannel = null;
-    }
-
-    // Switch to playlist-global so DJs can monitor main page chat
-    // (the main live page uses playlist-global when no stream is active)
-    window.livestreamChatInitialized = false;
-    window.currentStreamId = 'playlist-global';
-    initLivestreamChat('playlist-global');
-    console.debug('[LivestreamChat] Switched to playlist-global for DJ waitlist monitoring');
-  }
 
   // =============== INITIALIZATION MODAL ===============
   let initCheckInterval = null;

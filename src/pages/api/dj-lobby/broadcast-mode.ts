@@ -10,7 +10,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 
 const BroadcastModeSchema = z.object({
   slotId: z.string().min(1).max(500),
-  mode: z.enum(['placeholder', 'video']),
+  mode: z.enum(['placeholder', 'video', 'browser']),
   hlsUrl: z.string().max(2000).nullish(),
 }).passthrough();
 

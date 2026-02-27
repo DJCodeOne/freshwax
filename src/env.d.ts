@@ -94,6 +94,9 @@ interface ImportMetaEnv {
   readonly RED5_SIGNING_SECRET: string;
   readonly RED5_WEBHOOK_SECRET: string;
 
+  // ---- Livestream (WHIP / Browser Streaming) ----
+  readonly WHIP_BASE_URL: string;
+
   // ---- Playlist Server ----
   readonly PLAYLIST_ACCESS_TOKEN: string;
 
@@ -198,6 +201,7 @@ interface CloudflareEnv {
   RED5_HLS_URL: string;
   RED5_SIGNING_SECRET: string;
   RED5_WEBHOOK_SECRET: string;
+  WHIP_BASE_URL: string;
 
   // ---- Playlist Server ----
   PLAYLIST_ACCESS_TOKEN: string;

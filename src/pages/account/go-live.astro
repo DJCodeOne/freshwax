@@ -1,0 +1,689 @@
+---
+// src/pages/account/go-live.astro
+// Browser-based livestreaming — mobile-first Go Live page
+export const prerender = false;
+const nonce = Astro.locals.nonce || '';
+const csrfToken = Astro.locals.csrfToken || '';
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="csrf-token" content={csrfToken} />
+  <title>Go Live - Fresh Wax</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="Go live from your browser — no OBS needed." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/styles/go-live.css" />
+</head>
+<body class="go-live-page">
+  <script is:inline src="/csrf-protect.js"></script>
+
+  <!-- Auth Gate -->
+  <div id="authGate" class="go-live-auth-gate">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Main Content (hidden until authenticated) -->
+  <div id="mainContent" class="go-live-hidden">
+    <!-- Header -->
+    <header class="go-live-header">
+      <a href="/account/dj-lobby/" class="go-live-back">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        Lobby
+      </a>
+      <span class="go-live-title">GO <span class="red">LIVE</span></span>
+      <div style="width:60px"></div>
+    </header>
+
+    <!-- Camera Preview -->
+    <div class="preview-container" id="previewContainer">
+      <video id="previewVideo" autoplay muted playsinline></video>
+      <div class="camera-prompt" id="cameraPrompt">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+        <p>Tap below to enable camera</p>
+        <button id="enableCameraBtn" class="go-live-start-btn" style="width:auto;padding:12px 32px;font-size:18px;">Enable Camera</button>
+      </div>
+      <div class="preview-overlay" id="previewOverlay" style="display:none">
+        <div class="preview-controls">
+          <button id="flipCameraBtn" class="preview-btn" aria-label="Flip camera">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M9 12c0 1.66 1.34 3 3 3s3-1.34 3-3-1.34-3-3-3-3 1.34-3 3zm13-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-3l-2-2zm-2 6H4V7h16v9z"/></svg>
+          </button>
+          <button id="toggleMicBtn" class="preview-btn" aria-label="Toggle microphone">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+          </button>
+          <button id="toggleVideoBtn" class="preview-btn" aria-label="Toggle camera">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+          </button>
+        </div>
+        <div class="audio-meter" id="audioMeter">
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Status Bar -->
+    <div class="live-status-bar" id="liveStatusBar">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        LIVE
+      </div>
+      <div class="live-timer" id="liveTimer">00:00</div>
+      <div class="live-viewers" id="liveViewers">0 viewers</div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-item">
+        <div class="stat-value" id="statBitrate">--</div>
+        <div>kbps</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="statFps">--</div>
+        <div>FPS</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="statRtt">--</div>
+        <div>ms RTT</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="go-live-controls" id="controlsSection">
+      <div class="go-live-input-group">
+        <label for="streamTitle">Stream Title</label>
+        <input type="text" id="streamTitle" class="go-live-input" placeholder="My Live Set" maxlength="100" />
+      </div>
+
+      <div class="go-live-input-group">
+        <label for="streamGenre">Genre</label>
+        <input type="text" id="streamGenre" class="go-live-input" placeholder="Jungle / D&B" maxlength="60" value="Jungle / D&B" />
+      </div>
+
+      <div class="go-live-input-group">
+        <label>Quality</label>
+        <div class="quality-row">
+          <button class="quality-btn" data-quality="low" data-width="640" data-height="480" data-bitrate="1000000">480p</button>
+          <button class="quality-btn selected" data-quality="medium" data-width="1280" data-height="720" data-bitrate="2500000">720p</button>
+          <button class="quality-btn" data-quality="high" data-width="1920" data-height="1080" data-bitrate="4500000">1080p</button>
+        </div>
+      </div>
+
+      <div class="go-live-warning">
+        &#9888;&#65039; Stream pauses if you switch apps or lock your phone
+      </div>
+
+      <div class="go-live-error" id="errorMsg"></div>
+
+      <button id="goLiveStartBtn" class="go-live-start-btn" disabled>GO LIVE</button>
+      <button id="endStreamBtn" class="end-stream-btn">END STREAM</button>
+    </div>
+
+    <!-- Stream Summary -->
+    <div class="stream-summary" id="streamSummary">
+      <h2>Stream Ended</h2>
+      <p id="summaryDuration">Duration: --</p>
+      <p id="summaryViewers">Peak viewers: --</p>
+      <a href="/account/dj-lobby/" class="go-live-start-btn" style="text-decoration:none;text-align:center;display:inline-block;width:auto;padding:12px 32px;font-size:18px;">Back to Lobby</a>
+    </div>
+  </div>
+
+  <script is:inline type="module">
+    import { whipConnect, whipDisconnect, whipReplaceTrack, whipGetStats, whipIsConnected, whipSetBitrate } from '/whip-client.js';
+
+    // ---- State ----
+    var mediaStream = null;
+    var audioContext = null;
+    var analyser = null;
+    var animFrameId = null;
+    var wakeLock = null;
+    var liveStartTime = null;
+    var timerInterval = null;
+    var viewerPollInterval = null;
+    var currentSlotId = null;
+    var currentStreamKey = null;
+    var currentDjId = null;
+    var currentDjName = null;
+    var currentDjAvatar = null;
+    var facingMode = 'user';
+    var isLive = false;
+    var selectedQuality = { width: 1280, height: 720, bitrate: 2500000 };
+    var previousVideoBytes = 0;
+    var previousStatsTime = 0;
+
+    // ---- DOM refs ----
+    var authGate = document.getElementById('authGate');
+    var mainContent = document.getElementById('mainContent');
+    var previewVideo = document.getElementById('previewVideo');
+    var cameraPrompt = document.getElementById('cameraPrompt');
+    var previewOverlay = document.getElementById('previewOverlay');
+    var enableCameraBtn = document.getElementById('enableCameraBtn');
+    var flipCameraBtn = document.getElementById('flipCameraBtn');
+    var toggleMicBtn = document.getElementById('toggleMicBtn');
+    var toggleVideoBtn = document.getElementById('toggleVideoBtn');
+    var audioMeter = document.getElementById('audioMeter');
+    var goLiveStartBtn = document.getElementById('goLiveStartBtn');
+    var endStreamBtn = document.getElementById('endStreamBtn');
+    var liveStatusBar = document.getElementById('liveStatusBar');
+    var liveTimer = document.getElementById('liveTimer');
+    var liveViewers = document.getElementById('liveViewers');
+    var statsBar = document.getElementById('statsBar');
+    var controlsSection = document.getElementById('controlsSection');
+    var streamSummary = document.getElementById('streamSummary');
+    var errorMsg = document.getElementById('errorMsg');
+
+    // ---- Auth ----
+    function getIdToken() {
+      try { return localStorage.getItem('fw_id_token') || ''; }
+      catch (e) { return ''; }
+    }
+
+    function getUserInfo() {
+      try {
+        var raw = localStorage.getItem('fw_user_info');
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
+
+    async function checkAuth() {
+      var token = getIdToken();
+      if (!token) {
+        window.location.href = '/login/?redirect=/account/go-live/';
+        return false;
+      }
+      try {
+        var resp = await fetch('/api/auth/verify/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ idToken: token })
+        });
+        if (!resp.ok) {
+          window.location.href = '/login/?redirect=/account/go-live/';
+          return false;
+        }
+        return true;
+      } catch (e) {
+        window.location.href = '/login/?redirect=/account/go-live/';
+        return false;
+      }
+    }
+
+    // ---- Camera ----
+    async function startCamera() {
+      try {
+        var constraints = {
+          video: {
+            facingMode: facingMode,
+            width: { ideal: selectedQuality.width },
+            height: { ideal: selectedQuality.height }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        };
+
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        previewVideo.srcObject = mediaStream;
+        cameraPrompt.style.display = 'none';
+        previewOverlay.style.display = 'flex';
+        goLiveStartBtn.disabled = false;
+
+        startAudioMeter();
+      } catch (err) {
+        showError('Camera access denied. Please allow camera and microphone permissions.');
+      }
+    }
+
+    async function flipCamera() {
+      if (!mediaStream || isLive === false) {
+        // Only allow flip when not live — for live, use replaceTrack
+      }
+
+      facingMode = facingMode === 'user' ? 'environment' : 'user';
+
+      // Get new video track
+      try {
+        var newStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facingMode, width: { ideal: selectedQuality.width }, height: { ideal: selectedQuality.height } },
+          audio: false
+        });
+
+        var newVideoTrack = newStream.getVideoTracks()[0];
+        var oldVideoTrack = mediaStream.getVideoTracks()[0];
+
+        if (isLive) {
+          await whipReplaceTrack(oldVideoTrack, newVideoTrack);
+        }
+
+        mediaStream.removeTrack(oldVideoTrack);
+        oldVideoTrack.stop();
+        mediaStream.addTrack(newVideoTrack);
+        previewVideo.srcObject = mediaStream;
+
+        // Mirror only front camera
+        previewVideo.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+      } catch (err) {
+        showError('Could not flip camera.');
+        facingMode = facingMode === 'user' ? 'environment' : 'user'; // revert
+      }
+    }
+
+    function toggleMic() {
+      if (!mediaStream) return;
+      var audioTracks = mediaStream.getAudioTracks();
+      audioTracks.forEach(function(t) { t.enabled = !t.enabled; });
+      var muted = audioTracks.length > 0 && !audioTracks[0].enabled;
+      toggleMicBtn.classList.toggle('muted', muted);
+      toggleMicBtn.setAttribute('aria-label', muted ? 'Unmute microphone' : 'Mute microphone');
+    }
+
+    function toggleVideo() {
+      if (!mediaStream) return;
+      var videoTracks = mediaStream.getVideoTracks();
+      videoTracks.forEach(function(t) { t.enabled = !t.enabled; });
+      var off = videoTracks.length > 0 && !videoTracks[0].enabled;
+      toggleVideoBtn.classList.toggle('muted', off);
+      toggleVideoBtn.setAttribute('aria-label', off ? 'Enable camera' : 'Disable camera');
+    }
+
+    // ---- Audio Meter ----
+    function startAudioMeter() {
+      if (!mediaStream) return;
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        var source = audioContext.createMediaStreamSource(mediaStream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 64;
+        source.connect(analyser);
+
+        var bars = audioMeter.querySelectorAll('.bar');
+        var dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        function updateMeter() {
+          if (!analyser) return;
+          analyser.getByteFrequencyData(dataArray);
+          for (var i = 0; i < bars.length; i++) {
+            var value = dataArray[i * 2] || 0;
+            var height = Math.max(3, (value / 255) * 24);
+            bars[i].style.height = height + 'px';
+          }
+          animFrameId = requestAnimationFrame(updateMeter);
+        }
+        updateMeter();
+      } catch (e) {
+        // Audio meter not critical
+      }
+    }
+
+    // ---- Quality ----
+    var qualityBtns = document.querySelectorAll('.quality-btn');
+    qualityBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        qualityBtns.forEach(function(b) { b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        selectedQuality = {
+          width: parseInt(btn.dataset.width),
+          height: parseInt(btn.dataset.height),
+          bitrate: parseInt(btn.dataset.bitrate)
+        };
+        if (isLive) {
+          whipSetBitrate(selectedQuality.bitrate).catch(function() {});
+        }
+      });
+    });
+
+    // ---- Go Live ----
+    async function goLive() {
+      if (!mediaStream) {
+        showError('Camera not started');
+        return;
+      }
+
+      goLiveStartBtn.disabled = true;
+      goLiveStartBtn.textContent = 'CONNECTING...';
+      hideError();
+
+      var token = getIdToken();
+      var userInfo = getUserInfo();
+      if (!token || !userInfo) {
+        showError('Not authenticated');
+        goLiveStartBtn.disabled = false;
+        goLiveStartBtn.textContent = 'GO LIVE';
+        return;
+      }
+
+      currentDjId = userInfo.id || userInfo.uid;
+      currentDjName = userInfo.displayName || userInfo.name || 'DJ';
+      currentDjAvatar = userInfo.avatar || null;
+
+      try {
+        // Step 1: Get stream key
+        var keyResp = await fetch('/api/livestream/slots/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'getStreamKey',
+            idToken: token,
+            djId: currentDjId
+          })
+        });
+        if (!keyResp.ok) {
+          var keyErr = await keyResp.json().catch(function() { return {}; });
+          throw new Error(keyErr.error || 'Failed to get stream key');
+        }
+        var keyData = await keyResp.json();
+        currentStreamKey = keyData.streamKey;
+        currentSlotId = keyData.slotId || keyData.tempSlotId;
+
+        // Step 2: Get WHIP URL
+        var whipResp = await fetch('/api/livestream/whip-url/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            slotId: currentSlotId,
+            djId: currentDjId,
+            streamKey: currentStreamKey
+          })
+        });
+        if (!whipResp.ok) {
+          var whipErr = await whipResp.json().catch(function() { return {}; });
+          throw new Error(whipErr.error || 'Failed to get WHIP URL');
+        }
+        var whipData = await whipResp.json();
+
+        // Step 3: Connect WHIP
+        goLiveStartBtn.textContent = 'CONNECTING STREAM...';
+
+        await whipConnect(whipData.whipUrl, mediaStream, {
+          onStateChange: function(state) {
+            if (state === 'failed') {
+              showError('Stream connection failed. Check your internet.');
+              endStream(true);
+            }
+          },
+          onStats: function(stats) {
+            updateStats(stats);
+          },
+          onError: function(err) {
+            showError('Stream error: ' + err.message);
+          }
+        });
+
+        // Step 4: Wait briefly for ICE to connect
+        await new Promise(function(resolve) { setTimeout(resolve, 1500); });
+
+        // Step 5: Call go_live API
+        var title = document.getElementById('streamTitle').value || (currentDjName + ' - Live');
+        var genre = document.getElementById('streamGenre').value || 'Jungle / D&B';
+
+        var goLiveResp = await fetch('/api/livestream/slots/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'go_live',
+            idToken: token,
+            djId: currentDjId,
+            djName: currentDjName,
+            djAvatar: currentDjAvatar,
+            streamKey: currentStreamKey,
+            title: title,
+            genre: genre,
+            broadcastMode: 'browser'
+          })
+        });
+
+        if (!goLiveResp.ok) {
+          var goLiveErr = await goLiveResp.json().catch(function() { return {}; });
+          throw new Error(goLiveErr.error || 'Failed to go live');
+        }
+
+        var goLiveData = await goLiveResp.json();
+        currentSlotId = goLiveData.slotId || currentSlotId;
+
+        // Success — switch to live UI
+        isLive = true;
+        switchToLiveUI();
+        acquireWakeLock();
+        startTimer();
+        startViewerPoll();
+
+      } catch (err) {
+        showError(err.message || 'Failed to go live');
+        goLiveStartBtn.disabled = false;
+        goLiveStartBtn.textContent = 'GO LIVE';
+        // Clean up WHIP if it was partially connected
+        whipDisconnect().catch(function() {});
+      }
+    }
+
+    // ---- End Stream ----
+    async function endStream(force) {
+      if (!isLive && !force) return;
+
+      var confirmEnd = force || confirm('End your livestream?');
+      if (!confirmEnd) return;
+
+      isLive = false;
+
+      // Disconnect WHIP
+      try { await whipDisconnect(); } catch (e) { /* ignore */ }
+
+      // Call endStream API
+      try {
+        var token = getIdToken();
+        if (currentSlotId && token) {
+          await fetch('/api/livestream/slots/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'endStream',
+              idToken: token,
+              slotId: currentSlotId,
+              djId: currentDjId
+            })
+          });
+        }
+      } catch (e) { /* best effort */ }
+
+      // Stop media tracks
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(function(t) { t.stop(); });
+        mediaStream = null;
+      }
+
+      // Clean up
+      releaseWakeLock();
+      stopTimer();
+      stopViewerPoll();
+      stopAudioMeter();
+
+      // Show summary
+      switchToSummaryUI();
+    }
+
+    // ---- UI State Switches ----
+    function switchToLiveUI() {
+      goLiveStartBtn.style.display = 'none';
+      endStreamBtn.classList.add('visible');
+      liveStatusBar.classList.add('visible');
+      statsBar.classList.add('visible');
+
+      // Disable quality buttons and inputs while live
+      qualityBtns.forEach(function(b) { b.disabled = true; b.style.opacity = '0.5'; });
+      document.getElementById('streamTitle').disabled = true;
+      document.getElementById('streamGenre').disabled = true;
+    }
+
+    function switchToSummaryUI() {
+      controlsSection.style.display = 'none';
+      liveStatusBar.classList.remove('visible');
+      statsBar.classList.remove('visible');
+      document.getElementById('previewContainer').style.display = 'none';
+
+      var duration = liveStartTime ? formatDuration(Date.now() - liveStartTime) : '--';
+      document.getElementById('summaryDuration').textContent = 'Duration: ' + duration;
+      document.getElementById('summaryViewers').textContent = 'Peak viewers: ' + (liveViewers.textContent || '0');
+
+      streamSummary.classList.add('visible');
+    }
+
+    // ---- Timer ----
+    function startTimer() {
+      liveStartTime = Date.now();
+      timerInterval = setInterval(function() {
+        if (!liveStartTime) return;
+        liveTimer.textContent = formatDuration(Date.now() - liveStartTime);
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    }
+
+    function formatDuration(ms) {
+      var totalSec = Math.floor(ms / 1000);
+      var h = Math.floor(totalSec / 3600);
+      var m = Math.floor((totalSec % 3600) / 60);
+      var s = totalSec % 60;
+      if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+      return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    // ---- Viewer Poll ----
+    function startViewerPoll() {
+      viewerPollInterval = setInterval(async function() {
+        try {
+          var resp = await fetch('/api/livestream/status/');
+          if (resp.ok) {
+            var data = await resp.json();
+            if (data.currentViewers !== undefined) {
+              liveViewers.textContent = data.currentViewers + ' viewer' + (data.currentViewers !== 1 ? 's' : '');
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }, 10000);
+    }
+
+    function stopViewerPoll() {
+      if (viewerPollInterval) { clearInterval(viewerPollInterval); viewerPollInterval = null; }
+    }
+
+    // ---- Stats ----
+    function updateStats(stats) {
+      if (!stats) return;
+
+      // Calculate actual bitrate from bytesSent delta
+      var now = Date.now();
+      if (previousStatsTime > 0 && stats.videoBitrate > 0) {
+        var timeDelta = (now - previousStatsTime) / 1000;
+        var bytesDelta = stats.videoBitrate - previousVideoBytes;
+        if (timeDelta > 0 && bytesDelta >= 0) {
+          var kbps = Math.round((bytesDelta * 8) / timeDelta / 1000);
+          document.getElementById('statBitrate').textContent = kbps;
+        }
+      }
+      previousVideoBytes = stats.videoBitrate;
+      previousStatsTime = now;
+
+      if (stats.fps) {
+        document.getElementById('statFps').textContent = Math.round(stats.fps);
+      }
+      if (stats.roundTripTime) {
+        document.getElementById('statRtt').textContent = Math.round(stats.roundTripTime * 1000);
+      }
+    }
+
+    // ---- Wake Lock ----
+    async function acquireWakeLock() {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', function() { wakeLock = null; });
+        } catch (e) { /* not critical */ }
+      }
+    }
+
+    function releaseWakeLock() {
+      if (wakeLock) {
+        try { wakeLock.release(); } catch (e) { /* ignore */ }
+        wakeLock = null;
+      }
+    }
+
+    // ---- Audio cleanup ----
+    function stopAudioMeter() {
+      if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+      if (audioContext) {
+        try { audioContext.close(); } catch (e) { /* ignore */ }
+        audioContext = null;
+      }
+      analyser = null;
+    }
+
+    // ---- Error display ----
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.classList.add('visible');
+    }
+
+    function hideError() {
+      errorMsg.textContent = '';
+      errorMsg.classList.remove('visible');
+    }
+
+    // ---- Event Listeners ----
+    enableCameraBtn.addEventListener('click', startCamera);
+    flipCameraBtn.addEventListener('click', flipCamera);
+    toggleMicBtn.addEventListener('click', toggleMic);
+    toggleVideoBtn.addEventListener('click', toggleVideo);
+    goLiveStartBtn.addEventListener('click', goLive);
+    endStreamBtn.addEventListener('click', function() { endStream(false); });
+
+    // Cleanup on page unload
+    window.addEventListener('pagehide', function() {
+      if (isLive) {
+        // Best-effort end stream
+        var token = getIdToken();
+        if (currentSlotId && token) {
+          navigator.sendBeacon('/api/livestream/slots/', JSON.stringify({
+            action: 'endStream',
+            idToken: token,
+            slotId: currentSlotId,
+            djId: currentDjId
+          }));
+        }
+      }
+      releaseWakeLock();
+      stopAudioMeter();
+    });
+
+    // Re-acquire wake lock on visibility change
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible' && isLive && !wakeLock) {
+        acquireWakeLock();
+      }
+    });
+
+    // ---- Init ----
+    (async function init() {
+      var authed = await checkAuth();
+      if (!authed) return;
+
+      authGate.style.display = 'none';
+      mainContent.classList.remove('go-live-hidden');
+    })();
+  </script>
+</body>
+</html>

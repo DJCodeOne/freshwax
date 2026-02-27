@@ -1073,1422 +1073,360 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
 
-<script>
+<script is:inline type="module">
+  import { initSpeedTest } from '/live/speed-test.js';
+  import { initReactions } from '/live/reactions.js';
+  import { initFullscreen, stopFullscreenStats } from '/live/fullscreen.js';
+  import { initShare } from '/live/share.js';
+  import { initShoutout } from '/live/shoutout.js';
+
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
 
-  // Speed Test - Download and Upload
-  async function runSpeedTest() {
-    const btn = document.getElementById('speedTestBtn');
-    const text = document.getElementById('speedTestText');
-    const result = document.getElementById('speedResult');
-    const downloadEl = document.getElementById('downloadSpeed');
-    const uploadEl = document.getElementById('uploadSpeed');
-    const recommendation = document.getElementById('speedRecommendation');
-    
-    if (!btn) return;
-    
-    btn.classList.add('testing');
-    text.textContent = 'Testing...';
-    result.classList.remove('hidden');
-    if (recommendation) {
-      recommendation.className = 'speed-recommendation';
-      recommendation.textContent = '';
-    }
-    
-    try {
-      // Test download speed - fetch a larger file
-      const downloadStart = performance.now();
-      const downloadResponse = await fetch('https://www.cloudflare.com/cdn-cgi/trace?' + Date.now(), { 
-        cache: 'no-store',
-        mode: 'cors'
-      });
-      await downloadResponse.text();
-      const downloadDuration = (performance.now() - downloadStart) / 1000;
-      
-      // Estimate download speed based on response time
-      let downloadSpeed;
-      if (downloadDuration < 0.05) downloadSpeed = 80 + Math.random() * 40;
-      else if (downloadDuration < 0.1) downloadSpeed = 40 + Math.random() * 40;
-      else if (downloadDuration < 0.2) downloadSpeed = 20 + Math.random() * 20;
-      else if (downloadDuration < 0.4) downloadSpeed = 10 + Math.random() * 10;
-      else if (downloadDuration < 0.8) downloadSpeed = 5 + Math.random() * 5;
-      else downloadSpeed = 1 + Math.random() * 4;
-      
-      downloadEl.textContent = downloadSpeed.toFixed(1) + ' Mbps';
-      
-      // Test upload speed - POST some data
-      text.textContent = 'Testing upload...';
-      const testData = new Blob([new ArrayBuffer(1024)], { type: 'application/octet-stream' });
-      const uploadStart = performance.now();
-      
-      try {
-        await fetch('https://httpbin.org/post', {
-          method: 'POST',
-          body: testData,
-          mode: 'cors'
-        });
-      } catch (e) {
-        // Fallback if httpbin fails - estimate from download
-      }
-      
-      const uploadDuration = (performance.now() - uploadStart) / 1000;
-      
-      // Estimate upload speed (usually slower than download)
-      let uploadSpeed;
-      if (uploadDuration < 0.1) uploadSpeed = 40 + Math.random() * 30;
-      else if (uploadDuration < 0.2) uploadSpeed = 20 + Math.random() * 20;
-      else if (uploadDuration < 0.4) uploadSpeed = 10 + Math.random() * 10;
-      else if (uploadDuration < 0.8) uploadSpeed = 5 + Math.random() * 5;
-      else uploadSpeed = 1 + Math.random() * 4;
-      
-      uploadEl.textContent = uploadSpeed.toFixed(1) + ' Mbps';
-      
-      // Show streaming recommendation based on upload speed
-      if (recommendation) {
-        if (uploadSpeed >= 10) {
-          recommendation.className = 'speed-recommendation good';
-          recommendation.textContent = '✓ Great for 1080p streaming';
-        } else if (uploadSpeed >= 5) {
-          recommendation.className = 'speed-recommendation good';
-          recommendation.textContent = '✓ Good for 720p streaming';
-        } else if (uploadSpeed >= 3) {
-          recommendation.className = 'speed-recommendation ok';
-          recommendation.textContent = '⚠ OK for 480p - consider wired connection';
-        } else {
-          recommendation.className = 'speed-recommendation poor';
-          recommendation.textContent = '✗ Connection may be too slow for streaming';
-        }
-      }
-      
-      text.textContent = 'Test Again';
-    } catch (e) {
-      text.textContent = 'Test Failed';
-      downloadEl.textContent = '-- Mbps';
-      uploadEl.textContent = '-- Mbps';
-      if (recommendation) {
-        recommendation.className = 'speed-recommendation poor';
-        recommendation.textContent = 'Could not complete speed test';
-      }
-    }
-    
-    btn.classList.remove('testing');
-  }
-  
-  document.getElementById('speedTestBtn')?.addEventListener('click', runSpeedTest);
-  
-  // Floating Reactions - Rise from button with JS animation
-  let emojiAnimationsEnabled = true;
-
-  // Respect prefers-reduced-motion: disable floating animations for users who prefer reduced motion
-  const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-  let prefersReducedMotion = reducedMotionQuery.matches;
-  reducedMotionQuery.addEventListener('change', function(e) { prefersReducedMotion = e.matches; });
-
-  function createFloatingEmoji(startX, startY, emojiList) {
-    // Only show emojis on live pages (ViewTransitions keeps scripts alive across pages)
-    const path = window.location.pathname;
-    if (!path.startsWith('/live') && !path.includes('/account/dj-lobby')) {
-      return;
-    }
-
-    // Check if animations are enabled
-    if (!emojiAnimationsEnabled) return;
-
-    const heart = document.createElement('div');
-
-    // Pick random emoji from the list
-    const emojis = emojiList || ['❤️', '💖', '💗', '💓', '💕'];
-    heart.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-
-    // Reduced motion: show emoji briefly in place, then fade out (no floating/wiggling)
-    if (prefersReducedMotion) {
-      const fontSize = 28 + Math.floor(Math.random() * 20);
-      Object.assign(heart.style, {
-        position: 'fixed',
-        left: startX + 'px',
-        top: startY + 'px',
-        fontSize: fontSize + 'px',
-        lineHeight: '1',
-        pointerEvents: 'none',
-        zIndex: '99999',
-        opacity: '1',
-        transition: 'opacity 0.5s ease-out',
-        margin: '0',
-        padding: '0'
-      });
-      document.body.appendChild(heart);
-      // Fade out after a short delay, then remove
-      setTimeout(function() { heart.style.opacity = '0'; }, 400);
-      setTimeout(function() { heart.remove(); }, 900);
-      return;
-    }
-
-    // Random spread and wiggle parameters
-    const spreadX = (Math.random() - 0.5) * 60;
-    const wiggleAmount = 20 + Math.random() * 30;
-    const duration = 2000 + Math.random() * 1000;
-    const fontSize = 28 + Math.floor(Math.random() * 20);
-
-    // Calculate position
-    const posX = startX + spreadX;
-    const posY = startY;
-
-    // Apply all styles inline
-    Object.assign(heart.style, {
-      position: 'fixed',
-      left: posX + 'px',
-      top: posY + 'px',
-      fontSize: fontSize + 'px',
-      lineHeight: '1',
-      pointerEvents: 'none',
-      zIndex: '99999',
-      opacity: '1',
-      transform: 'scale(0)',
-      margin: '0',
-      padding: '0'
-    });
-
-    document.body.appendChild(heart);
-
-    // Animate using requestAnimationFrame
-    const startTime = performance.now();
-
-    function animate(time) {
-      const elapsed = time - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Easing function
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-
-      // Calculate animation values
-      const moveY = easeOut * 350;
-      const wiggle = Math.sin(progress * Math.PI * 4) * wiggleAmount * (1 - progress);
-
-      // Scale animation
-      let scale = 1;
-      if (progress < 0.1) {
-        scale = progress * 12;
-      } else if (progress < 0.2) {
-        scale = 1.2 - (progress - 0.1) * 2;
-      } else {
-        scale = 1 - (progress - 0.2) * 0.3;
-      }
-
-      // Opacity
-      const opacity = progress > 0.6 ? 1 - (progress - 0.6) / 0.4 : 1;
-
-      // Update position
-      heart.style.left = (posX + wiggle) + 'px';
-      heart.style.top = (posY - moveY) + 'px';
-      heart.style.opacity = String(opacity);
-      heart.style.transform = 'scale(' + scale + ')';
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        heart.remove();
-      }
-    }
-
-    requestAnimationFrame(animate);
-  }
-  
-  function triggerReactionBurst(element, emojiList) {
-    // Only show emojis on live pages (ViewTransitions keeps scripts alive across pages)
-    const path = window.location.pathname;
-    if (!path.startsWith('/live') && !path.includes('/account/dj-lobby')) {
-      return;
-    }
-
-    // Get position from element or default to video player area
-    let x = window.innerWidth / 2;
-    let y = window.innerHeight / 2;
-
-    if (element && element.getBoundingClientRect) {
-      const rect = element.getBoundingClientRect();
-      x = rect.left + rect.width / 2;
-      y = rect.top + rect.height / 2;
-    } else {
-      // Position over the video player when no element provided (incoming reactions from other users)
-      const playerContainer = document.getElementById('playerContainer');
-      if (playerContainer) {
-        const rect = playerContainer.getBoundingClientRect();
-        x = rect.left + rect.width / 2;
-        y = rect.top + rect.height * 0.7; // Start near bottom of player
-      }
-    }
-    
-    // Create burst of emojis
-    const numHearts = 1;
-    for (let i = 0; i < numHearts; i++) {
-      setTimeout(() => {
-        createFloatingEmoji(x, y, emojiList);
-      }, i * 70);
-    }
-  }
-  
-  // Legacy function - alias for hearts
-  function triggerHeartBurst(element) {
-    const emojiList = element?.dataset?.emoji?.split(',') || ['❤️', '💖', '💗', '💓', '💕'];
-    triggerReactionBurst(element, emojiList);
-  }
-  
-  // Expose globally
-  window.triggerHeartBurst = triggerHeartBurst;
-  window.triggerReactionBurst = triggerReactionBurst;
-  
-  // Legacy function for compatibility
-  function createHeart(x, y) {
-    createFloatingEmoji(x || 100, y || 100, ['❤️', '💖', '💗']);
-  }
-
-  // Track reaction state to prevent spam
-  let lastReactionTime = 0;
-  // Unique session ID for this browser tab
-  const reactionSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-  window.reactionSessionId = reactionSessionId;
-  const REACTION_COOLDOWN = 500; // 500ms between reactions
-
-  async function triggerReaction(e) {
-    e.preventDefault();
-    // Require login for all reactions
-    const auth = window.firebaseAuth;
-    const user = auth?.currentUser;
-
-    if (!user) {
-      alert('Please sign in to react');
-      return;
-    }
-
-    // Cooldown to prevent spam
-    const now = Date.now();
-    if (now - lastReactionTime < REACTION_COOLDOWN) {
-      return;
-    }
-    lastReactionTime = now;
-
-    const btn = e.currentTarget || e.target;
-    const emojiList = btn?.dataset?.emoji?.split(',') || ['❤️'];
-    const emojiType = btn?.id?.replace('Btn', '') || 'like';
-    // Trigger visual animation locally
-    triggerReactionBurst(btn, emojiList);
-    btn?.classList.add('liked');
-    setTimeout(() => btn?.classList.remove('liked'), 300);
-
-    // Optimistic UI - increment count immediately
-    const likeCountEl = document.getElementById('likeCount');
-    const currentCount = parseInt(likeCountEl?.textContent || '0');
-    if (likeCountEl) likeCountEl.textContent = currentCount + 1;
-
-    // Check if we're in playlist mode or livestream mode
-    const isPlaylistMode = window.isPlaylistActive;
-    const streamId = window.currentStreamId || document.body.dataset.streamId;
-
-    try {
-      if (isPlaylistMode) {
-        // Playlist mode - use livestream react API with playlist-global streamId
-        // This ensures emojis broadcast to all viewers (same as fullscreen page)
-        const token = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
-        const emojiResponse = await fetch('/api/livestream/react/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(token && { 'Authorization': 'Bearer ' + token }) },
-          body: JSON.stringify({
-            action: 'emoji',
-            streamId: 'playlist-global',
-            userId: user.uid,
-            userName: window.currentUserInfo?.name || user.displayName || user.email?.split('@')[0] || 'Viewer',
-            emoji: emojiList.join(','),
-            emojiType: emojiType,
-            sessionId: reactionSessionId
-          })
-        });
-        if (!emojiResponse.ok) return;
-        const emojiResult = await emojiResponse.json();
-        // Also update the global reaction count
-        const countResponse = await fetch('/api/playlist/global/', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'react' })
-        });
-        if (!countResponse.ok) return;
-        const countResult = await countResponse.json();
-        if (countResult.success && countResult.playlist?.reactionCount !== undefined && likeCountEl) {
-          likeCountEl.textContent = countResult.playlist.reactionCount;
-        }
-      } else if (streamId) {
-        // Livestream mode - use livestream react API
-        const lsToken = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
-        const emojiResponse = await fetch('/api/livestream/react/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(lsToken && { 'Authorization': 'Bearer ' + lsToken }) },
-          body: JSON.stringify({
-            action: 'emoji',
-            streamId,
-            userId: user.uid,
-            userName: window.currentUserInfo?.name || user.displayName || user.email?.split('@')[0] || 'Viewer',
-            emoji: emojiList.join(','),
-            emojiType: emojiType,
-            sessionId: reactionSessionId
-          })
-        });
-        if (!emojiResponse.ok) return;
-        const emojiResult = await emojiResponse.json();
-        // Update with actual count from server if available (only if > 0)
-        if (emojiResult.success && emojiResult.totalLikes > 0 && likeCountEl) {
-          likeCountEl.textContent = emojiResult.totalLikes;
-        }
-      } else {
-        if (likeCountEl) likeCountEl.textContent = currentCount;
-      }
-    } catch (error) {
-      console.error('[Reaction] API error:', error);
-      // Revert optimistic update on error
-      if (likeCountEl) likeCountEl.textContent = currentCount;
-    }
-  }
-  
-  // Setup reaction button click handlers
-  setTimeout(() => {
-    ['likeBtn', 'fireBtn', 'explosionBtn', 'starBtn', 'bassBtn', 'fistBtn', 'clapBtn', 'rocketBtn'].forEach(id => {
-      const btn = document.getElementById(id);
-      if (btn) {
-        btn.addEventListener('click', (e) => {
-          triggerReaction(e);
-        });
-      }
-    });
-
-    // Like button in stats bar
-    const likeStatBtn = document.getElementById('likeStatBtn');
-    if (likeStatBtn) {
-      likeStatBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const auth = window.firebaseAuth;
-        const user = auth?.currentUser;
-
-        if (!user) {
-          alert('Please sign in to like');
-          return;
-        }
-
-        const streamId = window.currentStreamId;
-        if (!streamId) {
-          return;
-        }
-
-        // Immediate visual feedback - optimistic UI
-        const likeCountEl = document.getElementById('likeCount');
-        const currentCount = parseInt(likeCountEl?.textContent || '0');
-        if (likeCountEl) likeCountEl.textContent = currentCount + 1;
-
-        // Animation feedback
-        likeStatBtn.classList.add('clicking');
-        likeStatBtn.classList.add('liked');
-        setTimeout(() => likeStatBtn.classList.remove('clicking'), 300);
-
-        // Trigger heart animation from button position
-        triggerReactionBurst(likeStatBtn, ['❤️', '💖', '💗', '💓', '💕']);
-
-        try {
-          // Send like and broadcast emoji to all viewers
-          const likeToken = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
-          fetch('/api/livestream/react/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(likeToken && { 'Authorization': 'Bearer ' + likeToken }) },
-            body: JSON.stringify({
-              action: 'emoji',
-              streamId,
-              userId: user.uid,
-              userName: window.currentUserInfo?.name || user.displayName || 'Viewer',
-              emoji: '❤️,💖,💗,💓,💕',
-              emojiType: 'like'
-            })
-          }).catch(() => {});
-
-          // Increment like count in database
-          const response = await fetch('/api/livestream/react/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(likeToken && { 'Authorization': 'Bearer ' + likeToken }) },
-            body: JSON.stringify({
-              action: 'like',
-              streamId,
-              userId: user.uid
-            })
-          });
-
-          if (!response.ok) throw new Error('Like request failed');
-          const result = await response.json();
-          // Update with actual count from server (only if > 0)
-          if (result.success && result.totalLikes > 0 && likeCountEl) {
-            likeCountEl.textContent = result.totalLikes;
-          }
-        } catch (error) {
-          console.error('[Like] Error:', error);
-          // Revert optimistic update on error
-          if (likeCountEl) likeCountEl.textContent = currentCount;
-        }
-      });
-    }
-  }, 100);
-
-  // Animation toggle button
-  const animToggleBtn = document.getElementById('animToggleBtn');
-  const fsAnimToggleBtn = document.getElementById('fsAnimToggleBtn');
-  
-  function toggleEmojiAnimations() {
-    emojiAnimationsEnabled = !emojiAnimationsEnabled;
-    const isOff = !emojiAnimationsEnabled;
-    const title = emojiAnimationsEnabled ? 'Turn off emoji animations' : 'Turn on emoji animations';
-    
-    // Sync both buttons
-    animToggleBtn?.classList.toggle('off', isOff);
-    fsAnimToggleBtn?.classList.toggle('off', isOff);
-    if (animToggleBtn) animToggleBtn.title = title;
-    if (fsAnimToggleBtn) fsAnimToggleBtn.title = title;
-  }
-  
-  animToggleBtn?.addEventListener('click', toggleEmojiAnimations);
-  fsAnimToggleBtn?.addEventListener('click', toggleEmojiAnimations);
-  
-  // Fullscreen Mode
-  function openFullscreen() {
-    const fs = document.getElementById('fullscreenMode');
-    if (fs) {
-      fs.classList.remove('hidden');
-      document.body.style.overflow = 'hidden';
-      syncFullscreenState();
-      startFullscreenStats();
-      // Sync volume slider
-      const fsVol = document.getElementById('fsVolumeSlider');
-      const mainVol = document.getElementById('volumeSlider');
-      if (fsVol && mainVol) fsVol.value = mainVol.value;
-    }
-  }
-  
-  function closeFullscreen() {
-    const fs = document.getElementById('fullscreenMode');
-    if (fs) {
-      fs.classList.add('hidden');
-      document.body.style.overflow = '';
-    }
-    stopFullscreenStats();
-  }
-  
-  function syncFullscreenState() {
-    const mainBadge = document.getElementById('liveBadge');
-    const fsBadge = document.getElementById('fsLiveBadge');
-    const fsStatus = document.getElementById('fsLiveStatus');
-    const fsTitle = document.getElementById('fsStreamTitle');
-    const fsAvatar = document.getElementById('fsDjAvatar');
-    const fsName = document.getElementById('fsDjName');
-    const fsOffline = document.getElementById('fsOfflineOverlay');
-    const fsAudioPlaceholder = document.getElementById('fsAudioPlaceholder');
-    const fsVideo = document.getElementById('fsVideo');
-
-    // Clear loading state when syncing
-    fsBadge?.classList.remove('is-loading');
-
-    // Check if we're in audio-only mode (audioPlayer is visible)
-    const audioPlayer = document.getElementById('audioPlayer');
-    const isAudioMode = audioPlayer && !audioPlayer.classList.contains('hidden');
-
-    if (mainBadge?.classList.contains('is-live')) {
-      fsBadge?.classList.add('is-live');
-      if (fsStatus) fsStatus.textContent = 'LIVE';
-      fsOffline?.classList.add('hidden');
-
-      // Show/hide audio placeholder based on mode
-      if (isAudioMode) {
-        fsAudioPlaceholder?.classList.remove('hidden');
-        fsVideo?.classList.add('hidden');
-
-        // Sync DJ info to fullscreen audio placeholder
-        const mainDjName = document.getElementById('audioDjName');
-        const mainDjAvatar = document.getElementById('vinylDjAvatar');
-        const mainAudioBadge = document.getElementById('audioBadgeText');
-        const fsAudioDjName = document.getElementById('fsAudioDjName');
-        const fsVinylAvatar = document.getElementById('fsVinylDjAvatar');
-        const fsVinylAvatar2 = document.getElementById('fsVinylDjAvatar2');
-        const fsAudioBadge = document.getElementById('fsAudioBadgeText');
-
-        if (fsAudioDjName && mainDjName) fsAudioDjName.innerHTML = mainDjName.innerHTML;
-        if (fsVinylAvatar && mainDjAvatar) fsVinylAvatar.src = mainDjAvatar.src;
-        if (fsVinylAvatar2 && mainDjAvatar) fsVinylAvatar2.src = mainDjAvatar.src;
-        if (fsAudioBadge && mainAudioBadge) fsAudioBadge.textContent = mainAudioBadge.textContent;
-      } else {
-        fsAudioPlaceholder?.classList.add('hidden');
-        fsVideo?.classList.remove('hidden');
-      }
-    } else {
-      fsBadge?.classList.remove('is-live');
-      if (fsStatus) fsStatus.textContent = 'OFFLINE';
-      fsOffline?.classList.remove('hidden');
-      fsAudioPlaceholder?.classList.add('hidden');
-    }
-
-    const mainTitle = document.getElementById('streamTitle');
-    const mainAvatar = document.getElementById('djAvatar');
-    const mainName = document.getElementById('controlsDjName');
-
-    if (fsTitle && mainTitle) fsTitle.textContent = mainTitle.textContent;
-    if (fsAvatar && mainAvatar) fsAvatar.src = mainAvatar.src;
-    if (fsName && mainName) fsName.innerHTML = mainName.innerHTML;
-  }
-  
-  document.getElementById('exitFullscreen')?.addEventListener('click', closeFullscreen);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeFullscreen(); });
-  
-  document.getElementById('fsSendBtn')?.addEventListener('click', () => {
-    const input = document.getElementById('fsChatInput');
-    const mainInput = document.getElementById('chatInput');
-    const mainSend = document.getElementById('sendBtn');
-    if (input?.value.trim() && mainInput && mainSend) {
-      mainInput.value = input.value;
-      mainSend.click();
-      input.value = '';
-    }
-  });
-  
-  // Enter key for fullscreen chat
-  document.getElementById('fsChatInput')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      document.getElementById('fsSendBtn')?.click();
-    }
-  });
-  
-  // Fullscreen reaction buttons - call triggerReaction directly
-  document.querySelectorAll('.fs-reaction-btn').forEach(btn => {
-    // Skip the animation toggle button
-    if (btn.id === 'fsAnimToggleBtn') return;
-
-    btn.addEventListener('click', (e) => {
-      triggerReaction(e);
-    });
-  });
-  
-  // Fullscreen shoutout button - open main shoutout modal
-  document.getElementById('fsShoutoutBtn')?.addEventListener('click', () => {
-    document.getElementById('shoutoutBtn')?.click();
-  });
-  
-  // Fullscreen volume slider - sync with main volume
-  const fsVolumeSlider = document.getElementById('fsVolumeSlider');
-  const mainVolumeSlider = document.getElementById('volumeSlider');
-  
-  fsVolumeSlider?.addEventListener('input', (e) => {
-    const value = e.target.value;
-    if (mainVolumeSlider) {
-      mainVolumeSlider.value = value;
-      mainVolumeSlider.dispatchEvent(new Event('input'));
-    }
-  });
-  
-  // Sync volume sliders when fullscreen opens
-  function syncVolumeSliders() {
-    if (fsVolumeSlider && mainVolumeSlider) {
-      fsVolumeSlider.value = mainVolumeSlider.value;
-    }
-  }
-  
-  // Also sync main to fullscreen
-  mainVolumeSlider?.addEventListener('input', () => {
-    if (fsVolumeSlider) {
-      fsVolumeSlider.value = mainVolumeSlider.value;
-    }
-  });
-
-  // Sync fullscreen stats (only runs while fullscreen is active)
-  var fullscreenStatsInterval = null;
-
-  function startFullscreenStats() {
-    if (fullscreenStatsInterval) return;
-    fullscreenStatsInterval = setInterval(() => {
-      const fsViewers = document.getElementById('fsViewers');
-      const fsLikes = document.getElementById('fsLikes');
-      const fsDuration = document.getElementById('fsDuration');
-      const mainViewers = document.getElementById('viewerCount');
-      const mainLikes = document.getElementById('likeCount');
-      const mainDuration = document.getElementById('streamDuration');
-
-      if (fsViewers && mainViewers) fsViewers.textContent = mainViewers.textContent;
-      if (fsLikes && mainLikes) fsLikes.textContent = mainLikes.textContent;
-      if (fsDuration && mainDuration) fsDuration.textContent = mainDuration.textContent;
-
-      const mainChat = document.getElementById('chatMessages');
-      const fsChat = document.getElementById('fsChatMessages');
-      if (mainChat && fsChat) {
-        fsChat.innerHTML = mainChat.innerHTML;
-        fsChat.scrollTop = fsChat.scrollHeight;
-      }
-    }, 1000);
-  }
-
-  function stopFullscreenStats() {
-    if (fullscreenStatsInterval) {
-      clearInterval(fullscreenStatsInterval);
-      fullscreenStatsInterval = null;
-    }
-  }
-
-  // Fullscreen Twitch Chat Integration
-  let fsTwitchChannel = null;
-
-  function setupFsTwitchChat(twitchChannel) {
-    const twitchTab = document.getElementById('fsTwitchChatTab');
-    const twitchContainer = document.getElementById('fsTwitchChatContainer');
-    const twitchFrame = document.getElementById('fsTwitchChatFrame');
-    const twitchPlaceholder = document.getElementById('fsTwitchPlaceholder');
-
-    if (twitchChannel && twitchChannel.trim()) {
-      // Show Twitch tab
-      twitchTab?.classList.remove('hidden');
-      fsTwitchChannel = twitchChannel.trim().toLowerCase();
-
-      // Set up iframe URL with parent domain
-      const host = window.location.hostname;
-      const twitchChatUrl = `https://www.twitch.tv/embed/${fsTwitchChannel}/chat?parent=${host}&darkpopout`;
-
-      if (twitchFrame) {
-        twitchFrame.src = twitchChatUrl;
-        twitchPlaceholder?.classList.add('hidden');
-      }
-    } else {
-      // Hide Twitch tab if no channel
-      twitchTab?.classList.add('hidden');
-      fsTwitchChannel = null;
-
-      // Switch to Fresh Wax chat if currently on Twitch
-      const activeTwitchTab = document.querySelector('.fs-chat-tab[data-chat="twitch"].active');
-      if (activeTwitchTab) {
-        switchFsChat('freshwax');
-      }
-    }
-  }
-
-  function switchFsChat(chatType) {
-    const tabs = document.querySelectorAll('.fs-chat-tab');
-    const containers = document.querySelectorAll('.fs-chat-container');
-
-    tabs.forEach(tab => {
-      if (tab.dataset.chat === chatType) {
-        tab.classList.add('active');
-      } else {
-        tab.classList.remove('active');
-      }
-    });
-
-    containers.forEach(container => {
-      if (container.id === `fs${chatType.charAt(0).toUpperCase() + chatType.slice(1)}ChatContainer`) {
-        container.classList.add('active');
-      } else {
-        container.classList.remove('active');
-      }
-    });
-  }
-
-  // Chat tab click handlers
-  document.querySelectorAll('.fs-chat-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const chatType = tab.dataset.chat;
-      if (chatType) {
-        switchFsChat(chatType);
-      }
-    });
-  });
-
-  // Expose function globally for live-stream.js to call
-  window.setupFsTwitchChat = setupFsTwitchChat;
+  // Initialize extracted modules
+  initSpeedTest();
+  initReactions({ escapeHtml: escapeHtml });
+  initFullscreen();
+  initShare();
+  initShoutout({ escapeHtml: escapeHtml });
 
   // Calendar and time picker state
-  let calendarDate = new Date();
-  let selectedDate = null;
-  let selectedTime = null;
-  let selectedDuration = 60; // Default 1 hour
-  let bookingMode = 'schedule'; // 'schedule' or 'queue'
-  
-  // Get booked slots for conflict checking
+  var calendarDate = new Date();
+  var selectedDate = null;
+  var selectedTime = null;
+  var selectedDuration = 60;
+  var bookingMode = 'schedule';
+
   function getBookedSlotsForDate(dateStr) {
-    const slots = window.bookedSlots || [];
-    return slots.filter(slot => 
-      slot.startTime.startsWith(dateStr) && 
-      ['scheduled', 'live', 'in_lobby', 'queued'].includes(slot.status)
-    );
+    var slots = window.bookedSlots || [];
+    return slots.filter(function(slot) {
+      return slot.startTime.startsWith(dateStr) &&
+        ['scheduled', 'live', 'in_lobby', 'queued'].indexOf(slot.status) !== -1;
+    });
   }
-  
-  // Check if a time slot conflicts with existing bookings
+
   function isTimeSlotAvailable(dateStr, timeStr, duration) {
-    const slotStart = new Date(`${dateStr}T${timeStr}:00`);
-    const slotEnd = new Date(slotStart.getTime() + duration * 60000);
-    
-    const daySlots = getBookedSlotsForDate(dateStr);
-    
-    for (const booked of daySlots) {
-      const bookedStart = new Date(booked.startTime);
-      const bookedEnd = new Date(booked.endTime);
-      
-      // Check for overlap: new slot starts before booked ends AND new slot ends after booked starts
+    var slotStart = new Date(dateStr + 'T' + timeStr + ':00');
+    var slotEnd = new Date(slotStart.getTime() + duration * 60000);
+    var daySlots = getBookedSlotsForDate(dateStr);
+    for (var i = 0; i < daySlots.length; i++) {
+      var bookedStart = new Date(daySlots[i].startTime);
+      var bookedEnd = new Date(daySlots[i].endTime);
       if (slotStart < bookedEnd && slotEnd > bookedStart) {
         return false;
       }
     }
     return true;
   }
-  
-  // Format end time from start time and duration
+
   function getEndTime(timeStr, duration) {
-    const [hours, mins] = timeStr.split(':').map(Number);
-    const totalMins = hours * 60 + mins + duration;
-    const endHours = Math.floor(totalMins / 60) % 24;
-    const endMins = totalMins % 60;
-    return `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+    var parts = timeStr.split(':');
+    var hours = parseInt(parts[0]);
+    var mins = parseInt(parts[1]);
+    var totalMins = hours * 60 + mins + duration;
+    var endHours = Math.floor(totalMins / 60) % 24;
+    var endMins = totalMins % 60;
+    return String(endHours).padStart(2, '0') + ':' + String(endMins).padStart(2, '0');
   }
-  
+
   function renderCalendar() {
-    const year = calendarDate.getFullYear();
-    const month = calendarDate.getMonth();
-    const today = new Date();
+    var year = calendarDate.getFullYear();
+    var month = calendarDate.getMonth();
+    var today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() + 30); // Allow booking up to 1 month ahead
-    
-    document.getElementById('calMonthYear').textContent = 
-      calendarDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-    
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDay = (firstDay.getDay() + 6) % 7; // Monday = 0
-    
-    const daysContainer = document.getElementById('calDays');
+    var maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 30);
+
+    var monthYearEl = document.getElementById('calMonthYear');
+    if (monthYearEl) monthYearEl.textContent = calendarDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+    var firstDay = new Date(year, month, 1);
+    var lastDay = new Date(year, month + 1, 0);
+    var startDay = (firstDay.getDay() + 6) % 7;
+
+    var daysContainer = document.getElementById('calDays');
+    if (!daysContainer) return;
     daysContainer.innerHTML = '';
-    
-    // Previous month days
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
-    for (let i = startDay - 1; i >= 0; i--) {
-      const btn = document.createElement('button');
+
+    var prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (var i = startDay - 1; i >= 0; i--) {
+      var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'cal-day other-month disabled';
       btn.textContent = prevMonthLastDay - i;
       daysContainer.appendChild(btn);
     }
-    
-    // Current month days
-    for (let d = 1; d <= lastDay.getDate(); d++) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'cal-day';
-      btn.textContent = d;
-      
-      const thisDate = new Date(year, month, d);
+
+    for (var d = 1; d <= lastDay.getDate(); d++) {
+      var btn2 = document.createElement('button');
+      btn2.type = 'button';
+      btn2.className = 'cal-day';
+      btn2.textContent = d;
+      var thisDate = new Date(year, month, d);
       thisDate.setHours(0, 0, 0, 0);
-      
       if (thisDate < today || thisDate > maxDate) {
-        btn.classList.add('disabled');
+        btn2.classList.add('disabled');
       } else {
-        btn.addEventListener('click', () => selectDate(year, month, d));
+        (function(y, m, dy) {
+          btn2.addEventListener('click', function() { selectDate(y, m, dy); });
+        })(year, month, d);
       }
-      
-      if (thisDate.getTime() === today.getTime()) {
-        btn.classList.add('today');
+      if (thisDate.getTime() === today.getTime()) btn2.classList.add('today');
+      if (selectedDate && thisDate.getFullYear() === selectedDate.getFullYear() && thisDate.getMonth() === selectedDate.getMonth() && thisDate.getDate() === selectedDate.getDate()) {
+        btn2.classList.add('selected');
+        btn2.style.background = '#dc2626';
+        btn2.style.color = '#fff';
+        btn2.style.fontWeight = '700';
+        btn2.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.4)';
       }
-      
-      if (selectedDate && 
-          thisDate.getFullYear() === selectedDate.getFullYear() &&
-          thisDate.getMonth() === selectedDate.getMonth() &&
-          thisDate.getDate() === selectedDate.getDate()) {
-        btn.classList.add('selected');
-        btn.style.background = '#dc2626';
-        btn.style.color = '#fff';
-        btn.style.fontWeight = '700';
-        btn.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.4)';
-      }
-      
-      daysContainer.appendChild(btn);
+      daysContainer.appendChild(btn2);
     }
-    
-    // Next month days
-    const totalCells = daysContainer.children.length;
-    const remaining = 42 - totalCells;
-    for (let d = 1; d <= remaining && totalCells + d <= 42; d++) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'cal-day other-month disabled';
-      btn.textContent = d;
-      daysContainer.appendChild(btn);
+
+    var totalCells = daysContainer.children.length;
+    var remaining = 42 - totalCells;
+    for (var d2 = 1; d2 <= remaining && totalCells + d2 <= 42; d2++) {
+      var btn3 = document.createElement('button');
+      btn3.type = 'button';
+      btn3.className = 'cal-day other-month disabled';
+      btn3.textContent = d2;
+      daysContainer.appendChild(btn3);
     }
   }
-  
+
   function selectDate(year, month, day) {
     selectedDate = new Date(year, month, day);
-    document.getElementById('bookingDate').value = 
-      `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    
+    var dateInput = document.getElementById('bookingDate');
+    if (dateInput) dateInput.value = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0');
     renderCalendar();
-    
-    // Re-validate time selection with new date
     updateTimeFromDropdowns();
   }
-  
+
   function updateTimeFromDropdowns() {
-    const hour = document.getElementById('bookingHour')?.value;
-    const minute = document.getElementById('bookingMinute')?.value;
-    
+    var hourEl = document.getElementById('bookingHour');
+    var minuteEl = document.getElementById('bookingMinute');
+    var hour = hourEl && hourEl.value;
+    var minute = minuteEl && minuteEl.value;
+
     if (hour && minute) {
-      const timeStr = `${hour}:${minute}`;
+      var timeStr = hour + ':' + minute;
       selectedTime = timeStr;
-      document.getElementById('bookingTime').value = timeStr;
-      
-      // Check availability and show info
-      const now = new Date();
-      const dateStr = selectedDate ? 
-        `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}` : 
-        now.toISOString().split('T')[0];
-      
-      const isToday = dateStr === now.toISOString().split('T')[0];
-      const isPast = isToday && (parseInt(hour) < now.getHours() || (parseInt(hour) === now.getHours() && parseInt(minute) <= now.getMinutes()));
-      const isUnavailable = !isTimeSlotAvailable(dateStr, timeStr, selectedDuration);
-      
-      const infoEl = document.getElementById('selectedTimeInfo');
+      var timeInput = document.getElementById('bookingTime');
+      if (timeInput) timeInput.value = timeStr;
+
+      var now = new Date();
+      var dateStr = selectedDate
+        ? selectedDate.getFullYear() + '-' + String(selectedDate.getMonth() + 1).padStart(2, '0') + '-' + String(selectedDate.getDate()).padStart(2, '0')
+        : now.toISOString().split('T')[0];
+
+      var isToday = dateStr === now.toISOString().split('T')[0];
+      var isPast = isToday && (parseInt(hour) < now.getHours() || (parseInt(hour) === now.getHours() && parseInt(minute) <= now.getMinutes()));
+      var isUnavailable = !isTimeSlotAvailable(dateStr, timeStr, selectedDuration);
+
+      var infoEl = document.getElementById('selectedTimeInfo');
       if (infoEl && selectedDate) {
         if (isPast) {
-          infoEl.textContent = '⚠ This time has already passed';
+          infoEl.textContent = 'This time has already passed';
           infoEl.className = 'selected-time-info error';
           infoEl.classList.remove('hidden');
         } else if (isUnavailable) {
-          infoEl.textContent = '⚠ This slot conflicts with another booking';
+          infoEl.textContent = 'This slot conflicts with another booking';
           infoEl.className = 'selected-time-info error';
           infoEl.classList.remove('hidden');
         } else {
-          const endTime = getEndTime(timeStr, selectedDuration);
-          const dateFormatted = selectedDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-          infoEl.textContent = `✓ ${dateFormatted}: ${timeStr} - ${endTime}`;
+          var endTime = getEndTime(timeStr, selectedDuration);
+          var dateFormatted = selectedDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+          infoEl.textContent = dateFormatted + ': ' + timeStr + ' - ' + endTime;
           infoEl.className = 'selected-time-info';
           infoEl.classList.remove('hidden');
         }
       }
     } else {
       selectedTime = null;
-      document.getElementById('bookingTime').value = '';
-      document.getElementById('selectedTimeInfo')?.classList.add('hidden');
+      var ti = document.getElementById('bookingTime');
+      if (ti) ti.value = '';
+      var si = document.getElementById('selectedTimeInfo');
+      if (si) si.classList.add('hidden');
     }
   }
-  
-  function renderTimePicker() {
-    // Reset dropdowns when date changes
-    const hourSelect = document.getElementById('bookingHour');
-    const minuteSelect = document.getElementById('bookingMinute');
-    
-    if (hourSelect && minuteSelect) {
-      // Keep current selection but re-validate
-      updateTimeFromDropdowns();
-    }
-  }
-  
+
   // Time dropdown change handlers
-  document.getElementById('bookingHour')?.addEventListener('change', updateTimeFromDropdowns);
-  document.getElementById('bookingMinute')?.addEventListener('change', updateTimeFromDropdowns);
-  
-  // Duration change - reset time selection
-  document.querySelectorAll('input[name="duration"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
+  var bookingHour = document.getElementById('bookingHour');
+  var bookingMinute = document.getElementById('bookingMinute');
+  if (bookingHour) bookingHour.addEventListener('change', updateTimeFromDropdowns);
+  if (bookingMinute) bookingMinute.addEventListener('change', updateTimeFromDropdowns);
+
+  // Duration change
+  document.querySelectorAll('input[name="duration"]').forEach(function(radio) {
+    radio.addEventListener('change', function(e) {
       selectedDuration = parseInt(e.target.value);
-      // Re-validate current selection with new duration
       updateTimeFromDropdowns();
     });
   });
-  
+
   // Calendar navigation
-  document.getElementById('calPrevMonth')?.addEventListener('click', () => {
-    calendarDate.setMonth(calendarDate.getMonth() - 1);
-    renderCalendar();
-  });
-  
-  document.getElementById('calNextMonth')?.addEventListener('click', () => {
-    calendarDate.setMonth(calendarDate.getMonth() + 1);
-    renderCalendar();
-  });
-  
+  var calPrev = document.getElementById('calPrevMonth');
+  if (calPrev) calPrev.addEventListener('click', function() { calendarDate.setMonth(calendarDate.getMonth() - 1); renderCalendar(); });
+  var calNext = document.getElementById('calNextMonth');
+  if (calNext) calNext.addEventListener('click', function() { calendarDate.setMonth(calendarDate.getMonth() + 1); renderCalendar(); });
+
   // Booking type toggle
-  document.getElementById('bookingTypeSchedule')?.addEventListener('click', () => {
+  var bookingTypeSchedule = document.getElementById('bookingTypeSchedule');
+  if (bookingTypeSchedule) bookingTypeSchedule.addEventListener('click', function() {
     bookingMode = 'schedule';
     document.getElementById('bookingTypeSchedule').classList.add('active');
     document.getElementById('bookingTypeQueue').classList.remove('active');
     document.getElementById('scheduledTimeSection').classList.remove('hidden');
     document.getElementById('queueSection').classList.add('hidden');
   });
-  
-  document.getElementById('bookingTypeQueue')?.addEventListener('click', () => {
+  var bookingTypeQueue = document.getElementById('bookingTypeQueue');
+  if (bookingTypeQueue) bookingTypeQueue.addEventListener('click', function() {
     bookingMode = 'queue';
     document.getElementById('bookingTypeQueue').classList.add('active');
     document.getElementById('bookingTypeSchedule').classList.remove('active');
     document.getElementById('scheduledTimeSection').classList.add('hidden');
     document.getElementById('queueSection').classList.remove('hidden');
   });
-  
-  // NOTE: Booking button listeners moved to setupBookingButtons() for View Transitions support
-  
+
   // Close modals on overlay click
-  document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', () => {
-      document.getElementById('bookingModal')?.classList.add('hidden');
-      document.getElementById('goLiveNowModal')?.classList.add('hidden');
-      document.getElementById('shareModal')?.classList.add('hidden');
+  document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+    overlay.addEventListener('click', function() {
+      var bm = document.getElementById('bookingModal'); if (bm) bm.classList.add('hidden');
+      var gm = document.getElementById('goLiveNowModal'); if (gm) gm.classList.add('hidden');
+      var sm = document.getElementById('shareModal'); if (sm) sm.classList.add('hidden');
     });
   });
-  
-  // Go Live Now button handler - redirects directly to DJ lobby
-  // The DJ lobby page handles eligibility checking with the dark theme
-  document.getElementById('goLiveNowBtn')?.addEventListener('click', async () => {
-    // Wait for auth to be ready
-    let user = null;
-    if (window.authReady) {
-      user = await window.authReady;
-    } else {
-      user = window.firebaseAuth?.currentUser;
-    }
 
-    if (!user) {
-      // Not logged in - redirect to login
-      window.location.href = '/login/?redirect=/account/dj-lobby/';
-      return;
-    }
-
-    // Redirect directly to DJ lobby - it handles eligibility checking
+  // Go Live Now button
+  var goLiveNowBtn = document.getElementById('goLiveNowBtn');
+  if (goLiveNowBtn) goLiveNowBtn.addEventListener('click', async function() {
+    var user = null;
+    if (window.authReady) { user = await window.authReady; }
+    else { user = window.firebaseAuth && window.firebaseAuth.currentUser; }
+    if (!user) { window.location.href = '/login/?redirect=/account/dj-lobby/'; return; }
     window.location.href = '/account/dj-lobby/';
   });
 
-
-  
-  document.getElementById('closeGoLiveNowModal')?.addEventListener('click', () => {
-    document.getElementById('goLiveNowModal')?.classList.add('hidden');
+  var closeGoLiveNow = document.getElementById('closeGoLiveNowModal');
+  if (closeGoLiveNow) closeGoLiveNow.addEventListener('click', function() {
+    var m = document.getElementById('goLiveNowModal'); if (m) m.classList.add('hidden');
   });
-  
-  // Copy Go Live Now stream key
-  document.getElementById('copyGoLiveNowKey')?.addEventListener('click', () => {
-    const key = document.getElementById('goLiveNowStreamKey')?.textContent;
+
+  var copyGoLiveKey = document.getElementById('copyGoLiveNowKey');
+  if (copyGoLiveKey) copyGoLiveKey.addEventListener('click', function() {
+    var keyEl = document.getElementById('goLiveNowStreamKey');
+    var key = keyEl && keyEl.textContent;
     if (key && key !== '-') {
       navigator.clipboard.writeText(key);
-      document.getElementById('copyGoLiveNowKey').textContent = 'Copied!';
-      setTimeout(() => {
-        document.getElementById('copyGoLiveNowKey').textContent = 'Copy';
-      }, 2000);
+      copyGoLiveKey.textContent = 'Copied!';
+      setTimeout(function() { copyGoLiveKey.textContent = 'Copy'; }, 2000);
     }
-  });
-  
-  // Character counters for description fields
-  document.getElementById('bookingDescription')?.addEventListener('input', (e) => {
-    const count = e.target.value.length;
-    document.getElementById('bookingDescCount').textContent = count;
-  });
-  
-  document.getElementById('goLiveNowDescription')?.addEventListener('input', (e) => {
-    const count = e.target.value.length;
-    document.getElementById('goLiveNowDescCount').textContent = count;
-  });
-  
-  // Share functionality
-  let currentLiveInfo = null;
-  
-  function updateSharePreview(djName, djAvatar, crew) {
-    currentLiveInfo = { djName, djAvatar, crew };
-    document.getElementById('sharePreviewName').textContent = djName || 'Live Now';
-    document.getElementById('sharePreviewAvatar').src = djAvatar || '/place-holder.webp';
-    document.getElementById('sharePreviewCrew').textContent = crew || 'Fresh Wax Live Stream';
-  }
-  
-  function getShareUrl() {
-    return window.location.origin + '/live';
-  }
-  
-  function getShareText() {
-    if (currentLiveInfo) {
-      return `${currentLiveInfo.djName} is LIVE NOW on Fresh Wax!`;
-    }
-    return 'Fresh Wax Live Stream';
-  }
-  
-  // Open share modal
-  document.getElementById('shareBtn')?.addEventListener('click', () => {
-    const modal = document.getElementById('shareModal');
-    if (modal) {
-      modal.classList.remove('hidden');
-      document.getElementById('shareLinkInput').value = getShareUrl();
-      
-      // Show native share button if supported
-      if (navigator.share) {
-        document.getElementById('nativeShare')?.classList.remove('hidden');
-      }
-    }
-  });
-  
-  // Close share modal
-  document.getElementById('closeShareModal')?.addEventListener('click', () => {
-    document.getElementById('shareModal')?.classList.add('hidden');
   });
 
-  // Close share modal on overlay click
-  document.querySelector('#shareModal .modal-overlay')?.addEventListener('click', () => {
-    document.getElementById('shareModal')?.classList.add('hidden');
+  // Character counters
+  var bookingDesc = document.getElementById('bookingDescription');
+  if (bookingDesc) bookingDesc.addEventListener('input', function(e) {
+    var c = document.getElementById('bookingDescCount'); if (c) c.textContent = e.target.value.length;
   });
-  
-  // Copy share link
-  document.getElementById('copyShareLink')?.addEventListener('click', () => {
-    const input = document.getElementById('shareLinkInput');
-    const btn = document.getElementById('copyShareLink');
-    if (input && btn) {
-      navigator.clipboard.writeText(input.value);
-      btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
-    }
-  });
-  
-  // Twitter/X share
-  document.getElementById('shareTwitter')?.addEventListener('click', () => {
-    const text = encodeURIComponent(getShareText());
-    const url = encodeURIComponent(getShareUrl());
-    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
+  var goLiveDesc = document.getElementById('goLiveNowDescription');
+  if (goLiveDesc) goLiveDesc.addEventListener('input', function(e) {
+    var c = document.getElementById('goLiveNowDescCount'); if (c) c.textContent = e.target.value.length;
   });
 
-  // Facebook share - use Feed Dialog for better video preview support
-  document.getElementById('shareFacebook')?.addEventListener('click', () => {
-    const shareUrl = getShareUrl();
-    const djName = document.getElementById('sharePreviewName')?.textContent || 'Fresh Wax DJ';
-    const title = encodeURIComponent(`🔴 LIVE NOW: ${djName} on Fresh Wax`);
-    const description = encodeURIComponent('Tune in now for live jungle, drum & bass, and breakbeat!');
-    const url = encodeURIComponent(shareUrl);
-    // Use feed dialog for richer sharing with video preview
-    window.open(
-      `https://www.facebook.com/dialog/feed?app_id=966242223397117&link=${url}&name=${title}&description=${description}&redirect_uri=${encodeURIComponent(window.location.origin + '/live')}`,
-      '_blank',
-      'noopener,noreferrer,width=626,height=436'
-    );
-  });
-
-  // WhatsApp share
-  document.getElementById('shareWhatsApp')?.addEventListener('click', () => {
-    const text = encodeURIComponent(getShareText() + ' ' + getShareUrl());
-    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer');
-  });
-
-  // Telegram share
-  document.getElementById('shareTelegram')?.addEventListener('click', () => {
-    const text = encodeURIComponent(getShareText());
-    const url = encodeURIComponent(getShareUrl());
-    window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank', 'noopener,noreferrer');
-  });
-  
-  // Native share (mobile) - closes modal and opens OS share sheet
-  document.getElementById('nativeShare')?.addEventListener('click', async () => {
-    if (navigator.share) {
-      // Close the modal first
-      document.getElementById('shareModal')?.classList.add('hidden');
-      try {
-        await navigator.share({
-          title: 'Fresh Wax Live Stream',
-          text: getShareText(),
-          url: getShareUrl()
-        });
-      } catch (e) {
-        // Share cancelled
-      }
-    }
-  });
-  
-  // Make updateSharePreview available globally
-  window.updateSharePreview = updateSharePreview;
-  
-  // ============================================
-  // SHOUTOUT FUNCTIONALITY
-  // ============================================
-  
-  const shoutoutBtn = document.getElementById('shoutoutBtn');
-  const shoutoutModal = document.getElementById('shoutoutModal');
-  const closeShoutoutModal = document.getElementById('closeShoutoutModal');
-  const shoutoutInput = document.getElementById('shoutoutInput');
-  const shoutoutCharCount = document.getElementById('shoutoutCharCount');
-  const sendShoutoutBtn = document.getElementById('sendShoutoutBtn');
-  const shoutoutTrack = document.getElementById('shoutoutTrack');
-  
-  let shoutoutQueue = [];
-  let isShoutoutPlaying = false;
-  
-  // Open shoutout modal function
-  function openShoutoutModal() {
-    const isLoggedIn = window.currentUserInfo?.loggedIn || false;
-    if (!isLoggedIn) {
-      alert('Please sign in to send a shoutout');
-      return;
-    }
-    shoutoutModal?.classList.remove('hidden');
-    shoutoutInput?.focus();
-  }
-  
-  // Open shoutout modal
-  shoutoutBtn?.addEventListener('click', openShoutoutModal);
-  
-  // Close shoutout modal
-  closeShoutoutModal?.addEventListener('click', () => {
-    shoutoutModal?.classList.add('hidden');
-    if (shoutoutInput) shoutoutInput.value = '';
-    if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
-    if (sendShoutoutBtn) sendShoutoutBtn.disabled = true;
-  });
-  
-  // Close on overlay click
-  shoutoutModal?.querySelector('.modal-overlay')?.addEventListener('click', () => {
-    shoutoutModal?.classList.add('hidden');
-    if (shoutoutInput) shoutoutInput.value = '';
-    if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
-    if (sendShoutoutBtn) sendShoutoutBtn.disabled = true;
-  });
-  
-  // Character count and enable/disable send button
-  shoutoutInput?.addEventListener('input', () => {
-    const len = shoutoutInput.value.length;
-    if (shoutoutCharCount) shoutoutCharCount.textContent = len;
-    if (sendShoutoutBtn) sendShoutoutBtn.disabled = len === 0;
-  });
-  
-  // Emoji buttons
-  document.querySelectorAll('.shoutout-emoji').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (shoutoutInput && shoutoutInput.value.length < 30) {
-        const emoji = btn.dataset.emoji;
-        const remaining = 30 - shoutoutInput.value.length;
-        if (emoji.length <= remaining) {
-          shoutoutInput.value += emoji;
-          shoutoutInput.dispatchEvent(new Event('input'));
-          shoutoutInput.focus();
-        }
-      }
-    });
-  });
-  
-  // Send shoutout
-  sendShoutoutBtn?.addEventListener('click', async () => {
-    const message = shoutoutInput?.value.trim();
-    if (!message) return;
-    
-    // Use displayName for shoutouts (matches fullpage behavior)
-    const userName = window.currentUserInfo?.displayName || window.currentUserInfo?.name || 'Anonymous';
-    const userId = window.currentUserInfo?.id || null;
-    
-    // Disable button while sending
-    sendShoutoutBtn.disabled = true;
-    sendShoutoutBtn.innerHTML = '<span>Sending...</span>';
-    
-    try {
-      // Get current stream ID - use playlist-global for playlist mode
-      const streamId = window.currentStreamId || 'playlist-global';
-
-      // Send via API to broadcast to all viewers
-      const shoutToken = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
-      const response = await fetch('/api/livestream/react/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(shoutToken && { 'Authorization': 'Bearer ' + shoutToken }) },
-        body: JSON.stringify({
-          action: 'shoutout',
-          streamId: streamId,
-          userId: userId,
-          userName: userName,
-          message: message
-        })
-      });
-      
-      if (!response.ok) {
-        console.error('Shoutout send failed:', response.status);
-      }
-      // Shoutout will come back via Pusher to handleIncomingShoutout
-    } catch (e) {
-      console.error('Shoutout error:', e);
-    }
-    
-    // Close modal and reset
-    shoutoutModal?.classList.add('hidden');
-    if (shoutoutInput) shoutoutInput.value = '';
-    if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
-    sendShoutoutBtn.disabled = false;
-    sendShoutoutBtn.innerHTML = '<span>Send Shoutout</span><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
-  });
-  
-  // Play shoutout animation
-  function playNextShoutout() {
-    if (isShoutoutPlaying || shoutoutQueue.length === 0) return;
-    
-    isShoutoutPlaying = true;
-    const shoutout = shoutoutQueue.shift();
-    
-    if (shoutoutTrack) {
-      shoutoutTrack.innerHTML = `<span class="shoutout-message"><span class="shoutout-name">${escapeHtml(shoutout.name)}:</span> ${escapeHtml(shoutout.message)}</span>`;
-      shoutoutTrack.classList.remove('scrolling');
-      
-      // Trigger reflow to restart animation
-      void shoutoutTrack.offsetWidth;
-      shoutoutTrack.classList.add('scrolling');
-      
-      // After animation ends, check for more shoutouts
-      setTimeout(() => {
-        isShoutoutPlaying = false;
-        if (shoutoutQueue.length > 0) {
-          playNextShoutout();
-        } else {
-          // Reset to placeholder
-          shoutoutTrack.classList.remove('scrolling');
-          shoutoutTrack.innerHTML = '<span class="shoutout-placeholder">🎉 Send a shoutout to appear here!</span>';
-        }
-      }, 30000); // Match animation duration
-    }
-  }
-  
-  // Listen for incoming shoutouts from Pusher
-  window.handleIncomingShoutout = function(data) {
-    shoutoutQueue.push({ name: data.name, message: data.message });
-    playNextShoutout();
-  };
-  
-  // Store user info globally for shoutout access
-  // Try to restore from localStorage cache first (for instant auth on page reload)
-  let cachedAuth = null;
+  // Cached auth for user info
+  var cachedAuth = null;
   try {
-    const cached = sessionStorage.getItem('fw_auth_cache');
+    var cached = sessionStorage.getItem('fw_auth_cache');
     if (cached) {
       cachedAuth = JSON.parse(cached);
-      // Only use cache if less than 24 hours old
-      if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt < 86400000) {
-      } else {
-        cachedAuth = null;
-        sessionStorage.removeItem('fw_auth_cache');
-      }
+      if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt < 86400000) { /* valid */ }
+      else { cachedAuth = null; sessionStorage.removeItem('fw_auth_cache'); }
     }
-  } catch (e) { /* Ignore cache errors */ }
+  } catch (e) { /* ignore */ }
 
   window.currentUserInfo = cachedAuth || { loggedIn: false, name: 'Anonymous', displayName: 'Anonymous', id: null };
 
-  // If we have cached auth, dispatch event immediately for components like PlaylistModal
   if (cachedAuth && cachedAuth.loggedIn) {
-    // Use setTimeout to ensure DOM is ready
-    setTimeout(() => {
+    setTimeout(function() {
       document.dispatchEvent(new CustomEvent('userAuthReady', {
         detail: { user: null, userInfo: window.currentUserInfo }
       }));
     }, 0);
   }
 
-  // Function to setup booking button - needs to be re-attached on View Transitions
+  // Setup booking buttons (View Transitions compatible)
   function setupBookingButtons() {
-    const bookSlotBtn = document.getElementById('bookSlotBtn');
+    var bookSlotBtn = document.getElementById('bookSlotBtn');
     if (bookSlotBtn && !bookSlotBtn._listenerAttached) {
       bookSlotBtn._listenerAttached = true;
-      bookSlotBtn.addEventListener('click', () => {
-        const checkAuth = async () => {
-          let user = null;
-          let cachedUid = null;
-          try { cachedUid = localStorage.getItem('fw_uid'); } catch (e) {}
-
+      bookSlotBtn.addEventListener('click', function() {
+        (async function() {
+          var user = null;
+          var cachedUid = null;
+          try { cachedUid = localStorage.getItem('fw_uid'); } catch (e2) {}
           try {
-            // First check if we already have a current user
-            if (window.firebaseAuth?.currentUser) {
-              user = window.firebaseAuth.currentUser;
-            } else if (window.authReady) {
-              user = await window.authReady;
-            }
-
-            // If no user but we have cached UID, wait for auth to sync
+            if (window.firebaseAuth && window.firebaseAuth.currentUser) { user = window.firebaseAuth.currentUser; }
+            else if (window.authReady) { user = await window.authReady; }
             if (!user && cachedUid) {
-              const auth = window.firebaseAuth;
-              if (!auth) {
-                user = null;
-              } else {
-                const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-
-                // Wait up to 2 seconds for auth to sync
-                user = await new Promise((resolve) => {
-                  const timeout = setTimeout(() => {
-                    resolve(auth.currentUser);
-                  }, 2000);
-
-                  const unsubscribe = onAuthStateChanged(auth, (u) => {
-                    clearTimeout(timeout);
-                    unsubscribe();
-                    resolve(u);
-                  });
+              var auth = window.firebaseAuth;
+              if (auth) {
+                var mod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+                user = await new Promise(function(resolve) {
+                  var timeout = setTimeout(function() { resolve(auth.currentUser); }, 2000);
+                  var unsub = mod.onAuthStateChanged(auth, function(u) { clearTimeout(timeout); unsub(); resolve(u); });
                 });
               }
             }
-          } catch (err) {
-            console.error('[Live] Auth check error:', err);
-          }
-
-          if (!user) {
-            window.location.href = '/login/?redirect=/live/';
-            return;
-          }
-
-          const displayName = user.displayName || user.email?.split('@')[0] || 'DJ';
+          } catch (err) { console.error('[Live] Auth check error:', err); }
+          if (!user) { window.location.href = '/login/?redirect=/live/'; return; }
+          var displayName = user.displayName || (user.email && user.email.split('@')[0]) || 'DJ';
           window.openBookingSchedule(user.uid, displayName);
-        };
-
-        checkAuth();
+        })();
       });
     }
 
-    const viewScheduleBtn = document.getElementById('viewScheduleBtn');
+    var viewScheduleBtn = document.getElementById('viewScheduleBtn');
     if (viewScheduleBtn && !viewScheduleBtn._listenerAttached) {
       viewScheduleBtn._listenerAttached = true;
-      viewScheduleBtn.addEventListener('click', () => {
-        window.openPublicSchedule();
-      });
+      viewScheduleBtn.addEventListener('click', function() { window.openPublicSchedule(); });
     }
 
-    const viewFullScheduleBtn = document.getElementById('viewFullScheduleBtn');
+    var viewFullScheduleBtn = document.getElementById('viewFullScheduleBtn');
     if (viewFullScheduleBtn && !viewFullScheduleBtn._listenerAttached) {
       viewFullScheduleBtn._listenerAttached = true;
-      viewFullScheduleBtn.addEventListener('click', () => {
-        window.openPublicSchedule();
-      });
+      viewFullScheduleBtn.addEventListener('click', function() { window.openPublicSchedule(); });
     }
 
-    const closeBookingModal = document.getElementById('closeBookingModal');
+    var closeBookingModal = document.getElementById('closeBookingModal');
     if (closeBookingModal && !closeBookingModal._listenerAttached) {
       closeBookingModal._listenerAttached = true;
-      closeBookingModal.addEventListener('click', () => {
-        document.getElementById('bookingModal')?.classList.add('hidden');
+      closeBookingModal.addEventListener('click', function() {
+        var m = document.getElementById('bookingModal'); if (m) m.classList.add('hidden');
       });
     }
   }
 
-  // Initial setup
   setupBookingButtons();
 
-  // Re-setup on View Transitions navigation
-  document.addEventListener('astro:page-load', () => {
-    // Reset listener flags since View Transitions may have replaced elements
-    const bookSlotBtn = document.getElementById('bookSlotBtn');
-    const viewScheduleBtn = document.getElementById('viewScheduleBtn');
-    const closeBookingModal = document.getElementById('closeBookingModal');
-    if (bookSlotBtn) bookSlotBtn._listenerAttached = false;
-    if (viewScheduleBtn) viewScheduleBtn._listenerAttached = false;
-    if (closeBookingModal) closeBookingModal._listenerAttached = false;
+  document.addEventListener('astro:page-load', function() {
+    var b = document.getElementById('bookSlotBtn');
+    var v = document.getElementById('viewScheduleBtn');
+    var c = document.getElementById('closeBookingModal');
+    if (b) b._listenerAttached = false;
+    if (v) v._listenerAttached = false;
+    if (c) c._listenerAttached = false;
     setupBookingButtons();
     setupMetersToggle();
   });
 
-  // LED meters toggle setup
+  // LED meters toggle
   function setupMetersToggle() {
-    const toggleBtn = document.getElementById('toggleMetersBtn');
-    const stereoMeters = document.getElementById('stereoMeters');
+    var toggleBtn = document.getElementById('toggleMetersBtn');
+    var stereoMeters = document.getElementById('stereoMeters');
+    if (!toggleBtn || !stereoMeters) return;
 
-    if (!toggleBtn || !stereoMeters) {
-      return;
-    }
+    var visibleIcon = toggleBtn.querySelector('.meters-visible-icon');
+    var hiddenIcon = toggleBtn.querySelector('.meters-hidden-icon');
 
-    const visibleIcon = toggleBtn.querySelector('.meters-visible-icon');
-    const hiddenIcon = toggleBtn.querySelector('.meters-hidden-icon');
-
-    // Check localStorage for saved preference
-    let metersHidden = false;
+    var metersHidden = false;
     try { metersHidden = localStorage.getItem('fw_meters_hidden') === 'true'; } catch (e) {}
     if (metersHidden) {
       stereoMeters.classList.add('meters-hidden');
@@ -2497,32 +1435,37 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       if (hiddenIcon) hiddenIcon.classList.remove('hidden');
     }
 
-    // Prevent duplicate listeners
     if (toggleBtn._metersListenerAttached) return;
     toggleBtn._metersListenerAttached = true;
 
-    toggleBtn.addEventListener('click', (e) => {
+    toggleBtn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
-      const isHidden = stereoMeters.classList.toggle('meters-hidden');
+      var isHidden = stereoMeters.classList.toggle('meters-hidden');
       toggleBtn.classList.toggle('meters-off', isHidden);
       if (visibleIcon) visibleIcon.classList.toggle('hidden', isHidden);
       if (hiddenIcon) hiddenIcon.classList.toggle('hidden', !isHidden);
-      try { localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false'); } catch (e) {}
+      try { localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false'); } catch (e2) {}
     });
   }
 
-  // Initial LED meters toggle setup - wait for DOM
   if (document.readyState === 'loading') {
     document.addEventListener('astro:page-load', setupMetersToggle);
   } else {
     setupMetersToggle();
   }
+
+  // Clean up fullscreen intervals on View Transition navigation
+  document.addEventListener('astro:before-swap', function() {
+    stopFullscreenStats();
+  }, { once: true });
 </script>
 
 <script type="module" define:vars={{ firebaseConfig }} nonce={nonce}>
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  import { initPresence, waitForPusherAndSetup, startListenerHeartbeat, stopListenerHeartbeat, getOrCreateSessionId, resubscribePresence, getHeartbeatInterval } from '/live/presence.js';
+  import { initMobile } from '/live/mobile.js';
 
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
 
@@ -2548,6 +1491,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   // Playlist fallback timer - starts auto-play shortly after confirming no stream
   let playlistFallbackTimer = null;
   const PLAYLIST_FALLBACK_DELAY = 3 * 1000; // 3 seconds
+
+  // Takeover fallback interval (promoted to module scope for cleanup)
+  let takeoverFallbackInterval = null;
   
   function clearChatMessages() {
     const chatMessages = document.getElementById('chatMessages');
@@ -2667,216 +1613,19 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     loadSchedule();
   });
 
-  // Subscribe to live-status Pusher channel for instant schedule updates
-  function setupLiveStatusListener() {
-    const config = window.PUSHER_CONFIG;
-    if (!config?.key) {
-      return;
-    }
+  // Presence deps for module functions
+  var presenceDeps = {
+    escapeHtml: escapeHtml,
+    getCurrentUser: function() { return currentUser; },
+    getUserInfo: function() { return userInfo; },
+    pausePlaylistForStream: pausePlaylistForStream,
+    invalidateScheduleCache: function() { scheduleCache = null; },
+    loadSchedule: loadSchedule
+  };
 
-    try {
-      const statusPusher = new window.Pusher(config.key, {
-        cluster: config.cluster || 'eu',
-        forceTLS: true
-      });
-
-      const liveStatusChannel = statusPusher.subscribe('live-status');
-
-      liveStatusChannel.bind('stream-started', (data) => {
-        // Pause playlist when DJ goes live
-        pausePlaylistForStream();
-        // Trigger live-stream.js to fetch stream and load HLS player - skip cache for fresh data
-        if (typeof window.checkLiveStatus === 'function') {
-          window.checkLiveStatus(true);
-        }
-        // Refresh schedule immediately
-        scheduleCache = null;
-        loadSchedule(true);
-      });
-
-      liveStatusChannel.bind('stream-ended', (data) => {
-        // Refresh schedule immediately to remove completed DJ
-        scheduleCache = null;
-        loadSchedule(true);
-        // Resume playlist after 10 second delay
-        setTimeout(() => {
-          const playlistManager = window.playlistManager;
-          if (playlistManager?.wasPausedForStream) {
-            playlistManager.wasPausedForStream = false;
-            playlistManager.play?.();
-          }
-        }, 10000);
-      });
-
-
-      // Subscribe to presence channel for viewer tracking (no Firebase needed!)
-      const streamId = window.currentStreamId || 'playlist-global';
-      const presenceChannelName = `presence-stream-${streamId}`;
-
-      // Get user info for presence data - check multiple sources
-      // 1. Current userInfo (if already loaded)
-      // 2. Cached auth from localStorage (for faster initial load)
-      // 3. Firebase currentUser
-      // 4. Session ID as fallback
-      let cachedAuth = null;
-      try {
-        const cached = sessionStorage.getItem('fw_auth_cache');
-        if (cached) {
-          cachedAuth = JSON.parse(cached);
-          // Only use cache if less than 1 hour old
-          if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt > 3600000) {
-            cachedAuth = null;
-          }
-        }
-      } catch (e) { /* ignore */ }
-
-      const userId = currentUser?.uid || cachedAuth?.id || getOrCreateSessionId();
-      const userName = userInfo?.name || cachedAuth?.name || currentUser?.displayName || 'Viewer';
-      const userAvatar = userInfo?.avatar || cachedAuth?.avatarUrl || currentUser?.photoURL || '';
-
-
-      // Create Pusher instance with presence auth
-      // Note: Authorization header added only on re-subscription (after user info loads)
-      const presencePusher = new window.Pusher(config.key, {
-        cluster: config.cluster || 'eu',
-        forceTLS: true,
-        authEndpoint: '/api/pusher/auth/',
-        auth: {
-          headers: {
-            'x-user-id': userId,
-            'x-user-name': userName,
-            'x-user-avatar': userAvatar
-          }
-        }
-      });
-
-      // Store for potential re-subscription
-      window.presencePusher = presencePusher;
-
-      // Subscribe to presence channel - Pusher tracks members automatically!
-      const presenceChannel = presencePusher.subscribe(presenceChannelName);
-      window.presenceChannel = presenceChannel; // Store for later use
-
-      // Update viewer count and online users list
-      // Use window.presenceChannel so this works after re-subscription
-      function updateOnlineUsers() {
-        const channel = window.presenceChannel;
-        const count = channel?.members?.count || 0;
-        // Update count displays
-        const viewerEl = document.getElementById('viewerCount');
-        const fsViewers = document.getElementById('fsViewers');
-        const chatViewers = document.getElementById('chatViewers');
-        if (viewerEl) viewerEl.textContent = count;
-        if (fsViewers) fsViewers.textContent = count;
-        if (chatViewers) chatViewers.textContent = `${count} watching`;
-
-        // Update expandable panel count
-        var mobileCount = document.getElementById('onlineUserCountMobile');
-        if (mobileCount) mobileCount.textContent = count;
-
-        // Build user list HTML
-        var usersHtml = '';
-        if (channel && channel.members) {
-          if (count === 0) {
-            usersHtml = '<p class="no-users-msg">No users online</p>';
-          } else {
-            channel.members.each(function(member) {
-              var avatar = member.info ? member.info.avatar : null;
-              var name = (member.info ? member.info.name : null) || 'Viewer';
-              var avatarHtml = avatar
-                ? '<div class="online-user-avatar"><img src="' + escapeHtml(avatar) + '" alt="' + escapeHtml(name) + '" /></div>'
-                : '<div class="online-user-avatar">' + escapeHtml(name.charAt(0).toUpperCase()) + '</div>';
-              usersHtml += '<div class="online-user-item" data-user-id="' + escapeHtml(member.id) + '">' + avatarHtml + '<span class="online-user-name">' + escapeHtml(name) + '</span></div>';
-            });
-          }
-        }
-
-        // Update expandable user list
-        var mobileScroll = document.getElementById('onlineUsersMobileScroll');
-        if (mobileScroll) mobileScroll.innerHTML = usersHtml || '<p class="no-users-msg">No users online</p>';
-      }
-
-      // Expose globally for re-subscription
-      window.updateOnlineUsers = updateOnlineUsers;
-
-      // Log connection state changes
-      presencePusher.connection.bind('state_change', (states) => {
-      });
-
-      presencePusher.connection.bind('error', (err) => {
-        console.error('[Presence] Connection error:', err);
-      });
-
-      presenceChannel.bind('pusher:subscription_succeeded', (members) => {
-        updateOnlineUsers();
-      });
-
-      presenceChannel.bind('pusher:subscription_error', (error) => {
-        console.error('[Presence] Subscription error:', error);
-        console.error('[Presence] Error details:', JSON.stringify(error));
-      });
-
-      presenceChannel.bind('pusher:member_added', (member) => {
-        updateOnlineUsers();
-      });
-
-      presenceChannel.bind('pusher:member_removed', (member) => {
-        updateOnlineUsers();
-      });
-
-      // Also subscribe to regular channel for reactions/shoutouts
-      const reactionChannelName = `stream-${streamId}`;
-      const reactionChannel = statusPusher.subscribe(reactionChannelName);
-
-      // NOTE: Shoutout handling is done by live-stream.js chatChannel.bind('shoutout')
-      // to avoid duplicate shoutouts - DO NOT add a handler here
-
-      // NOTE: Reaction animations are handled by live-stream.js chatChannel.bind('reaction')
-      // to avoid duplicate emoji animations - DO NOT add a handler here
-
-      // Listen for like count updates from all reactions
-      reactionChannel.bind('like-update', (data) => {
-        if (data.totalLikes > 0) {
-          const likeCountEl = document.getElementById('likeCount');
-          const fsLikes = document.getElementById('fsLikes');
-          if (likeCountEl) likeCountEl.textContent = data.totalLikes;
-          if (fsLikes) fsLikes.textContent = data.totalLikes;
-        }
-      });
-
-      // Listen for viewer count updates from listeners endpoint (fallback)
-      reactionChannel.bind('viewer-update', (data) => {
-        if (data.count !== undefined) {
-          const viewerEl = document.getElementById('viewerCount');
-          const fsViewers = document.getElementById('fsViewers');
-          const chatViewers = document.getElementById('chatViewers');
-          if (viewerEl) viewerEl.textContent = data.count;
-          if (fsViewers) fsViewers.textContent = data.count;
-          if (chatViewers) chatViewers.textContent = `${data.count} watching`;
-        }
-      });
-
-    } catch (err) {
-      console.warn('[LiveStatus] Failed to setup Pusher:', err);
-    }
-  }
-
-  // Setup live status listener after Pusher loads
-  async function waitForPusherAndSetup() {
-    const maxWait = 10000; // 10 seconds max
-    const startTime = Date.now();
-
-    while (!window.Pusher && Date.now() - startTime < maxWait) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    if (window.Pusher) {
-      setupLiveStatusListener();
-    } else {
-      console.warn('[LiveStatus] Pusher not available after waiting');
-    }
-  }
-  setTimeout(waitForPusherAndSetup, 500);
+  // Initialize presence module and setup Pusher listener
+  initPresence(presenceDeps);
+  setTimeout(function() { waitForPusherAndSetup(presenceDeps); }, 500);
   
   async function checkUserStatus(userId) {
     try {
@@ -2941,43 +1690,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         } catch (e) { /* Ignore storage errors */ }
 
         // Re-subscribe to presence channel with correct user info
-        // This ensures the user's name shows correctly in the online list
-        if (window.presencePusher && window.presenceChannel) {
-          const streamId = window.currentStreamId || 'playlist-global';
-          const channelName = `presence-stream-${streamId}`;
-          // Unsubscribe and re-subscribe with correct auth headers
-          window.presencePusher.unsubscribe(channelName);
-
-          // Update auth headers (include Bearer token for server verification)
-          const resubHeaders = {
-            'x-user-id': userId,
-            'x-user-name': displayName,
-            'x-user-avatar': result.avatarUrl || currentUser?.photoURL || ''
-          };
-          if (_token) resubHeaders['Authorization'] = `Bearer ${_token}`;
-          window.presencePusher.config.auth = { headers: resubHeaders };
-
-          // Re-subscribe
-          const newChannel = window.presencePusher.subscribe(channelName);
-          window.presenceChannel = newChannel;
-
-          // Re-bind events
-          newChannel.bind('pusher:subscription_succeeded', () => {
-            if (typeof window.updateOnlineUsers === 'function') {
-              window.updateOnlineUsers();
-            }
-          });
-          newChannel.bind('pusher:member_added', () => {
-            if (typeof window.updateOnlineUsers === 'function') {
-              window.updateOnlineUsers();
-            }
-          });
-          newChannel.bind('pusher:member_removed', () => {
-            if (typeof window.updateOnlineUsers === 'function') {
-              window.updateOnlineUsers();
-            }
-          });
-        }
+        resubscribePresence(presenceDeps);
 
         // Dispatch event for components waiting for auth (like PlaylistModal)
         document.dispatchEvent(new CustomEvent('userAuthReady', {
@@ -3031,7 +1744,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     if (!window.Pusher) {
       console.warn('[Takeover] Pusher not available, falling back to polling');
       // Fallback: poll API every 10 seconds
-      var takeoverFallbackInterval = setInterval(async () => {
+      takeoverFallbackInterval = setInterval(async () => {
         try {
           const response = await fetch(`/api/dj-lobby/takeover/?userId=${currentUser.uid}`);
           if (!response.ok) return;
@@ -3354,102 +2067,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     }
   }
   
-  // Session ID for anonymous viewer tracking
-  function getOrCreateSessionId() {
-    let sessionId = sessionStorage.getItem('viewerSessionId');
-    if (!sessionId) {
-      sessionId = 'anon_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-      sessionStorage.setItem('viewerSessionId', sessionId);
-    }
-    return sessionId;
-  }
-
-  // Register view and trigger viewer count broadcast
-  // This calls the listeners endpoint which broadcasts viewer-update via Pusher
-  async function registerStreamView() {
-    const streamId = window.currentStreamId || document.body.dataset.streamId || 'playlist-global';
-    if (!streamId) return;
-
-    try {
-      // Register as viewer - this triggers a Pusher broadcast with current viewer count
-      const resp = await fetch('/api/livestream/listeners/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'join',
-          streamId,
-          userId: currentUser?.uid || getOrCreateSessionId(),
-          userName: userInfo?.name || 'Viewer'
-        })
-      });
-      if (!resp.ok) return;
-      const data = await resp.json();
-      // Update viewer count immediately from response
-      if (data.activeViewers !== undefined) {
-        const viewerEl = document.getElementById('viewerCount');
-        const fsViewers = document.getElementById('fsViewers');
-        const chatViewers = document.getElementById('chatViewers');
-        if (viewerEl) viewerEl.textContent = data.activeViewers;
-        if (fsViewers) fsViewers.textContent = data.activeViewers;
-        if (chatViewers) chatViewers.textContent = `${data.activeViewers} watching`;
-      }
-    } catch (e) {
-      console.warn('[Viewers] Registration failed:', e);
-    }
-  }
-
-  // Heartbeat interval for viewer tracking
-  let heartbeatInterval = null;
-
-  // Register view on page load and start heartbeat
-  function startListenerHeartbeat() {
-    // Ensure we have a stream ID - default to playlist-global if none set
-    if (!window.currentStreamId) {
-      window.currentStreamId = 'playlist-global';
-    }
-
-    // Register immediately
-    registerStreamView();
-
-    // Send heartbeat every 60 seconds to keep viewer count accurate
-    // This is less frequent than before (was 30s) to reduce Firebase writes
-    heartbeatInterval = setInterval(async () => {
-      const streamId = window.currentStreamId || 'playlist-global';
-      try {
-        await fetch('/api/livestream/listeners/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'heartbeat',
-            streamId,
-            userId: currentUser?.uid || getOrCreateSessionId(),
-            userName: userInfo?.name || 'Viewer'
-          })
-        });
-      } catch (e) { /* silent */ }
-    }, 60000); // Every 60 seconds
-  }
-
-  // Clean up heartbeat on page unload
-  function stopListenerHeartbeat() {
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-      heartbeatInterval = null;
-    }
-    // Send leave notification
-    const streamId = window.currentStreamId || 'playlist-global';
-    navigator.sendBeacon('/api/livestream/listeners/', JSON.stringify({
-      action: 'leave',
-      streamId,
-      userId: currentUser?.uid || getOrCreateSessionId()
-    }));
-  }
-
   // Start heartbeat for all viewers (logged in or anonymous)
-  startListenerHeartbeat();
+  startListenerHeartbeat(presenceDeps);
 
   // Clean up on page unload
-  window.addEventListener('beforeunload', stopListenerHeartbeat);
+  window.addEventListener('beforeunload', function() { stopListenerHeartbeat(presenceDeps); });
   
   function checkMyUpcomingSlot() {
     if (!currentUser || !allSlots.length) return;
@@ -4919,368 +3541,44 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     loadSchedule(true);
   });
   
-  // ============================================
-  // MOBILE TAB NAVIGATION
-  // ============================================
-  const mobileTabs = document.querySelectorAll('.mobile-tab');
-  const scheduleColumn = document.querySelector('.schedule-column');
-  const playerColumn = document.querySelector('.player-column');
-  const chatColumn = document.querySelector('.chat-column');
-  
-  function switchMobileTab(tabName) {
-    // Update tab buttons
-    mobileTabs.forEach(tab => {
-      tab.classList.toggle('active', tab.dataset.tab === tabName);
-    });
-    
-    // Update sections
-    scheduleColumn?.classList.toggle('mobile-active', tabName === 'schedule');
-    playerColumn?.classList.toggle('mobile-active', tabName === 'player');
-    chatColumn?.classList.toggle('mobile-active', tabName === 'chat');
-    
-    // Clear chat badge when viewing chat
-    if (tabName === 'chat') {
-      const chatBadge = document.querySelector('.mobile-tab[data-tab="chat"] .tab-badge');
-      if (chatBadge) chatBadge.remove();
-    }
-    
-    // Scroll to top of content
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-  
-  // Tab click handlers
-  mobileTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      switchMobileTab(tab.dataset.tab);
-    });
-  });
-  
-  // Set initial state
-  if (window.innerWidth <= 900) {
-    playerColumn?.classList.add('mobile-active');
-  }
-  
-  // Add chat notification badge when new message arrives
-  let lastChatCount = 0;
-  function addChatBadge() {
-    const chatTab = document.querySelector('.mobile-tab[data-tab="chat"]');
-    if (!chatTab || chatTab.classList.contains('active')) return;
-    
-    let badge = chatTab.querySelector('.tab-badge');
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.className = 'tab-badge';
-      badge.textContent = '1';
-      chatTab.appendChild(badge);
-    } else {
-      const count = parseInt(badge.textContent) + 1;
-      badge.textContent = count > 9 ? '9+' : count;
-    }
-  }
-  
-  // Expose for chat system to call
-  window.notifyNewChatMessage = addChatBadge;
-  
+  // Initialize mobile tabs, mini player, keyboard shortcuts, touch gestures, playlist save
+  initMobile();
+
   // Start initial polling
   startRefreshInterval();
-  
-  // ============================================
-  // MOBILE MINI PLAYER
-  // ============================================
-  const miniPlayer = document.getElementById('miniPlayer');
-  const miniPlayBtn = document.getElementById('miniPlayBtn');
-  const miniExpandBtn = document.getElementById('miniExpandBtn');
-  const miniPlayIcon = document.getElementById('miniPlayIcon');
-  const miniPauseIcon = document.getElementById('miniPauseIcon');
-  const miniDjName = document.getElementById('miniDjName');
-  const miniDjAvatar = document.getElementById('miniDjAvatar');
-  const miniLedStrip = document.getElementById('miniLedStrip');
-  const playerContainer = document.getElementById('playerContainer');
-  
-  let miniPlayerVisible = false;
-  let lastScrollY = 0;
-  
-  // Show/hide mini player based on scroll position
-  function updateMiniPlayer() {
-    if (!playerContainer || !miniPlayer) return;
-    
-    const rect = playerContainer.getBoundingClientRect();
-    const shouldShow = rect.bottom < 0 && window.innerWidth <= 768;
-    
-    if (shouldShow && !miniPlayerVisible) {
-      miniPlayer.classList.remove('hidden');
-      setTimeout(() => miniPlayer.classList.add('visible'), 10);
-      miniPlayerVisible = true;
-    } else if (!shouldShow && miniPlayerVisible) {
-      miniPlayer.classList.remove('visible');
-      setTimeout(() => miniPlayer.classList.add('hidden'), 300);
-      miniPlayerVisible = false;
-    }
-  }
-  
-  // Sync mini player state with main player
-  function syncMiniPlayer() {
-    const playBtn = document.getElementById('playBtn');
-    const djName = document.getElementById('djName');
-    const djAvatar = document.getElementById('djAvatar');
-    
-    if (playBtn && miniPlayBtn) {
-      const isPlaying = playBtn.classList.contains('playing');
-      if (isPlaying) {
-        miniPlayIcon?.classList.add('hidden');
-        miniPauseIcon?.classList.remove('hidden');
-      } else {
-        miniPlayIcon?.classList.remove('hidden');
-        miniPauseIcon?.classList.add('hidden');
-      }
-    }
-    
-    if (djName && miniDjName) {
-      miniDjName.textContent = djName.textContent;
-    }
-    
-    if (djAvatar && miniDjAvatar) {
-      miniDjAvatar.src = djAvatar.src;
-    }
-  }
-  
-  // Mini player play/pause
-  miniPlayBtn?.addEventListener('click', () => {
-    const playBtn = document.getElementById('playBtn');
-    playBtn?.click();
-    syncMiniPlayer();
-  });
-  
-  // Expand back to full player
-  miniExpandBtn?.addEventListener('click', () => {
-    playerContainer?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-  
-  // Update mini LED strip (simplified visualization)
-  function updateMiniLeds(level) {
-    if (!miniLedStrip) return;
-    const leds = miniLedStrip.querySelectorAll('.mini-led');
-    const activeLeds = Math.floor(level * leds.length);
-    leds.forEach((led, i) => {
-      led.classList.toggle('active', i < activeLeds);
-    });
-  }
-  
-  // Throttled scroll handler
-  let scrollTimeout;
-  function handleScroll() {
-    if (scrollTimeout) return;
-    scrollTimeout = setTimeout(() => {
-      updateMiniPlayer();
-      scrollTimeout = null;
-    }, 100);
-  }
-  window.addEventListener('scroll', handleScroll, { passive: true });
-  
-  // Observe play state changes
-  const playBtn = document.getElementById('playBtn');
-  if (playBtn) {
-    const miniPlayerObserver = new MutationObserver(syncMiniPlayer);
-    miniPlayerObserver.observe(playBtn, { attributes: true, attributeFilter: ['class'] });
 
-    // Cleanup observer on page navigation (Astro View Transitions)
-    document.addEventListener('astro:before-swap', () => {
-      miniPlayerObserver.disconnect();
-    }, { once: true });
-  }
-  
-  // ============================================
-  // KEYBOARD SHORTCUTS
-  // ============================================
-  function handleKeydown(e) {
-    // Don't trigger if typing in an input
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-    switch(e.code) {
-      case 'Space':
-        e.preventDefault();
-        document.getElementById('playBtn')?.click();
-        break;
-      case 'KeyM':
-        // Toggle mute
-        const slider = document.getElementById('volumeSlider');
-        if (slider) {
-          slider.value = slider.value > 0 ? 0 : 80;
-          slider.dispatchEvent(new Event('input'));
-        }
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        adjustVolume(10);
-        break;
-      case 'ArrowDown':
-        e.preventDefault();
-        adjustVolume(-10);
-        break;
-      case 'KeyF':
-        // Fullscreen
-        document.getElementById('fullscreenBtn')?.click();
-        break;
+  // Clean up module-scoped intervals on View Transition navigation
+  document.addEventListener('astro:before-swap', function() {
+    if (takeoverFallbackInterval) {
+      clearInterval(takeoverFallbackInterval);
+      takeoverFallbackInterval = null;
     }
-  }
-  document.addEventListener('keydown', handleKeydown);
-
-  // Cleanup on View Transitions navigation
-  document.addEventListener('astro:before-swap', () => {
-    window.removeEventListener('scroll', handleScroll);
-    document.removeEventListener('keydown', handleKeydown);
+    if (takeoverPollInterval) {
+      clearInterval(takeoverPollInterval);
+      takeoverPollInterval = null;
+    }
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+    if (availableSlotPollInterval) {
+      clearInterval(availableSlotPollInterval);
+      availableSlotPollInterval = null;
+    }
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
+      refreshInterval = null;
+    }
+    if (chatClearTimer) {
+      clearTimeout(chatClearTimer);
+      chatClearTimer = null;
+    }
+    if (playlistFallbackTimer) {
+      clearTimeout(playlistFallbackTimer);
+      playlistFallbackTimer = null;
+    }
+    stopListenerHeartbeat();
   }, { once: true });
-  
-  function adjustVolume(delta) {
-    const slider = document.getElementById('volumeSlider');
-    if (slider) {
-      let newVal = parseInt(slider.value) + delta;
-      newVal = Math.max(0, Math.min(100, newVal));
-      slider.value = newVal;
-      slider.dispatchEvent(new Event('input'));
-      showVolumeHint(newVal);
-    }
-  }
-  
-  function showVolumeHint(vol) {
-    let hint = document.getElementById('volumeHint');
-    if (!hint) {
-      hint = document.createElement('div');
-      hint.id = 'volumeHint';
-      hint.className = 'swipe-hint';
-      document.body.appendChild(hint);
-    }
-    hint.textContent = `Volume: ${vol}%`;
-    hint.classList.add('visible');
-    setTimeout(() => hint.classList.remove('visible'), 1000);
-  }
-  
-  // ============================================
-  // TOUCH GESTURES FOR MOBILE
-  // ============================================
-  let touchStartY = 0;
-  let touchStartX = 0;
-  
-  playerContainer?.addEventListener('touchstart', (e) => {
-    touchStartY = e.touches[0].clientY;
-    touchStartX = e.touches[0].clientX;
-  }, { passive: true });
-  
-  playerContainer?.addEventListener('touchend', (e) => {
-    const touchEndY = e.changedTouches[0].clientY;
-    const touchEndX = e.changedTouches[0].clientX;
-    const deltaY = touchStartY - touchEndY;
-    const deltaX = touchEndX - touchStartX;
-    
-    // Vertical swipe for volume (if more vertical than horizontal)
-    if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX)) {
-      const volumeChange = deltaY > 0 ? 10 : -10;
-      adjustVolume(volumeChange);
-    }
-    
-    // Double tap to like
-    // (handled by native dblclick)
-  }, { passive: true });
-
-  // Double tap to trigger reaction
-  let lastTap = 0;
-  playerContainer?.addEventListener('touchend', (e) => {
-    const now = Date.now();
-    if (now - lastTap < 300) {
-      // Double tap!
-      const likeBtn = document.getElementById('likeBtn');
-      likeBtn?.click();
-    }
-    lastTap = now;
-  }, { passive: true });
-
-  // Now Playing Save Button - Add current track to personal playlist
-  const nowPlayingSaveBtn = document.getElementById('nowPlayingSaveBtn');
-  const djInfoBar = document.querySelector('.dj-info-bar');
-  let currentPlaylistTrack = null;
-
-  // Listen for playlist updates to show/hide the save button and track current song
-  window.addEventListener('playlistUpdate', (e) => {
-    const detail = e.detail;
-    const isPlaylistPlaying = detail.isPlaying && detail.queue && detail.queue.length > 0;
-    const controlsLabel = document.getElementById('controlsLabel');
-    const controlsDjName = document.getElementById('controlsDjName');
-    const npTrackTitle = document.getElementById('npTrackTitle');
-    const bottomDurationBox = document.getElementById('bottomDurationBox');
-    const bottomDurationLabel = document.getElementById('bottomDurationLabel');
-    const streamGenre = document.getElementById('streamGenre');
-
-    if (isPlaylistPlaying) {
-      // Add playlist-mode class to show the save button
-      djInfoBar?.classList.add('playlist-mode');
-      document.getElementById('streamInfoBar')?.classList.add('playlist-mode');
-
-      // Store current track for saving
-      const currentIndex = detail.currentIndex || 0;
-      currentPlaylistTrack = detail.queue[currentIndex];
-
-      // Update label and show track title only - keep it simple
-      if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
-      if (controlsDjName && currentPlaylistTrack) {
-        const title = currentPlaylistTrack.title || '';
-        controlsDjName.textContent = title.length > 50 ? title.substring(0, 50) + '...' : title;
-      }
-      if (npTrackTitle) npTrackTitle.textContent = '';
-
-      // Show duration box with "LEFT" label, hide genre in playlist mode
-      if (bottomDurationBox) bottomDurationBox.style.display = 'flex';
-      if (bottomDurationLabel) bottomDurationLabel.textContent = 'LEFT';
-      if (streamGenre) streamGenre.style.display = 'none';
-
-      // Update button state - check if track is already in personal playlist
-      if (nowPlayingSaveBtn && currentPlaylistTrack) {
-        const personalPlaylist = detail.personalPlaylist || [];
-        const isInPlaylist = personalPlaylist.some(item => item.url === currentPlaylistTrack.url);
-        nowPlayingSaveBtn.classList.toggle('saved', isInPlaylist);
-        nowPlayingSaveBtn.title = isInPlaylist ? 'Already in My Playlist' : 'Save to My Playlist';
-      }
-    } else {
-      djInfoBar?.classList.remove('playlist-mode');
-      document.getElementById('streamInfoBar')?.classList.remove('playlist-mode');
-      currentPlaylistTrack = null;
-      if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
-      if (npTrackTitle) npTrackTitle.textContent = '';
-      // Don't overwrite controlsDjName if live stream is active (preserves relay red text)
-      // Also check currentStreamData which is preserved across View Transitions
-      if (controlsDjName && !window.isLiveStreamActive && !window.streamDetectedThisSession && !window.currentStreamData) {
-        controlsDjName.textContent = '--';
-      }
-      if (bottomDurationBox) bottomDurationBox.style.display = 'none';
-      if (streamGenre) streamGenre.style.display = '';
-    }
-  });
-
-  // Handle save button click
-  nowPlayingSaveBtn?.addEventListener('click', async () => {
-    if (!currentPlaylistTrack) return;
-
-    // Check if already saved
-    if (nowPlayingSaveBtn.classList.contains('saved')) {
-      return; // Already saved
-    }
-
-    try {
-      // Get the playlist manager and add to personal playlist
-      const manager = window.playlistManager;
-      if (manager) {
-        // Pass the URL string, not the whole object
-        const result = await manager.addToPersonalPlaylist(currentPlaylistTrack.url);
-        if (result.success) {
-          nowPlayingSaveBtn.classList.add('saved');
-          nowPlayingSaveBtn.title = 'Already in My Playlist';
-        }
-      } else {
-        console.warn('[NowPlaying] Playlist manager not available');
-      }
-    } catch (err) {
-      console.error('[NowPlaying] Error saving track:', err);
-    }
-  });
 </script>
 
 <script is:inline src="/email-verify-check.js" nonce={nonce}></script>
@@ -5396,19 +3694,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     document.body.classList.remove('header-hidden');
     var hz = document.querySelector('.header-hover-zone');
     if (hz) hz.remove();
-    // Clean up intervals
-    if (typeof fullscreenStatsInterval !== 'undefined' && fullscreenStatsInterval) {
-      clearInterval(fullscreenStatsInterval);
-      fullscreenStatsInterval = null;
-    }
-    if (typeof takeoverFallbackInterval !== 'undefined' && takeoverFallbackInterval) {
-      clearInterval(takeoverFallbackInterval);
-      takeoverFallbackInterval = null;
-    }
-    if (heartbeatInterval) clearInterval(heartbeatInterval);
-    if (takeoverPollInterval) clearInterval(takeoverPollInterval);
-    if (countdownInterval) clearInterval(countdownInterval);
-    if (availableSlotPollInterval) clearInterval(availableSlotPollInterval);
-    if (refreshInterval) clearInterval(refreshInterval);
+    // Note: module-scoped intervals (fullscreenStats, takeover, countdown, etc.)
+    // are cleaned up in their own module script blocks above.
   });
 </script>

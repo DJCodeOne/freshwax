@@ -1060,33 +1060,38 @@ export const POST: APIRoute = async ({ request, locals }) => {
           : 'Another DJ is currently live. Please wait until their session ends.');
       }
 
-      // Validate that the stream is actually active before going live
-      const hlsCheckUrl = buildHlsUrl(streamKey);
-      let streamActive = false;
-      let streamCheckAttempts = 0;
-      const maxAttempts = 2;
+      // Skip HLS check for browser mode — WebRTC→HLS transcode takes 10-15s for segments to appear
+      const isBrowserMode = broadcastMode === 'browser';
 
-      while (streamCheckAttempts < maxAttempts && !streamActive) {
-        streamCheckAttempts++;
-        try {
-          const checkResponse = await fetchWithTimeout(hlsCheckUrl.replace('/index.m3u8', '/'), {
-            method: 'HEAD'
-          }, 5000);
-          streamActive = checkResponse.ok || checkResponse.status === 200;
-          if (!streamActive && streamCheckAttempts < maxAttempts) {
-            await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
-          }
-        } catch (e: unknown) {
-          log.warn(`Stream check attempt ${streamCheckAttempts} failed:`, e);
-          if (streamCheckAttempts < maxAttempts) {
-            await new Promise(r => setTimeout(r, 1000));
+      if (!isBrowserMode) {
+        // Validate that the stream is actually active before going live
+        const hlsCheckUrl = buildHlsUrl(streamKey);
+        let streamActive = false;
+        let streamCheckAttempts = 0;
+        const maxAttempts = 2;
+
+        while (streamCheckAttempts < maxAttempts && !streamActive) {
+          streamCheckAttempts++;
+          try {
+            const checkResponse = await fetchWithTimeout(hlsCheckUrl.replace('/index.m3u8', '/'), {
+              method: 'HEAD'
+            }, 5000);
+            streamActive = checkResponse.ok || checkResponse.status === 200;
+            if (!streamActive && streamCheckAttempts < maxAttempts) {
+              await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+            }
+          } catch (e: unknown) {
+            log.warn(`Stream check attempt ${streamCheckAttempts} failed:`, e);
+            if (streamCheckAttempts < maxAttempts) {
+              await new Promise(r => setTimeout(r, 1000));
+            }
           }
         }
-      }
 
-      // If stream check failed after retries, warn but allow (DJ clicked Ready)
-      if (!streamActive) {
-        log.warn('Could not verify stream, proceeding with DJ confirmation');
+        // If stream check failed after retries, warn but allow (DJ clicked Ready)
+        if (!streamActive) {
+          log.warn('Could not verify stream, proceeding with DJ confirmation');
+        }
       }
 
       // Calculate end time (top of next hour)
