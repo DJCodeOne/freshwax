@@ -6167,11 +6167,21 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (desktopBtnText) desktopBtnText.textContent = '\u2713 Ready';
       if (desktopGoLive) desktopGoLive.classList.remove('hidden');
 
+      // Start camera preview so DJ can see themselves
+      btnText.textContent = 'Starting camera...';
+      var videoEl = document.getElementById('mobilePreviewVideo');
+      var offlineState = document.getElementById('mobileOfflineState');
+      await mobileBroadcast.startCamera(videoEl);
+
+      // Show camera feed, hide offline state
+      if (offlineState) offlineState.style.display = 'none';
+      if (videoEl) videoEl.classList.add('active');
+
       // Update mobile UI
       btn.classList.add('mobile-is-ready');
       btnText.textContent = '\u2713 Ready';
       if (goLiveBtn) goLiveBtn.style.display = '';
-      if (statusText) statusText.textContent = 'Tap GO LIVE to start streaming from your camera';
+      if (statusText) statusText.textContent = 'Camera preview active — tap GO LIVE when ready';
 
     } catch (e) {
       btnText.textContent = "I'm Ready";
@@ -6180,7 +6190,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
   });
 
-  // Mobile Go Live button
+  // Mobile Go Live button — camera already running from Ready step
   document.getElementById('mobileGoLiveBtn')?.addEventListener('click', async () => {
     if (!currentUser || !mySlot) return;
 
@@ -6197,20 +6207,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (!btn || !btnText) return;
 
     btn.disabled = true;
-    btnText.textContent = 'Starting camera...';
+    btnText.textContent = 'Connecting...';
     if (statusText) statusText.textContent = '';
 
     try {
-      // Start camera
-      await mobileBroadcast.startCamera(videoEl);
-
-      // Show camera feed, hide offline state
-      if (offlineState) offlineState.style.display = 'none';
-      if (videoEl) videoEl.classList.add('active');
-
-      btnText.textContent = 'Connecting...';
-
-      // Go live via WHIP
+      // Go live via WHIP (camera already started in Ready step)
       var token = await currentUser.getIdToken();
       await mobileBroadcast.goLive(
         token,
