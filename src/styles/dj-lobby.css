@@ -10484,3 +10484,146 @@
     display: none;
   }
 }
+
+/* ============================================
+   BROADCAST METHOD CHOOSER
+   ============================================ */
+
+.broadcast-chooser {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: calc(100vh - 120px);
+}
+
+.broadcast-chooser h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 0.05em;
+  color: #f3f4f6;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.chooser-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+.chooser-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 1.25rem 1rem;
+  min-height: 120px;
+  background: rgba(31, 41, 55, 0.8);
+  border: 2px solid #374151;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+.chooser-btn:hover {
+  background: rgba(31, 41, 55, 1);
+}
+
+.chooser-btn:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+.chooser-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.chooser-label {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: 0.05em;
+  color: #f3f4f6;
+}
+
+.chooser-subtitle {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* Per-button hover colors */
+.chooser-phone:hover {
+  border-color: #22c55e;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.2);
+}
+
+.chooser-obs:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+}
+
+.chooser-butt:hover {
+  border-color: #a855f7;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.2);
+}
+
+.chooser-relay:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+/* When chooser is active, hide both layouts */
+.lobby-container.chooser-active .mobile-broadcast-layout,
+.lobby-container.chooser-active .lobby-layout,
+.lobby-container.chooser-active .lobby-footer {
+  display: none !important;
+}
+
+/* Change method link (mobile layout) */
+.change-method-link {
+  display: flex;
+  justify-content: center;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.change-method-link button {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 0.7rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 8px;
+}
+
+.change-method-link button:hover {
+  color: #9ca3af;
+}
+
+@media (max-width: 400px) {
+  .broadcast-chooser {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .chooser-btn {
+    min-height: 100px;
+    padding: 1rem 0.75rem;
+  }
+
+  .chooser-icon {
+    font-size: 1.5rem;
+  }
+
+  .chooser-label {
+    font-size: 1.1rem;
+  }
+}

@@ -235,6 +235,33 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       </div>
     </header>
 
+    <!-- Broadcast Method Chooser -->
+    <div id="broadcastChooser" class="broadcast-chooser hidden">
+      <h2>How are you broadcasting?</h2>
+      <div class="chooser-grid">
+        <button id="chooserPhone" class="chooser-btn chooser-phone" type="button">
+          <span class="chooser-icon">&#128241;</span>
+          <span class="chooser-label">Phone</span>
+          <span class="chooser-subtitle">Camera + mic from this device</span>
+        </button>
+        <button id="chooserObs" class="chooser-btn chooser-obs" type="button">
+          <span class="chooser-icon">&#128421;</span>
+          <span class="chooser-label">OBS</span>
+          <span class="chooser-subtitle">Stream via OBS Studio</span>
+        </button>
+        <button id="chooserButt" class="chooser-btn chooser-butt" type="button">
+          <span class="chooser-icon">&#127911;</span>
+          <span class="chooser-label">BUTT</span>
+          <span class="chooser-subtitle">Audio-only via BUTT</span>
+        </button>
+        <button id="chooserRelay" class="chooser-btn chooser-relay" type="button">
+          <span class="chooser-icon">&#128225;</span>
+          <span class="chooser-label">Relay</span>
+          <span class="chooser-subtitle">External audio source</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Mobile Broadcast Layout (visible <=768px only) -->
     <div class="mobile-broadcast-layout" id="mobileBroadcastLayout">
       <!-- Video: offline placeholder + camera preview + live overlay -->
@@ -295,6 +322,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       <!-- Toggle to OBS/Advanced mode -->
       <div class="broadcast-mode-toggle">
         <button id="switchToObsMode" type="button">Switch to OBS / Advanced Mode</button>
+      </div>
+      <div class="change-method-link">
+        <button id="changeMethodMobile" type="button">Change broadcast method</button>
       </div>
     </div>
 
@@ -1358,6 +1388,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       <span>DJ Lobby</span>
       <span class="footer-dot">•</span>
       <button id="switchToBrowserMode" type="button" style="background:none;border:none;color:#9ca3af;font-size:0.75rem;cursor:pointer;text-decoration:underline;">Browser Mode</button>
+      <span class="footer-dot">•</span>
+      <button id="changeMethodDesktop" type="button" style="background:none;border:none;color:#9ca3af;font-size:0.75rem;cursor:pointer;text-decoration:underline;">Change Method</button>
     </footer>
     
     <!-- DM Modal -->
@@ -6079,29 +6111,73 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }
 
   function switchToObsMode() {
-    if (lobbyContainer) lobbyContainer.classList.add('obs-mode');
+    if (lobbyContainer) {
+      lobbyContainer.classList.add('obs-mode');
+      lobbyContainer.classList.remove('chooser-active');
+    }
     moveChatToDesktop();
-    try { localStorage.setItem('fw_lobby_mode', 'obs'); } catch (e) { /* ignore */ }
   }
 
   function switchToBrowserMode() {
-    if (lobbyContainer) lobbyContainer.classList.remove('obs-mode');
+    if (lobbyContainer) {
+      lobbyContainer.classList.remove('obs-mode');
+      lobbyContainer.classList.remove('chooser-active');
+    }
     moveChatToBroadcast();
-    try { localStorage.setItem('fw_lobby_mode', 'browser'); } catch (e) { /* ignore */ }
   }
 
-  // Mode toggle buttons
-  document.getElementById('switchToObsMode')?.addEventListener('click', switchToObsMode);
-  document.getElementById('switchToBrowserMode')?.addEventListener('click', switchToBrowserMode);
+  // Chooser logic
+  var chooserEl = document.getElementById('broadcastChooser');
 
-  // Restore saved preference (default: browser mode)
+  function showChooser() {
+    if (chooserEl) chooserEl.classList.remove('hidden');
+    if (lobbyContainer) lobbyContainer.classList.add('chooser-active');
+  }
+
+  function hideChooser() {
+    if (chooserEl) chooserEl.classList.add('hidden');
+    if (lobbyContainer) lobbyContainer.classList.remove('chooser-active');
+  }
+
+  function applyMode(mode) {
+    hideChooser();
+    if (mode === 'browser') {
+      switchToBrowserMode();
+    } else {
+      // obs:obs, obs:butt, obs:relay
+      switchToObsMode();
+      var source = mode.split(':')[1] || 'obs';
+      setTimeout(function() { setPreviewSource(source); }, 50);
+    }
+    try { localStorage.setItem('fw_lobby_mode', mode); } catch (e) { /* ignore */ }
+  }
+
+  // Chooser button handlers
+  document.getElementById('chooserPhone')?.addEventListener('click', function() { applyMode('browser'); });
+  document.getElementById('chooserObs')?.addEventListener('click', function() { applyMode('obs:obs'); });
+  document.getElementById('chooserButt')?.addEventListener('click', function() { applyMode('obs:butt'); });
+  document.getElementById('chooserRelay')?.addEventListener('click', function() { applyMode('obs:relay'); });
+
+  // Change method links re-show the chooser
+  document.getElementById('changeMethodMobile')?.addEventListener('click', showChooser);
+  document.getElementById('changeMethodDesktop')?.addEventListener('click', showChooser);
+
+  // Mode toggle buttons (quick switch without chooser)
+  document.getElementById('switchToObsMode')?.addEventListener('click', function() {
+    applyMode('obs:obs');
+  });
+  document.getElementById('switchToBrowserMode')?.addEventListener('click', function() {
+    applyMode('browser');
+  });
+
+  // Restore saved preference or show chooser
   var savedMode = null;
   try { savedMode = localStorage.getItem('fw_lobby_mode'); } catch (e) { /* ignore */ }
-  if (savedMode === 'obs') {
-    switchToObsMode();
+  if (savedMode) {
+    applyMode(savedMode);
   } else {
-    // Default: browser broadcast mode — move chat there
-    setTimeout(function() { moveChatToBroadcast(); }, 0);
+    // First visit: show broadcast method chooser
+    showChooser();
   }
 
   // Mobile Ready button
