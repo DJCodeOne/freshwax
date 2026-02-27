@@ -1583,7 +1583,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   var checkObsPreview = videoPlayer.checkObsPreview;
   var initObsPreviewPlayer = videoPlayer.initObsPreviewPlayer;
   var destroyObsPreviewPlayer = videoPlayer.destroyObsPreviewPlayer;
-  var startObsPreviewCheck = videoPlayer.startObsPreviewCheck;
+  var startObsPreviewCheck = function() {
+    var lc = document.getElementById('mainLobby');
+    if (lc && lc.classList.contains('obs-mode')) {
+      videoPlayer.startObsPreviewCheck();
+    }
+  };
   var stopObsPreviewCheck = videoPlayer.stopObsPreviewCheck;
   var updateMuteButtonState = videoPlayer.updateMuteButtonState;
   var updateCenterStats = videoPlayer.updateCenterStats;
@@ -3054,7 +3059,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       escapeHtml: escapeHtml,
       log: log,
       updateButtPassword: updateButtPassword,
-      startObsPreviewCheck: function() { return videoPlayer.startObsPreviewCheck(); },
+      startObsPreviewCheck: function() {
+        // Only poll OBS HLS preview when in OBS/Advanced mode
+        var lc = document.getElementById('mainLobby');
+        if (lc && lc.classList.contains('obs-mode')) {
+          return videoPlayer.startObsPreviewCheck();
+        }
+      },
       loadStreamStatus: loadStreamStatus,
       updateEndStreamButton: updateEndStreamButton,
       initBroadcastMeters: function() { return audioMeters.initBroadcastMeters(); },
