@@ -168,7 +168,7 @@ const securityHeaders: Record<string, string> = {
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'camera=(), microphone=(self), geolocation=(), payment=(), interest-cohort=(), browsing-topics=(), usb=(), bluetooth=(), serial=(), hid=()',
+  'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=(), payment=(), interest-cohort=(), browsing-topics=(), usb=(), bluetooth=(), serial=(), hid=()',
   'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
   'Cross-Origin-Resource-Policy': 'cross-origin',
   'X-XSS-Protection': '0',
