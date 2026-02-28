@@ -6870,7 +6870,41 @@
     .chat-input-section {
       flex-shrink: 0;
     }
-    
+
+    .chat-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .chat-input-wrapper input {
+      flex: 1;
+      min-width: 0;
+      font-size: 16px !important; /* Prevent iOS zoom */
+    }
+
+    .chat-input-wrapper .chat-tool-btn {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+    }
+
+    .chat-input-wrapper #sendBtn {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+    }
+
+    .chat-input-wrapper #sendBtn svg {
+      width: 18px;
+      height: 18px;
+    }
+
     /* Schedule section mobile — show full day, scroll entire page */
     .schedule-column.mobile-active {
       padding: 0.75rem;
