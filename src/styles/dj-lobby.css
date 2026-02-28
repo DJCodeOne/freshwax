@@ -6667,12 +6667,15 @@
     border-radius: 24px;
     padding: 0.4rem 0.4rem 0.4rem 0.75rem;
     border: 2px solid #374151;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   
   .chat-input-wrapper:focus-within { border-color: #dc2626; }
   
   #chatInput {
     flex: 1;
+    min-width: 0;
     background: none;
     border: none;
     color: #fff;
@@ -6688,6 +6691,7 @@
     justify-content: center;
     width: 36px;
     height: 36px;
+    flex-shrink: 0;
     background: #dc2626;
     border: none;
     border-radius: 50%;

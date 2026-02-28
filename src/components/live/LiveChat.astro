@@ -663,7 +663,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
     left: 50%;
     transform: translateX(-50%);
     width: 400px;
-    max-width: 95vw;
+    max-width: calc(100vw - 2rem);
     background: #1a1a1a;
     border: 2px solid #444;
     border-radius: 12px;
@@ -745,6 +745,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
     justify-content: center;
     width: 36px;
     height: 36px;
+    flex-shrink: 0;
     background: #2a2a2a;
     border: none;
     border-radius: 6px;

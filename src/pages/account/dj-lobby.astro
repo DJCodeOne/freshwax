@@ -6106,6 +6106,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (chatSection && broadcastContainer) {
       broadcastContainer.appendChild(chatSection);
       chatMovedToBroadcast = true;
+      // Move modals to body so they render outside display:none .lobby-layout
+      var gifModal = document.getElementById('gifModal');
+      var dmModal = document.getElementById('dmModal');
+      if (gifModal) document.body.appendChild(gifModal);
+      if (dmModal) document.body.appendChild(dmModal);
     }
   }
 
@@ -6116,6 +6121,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (chatSection && rightColumn) {
       rightColumn.insertBefore(chatSection, rightColumn.firstChild);
       chatMovedToBroadcast = false;
+      // Move modals back to right-column
+      var gifModal = document.getElementById('gifModal');
+      var dmModal = document.getElementById('dmModal');
+      if (gifModal) rightColumn.appendChild(gifModal);
+      if (dmModal) rightColumn.appendChild(dmModal);
     }
   }
 
