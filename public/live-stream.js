@@ -2266,7 +2266,12 @@ function updateGlobalMeters() {
     rightSum += rightData[i] * rightData[i];
   }
   const leftRms = Math.sqrt(leftSum / leftData.length);
-  const rightRms = Math.sqrt(rightSum / rightData.length);
+  let rightRms = Math.sqrt(rightSum / rightData.length);
+
+  // Mono signal: right channel is silent but left has audio — mirror L to R
+  if (rightRms === 0 && leftRms > 0) {
+    rightRms = leftRms;
+  }
   
   const leftLevel = Math.min(14, Math.floor((leftRms / 255) * 18));
   const rightLevel = Math.min(14, Math.floor((rightRms / 255) * 18));
