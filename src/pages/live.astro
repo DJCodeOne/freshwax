@@ -563,6 +563,19 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           <LiveReactions />
         </div>
         
+        <!-- DJ Info Bar -->
+        <div class="dj-info-bar">
+          <img id="djAvatar" src="/place-holder.webp" alt="DJ" class="dj-avatar" width="40" height="40" loading="lazy" decoding="async" />
+          <div class="dj-info-center">
+            <span class="dj-info-label" id="controlsLabel">NOW PLAYING</span>
+            <span class="dj-info-name" id="controlsDjName">--</span>
+            <span class="dj-info-title" id="npTrackTitle"></span>
+          </div>
+          <div class="dj-info-right">
+            <span class="stream-genre" id="streamGenre">Jungle / D&B</span>
+          </div>
+        </div>
+
         <!-- Shoutout Bar -->
         <div class="shoutout-bar" id="shoutoutBar">
           <div class="shoutout-left">
@@ -577,19 +590,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             <div class="shoutout-track" id="shoutoutTrack">
               <span class="shoutout-placeholder">🎉 Send a shoutout to appear here!</span>
             </div>
-          </div>
-        </div>
-        
-        <!-- DJ Info Bar -->
-        <div class="dj-info-bar">
-          <img id="djAvatar" src="/place-holder.webp" alt="DJ" class="dj-avatar" width="40" height="40" loading="lazy" decoding="async" />
-          <div class="dj-info-center">
-            <span class="dj-info-label" id="controlsLabel">NOW PLAYING</span>
-            <span class="dj-info-name" id="controlsDjName">--</span>
-            <span class="dj-info-title" id="npTrackTitle"></span>
-          </div>
-          <div class="dj-info-right">
-            <span class="stream-genre" id="streamGenre">Jungle / D&B</span>
           </div>
         </div>
       </div>
