@@ -225,12 +225,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <span id="headerTimeLeft" class="header-time-value">--:--</span>
           <span class="header-time-label">remaining</span>
         </div>
-        <a href="/live/" class="back-link">
+        <a href="/live/" class="back-link" id="headerBackToLive">
           <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
             <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
           </svg>
           Back to Live
         </a>
+        <button id="headerEndStreamBtn" class="header-end-stream-btn" style="display:none">End Stream</button>
         <button id="signOutBtn" class="sign-out-btn">Sign Out</button>
       </div>
     </header>
@@ -297,6 +298,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <div class="mobile-meter-bar"></div>
             <div class="mobile-meter-bar"></div>
           </div>
+          <button id="mobileEndStreamBtn" class="mobile-end-btn-overlay">
+            <span id="mobileEndBtnText">End Stream</span>
+          </button>
         </div>
       </div>
 
@@ -309,9 +313,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <button id="mobileGoLiveBtn" class="mobile-golive-btn" style="display:none">
           <span class="mobile-golive-dot"></span>
           <span id="mobileGoLiveBtnText">GO LIVE</span>
-        </button>
-        <button id="mobileEndStreamBtn" class="mobile-end-btn" style="display:none">
-          <span id="mobileEndBtnText">End Stream</span>
         </button>
         <p id="mobileStatusText" class="mobile-status-text"></p>
       </div>
@@ -6319,8 +6320,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       // Success - switch to live UI
       btn.style.display = 'none';
       if (readyBtn) readyBtn.style.display = 'none';
-      if (endBtn) endBtn.style.display = '';
       if (liveOverlay) liveOverlay.style.display = '';
+
+      // Swap header: hide Back to Live, show End Stream
+      var headerBack = document.getElementById('headerBackToLive');
+      var headerEnd = document.getElementById('headerEndStreamBtn');
+      if (headerBack) headerBack.style.display = 'none';
+      if (headerEnd) headerEnd.style.display = '';
 
       // Sync desktop buttons
       var desktopReadyBtn = document.getElementById('setReadyBtn');
@@ -6376,6 +6382,27 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (statusText) statusText.textContent = 'Stream ended';
   });
 
+  // Header End Stream button (replaces Back to Live when live)
+  document.getElementById('headerEndStreamBtn')?.addEventListener('click', async () => {
+    if (!mobileBroadcast.getIsLive()) return;
+    if (!confirm('End your livestream?')) return;
+
+    var btn = document.getElementById('headerEndStreamBtn');
+    if (btn) { btn.textContent = 'Ending...'; btn.disabled = true; }
+
+    try {
+      var token = await currentUser.getIdToken();
+      await mobileBroadcast.endStream(token);
+    } catch (e) {
+      // Best effort
+    }
+
+    resetMobileToOffline();
+    if (typeof loadStreamStatus === 'function') await loadStreamStatus();
+    if (typeof updateEndStreamButton === 'function') updateEndStreamButton(false, false);
+    if (btn) { btn.textContent = 'End Stream'; btn.disabled = false; }
+  });
+
   // Mobile mic/camera/flip controls
   document.getElementById('mobileMicBtn')?.addEventListener('click', () => {
     var muted = mobileBroadcast.toggleMic();
@@ -6416,8 +6443,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (readyBtn) { readyBtn.style.display = ''; readyBtn.disabled = false; readyBtn.classList.remove('mobile-is-ready'); }
     if (readyBtnText) readyBtnText.textContent = "I'm Ready";
     if (goLiveBtn) goLiveBtn.style.display = 'none';
-    if (endBtn) { endBtn.style.display = 'none'; endBtn.disabled = false; }
+    if (endBtn) { endBtn.disabled = false; }
     if (endBtnText) endBtnText.textContent = 'End Stream';
+
+    // Restore header: show Back to Live, hide End Stream
+    var headerBack = document.getElementById('headerBackToLive');
+    var headerEnd = document.getElementById('headerEndStreamBtn');
+    if (headerBack) headerBack.style.display = '';
+    if (headerEnd) headerEnd.style.display = 'none';
 
     // Clear header remaining timer
     videoPlayer.setStreamEndTime(null);

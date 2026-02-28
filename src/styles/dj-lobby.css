@@ -10401,20 +10401,51 @@
   50% { box-shadow: 0 0 30px rgba(220, 38, 38, 0.7); }
 }
 
-.mobile-end-btn {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #4b5563;
+/* End Stream button inside live overlay (centered) */
+.mobile-end-btn-overlay {
+  padding: 10px 28px;
+  border: 1px solid rgba(220, 38, 38, 0.6);
   border-radius: 10px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #d1d5db;
-  background: rgba(55, 65, 81, 0.5);
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.6);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  margin-top: 8px;
 }
 
-.mobile-end-btn:disabled {
+.mobile-end-btn-overlay:active {
+  background: rgba(185, 28, 28, 0.8);
+}
+
+.mobile-end-btn-overlay:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Header End Stream button (replaces Back to Live when live) */
+.header-end-stream-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #fca5a5;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(220, 38, 38, 0.5);
+  border-radius: 6px;
+  background: rgba(127, 29, 29, 0.4);
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.header-end-stream-btn:hover {
+  background: rgba(185, 28, 28, 0.6);
+  border-color: rgba(220, 38, 38, 0.8);
+}
+
+.header-end-stream-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
