@@ -10401,29 +10401,6 @@
   50% { box-shadow: 0 0 30px rgba(220, 38, 38, 0.7); }
 }
 
-/* End Stream button inside live overlay (centered) */
-.mobile-end-btn-overlay {
-  padding: 10px 28px;
-  border: 1px solid rgba(220, 38, 38, 0.6);
-  border-radius: 10px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #fca5a5;
-  background: rgba(127, 29, 29, 0.6);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  margin-top: 8px;
-}
-
-.mobile-end-btn-overlay:active {
-  background: rgba(185, 28, 28, 0.8);
-}
-
-.mobile-end-btn-overlay:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* Header End Stream button (replaces Back to Live when live) */
 .header-end-stream-btn {
   display: flex;
