@@ -6198,12 +6198,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   });
 
   // Restore saved preference or show chooser
+  // On mobile, always use browser mode — OBS/advanced view is desktop-only
+  var isMobile = window.innerWidth <= 768;
   var savedMode = null;
   try { savedMode = localStorage.getItem('fw_lobby_mode'); } catch (e) { /* ignore */ }
-  if (savedMode) {
+  if (isMobile) {
+    applyMode('browser');
+  } else if (savedMode) {
     applyMode(savedMode);
   } else {
-    // First visit: show broadcast method chooser
+    // First visit on desktop: show broadcast method chooser
     showChooser();
   }
 
