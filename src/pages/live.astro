@@ -1625,6 +1625,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     loadSchedule: loadSchedule
   };
 
+  // Expose schedule refresh for live-stream.js Pusher events
+  window.refreshSchedule = function() { scheduleCache = null; loadSchedule(true); };
+
   // Initialize presence module and setup Pusher listener
   initPresence(presenceDeps);
   setTimeout(function() { waitForPusherAndSetup(presenceDeps); }, 500);
@@ -3583,7 +3586,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 </script>
 
 <script is:inline src="/email-verify-check.js" nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260228-v2"></script>
+<script type="module" src="/live-stream.js?v=20260228-v3"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page

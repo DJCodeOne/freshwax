@@ -1246,6 +1246,8 @@ async function setupLiveStatusPusher() {
     liveStatusChannel.bind('stream-started', (data) => {
       // Immediately check status to switch to live stream — skip cache for fresh data
       checkLiveStatus(true);
+      // Refresh Today's Lineup sidebar
+      if (typeof window.refreshSchedule === 'function') window.refreshSchedule();
     });
 
     liveStatusChannel.bind('stream-ended', (data) => {
@@ -1256,6 +1258,8 @@ async function setupLiveStatusPusher() {
       streamEndedAt = Date.now();
       // Skip cache to get fresh status after stream end
       checkLiveStatus(true);
+      // Refresh Today's Lineup sidebar to remove completed slot
+      if (typeof window.refreshSchedule === 'function') window.refreshSchedule();
     });
 
   } catch (err) {
