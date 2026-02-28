@@ -1244,8 +1244,8 @@ async function setupLiveStatusPusher() {
     liveStatusChannel = window.statusPusher.subscribe('live-status');
 
     liveStatusChannel.bind('stream-started', (data) => {
-      // Immediately check status to switch to live stream
-      checkLiveStatus();
+      // Immediately check status to switch to live stream — skip cache for fresh data
+      checkLiveStatus(true);
     });
 
     liveStatusChannel.bind('stream-ended', (data) => {
@@ -1254,7 +1254,8 @@ async function setupLiveStatusPusher() {
       // Trigger the 10-second delay before resuming playlist
       wasLiveStreamActive = true;
       streamEndedAt = Date.now();
-      checkLiveStatus();
+      // Skip cache to get fresh status after stream end
+      checkLiveStatus(true);
     });
 
   } catch (err) {

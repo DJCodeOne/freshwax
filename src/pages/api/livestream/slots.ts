@@ -364,30 +364,68 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       // Auto-end expired live slots
       for (const liveSlot of firebaseLiveSlots) {
-        const slotEnd = new Date(liveSlot.endTime);
+        const slotEnd = new Date(liveSlot.endTime as string);
         if (now > slotEnd) {
-          // Check if DJ has a consecutive booking
-          const djSlots = await queryCollection('livestreamSlots', {
-            filters: [{ field: 'djId', op: 'EQUAL', value: liveSlot.djId }],
-            limit: 10
+          // Check if ANOTHER DJ has a slot starting soon — only cut off if someone else needs the slot
+          const upcomingAllSlots = await queryCollection('livestreamSlots', {
+            filters: [{ field: 'startTime', op: 'GREATER_THAN_OR_EQUAL', value: slotEnd.toISOString() }],
+            limit: 10,
+            skipCache: true
           });
 
-          const hasConsecutive = djSlots.some((s: Record<string, unknown>) => {
-            if (s.id === liveSlot.id) return false;
-            if (!['scheduled', 'in_lobby', 'queued'].includes(s.status)) return false;
-            const nextStart = new Date(s.startTime);
-            return Math.abs(nextStart.getTime() - slotEnd.getTime()) <= 5 * 60 * 1000;
+          const anotherDjWaiting = upcomingAllSlots.some((s: Record<string, unknown>) => {
+            if (s.djId === liveSlot.djId) return false; // Same DJ doesn't count
+            if (!['scheduled', 'in_lobby', 'queued'].includes(s.status as string)) return false;
+            const nextStart = new Date(s.startTime as string);
+            // Another DJ's slot starts within 15 minutes of this slot's end
+            return nextStart.getTime() - slotEnd.getTime() <= 15 * 60 * 1000;
           });
 
-          if (!hasConsecutive) {
-            log.info(`Auto-ending expired slot ${liveSlot.id} for ${liveSlot.djName}`);
+          // Enforce max duration: 2hr standard, 2hr + approved event hours for Plus
+          const startedAt = new Date((liveSlot.startedAt || liveSlot.startTime) as string);
+          const streamDurationMs = now.getTime() - startedAt.getTime();
+          let maxDurationMs = 2 * 60 * 60 * 1000; // 2 hours default
+          try {
+            const djUser = await getDocument('users', liveSlot.djId as string);
+            const sub = djUser?.subscription || { tier: 'free' };
+            const djIsPlus = sub.tier === 'pro' && sub.expiresAt && new Date(sub.expiresAt) > now;
+            if (djIsPlus) {
+              // Check for approved event requests for today
+              const todayDate = now.toISOString().split('T')[0];
+              try {
+                const eventReqs = await queryCollection('event-requests', {
+                  filters: [
+                    { field: 'userId', op: 'EQUAL', value: liveSlot.djId as string },
+                    { field: 'eventDate', op: 'EQUAL', value: todayDate },
+                    { field: 'status', op: 'EQUAL', value: 'approved' }
+                  ],
+                  limit: 1
+                });
+                const approvedHours = eventReqs.length > 0 ? (eventReqs[0].hoursRequested || 0) : 0;
+                // Plus base = 4hr minimum, or 2hr + approved event hours (whichever is greater)
+                maxDurationMs = Math.max(4, 2 + approvedHours) * 60 * 60 * 1000;
+              } catch (evErr) {
+                // If event check fails, give Plus users 4hr default
+                maxDurationMs = 4 * 60 * 60 * 1000;
+              }
+            }
+          } catch (userErr) {
+            log.warn('Could not check DJ subscription for auto-end:', userErr);
+          }
+          const exceededMaxDuration = streamDurationMs >= maxDurationMs;
+
+          const shouldAutoEnd = anotherDjWaiting || exceededMaxDuration;
+
+          if (shouldAutoEnd) {
+            const reason = anotherDjWaiting ? 'next_dj_waiting' : 'max_duration_reached';
+            log.info(`Auto-ending slot ${liveSlot.id} for ${liveSlot.djName} (${reason})`);
             try {
               await updateDocument('livestreamSlots', liveSlot.id, {
                 status: 'completed',
                 endedAt: now.toISOString(),
                 updatedAt: now.toISOString(),
                 autoEnded: true,
-                autoEndReason: 'slot_time_expired'
+                autoEndReason: reason
               });
 
               // Sync to D1
@@ -401,10 +439,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
                 djId: liveSlot.djId,
                 djName: liveSlot.djName,
                 slotId: liveSlot.id,
-                reason: 'time_expired'
+                reason: reason
               }, env);
 
               invalidateCache();
+
+              // Clear all caches so status endpoint returns fresh data
+              clearCache('livestreamSlots');
+              await kvDelete('general', { prefix: 'status' });
+              await invalidateStatusCache();
             } catch (autoEndError: unknown) {
               log.error('Failed to auto-end slot:', autoEndError);
             }
