@@ -4667,8 +4667,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         highPassL.Q.value = 0.5;
         highPassR.Q.value = 0.5;
 
-        // Connect audio chain
-        source.connect(splitter);
+        // Upmix mono to stereo before splitting — if source is mono,
+        // channelSplitter output 1 (right) would be silent. A gain node
+        // with channelInterpretation 'speakers' copies mono to both L+R.
+        const upmixNode = audioContext.createGain();
+        upmixNode.channelCount = 2;
+        upmixNode.channelCountMode = 'explicit';
+        upmixNode.channelInterpretation = 'speakers';
+        source.connect(upmixNode);
+        upmixNode.connect(splitter);
 
         // Unfiltered path for LED visualization
         splitter.connect(analyserL, 0);

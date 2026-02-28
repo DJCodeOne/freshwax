@@ -6969,15 +6969,15 @@
     /* --- Controls container — separate from emojis --- */
     .inline-controls {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 0.5rem;
       padding: 0.6rem;
       background: #0a0a0a;
       border-radius: 12px;
     }
 
-    /* Play — red */
-    .inline-controls .play-btn {
+    /* Play — red, full-width standalone row */
+    .player-controls > .play-btn {
       width: 100%;
       height: 48px;
       border-radius: 12px;
@@ -6985,13 +6985,13 @@
       border: 2px solid #ef4444;
     }
 
-    .inline-controls .play-btn svg {
+    .player-controls > .play-btn svg {
       width: 24px;
       height: 24px;
       fill: #fff;
     }
 
-    .inline-controls .play-btn:disabled {
+    .player-controls > .play-btn:disabled {
       background: #7f1d1d;
       border-color: #991b1b;
       opacity: 0.6;
@@ -7028,8 +7028,9 @@
     .shoutout-bar { order: 5; }
 
     /* Controls above emojis within player-controls */
-    .inline-controls { order: 1; }
-    .inline-reactions { order: 2; }
+    .player-controls > .play-btn { order: 1; }
+    .inline-controls { order: 2; }
+    .inline-reactions { order: 3; }
 
     /* DJ Info Bar - mobile */
     .dj-info-bar {

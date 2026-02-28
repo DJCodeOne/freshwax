@@ -2225,7 +2225,13 @@ function initGlobalAudioAnalyzer(mediaElement) {
     globalAnalyserLeft.smoothingTimeConstant = 0.5;
     globalAnalyserRight.smoothingTimeConstant = 0.5;
 
-    globalMediaSource.connect(splitter);
+    // Upmix mono to stereo before splitting — copies mono to both L+R
+    const upmixNode = globalAudioContext.createGain();
+    upmixNode.channelCount = 2;
+    upmixNode.channelCountMode = 'explicit';
+    upmixNode.channelInterpretation = 'speakers';
+    globalMediaSource.connect(upmixNode);
+    upmixNode.connect(splitter);
     splitter.connect(globalAnalyserLeft, 0);
     splitter.connect(globalAnalyserRight, 1);
     globalMediaSource.connect(globalAudioContext.destination);

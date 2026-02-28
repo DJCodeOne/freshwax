@@ -614,7 +614,13 @@ export function setupIcecastAnalysers(audioElement) {
     highPassL.Q.value = 0.5;
     highPassR.Q.value = 0.5;
 
-    source.connect(splitter);
+    // Upmix mono to stereo before splitting — copies mono to both L+R
+    var upmixNode = icecastAudioContext.createGain();
+    upmixNode.channelCount = 2;
+    upmixNode.channelCountMode = 'explicit';
+    upmixNode.channelInterpretation = 'speakers';
+    source.connect(upmixNode);
+    upmixNode.connect(splitter);
 
     splitter.connect(icecastAnalyserL, 0);
     splitter.connect(icecastAnalyserR, 1);
