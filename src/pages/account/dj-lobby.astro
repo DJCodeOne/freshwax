@@ -3177,6 +3177,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     // Load initial data from API
     await loadAllSlots(); // Load all slots for consecutive slot detection
     await loadStreamStatus();
+
+    // Detect orphaned live stream (DJ navigated away while live, stream still marked live in Firestore)
+    if (currentStream && currentUser && currentStream.djId === currentUser.uid) {
+      var headerBack = document.getElementById('headerBackToLive');
+      var headerEnd = document.getElementById('headerEndStreamBtn');
+      var statusText = document.getElementById('mobileStatusText');
+      if (headerBack) headerBack.style.display = 'none';
+      if (headerEnd) headerEnd.style.display = '';
+      if (statusText) statusText.textContent = 'Your stream is still live. End it from the header button.';
+    }
+
     await checkAndCleanupChat();
     await loadMySlot();
     
@@ -6180,20 +6191,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     // First visit: show broadcast method chooser
     showChooser();
   }
-
-  // Detect orphaned live stream (DJ navigated away while live)
-  // loadStreamStatus runs before this, so currentStream is populated
-  setTimeout(function() {
-    if (currentStream && currentUser && currentStream.djId === currentUser.uid) {
-      // DJ's own stream is still live — show end stream UI
-      var headerBack = document.getElementById('headerBackToLive');
-      var headerEnd = document.getElementById('headerEndStreamBtn');
-      var statusText = document.getElementById('mobileStatusText');
-      if (headerBack) headerBack.style.display = 'none';
-      if (headerEnd) headerEnd.style.display = '';
-      if (statusText) statusText.textContent = 'Your stream is still live. End it from the header button.';
-    }
-  }, 2000); // Wait for loadStreamStatus to complete
 
   // Mobile Ready button
   document.getElementById('mobileReadyBtn')?.addEventListener('click', async () => {
