@@ -285,7 +285,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
               </button>
               <span id="recordDuration" class="record-duration hidden">00:00</span>
             </div>
-            <a href="/account/dj-lobby/" id="djLobbyBtn" class="dj-lobby-btn hidden" title="Open DJ Lobby">
+            <a href="/account/dj-lobby/" id="djLobbyBtn" class="dj-lobby-btn" title="Open DJ Lobby">
               <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true">
                 <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
               </svg>
@@ -1715,7 +1715,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         
         // Show DJ-only elements for approved DJs and admins
         if ((userInfo.isDj && userInfo.isApproved) || userInfo.isAdmin) {
-          document.getElementById('djLobbyBtn')?.classList.remove('hidden');
           document.getElementById('takeoverSection')?.classList.remove('hidden');
           
           // Subscribe to incoming takeover requests
