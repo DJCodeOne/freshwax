@@ -547,12 +547,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Check for conflicts - limit to prevent runaway
       const existingSlots = await queryCollection('livestreamSlots', { skipCache: true, limit: 200 });
 
+      const now = new Date();
       const conflicts = existingSlots.filter(slot => {
         if (!['scheduled', 'in_lobby', 'live', 'queued'].includes(slot.status)) {
           return false;
         }
-        const existingStart = new Date(slot.startTime);
         const existingEnd = new Date(slot.endTime);
+        // Skip stale slots whose endTime has already passed
+        if (existingEnd < now) {
+          return false;
+        }
+        const existingStart = new Date(slot.startTime);
         const check1 = slotStart < existingEnd;
         const check2 = slotEnd > existingStart;
         const isConflict = check1 && check2;
