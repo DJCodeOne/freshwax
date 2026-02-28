@@ -6182,11 +6182,13 @@
     .audio-waveform .audio-bar {
       width: 3px;
     }
-    .audio-dj-name {
-      font-size: 1.25rem;
+    .audio-dj-info {
+      display: none;
     }
-    .audio-show-title {
-      font-size: 0.75rem;
+
+    /* Hide playlist track title overlay in video player */
+    #audio-title {
+      display: none !important;
     }
   }
   
@@ -6988,10 +6990,6 @@
       display: none;
     }
 
-    /* Hide track title in video player area on mobile */
-    .dj-info-bar .dj-info-name {
-      display: none;
-    }
 
     .dj-info-center,
     .dj-info-right {
