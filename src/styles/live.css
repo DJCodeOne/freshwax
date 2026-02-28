@@ -6828,13 +6828,12 @@
       display: contents;
     }
 
-    /* Row 1: Views, Reacts, Time, Wishlist, Record */
+    /* Row 1: Views, Reacts, Time, Wishlist */
     .stream-stats { order: 1; flex: 1 1 auto; }
     .now-playing-save-btn { order: 2; }
-    .record-control { order: 3; margin-left: 0; }
 
     /* Row 2: Lobby, Playlist, Live badge */
-    .dj-lobby-btn { order: 4; margin-left: 0; }
+    .dj-lobby-btn { order: 3; margin-left: 0; }
     .playlist-btn { order: 5; }
     .live-badge { order: 6; margin-left: auto; }
     
@@ -7018,6 +7017,31 @@
       border: 2px solid #333;
     }
 
+    /* Record — dark red, inline with other controls */
+    .inline-controls .record-control {
+      flex: 1 1 0;
+    }
+
+    .inline-controls .record-btn {
+      width: 100%;
+      height: 44px;
+      border-radius: 12px;
+      background: #1a1a1a;
+      border: 2px solid #991b1b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .inline-controls .record-duration {
+      display: none;
+    }
+
     .inline-controls .volume-control {
       display: none;
     }
@@ -7111,16 +7135,10 @@
       cursor: pointer;
     }
     
-    /* Share and record buttons */
-    .share-btn,
-    .record-control button {
+    /* Share button */
+    .share-btn {
       width: 44px;
       height: 44px;
-      border-radius: 50%;
-    }
-    
-    .record-control {
-      order: 2;
     }
   }
   
@@ -7149,6 +7167,7 @@
 
     .inline-btn.anim-toggle-btn,
     .inline-btn.share-btn,
+    .inline-controls .record-btn,
     .play-btn,
     .volume-control {
       height: 42px !important;
@@ -7451,10 +7470,6 @@
     .inline-rating {
       display: none;
     }
-
-    .record-control {
-      order: 10;
-    }
   }
   
   /* Extra small phones */
@@ -7481,13 +7496,14 @@
 
     .inline-btn.anim-toggle-btn,
     .inline-btn.share-btn,
+    .inline-controls .record-btn,
     .play-btn,
     .volume-control {
       height: 38px !important;
       border-radius: 8px !important;
     }
   }
-  
+
   /* Swipe gesture hint */
   .swipe-hint {
     position: fixed;
