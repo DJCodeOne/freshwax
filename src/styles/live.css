@@ -6988,6 +6988,11 @@
       display: none;
     }
 
+    /* Hide track title in video player area on mobile */
+    .dj-info-bar .dj-info-name {
+      display: none;
+    }
+
     .dj-info-center,
     .dj-info-right {
       width: 100%;
