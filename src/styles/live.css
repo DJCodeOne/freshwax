@@ -3410,7 +3410,10 @@
     border-radius: 10px;
     flex-shrink: 0;
   }
-  
+
+  /* Desktop ordering: play button first (left of LEDs/waveform) */
+  .player-controls > .play-btn { order: -1; }
+
   /* Stereo LED Meters */
   .stereo-meters-wrapper {
     display: flex;
