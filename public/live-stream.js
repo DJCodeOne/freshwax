@@ -1956,7 +1956,8 @@ function setupHlsPlayer(stream) {
       const MAX_NETWORK_RETRIES = 3;
 
       hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
-        console.error('[HLS] Error:', data.type, data.details);
+        if (!data.fatal) return; // Non-fatal errors — HLS.js recovers automatically
+        console.error('[HLS] Fatal error:', data.type, data.details);
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
