@@ -348,6 +348,32 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // D1 consistency check: if D1 has 'live' slots with expired endTime, verify with Firebase
+    const nowCheck = new Date();
+    const staleD1Live = allSlots.filter((s: Record<string, unknown>) =>
+      s.status === 'live' && s.endTime && new Date(s.endTime as string) < nowCheck
+    );
+    if (staleD1Live.length > 0) {
+      for (const stale of staleD1Live) {
+        try {
+          const fbSlot = await getDocument('livestreamSlots', stale.id);
+          if (fbSlot && fbSlot.status !== 'live') {
+            // D1 is stale — update it and fix the local allSlots array
+            stale.status = fbSlot.status;
+            if (fbSlot.endedAt) stale.endedAt = fbSlot.endedAt;
+            if (fbSlot.autoEnded) stale.autoEnded = fbSlot.autoEnded;
+            await syncSlotStatusToD1(db, stale.id, fbSlot.status as string, {
+              endedAt: fbSlot.endedAt as string || nowCheck.toISOString(),
+              autoEnded: fbSlot.autoEnded || false
+            });
+            log.info(`Fixed stale D1 slot ${stale.id}: ${fbSlot.status}`);
+          }
+        } catch (fixErr: unknown) {
+          log.warn('D1 consistency fix failed for', stale.id, fixErr);
+        }
+      }
+    }
+
     // Check D1 for live slots to see if auto-end check is needed
     const d1LiveSlots = db ? await d1GetLiveSlots(db) : [];
 
