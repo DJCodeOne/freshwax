@@ -16,12 +16,13 @@ import {
   shouldSkipCsrf,
 } from './lib/csrf';
 
-// Webhook endpoints that bypass Content-Type validation (they have their own body parsing)
+// Endpoints that bypass Content-Type validation (they have their own body parsing)
 const CONTENT_TYPE_SKIP = new Set([
   '/api/stripe/webhook/',
   '/api/stripe/connect/webhook/',
   '/api/paypal/webhook/',
   '/api/livestream/red5-webhook/',
+  '/api/livestream/whip-proxy/',
 ]);
 
 // Allowed Content-Type prefixes for POST/PUT/PATCH requests

@@ -145,13 +145,8 @@ export async function whipConnect(whipUrl, mediaStream, callbacks) {
   // Store the resource URL for later DELETE (disconnect)
   var location = response.headers.get('Location');
   if (location) {
-    // Location may be relative or absolute
-    if (location.startsWith('http')) {
-      resourceUrl = location;
-    } else {
-      var urlObj = new URL(whipUrl);
-      resourceUrl = urlObj.origin + location;
-    }
+    // Location may be relative or absolute — both work with fetch()
+    resourceUrl = location;
   } else {
     // Fallback: use the WHIP URL itself
     resourceUrl = whipUrl;

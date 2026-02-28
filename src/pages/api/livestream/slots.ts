@@ -547,7 +547,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Check for conflicts - limit to prevent runaway
       const existingSlots = await queryCollection('livestreamSlots', { skipCache: true, limit: 200 });
 
-      const now = new Date();
       const conflicts = existingSlots.filter(slot => {
         if (!['scheduled', 'in_lobby', 'live', 'queued'].includes(slot.status)) {
           return false;
@@ -557,12 +556,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (existingEnd < now) {
           return false;
         }
+        // Skip the DJ's own scheduled slots — rebooking supersedes them
+        if (slot.djId === djId && slot.status === 'scheduled') {
+          return false;
+        }
         const existingStart = new Date(slot.startTime);
         const check1 = slotStart < existingEnd;
         const check2 = slotEnd > existingStart;
-        const isConflict = check1 && check2;
 
-        return isConflict;
+        return check1 && check2;
       });
 
       if (conflicts.length > 0) {
@@ -693,14 +695,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.badRequest('DJ ID required');
       }
 
-      // Check if anyone is currently live
+      // Check if anyone is currently live (skip stale slots with expired endTime)
       const liveSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-        limit: 1,
+        limit: 5,
         skipCache: true
       });
+      const activeLive = liveSlots.filter(s => new Date(s.endTime) > now);
 
-      if (liveSlots.length > 0 && liveSlots[0].djId !== djId) {
+      if (activeLive.length > 0 && activeLive[0].djId !== djId) {
         return ApiErrors.badRequest('Someone is already streaming');
       }
 
@@ -1072,12 +1075,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Check if anyone is currently live (including this DJ - prevent duplicate sessions)
       const liveSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-        limit: 1,
+        limit: 5,
         skipCache: true
       });
+      const activeLiveSlots = liveSlots.filter(s => new Date(s.endTime) > now);
 
-      if (liveSlots.length > 0) {
-        const isOwnSlot = liveSlots[0].djId === djId;
+      if (activeLiveSlots.length > 0) {
+        const isOwnSlot = activeLiveSlots[0].djId === djId;
         return ApiErrors.badRequest(isOwnSlot
           ? 'You already have an active stream. End it before starting a new one.'
           : 'Another DJ is currently live. Please wait until their session ends.');
@@ -1294,14 +1298,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Check if anyone is currently live (including this DJ - prevent duplicate sessions)
-      const liveSlots = await queryCollection('livestreamSlots', {
+      const relayLiveSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-        limit: 1,
+        limit: 5,
         skipCache: true
       });
+      const activeRelayLive = relayLiveSlots.filter(s => new Date(s.endTime) > now);
 
-      if (liveSlots.length > 0) {
-        const isOwnSlot = liveSlots[0].djId === djId;
+      if (activeRelayLive.length > 0) {
+        const isOwnSlot = activeRelayLive[0].djId === djId;
         return ApiErrors.badRequest(isOwnSlot
           ? 'You already have an active stream. End it before starting a new one.'
           : 'Another DJ is currently live. Please wait until their session ends.');
@@ -1406,7 +1411,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: unknown) {
     log.error('POST Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return ApiErrors.serverError('Failed to process request');
+    return ApiErrors.serverError('Failed to process request: ' + errorMessage);
   }
 };
 

@@ -47,6 +47,9 @@ const CSRF_SKIP = new Set([
   // that run before the meta tag is available (e.g. Layout.astro error handler).
   '/api/log-error/',
   '/api/consent-log/',
+  // WHIP proxy — whip-client.js sends raw SDP without CSRF tokens.
+  // Stream key acts as auth (only revealed to authenticated DJs).
+  '/api/livestream/whip-proxy/',
 ]);
 
 /**

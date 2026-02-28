@@ -2,7 +2,7 @@
 // Mobile WHIP broadcast logic for DJ Lobby — adapted from go-live.astro
 // Plain JS only (no TypeScript syntax — this is loaded via <script is:inline type="module">)
 
-import { whipConnect, whipDisconnect, whipReplaceTrack, whipGetStats, whipIsConnected } from '/whip-client.js';
+import { whipConnect, whipDisconnect, whipReplaceTrack, whipGetStats, whipIsConnected } from '/whip-client.js?v=2';
 
 var ctx = null;
 

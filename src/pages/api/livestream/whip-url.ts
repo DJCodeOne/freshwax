@@ -2,7 +2,7 @@
 // Returns authenticated WHIP URL for browser-based streaming
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
+import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -43,16 +43,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.forbidden('Not authorized for this DJ');
     }
 
-    // Get WHIP base URL from environment
-    const whipBaseUrl = (locals as App.Locals).runtime?.env?.WHIP_BASE_URL || import.meta.env.WHIP_BASE_URL;
-    if (!whipBaseUrl) {
-      log.error('WHIP_BASE_URL not configured');
-      return ApiErrors.serverError('Browser streaming not configured');
-    }
-
-    // Build WHIP URL: base/live/{streamKey}/whip
-    // Must use live/ prefix to match HLS playback path (/live/{streamKey}/index.m3u8)
-    const whipUrl = `${whipBaseUrl.replace(/\/$/, '')}/live/${encodeURIComponent(streamKey)}/whip`;
+    // Return proxy URL (same origin) to avoid CORS with stream.freshwax.co.uk
+    // The proxy at /api/livestream/whip-proxy/ relays SDP to MediaMTX via WHIP_BASE_URL
+    const whipUrl = `/api/livestream/whip-proxy/?key=${encodeURIComponent(streamKey)}`;
 
     return successResponse({ whipUrl });
 
