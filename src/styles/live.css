@@ -3837,6 +3837,14 @@
     overflow: visible;
     min-width: 0;
   }
+
+  /* Inline Controls — sits alongside reactions on desktop */
+  .inline-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
   
   .inline-btn {
     display: flex;
@@ -6724,11 +6732,24 @@
       box-sizing: border-box;
     }
 
+    body.header-hidden {
+      overflow-y: auto !important;
+      height: auto !important;
+      max-height: none !important;
+    }
+
+    body.header-hidden #main-content {
+      overflow-y: auto !important;
+      height: auto !important;
+      max-height: none !important;
+    }
+
     body.header-hidden main,
     body.header-hidden .live-main {
       overflow-x: hidden !important;
       overflow-y: auto !important;
       max-height: none !important;
+      height: auto !important;
     }
 
     body.header-hidden .live-layout {
@@ -6871,33 +6892,36 @@
      MOBILE PLAYER CONTROLS - THUMB-FRIENDLY
      ============================================ */
   @media (max-width: 900px) {
-    /* Player controls as 4-column grid — emojis top, controls bottom */
+    /* Player controls — flex column to separate emojis from controls */
     .player-controls {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.5rem;
-      padding: 0.75rem;
-      background: #0a0a0a;
-      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 0;
+      background: transparent;
       margin-top: 0.75rem;
       overflow: visible;
     }
 
-    /* Dissolve .inline-reactions so children join the parent grid */
+    /* --- Emoji grid — single row --- */
     .inline-reactions {
-      display: contents;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.25rem;
+      padding: 0.5rem;
+      background: #0a0a0a;
+      border-radius: 12px;
+      overflow: hidden;
     }
 
-    /* --- Emoji rows — order 1 (8 emojis = 2 neat rows of 4) --- */
     .inline-btn.reaction-btn {
-      order: 1;
       width: 100%;
-      height: 48px;
-      font-size: 22px;
-      border-radius: 12px;
+      height: 41px;
+      font-size: 19px;
+      border-radius: 10px;
       background: #1a1a1a;
       border: 2px solid #333;
-      overflow: visible;
+      overflow: hidden;
     }
 
     .inline-btn.reaction-btn:active {
@@ -6905,78 +6929,70 @@
       background: #222;
     }
 
-    /* --- Bottom controls row — order 10 --- */
-    /* Toggle + Share on the left, Play center, Volume right */
-    .inline-btn.anim-toggle-btn {
-      order: 10;
-      width: 100%;
-      height: 48px;
+    /* --- Controls container — separate from emojis --- */
+    .inline-controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      padding: 0.6rem;
+      background: #0a0a0a;
       border-radius: 12px;
-      background: #222;
-      border: 2px solid #444;
-      margin-top: 0.25rem;
     }
 
-    .inline-btn.share-btn {
-      order: 10;
-      width: 100%;
-      height: 48px;
-      border-radius: 12px;
-      background: #222;
-      border: 2px solid #444;
-      margin-top: 0.25rem;
-    }
-
-    .play-btn {
-      order: 10;
+    /* Play — red */
+    .inline-controls .play-btn {
       width: 100%;
       height: 48px;
       border-radius: 12px;
       background: #dc2626;
-      border: none;
-      margin-top: 0.25rem;
+      border: 2px solid #ef4444;
     }
 
-    .play-btn svg {
-      width: 28px;
-      height: 28px;
+    .inline-controls .play-btn svg {
+      width: 24px;
+      height: 24px;
       fill: #fff;
     }
 
-    .play-btn:disabled {
-      background: #333;
-      opacity: 0.5;
+    .inline-controls .play-btn:disabled {
+      background: #7f1d1d;
+      border-color: #991b1b;
+      opacity: 0.6;
     }
 
-    .volume-control {
-      order: 10;
+    /* Share — dark blue */
+    .inline-controls .inline-btn.share-btn {
       width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: #222;
-      border-radius: 12px;
-      padding: 0 0.75rem;
-      border: 2px solid #444;
       height: 48px;
-      margin-top: 0.25rem;
+      border-radius: 12px;
+      background: #1e3a5f;
+      border: 2px solid #2563eb;
+      color: #fff;
     }
 
-    .volume-control .volume-icon {
-      flex-shrink: 0;
-    }
-
-    #volumeSlider {
+    /* Disable emojis — grey */
+    .inline-controls .inline-btn.anim-toggle-btn {
       width: 100%;
-      height: 6px;
+      height: 48px;
+      border-radius: 12px;
+      background: #1a1a1a;
+      border: 2px solid #333;
     }
 
-    /* Move NOW PLAYING above emoji reactions on mobile */
+    .inline-controls .volume-control {
+      display: none;
+    }
+
+    /* Mobile ordering within player-column */
     .stream-info-bar { order: 1; }
     .player-container { order: 2; }
     .dj-info-bar { order: 3; }
     .player-controls { order: 4; }
     .shoutout-bar { order: 5; }
+
+    /* Controls above emojis within player-controls */
+    .inline-controls { order: 1; }
+    .inline-reactions { order: 2; }
 
     /* DJ Info Bar - mobile */
     .dj-info-bar {
