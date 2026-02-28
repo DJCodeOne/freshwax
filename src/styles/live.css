@@ -3777,7 +3777,6 @@
   }
 
   .dj-info-bar.playlist-mode .dj-info-name {
-    display: none;
     font-size: 14px;
     color: #dc2626;
     white-space: nowrap;
