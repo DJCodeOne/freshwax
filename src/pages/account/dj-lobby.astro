@@ -6181,6 +6181,20 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     showChooser();
   }
 
+  // Detect orphaned live stream (DJ navigated away while live)
+  // loadStreamStatus runs before this, so currentStream is populated
+  setTimeout(function() {
+    if (currentStream && currentUser && currentStream.djId === currentUser.uid) {
+      // DJ's own stream is still live — show end stream UI
+      var headerBack = document.getElementById('headerBackToLive');
+      var headerEnd = document.getElementById('headerEndStreamBtn');
+      var statusText = document.getElementById('mobileStatusText');
+      if (headerBack) headerBack.style.display = 'none';
+      if (headerEnd) headerEnd.style.display = '';
+      if (statusText) statusText.textContent = 'Your stream is still live. End it from the header button.';
+    }
+  }, 2000); // Wait for loadStreamStatus to complete
+
   // Mobile Ready button
   document.getElementById('mobileReadyBtn')?.addEventListener('click', async () => {
     if (!currentUser) return;
@@ -6384,7 +6398,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   // Header End Stream button (replaces Back to Live when live)
   document.getElementById('headerEndStreamBtn')?.addEventListener('click', async () => {
-    if (!mobileBroadcast.getIsLive()) return;
+    if (!currentUser) return;
     if (!confirm('End your livestream?')) return;
 
     var btn = document.getElementById('headerEndStreamBtn');
@@ -6392,7 +6406,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     try {
       var token = await currentUser.getIdToken();
-      await mobileBroadcast.endStream(token);
+      if (mobileBroadcast.getIsLive()) {
+        // Active WHIP session — disconnect + end via API
+        await mobileBroadcast.endStream(token);
+      } else {
+        // Orphaned stream — just call endStream API directly (no WHIP to disconnect)
+        await fetch('/api/livestream/slots/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ action: 'endStream', djId: currentUser.uid })
+        });
+      }
     } catch (e) {
       // Best effort
     }
@@ -6401,6 +6425,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (typeof loadStreamStatus === 'function') await loadStreamStatus();
     if (typeof updateEndStreamButton === 'function') updateEndStreamButton(false, false);
     if (btn) { btn.textContent = 'End Stream'; btn.disabled = false; }
+    var statusText = document.getElementById('mobileStatusText');
+    if (statusText) statusText.textContent = 'Stream ended';
   });
 
   // Mobile mic/camera/flip controls
