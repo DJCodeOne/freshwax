@@ -20,6 +20,7 @@ var currentSlotId = null;
 var currentStreamKey = null;
 var previousVideoBytes = 0;
 var previousStatsTime = 0;
+var reconnectTimeout = null;
 
 export function init(context) {
   ctx = context;
@@ -44,7 +45,22 @@ export async function startCamera(videoEl) {
     }
   };
 
-  mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch (camErr) {
+    // Provide specific error messages based on error type
+    if (camErr && camErr.name === 'NotAllowedError') {
+      throw new Error('Camera/microphone permission denied. Please allow access in your browser settings and try again.');
+    } else if (camErr && camErr.name === 'NotFoundError') {
+      throw new Error('No camera or microphone found. Please connect a device and try again.');
+    } else if (camErr && camErr.name === 'NotReadableError') {
+      throw new Error('Camera or microphone is in use by another app. Please close other apps using the camera and try again.');
+    } else if (camErr && camErr.name === 'OverconstrainedError') {
+      throw new Error('Camera does not support the requested resolution. Please try a different camera.');
+    } else {
+      throw new Error('Could not access camera/microphone: ' + (camErr && camErr.message ? camErr.message : String(camErr)));
+    }
+  }
   videoEl.srcObject = mediaStream;
   // Mirror front camera preview (CSS only — doesn't affect stream output)
   videoEl.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
@@ -158,8 +174,26 @@ export async function goLive(token, slotId, streamKey, djId, djName, djAvatar, t
   try {
     await whipConnect(whipData.whipUrl, mediaStream, {
       onStateChange: function(state) {
-        if (state === 'failed') {
-          endStream(token, true);
+        if (state === 'failed' || state === 'ice-failed') {
+          // Prompt user to retry instead of auto-ending
+          handleConnectionLost(token, whipData.whipUrl, timerEl, onStats);
+        } else if (state === 'disconnected' || state === 'ice-disconnected') {
+          // Temporary disconnect — wait for recovery before prompting
+          if (!reconnectTimeout) {
+            reconnectTimeout = setTimeout(function() {
+              reconnectTimeout = null;
+              // If still disconnected after 5s, prompt user
+              if (isLive && !whipIsConnected()) {
+                handleConnectionLost(token, whipData.whipUrl, timerEl, onStats);
+              }
+            }, 5000);
+          }
+        } else if (state === 'connected' || state === 'ice-connected') {
+          // Connection recovered — clear any pending reconnect timer
+          if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = null;
+          }
         }
       },
       onStats: function(stats) {
@@ -257,6 +291,7 @@ export async function endStream(token, force) {
   }
 
   // Clean up
+  if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
   releaseWakeLock();
   stopTimer();
   stopAudioMeter();
@@ -287,6 +322,7 @@ export function cleanup() {
     mediaStream = null;
   }
 
+  if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
   releaseWakeLock();
   stopTimer();
   stopAudioMeter();
@@ -314,6 +350,60 @@ export function getIsLive() {
  */
 export function getMediaStream() {
   return mediaStream;
+}
+
+/**
+ * Handle connection lost — prompt user to retry or end stream
+ * @param {string} token
+ * @param {string} whipUrl
+ * @param {HTMLElement} timerEl
+ * @param {function} [onStats]
+ */
+function handleConnectionLost(token, whipUrl, timerEl, onStats) {
+  if (!isLive) return;
+
+  // Show confirmation dialog — user decides whether to retry
+  var shouldRetry = confirm('Connection lost. Would you like to try reconnecting?\n\nPress OK to reconnect, or Cancel to end your stream.');
+
+  if (shouldRetry && mediaStream) {
+    // Attempt reconnection with existing media stream
+    whipDisconnect().catch(function() {}).then(function() {
+      return whipConnect(whipUrl, mediaStream, {
+        onStateChange: function(state) {
+          if (state === 'failed' || state === 'ice-failed') {
+            // Second failure — offer to end or retry again
+            handleConnectionLost(token, whipUrl, timerEl, onStats);
+          } else if (state === 'disconnected' || state === 'ice-disconnected') {
+            if (!reconnectTimeout) {
+              reconnectTimeout = setTimeout(function() {
+                reconnectTimeout = null;
+                if (isLive && !whipIsConnected()) {
+                  handleConnectionLost(token, whipUrl, timerEl, onStats);
+                }
+              }, 5000);
+            }
+          } else if (state === 'connected' || state === 'ice-connected') {
+            if (reconnectTimeout) {
+              clearTimeout(reconnectTimeout);
+              reconnectTimeout = null;
+            }
+          }
+        },
+        onStats: function(stats) {
+          if (onStats) onStats(stats);
+        },
+        onError: function() {}
+      });
+    }).catch(function() {
+      // Reconnection attempt failed entirely
+      var endNow = confirm('Reconnection failed. End stream?');
+      if (endNow) {
+        endStream(token, true);
+      }
+    });
+  } else {
+    endStream(token, true);
+  }
 }
 
 // ---- Internal helpers ----

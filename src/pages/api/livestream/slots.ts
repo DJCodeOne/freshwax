@@ -9,6 +9,7 @@ import { initKVCache, kvDelete } from '../../../lib/kv-cache';
 import { d1UpsertSlot, d1UpdateSlotStatus, d1DeleteSlot, d1GetLiveSlots, d1GetScheduledSlots } from '../../../lib/d1-catalog';
 import { invalidateStatusCache } from './status';
 import { isAdmin } from '../../../lib/admin';
+import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
 import { createLogger, ApiErrors, fetchWithTimeout, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const log = createLogger('[livestream-slots]');
@@ -92,6 +93,41 @@ function sanitizeSlot(slot: Record<string, unknown>): Record<string, unknown> {
 
 function sanitizeSlots(slots: Record<string, unknown>[]): Record<string, unknown>[] {
   return slots.map(sanitizeSlot);
+}
+
+// Server-side DJ eligibility check — mirrors check-dj-eligibility.ts logic
+const REQUIRED_LIKES = 10;
+async function checkDjEligible(djId: string): Promise<{ eligible: boolean; reason?: string }> {
+  try {
+    // Admin bypass
+    if (await isAdmin(djId)) return { eligible: true };
+
+    // Check moderation status
+    const moderation = await getDocument('djModeration', djId);
+    if (moderation?.status === 'banned') return { eligible: false, reason: 'Your account has been suspended from streaming' };
+    if (moderation?.status === 'hold') return { eligible: false, reason: 'Your streaming access is temporarily on hold' };
+
+    // Check admin bypass collections
+    const bypass = await getDocument('djLobbyBypass', djId);
+    if (bypass) return { eligible: true };
+
+    const userData = await getDocument('users', djId);
+    if (userData?.['go-liveBypassed'] === true) return { eligible: true };
+
+    // Must have at least 1 mix with 10+ likes
+    const mixes = await queryCollection('dj-mixes', {
+      filters: [{ field: 'userId', op: 'EQUAL', value: djId }]
+    });
+    if (mixes.length === 0) return { eligible: false, reason: 'You need to upload at least one DJ mix before you can go live' };
+
+    const qualifying = mixes.filter((m: Record<string, unknown>) => ((m.likeCount as number) || (m.likes as number) || 0) >= REQUIRED_LIKES);
+    if (qualifying.length === 0) return { eligible: false, reason: `Your mixes need at least ${REQUIRED_LIKES} likes to go live` };
+
+    return { eligible: true };
+  } catch (e: unknown) {
+    log.warn('Eligibility check failed, allowing:', e);
+    return { eligible: true }; // Fail open to not block DJs on transient errors
+  }
 }
 
 const DEFAULT_SETTINGS = {
@@ -544,67 +580,84 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Continue with booking if limit check fails
       }
 
-      // Check for conflicts - limit to prevent runaway
-      const existingSlots = await queryCollection('livestreamSlots', { skipCache: true, limit: 200 });
-
-      const conflicts = existingSlots.filter(slot => {
-        if (!['scheduled', 'in_lobby', 'live', 'queued'].includes(slot.status)) {
-          return false;
-        }
-        const existingEnd = new Date(slot.endTime);
-        // Skip stale slots whose endTime has already passed
-        if (existingEnd < now) {
-          return false;
-        }
-        // Skip the DJ's own scheduled slots — rebooking supersedes them
-        if (slot.djId === djId && slot.status === 'scheduled') {
-          return false;
-        }
-        const existingStart = new Date(slot.startTime);
-        const check1 = slotStart < existingEnd;
-        const check2 = slotEnd > existingStart;
-
-        return check1 && check2;
-      });
-
-      if (conflicts.length > 0) {
-        const c = conflicts[0];
-        return ApiErrors.badRequest(`Time conflicts with ${c.djName}'s booking`);
+      // Acquire distributed lock to prevent TOCTOU race condition
+      // (two DJs booking the same slot simultaneously)
+      const lockAcquired = await acquireCronLock(db, 'slot_booking');
+      if (!lockAcquired) {
+        return ApiErrors.badRequest('Booking system busy — please try again in a moment');
       }
 
-      const slotId = generateId();
-      const streamKey = generateStreamKey(djId, slotId, slotStart, slotEnd);
+      try {
+        // Check for conflicts - limit to prevent runaway
+        const existingSlots = await queryCollection('livestreamSlots', { skipCache: true, limit: 200 });
 
-      const newSlot = {
-        djId,
-        djName: djName.trim(),
-        djAvatar: djAvatar || null,
-        title: title || `${djName.trim()} Live`,
-        genre: genre || 'Jungle / D&B',
-        description: description || '',
-        startTime: slotStart.toISOString(),
-        endTime: slotEnd.toISOString(),
-        duration,
-        status: 'scheduled',
-        streamKey,
-        rtmpUrl: buildRtmpUrl(streamKey),
-        hlsUrl: buildHlsUrl(streamKey),
-        createdAt: nowISO,
-        updatedAt: nowISO,
-        viewerPeak: 0,
-        totalViews: 0,
-        currentViewers: 0,
-      };
+        const conflicts = existingSlots.filter(slot => {
+          if (!['scheduled', 'in_lobby', 'live', 'queued'].includes(slot.status)) {
+            return false;
+          }
+          const existingEnd = new Date(slot.endTime);
+          // Skip stale slots whose endTime has already passed
+          if (existingEnd < now) {
+            return false;
+          }
+          // Skip the DJ's own scheduled slots — rebooking supersedes them
+          if (slot.djId === djId && slot.status === 'scheduled') {
+            return false;
+          }
+          const existingStart = new Date(slot.startTime);
+          const check1 = slotStart < existingEnd;
+          const check2 = slotEnd > existingStart;
 
-      await setDocument('livestreamSlots', slotId, newSlot, idToken);
-      invalidateCache();
+          return check1 && check2;
+        });
 
-      // Sync to D1 (non-blocking)
-      syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
+        if (conflicts.length > 0) {
+          const c = conflicts[0];
+          await releaseCronLock(db, 'slot_booking');
+          return ApiErrors.badRequest(`Time conflicts with ${c.djName}'s booking`);
+        }
 
-      return successResponse({ slot: { id: slotId, ...newSlot },
-        streamKey,
-        message: 'Slot booked successfully' });
+        const slotId = generateId();
+        const streamKey = generateStreamKey(djId, slotId, slotStart, slotEnd);
+
+        const newSlot = {
+          djId,
+          djName: djName.trim(),
+          djAvatar: djAvatar || null,
+          title: title || `${djName.trim()} Live`,
+          genre: genre || 'Jungle / D&B',
+          description: description || '',
+          startTime: slotStart.toISOString(),
+          endTime: slotEnd.toISOString(),
+          duration,
+          status: 'scheduled',
+          streamKey,
+          rtmpUrl: buildRtmpUrl(streamKey),
+          hlsUrl: buildHlsUrl(streamKey),
+          createdAt: nowISO,
+          updatedAt: nowISO,
+          viewerPeak: 0,
+          totalViews: 0,
+          currentViewers: 0,
+        };
+
+        await setDocument('livestreamSlots', slotId, newSlot, idToken);
+        invalidateCache();
+
+        // Release lock after successful booking
+        await releaseCronLock(db, 'slot_booking');
+
+        // Sync to D1 (non-blocking)
+        syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
+
+        return successResponse({ slot: { id: slotId, ...newSlot },
+          streamKey,
+          message: 'Slot booked successfully' });
+      } catch (bookingError: unknown) {
+        // Release lock on any error during booking
+        await releaseCronLock(db, 'slot_booking').catch(() => {});
+        throw bookingError;
+      }
     }
 
     // GO LIVE NOW
@@ -622,6 +675,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Verify the authenticated user matches the DJ going live
       if (authUserId !== djId) {
         return ApiErrors.forbidden('Not authorized to go live as this DJ');
+      }
+
+      // Server-side eligibility check
+      const goLiveNowEligibility = await checkDjEligible(djId);
+      if (!goLiveNowEligibility.eligible) {
+        return ApiErrors.forbidden(goLiveNowEligibility.reason || 'Not eligible to stream');
       }
 
       // Check if anyone is live
@@ -1070,6 +1129,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Verify the authenticated user matches the DJ going live
       if (authUserId !== djId) {
         return ApiErrors.forbidden('Not authorized to go live as this DJ');
+      }
+
+      // Server-side eligibility check — prevents bypassing client-side gate
+      const eligibility = await checkDjEligible(djId);
+      if (!eligibility.eligible) {
+        return ApiErrors.forbidden(eligibility.reason || 'Not eligible to stream');
       }
 
       // Check if anyone is currently live (including this DJ - prevent duplicate sessions)

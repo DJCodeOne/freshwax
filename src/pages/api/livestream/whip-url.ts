@@ -2,7 +2,7 @@
 // Returns authenticated WHIP URL for browser-based streaming
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { verifyRequestUser } from '../../../lib/firebase-rest';
+import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -41,6 +41,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify the authenticated user matches the DJ
     if (userId !== djId) {
       return ApiErrors.forbidden('Not authorized for this DJ');
+    }
+
+    // Verify slot exists, belongs to this DJ, and is in a valid state
+    try {
+      const slot = await getDocument('livestreamSlots', slotId);
+      if (!slot) {
+        return ApiErrors.badRequest('Slot not found');
+      }
+      if (slot.djId !== djId) {
+        return ApiErrors.forbidden('Slot does not belong to this DJ');
+      }
+      const validStatuses = ['scheduled', 'in_lobby', 'live', 'queued'];
+      if (!validStatuses.includes(slot.status as string)) {
+        return ApiErrors.badRequest('Slot is not in an active state');
+      }
+      if (slot.endTime && new Date(slot.endTime as string) < new Date()) {
+        return ApiErrors.badRequest('Slot has expired');
+      }
+      // Verify the stream key matches the slot
+      if (slot.streamKey !== streamKey) {
+        return ApiErrors.forbidden('Stream key does not match slot');
+      }
+    } catch (slotErr: unknown) {
+      // Fail open — don't block streaming if slot check fails
+      log.warn('Slot verification failed, allowing:', slotErr instanceof Error ? slotErr.message : String(slotErr));
     }
 
     // Return proxy URL (same origin) to avoid CORS with stream.freshwax.co.uk

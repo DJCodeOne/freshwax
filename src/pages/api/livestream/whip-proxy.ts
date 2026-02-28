@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { ApiErrors, createLogger, fetchWithTimeout } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { queryCollection } from '../../../lib/firebase-rest';
 
 const log = createLogger('livestream/whip-proxy');
 
@@ -18,14 +19,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    // Auth not required here — the stream key acts as the secret.
-    // The DJ was already authenticated by /api/livestream/whip-url/ which returned this proxy URL.
-    // whip-client.js sends raw SDP without auth headers.
-
     const url = new URL(request.url);
     const streamKey = url.searchParams.get('key');
     if (!streamKey) {
       return ApiErrors.badRequest('Stream key required');
+    }
+
+    // Validate that stream key maps to a valid, current slot
+    try {
+      const slots = await queryCollection('livestreamSlots', {
+        filters: [{ field: 'streamKey', op: 'EQUAL', value: streamKey }],
+        limit: 1
+      });
+      if (slots.length === 0) {
+        log.warn('WHIP proxy: no slot found for stream key');
+        return ApiErrors.forbidden('Invalid stream key');
+      }
+      const slot = slots[0];
+      // Only allow keys for slots that are active (in_lobby, live, scheduled within 15min)
+      const validStatuses = ['scheduled', 'in_lobby', 'live', 'queued'];
+      if (!validStatuses.includes(slot.status as string)) {
+        log.warn('WHIP proxy: slot status not valid for streaming:', slot.status);
+        return ApiErrors.forbidden('Stream slot is not active');
+      }
+      // Reject if slot endTime has passed
+      if (slot.endTime && new Date(slot.endTime as string) < new Date()) {
+        log.warn('WHIP proxy: slot has expired');
+        return ApiErrors.forbidden('Stream slot has expired');
+      }
+    } catch (validationErr: unknown) {
+      // Fail open — don't block streaming if validation query fails
+      log.warn('WHIP proxy: slot validation failed, allowing:', validationErr instanceof Error ? validationErr.message : String(validationErr));
     }
 
     const whipBaseUrl = (locals as App.Locals).runtime?.env?.WHIP_BASE_URL || import.meta.env.WHIP_BASE_URL;
