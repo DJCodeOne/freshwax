@@ -74,7 +74,10 @@ export async function whipConnect(whipUrl, mediaStream, callbacks) {
   pc = new RTCPeerConnection({
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' }
     ],
     bundlePolicy: 'max-bundle',
     rtcpMuxPolicy: 'require'
@@ -123,7 +126,7 @@ export async function whipConnect(whipUrl, mediaStream, callbacks) {
   await pc.setLocalDescription(offer);
 
   // Wait for ICE gathering to complete (with timeout)
-  var localDesc = await waitForIceGathering(pc, 5000);
+  var localDesc = await waitForIceGathering(pc, 8000);
 
   // Send offer to WHIP endpoint
   var response = await fetch(whipUrl, {

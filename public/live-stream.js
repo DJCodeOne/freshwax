@@ -1891,15 +1891,15 @@ function setupHlsPlayer(stream) {
         highBufferWatchdogPeriod: 1,
         nudgeOffset: 0.2,
         nudgeMaxRetry: 5,
-        // Fragment loading - faster retries
-        fragLoadingMaxRetry: 4,
-        fragLoadingRetryDelay: 500,
+        // Fragment loading - aggressive retries for live reliability
+        fragLoadingMaxRetry: 6,
+        fragLoadingRetryDelay: 200,
         fragLoadingMaxRetryTimeout: 20000,
-        manifestLoadingMaxRetry: 3,
-        manifestLoadingRetryDelay: 500,
+        manifestLoadingMaxRetry: 5,
+        manifestLoadingRetryDelay: 200,
         manifestLoadingMaxRetryTimeout: 15000,
-        levelLoadingMaxRetry: 3,
-        levelLoadingRetryDelay: 500,
+        levelLoadingMaxRetry: 5,
+        levelLoadingRetryDelay: 200,
         levelLoadingMaxRetryTimeout: 15000
       });
 
@@ -1953,7 +1953,7 @@ function setupHlsPlayer(stream) {
 
       // Track retry attempts to prevent infinite loops
       let networkRetryCount = 0;
-      const MAX_NETWORK_RETRIES = 3;
+      const MAX_NETWORK_RETRIES = 5;
 
       hlsPlayer.on(Hls.Events.ERROR, (event, data) => {
         if (!data.fatal) return; // Non-fatal errors — HLS.js recovers automatically

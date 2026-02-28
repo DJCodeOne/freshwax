@@ -21,6 +21,9 @@ var currentStreamKey = null;
 var previousVideoBytes = 0;
 var previousStatsTime = 0;
 var reconnectTimeout = null;
+var reconnectAttempts = 0;
+var MAX_RECONNECT_ATTEMPTS = 5;
+var RECONNECT_BACKOFF = [5000, 10000, 20000, 40000, 60000]; // exponential backoff
 
 export function init(context) {
   ctx = context;
@@ -292,6 +295,7 @@ export async function endStream(token, force) {
 
   // Clean up
   if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
+  reconnectAttempts = 0;
   releaseWakeLock();
   stopTimer();
   stopAudioMeter();
@@ -323,6 +327,7 @@ export function cleanup() {
   }
 
   if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
+  reconnectAttempts = 0;
   releaseWakeLock();
   stopTimer();
   stopAudioMeter();
@@ -362,17 +367,33 @@ export function getMediaStream() {
 function handleConnectionLost(token, whipUrl, timerEl, onStats) {
   if (!isLive) return;
 
-  // Show confirmation dialog — user decides whether to retry
-  var shouldRetry = confirm('Connection lost. Would you like to try reconnecting?\n\nPress OK to reconnect, or Cancel to end your stream.');
+  reconnectAttempts++;
+
+  // Too many retries — force end stream
+  if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+    alert('Connection lost after ' + MAX_RECONNECT_ATTEMPTS + ' attempts. Ending stream.');
+    endStream(token, true);
+    return;
+  }
+
+  var backoffMs = RECONNECT_BACKOFF[Math.min(reconnectAttempts - 1, RECONNECT_BACKOFF.length - 1)];
+  var backoffSec = Math.round(backoffMs / 1000);
+
+  var shouldRetry = confirm(
+    'Connection lost (attempt ' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ').\n\n' +
+    'Press OK to reconnect, or Cancel to end your stream.'
+  );
 
   if (shouldRetry && mediaStream) {
-    // Attempt reconnection with existing media stream
+    // Attempt reconnection with exponential backoff
     whipDisconnect().catch(function() {}).then(function() {
       return whipConnect(whipUrl, mediaStream, {
         onStateChange: function(state) {
           if (state === 'failed' || state === 'ice-failed') {
-            // Second failure — offer to end or retry again
-            handleConnectionLost(token, whipUrl, timerEl, onStats);
+            // Wait with backoff before next retry prompt
+            setTimeout(function() {
+              handleConnectionLost(token, whipUrl, timerEl, onStats);
+            }, backoffMs);
           } else if (state === 'disconnected' || state === 'ice-disconnected') {
             if (!reconnectTimeout) {
               reconnectTimeout = setTimeout(function() {
@@ -380,9 +401,11 @@ function handleConnectionLost(token, whipUrl, timerEl, onStats) {
                 if (isLive && !whipIsConnected()) {
                   handleConnectionLost(token, whipUrl, timerEl, onStats);
                 }
-              }, 5000);
+              }, backoffMs);
             }
           } else if (state === 'connected' || state === 'ice-connected') {
+            // Successfully reconnected — reset counter
+            reconnectAttempts = 0;
             if (reconnectTimeout) {
               clearTimeout(reconnectTimeout);
               reconnectTimeout = null;
@@ -395,7 +418,6 @@ function handleConnectionLost(token, whipUrl, timerEl, onStats) {
         onError: function() {}
       });
     }).catch(function() {
-      // Reconnection attempt failed entirely
       var endNow = confirm('Reconnection failed. End stream?');
       if (endNow) {
         endStream(token, true);
