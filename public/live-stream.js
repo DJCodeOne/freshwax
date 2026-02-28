@@ -1971,9 +1971,11 @@ function setupHlsPlayer(stream) {
                 }, 1000); // Faster retry - 1 second
               } else {
                 hlsPlayer.destroy();
-                showStreamError('Stream is offline or unavailable.');
-                // Show offline overlay
-                document.getElementById('offlineOverlay')?.classList.remove('hidden');
+                hlsPlayer = null;
+                // Stream is gone — clean up live state and let polling resume playlist
+                stopLiveStream();
+                // Trigger immediate status check to start playlist transition
+                checkLiveStatus();
               }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
@@ -1982,11 +1984,10 @@ function setupHlsPlayer(stream) {
             default:
               console.error('[HLS] Fatal error, cannot recover');
               hlsPlayer.destroy();
-              showStreamError('Stream unavailable. The DJ may still be connecting.');
-              setTimeout(() => {
-                showReconnecting();
-                setupHlsPlayer(currentStream);
-              }, 2000); // Faster retry - 2 seconds
+              hlsPlayer = null;
+              // Clean up live state and let polling resume playlist
+              stopLiveStream();
+              checkLiveStatus();
               break;
           }
         }
