@@ -414,10 +414,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
           }
           const exceededMaxDuration = streamDurationMs >= maxDurationMs;
 
-          const shouldAutoEnd = anotherDjWaiting || exceededMaxDuration;
+          // Check if DJ has disconnected (no heartbeat for 3+ minutes after slot end)
+          const lastHeartbeat = liveSlot.lastHeartbeat ? new Date(liveSlot.lastHeartbeat as string) : null;
+          const timeSinceSlotEnd = now.getTime() - slotEnd.getTime();
+          const heartbeatStale = lastHeartbeat
+            ? (now.getTime() - lastHeartbeat.getTime() > 3 * 60 * 1000) // No heartbeat for 3 min
+            : (timeSinceSlotEnd > 5 * 60 * 1000); // No heartbeat field at all + 5 min past end
+          const djDisconnected = heartbeatStale && timeSinceSlotEnd > 2 * 60 * 1000;
+
+          const shouldAutoEnd = anotherDjWaiting || exceededMaxDuration || djDisconnected;
 
           if (shouldAutoEnd) {
-            const reason = anotherDjWaiting ? 'next_dj_waiting' : 'max_duration_reached';
+            const reason = anotherDjWaiting ? 'next_dj_waiting' : (exceededMaxDuration ? 'max_duration_reached' : 'dj_disconnected');
             log.info(`Auto-ending slot ${liveSlot.id} for ${liveSlot.djName} (${reason})`);
             try {
               await updateDocument('livestreamSlots', liveSlot.id, {
@@ -428,8 +436,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
                 autoEndReason: reason
               });
 
-              // Sync to D1
-              syncSlotStatusToD1(db, liveSlot.id, 'completed', {
+              // Sync to D1 (await to ensure D1 is up to date before status checks)
+              await syncSlotStatusToD1(db, liveSlot.id, 'completed', {
                 endedAt: now.toISOString(),
                 autoEnded: true
               });
@@ -516,9 +524,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
       ? authHeader.slice(7)
       : data.idToken; // Fall back to body for backwards compatibility
 
-    // Verify authenticated user
-    const { userId: authUserId, error: authError } = await verifyRequestUser(request);
-    if (!authUserId || authError) {
+    // Verify authenticated user (header first, body idToken fallback for sendBeacon)
+    let authUserId: string | null = null;
+    const { userId: headerUserId } = await verifyRequestUser(request);
+    if (headerUserId) {
+      authUserId = headerUserId;
+    } else if (data.idToken) {
+      // Fallback: verify body idToken directly (for sendBeacon which can't set headers)
+      try {
+        const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
+        if (apiKey) {
+          const verifyResp = await fetchWithTimeout(
+            `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: data.idToken }) },
+            10000
+          );
+          if (verifyResp.ok) {
+            const verifyData = await verifyResp.json();
+            authUserId = verifyData.users?.[0]?.localId || null;
+          }
+        }
+      } catch (tokenErr: unknown) {
+        log.warn('Body idToken verification failed:', tokenErr);
+      }
+    }
+    if (!authUserId) {
       return ApiErrors.unauthorized('Authentication required');
     }
 
@@ -1042,6 +1072,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }, env);
 
       return successResponse({ message: 'Stream ended' });
+    }
+
+    // HEARTBEAT — DJ sends every 30s while streaming to prove they're still live
+    if (action === 'heartbeat') {
+      const { slotId } = data;
+      if (!slotId) return ApiErrors.badRequest('Slot ID required');
+
+      const slot = await getDocument('livestreamSlots', slotId);
+      if (!slot || slot.status !== 'live') {
+        return ApiErrors.notFound('No active stream found');
+      }
+      if (slot.djId !== authUserId) {
+        return ApiErrors.forbidden('Not authorized');
+      }
+
+      await updateDocument('livestreamSlots', slotId, {
+        lastHeartbeat: nowISO
+      });
+
+      // Also update D1 (non-blocking)
+      syncSlotStatusToD1(db, slotId, 'live', { lastHeartbeat: nowISO });
+
+      return successResponse({ ok: true });
     }
 
     // GET STREAM KEY

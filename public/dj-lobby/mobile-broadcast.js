@@ -24,6 +24,8 @@ var reconnectTimeout = null;
 var reconnectAttempts = 0;
 var MAX_RECONNECT_ATTEMPTS = 5;
 var RECONNECT_BACKOFF = [5000, 10000, 20000, 40000, 60000]; // exponential backoff
+var heartbeatInterval = null;
+var cachedToken = null;
 
 export function init(context) {
   ctx = context;
@@ -253,8 +255,10 @@ export async function goLive(token, slotId, streamKey, djId, djName, djAvatar, t
 
   // Success
   isLive = true;
+  cachedToken = token;
   acquireWakeLock();
   startTimer(timerEl);
+  startHeartbeat(token);
 }
 
 /**
@@ -267,25 +271,54 @@ export async function endStream(token, force) {
   if (!isLive && !force) return false;
 
   isLive = false;
+  stopHeartbeat();
 
   // Disconnect WHIP
   try { await whipDisconnect(); } catch (e) { /* ignore */ }
 
-  // Call endStream API
-  try {
-    if (currentSlotId && token) {
-      var djId = ctx && ctx.getCurrentUser ? ctx.getCurrentUser().uid : null;
-      await fetch('/api/livestream/slots/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-        body: JSON.stringify({
-          action: 'endStream',
-          slotId: currentSlotId,
-          djId: djId
-        })
-      });
+  // Call endStream API — retry once with fresh token if 401
+  var ended = false;
+  if (currentSlotId) {
+    var djId = ctx && ctx.getCurrentUser ? ctx.getCurrentUser().uid : null;
+    var attempts = 0;
+    var authToken = token;
+
+    while (attempts < 2 && !ended) {
+      attempts++;
+      try {
+        var headers = { 'Content-Type': 'application/json' };
+        if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+        var resp = await fetch('/api/livestream/slots/', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({
+            action: 'endStream',
+            slotId: currentSlotId,
+            djId: djId
+          })
+        });
+        if (resp.ok) {
+          ended = true;
+        } else if (resp.status === 401 && attempts === 1 && ctx && ctx.getCurrentUser) {
+          // Token expired — try refreshing
+          try {
+            var user = ctx.getCurrentUser();
+            if (user && user.getIdToken) {
+              authToken = await user.getIdToken(true);
+            }
+          } catch (refreshErr) {
+            console.warn('[Broadcast] Token refresh failed:', refreshErr);
+          }
+        } else {
+          console.warn('[Broadcast] endStream API returned', resp.status);
+          break;
+        }
+      } catch (fetchErr) {
+        console.warn('[Broadcast] endStream API failed:', fetchErr);
+        break;
+      }
     }
-  } catch (e) { /* best effort */ }
+  }
 
   // Stop media tracks
   if (mediaStream) {
@@ -310,14 +343,21 @@ export async function endStream(token, force) {
  * Cleanup handler for pagehide/unload — uses sendBeacon
  */
 export function cleanup() {
+  stopHeartbeat();
+
   if (isLive && currentSlotId) {
     var djId = ctx && ctx.getCurrentUser ? ctx.getCurrentUser().uid : null;
     try {
-      navigator.sendBeacon('/api/livestream/slots/', JSON.stringify({
+      // Use Blob with JSON content-type so the POST handler accepts it
+      // Include idToken in body for auth (sendBeacon can't set Authorization header)
+      var payload = {
         action: 'endStream',
         slotId: currentSlotId,
         djId: djId
-      }));
+      };
+      if (cachedToken) payload.idToken = cachedToken;
+      var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      navigator.sendBeacon('/api/livestream/slots/', blob);
     } catch (e) { /* best effort */ }
   }
 
@@ -332,6 +372,36 @@ export function cleanup() {
   stopTimer();
   stopAudioMeter();
   isLive = false;
+}
+
+/**
+ * Start heartbeat — sends signal every 30s to prove DJ is still streaming
+ * @param {string} token - Auth token
+ */
+function startHeartbeat(token) {
+  stopHeartbeat();
+  heartbeatInterval = setInterval(function() {
+    if (!isLive || !currentSlotId) { stopHeartbeat(); return; }
+    var authToken = token;
+    // Try to get fresh token if ctx is available
+    if (ctx && ctx.getCurrentUser) {
+      var user = ctx.getCurrentUser();
+      if (user && user.getIdToken) {
+        user.getIdToken().then(function(t) { authToken = t; }).catch(function() {});
+      }
+    }
+    var headers = { 'Content-Type': 'application/json' };
+    if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
+    fetch('/api/livestream/slots/', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ action: 'heartbeat', slotId: currentSlotId })
+    }).catch(function() { /* ignore heartbeat failures */ });
+  }, 30000);
+}
+
+function stopHeartbeat() {
+  if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
 }
 
 /**

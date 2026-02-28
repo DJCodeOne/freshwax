@@ -148,6 +148,23 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Try D1 first for live slots (FREE reads)
     let liveSlots = db ? await d1GetLiveSlots(db) : [];
 
+    // Sanity check: if D1 says live but slot endTime has passed, verify with Firebase
+    // D1 sync is fire-and-forget so it can be stale
+    const now = new Date();
+    if (liveSlots.length > 0) {
+      const hasExpiredSlot = liveSlots.some(s => s.endTime && new Date(s.endTime) < now);
+      if (hasExpiredSlot || skipCache) {
+        // Cross-check with Firebase (source of truth)
+        const firebaseLive = await queryCollection('livestreamSlots', {
+          filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+          limit: 5,
+          skipCache: true
+        });
+        // Use Firebase result — it's always more up to date
+        liveSlots = firebaseLive;
+      }
+    }
+
     // Fall back to Firebase if D1 returns nothing
     if (liveSlots.length === 0) {
       liveSlots = await queryCollection('livestreamSlots', {
