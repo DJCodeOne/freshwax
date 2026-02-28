@@ -10355,8 +10355,9 @@
   gap: 3px;
   justify-content: center;
   height: 20px;
-  align-self: center;
-  margin-bottom: 2px;
+  align-self: flex-end;
+  margin-bottom: 8px;
+  margin-right: 8px;
 }
 
 .mobile-meter-bar {
