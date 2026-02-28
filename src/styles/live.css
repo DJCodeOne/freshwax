@@ -6855,20 +6855,23 @@
     .chat-section {
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 200px);
-      height: calc(100dvh - 200px);
+      height: 450px;
+      max-height: 450px;
       border-radius: 12px;
       overflow: hidden;
     }
 
+    /* Reorder: header → input → messages */
+    .chat-section .chat-header { order: 1; }
+    .chat-section .chat-input-section { order: 2; flex-shrink: 0; }
+    .chat-section .chat-messages { order: 3; }
+
     .chat-messages {
       flex: 1;
-      min-height: 150px;
+      min-height: 0;
       overflow-y: auto;
-    }
-
-    .chat-input-section {
-      flex-shrink: 0;
+      flex-direction: column-reverse;
+      display: flex;
     }
 
     .chat-input-wrapper {
@@ -6939,17 +6942,18 @@
 
     /* --- Emoji grid — single row --- */
     .inline-reactions {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      display: flex;
+      justify-content: center;
       gap: 0.25rem;
-      padding: 0.5rem;
+      padding: 0.4rem;
       background: #0a0a0a;
       border-radius: 12px;
       overflow: hidden;
     }
 
     .inline-btn.reaction-btn {
-      width: 100%;
+      flex: 1 1 0;
+      max-width: 52px;
       height: 41px;
       font-size: 19px;
       border-radius: 10px;
