@@ -6657,6 +6657,20 @@
     background: rgba(255,255,255,0.05);
   }
   
+  /* DJ Lobby tab - green accent */
+  .mobile-tab-lobby {
+    color: #10b981;
+    text-decoration: none;
+  }
+
+  .mobile-tab-lobby.hidden {
+    display: none !important;
+  }
+
+  .mobile-tab-lobby:active {
+    background: rgba(16, 185, 129, 0.1);
+  }
+
   /* Chat notification badge */
   .mobile-tab .tab-badge {
     position: absolute;
