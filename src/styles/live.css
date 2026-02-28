@@ -6969,6 +6969,13 @@
       height: 6px;
     }
 
+    /* Move NOW PLAYING above emoji reactions on mobile */
+    .stream-info-bar { order: 1; }
+    .player-container { order: 2; }
+    .dj-info-bar { order: 3; }
+    .player-controls { order: 4; }
+    .shoutout-bar { order: 5; }
+
     /* DJ Info Bar - mobile */
     .dj-info-bar {
       flex-direction: column;
