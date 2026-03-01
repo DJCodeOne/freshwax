@@ -9205,47 +9205,57 @@ body:has(.playlist-modal:not(.hidden)) .playlist-player {
   .playlist-modal-content,
   #playlistModal .modal-content {
     width: 100% !important;
-    max-width: 100% !important;
+    max-width: 100vw !important;
     height: 100vh !important;
     height: 100dvh !important;
     max-height: 100vh !important;
     max-height: 100dvh !important;
     border-radius: 0 !important;
     margin: 0 !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
   }
 
   .my-playlist-header {
     flex-wrap: wrap;
     gap: 0.5rem;
-    padding: 0.75rem;
+    padding: 0.5rem 0;
   }
 
   .my-playlist-actions {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 0.4rem;
   }
 
   .playlist-sort-select {
-    flex: 1;
+    flex: none;
     min-width: 0;
+    font-size: 0.75rem;
   }
 
   .personal-playlist-item {
     width: 100% !important;
     max-width: 100% !important;
-    padding: 0.75rem;
+    padding: 0.35rem 0.5rem !important;
+    box-sizing: border-box !important;
+    gap: 0.5rem;
   }
 
   .personal-item-actions {
-    flex-direction: column;
-    gap: 0.5rem;
+    flex-direction: row;
+    gap: 0.35rem;
+    flex-shrink: 0;
   }
 
   .personal-add-btn,
   .personal-delete-btn {
-    width: 100%;
+    width: auto;
     justify-content: center;
-    min-height: 44px;
+    min-height: 32px;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
   }
 
   /* Export modal mobile */
