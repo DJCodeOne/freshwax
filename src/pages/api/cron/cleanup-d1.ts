@@ -12,6 +12,7 @@ import type { APIRoute } from 'astro';
 import { cleanupErrorLogs } from '../../../lib/error-logger';
 import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
+import { cleanupOldActivity } from '../../../lib/activity-feed';
 
 const log = createLogger('cleanup-d1');
 
@@ -92,6 +93,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       results.imageScanResults = { deleted: deletedScans };
     } catch (e: unknown) {
       // Table may not exist — that's fine, skip silently
+    }
+
+    // 4. Clean up activity_feed older than 90 days
+    try {
+      const activityResult = await cleanupOldActivity(db, 90);
+      log.info(`[Cleanup D1] activity_feed: deleted ${activityResult.deleted} rows`);
+      results.activityFeed = { deleted: activityResult.deleted, retentionDays: 90 };
+    } catch (err: unknown) {
+      log.error('[Cleanup D1] activity_feed cleanup failed:', err instanceof Error ? err.message : String(err));
+      results.activityFeed = { error: 'cleanup failed' };
     }
 
     const duration = Date.now() - startTime;

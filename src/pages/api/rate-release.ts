@@ -8,6 +8,7 @@ import { d1UpsertRating } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+import { logActivity } from '../../lib/activity-feed';
 
 const RateReleaseSchema = z.object({
   releaseId: z.string().min(1, 'Release ID is required').max(200),
@@ -130,6 +131,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     log.info('[rate-release] Saved to Firebase');
+
+    // Log to activity feed (non-blocking)
+    if (db) {
+      logActivity(db, {
+        eventType: 'rating',
+        actorId: userId,
+        targetId: releaseId,
+        targetType: 'release',
+        metadata: { rating },
+      }).catch(() => { /* activity logging non-critical */ });
+    }
 
     // Dual-write to D1 (non-blocking)
     if (db) {

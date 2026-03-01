@@ -232,3 +232,13 @@ export async function broadcastLiveStatus(event: 'stream-started' | 'stream-ende
 }, env?: Parameters<typeof triggerPusher>[3]): Promise<boolean> {
   return triggerPusher('live-status', event, data, env);
 }
+
+// Broadcast a high-value activity feed event for real-time dashboard updates
+export async function broadcastActivity(data: {
+  eventType: string;
+  actorName?: string;
+  targetName?: string;
+  targetUrl?: string;
+}, env?: Parameters<typeof triggerPusher>[3]): Promise<boolean> {
+  return triggerPusher('activity-feed', 'new-event', data, env);
+}

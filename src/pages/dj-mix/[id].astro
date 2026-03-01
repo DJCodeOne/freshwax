@@ -5,6 +5,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument } from '../../lib/firebase-rest';
 import { createLogger } from '../../lib/api-utils';
+import { getSupportsForMix } from '../../lib/dj-support';
 
 const log = createLogger('dj-mix-page');
 
@@ -135,6 +136,24 @@ const tracklist = Array.isArray(tracklistArray) && tracklistArray.length > 0
   : (typeof tracklistRaw === 'string' && tracklistRaw.trim() 
       ? tracklistRaw.split('\n').map(line => cleanTrackLine(line.trim())).filter(line => line.length > 0)
       : []);
+
+// Fetch catalog matches for this mix from D1
+let catalogMatches: Array<{releaseId: string; releaseTitle: string; artistName: string; confidence: number}> = [];
+const env = (Astro.locals as App.Locals).runtime?.env;
+const mixDb = env?.DB;
+if (mixDb && id) {
+  try {
+    const supports = await getSupportsForMix(mixDb, id);
+    catalogMatches = supports.map(s => ({
+      releaseId: s.releaseId,
+      releaseTitle: s.releaseTitle,
+      artistName: s.artistName,
+      confidence: s.confidence,
+    }));
+  } catch (err: unknown) {
+    log.debug('[DJ-MIX PAGE] Could not fetch catalog matches:', err);
+  }
+}
 
 const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
   day: 'numeric',
@@ -510,6 +529,29 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             </div>
           )}
         </div>
+
+        {catalogMatches.length > 0 && (
+          <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-2 sm:p-3 md:p-6 mb-3 sm:mb-4 md:mb-6">
+            <div class="flex items-center gap-2 mb-2 sm:mb-3 md:mb-4 pb-2 sm:pb-3 md:pb-4 border-b-2 border-red-600">
+              <h2 class="text-base sm:text-lg md:text-2xl font-black text-white uppercase tracking-wider drop-shadow-lg flex items-center gap-2">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/></svg>
+                Featured on FreshWax ({catalogMatches.length})
+              </h2>
+            </div>
+            <div class="space-y-1.5 sm:space-y-2">
+              {catalogMatches.map((match) => (
+                <a href={`/item/${match.releaseId}/`} class="block bg-gradient-to-r from-gray-700 to-gray-800 p-2 sm:p-3 rounded border-2 border-gray-600 hover:border-red-600 transition-all group">
+                  <div class="flex items-center justify-between">
+                    <p class="text-white font-bold text-xs sm:text-sm md:text-base group-hover:text-red-400 transition-colors">
+                      {match.artistName} - {match.releaseTitle}
+                    </p>
+                    <span class="text-xs text-gray-400 ml-2 flex-shrink-0">View release</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

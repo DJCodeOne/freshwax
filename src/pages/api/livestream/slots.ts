@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, clearCache, verifyRequestUser } from '../../../lib/firebase-rest';
 import { generateStreamKey as generateSecureStreamKey, buildRtmpUrl, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { broadcastLiveStatus } from '../../../lib/pusher';
+import { logActivity } from '../../../lib/activity-feed';
 import { APPROVED_RELAY_STATIONS } from '../../../lib/relay-stations';
 import { initKVCache, kvDelete } from '../../../lib/kv-cache';
 import { d1UpsertSlot, d1UpdateSlotStatus, d1DeleteSlot, d1GetLiveSlots, d1GetScheduledSlots } from '../../../lib/d1-catalog';
@@ -839,6 +840,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
         title: newSlot.title
       }, env);
 
+      // Log to activity feed (non-blocking)
+      if (db) {
+        logActivity(db, {
+          eventType: 'dj_went_live',
+          actorId: djId,
+          actorName: djName.trim(),
+          targetId: slotId,
+          targetType: 'livestream',
+          targetName: newSlot.title,
+          targetUrl: '/live/',
+        }).catch(() => { /* activity logging non-critical */ });
+      }
+
       return successResponse({ slot: { id: slotId, ...newSlot },
         streamKey,
         rtmpUrl: newSlot.rtmpUrl,
@@ -1096,6 +1110,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         djName: slot.djName,
         slotId: targetSlotId
       }, env);
+
+      // Log to activity feed (non-blocking)
+      if (db) {
+        logActivity(db, {
+          eventType: 'stream_ended',
+          actorId: slot.djId,
+          actorName: slot.djName,
+          targetId: targetSlotId,
+          targetType: 'livestream',
+          targetUrl: '/live/',
+        }).catch(() => { /* activity logging non-critical */ });
+      }
 
       return successResponse({ message: 'Stream ended' });
     }

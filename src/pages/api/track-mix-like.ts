@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getDocument, atomicIncrement, updateDocument, clearCache } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+import { logActivity } from '../../lib/activity-feed';
 
 const MixIdSchema = z.object({
   mixId: z.string().min(1, 'Invalid mixId').max(200),
@@ -41,6 +42,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     log.info('[track-mix-like] Mix', mixId, 'likes:', likes);
+
+    // Log to activity feed (non-blocking)
+    if (db) {
+      logActivity(db, {
+        eventType: 'like',
+        targetId: mixId,
+        targetType: 'mix',
+        metadata: { likes },
+      }).catch(() => { /* activity logging non-critical */ });
+    }
 
     // Invalidate caches for this mix and the listing
     clearCache(`doc:dj-mixes:${mixId}`);

@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { getDocument, queryCollection, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../lib/api-utils';
+import { logActivity } from '../../lib/activity-feed';
 
 const log = createLogger('follow-artist');
 
@@ -155,6 +156,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
         followedArtistsUpdatedAt: now
       });
 
+      // Log to activity feed (non-blocking)
+      const db = env?.DB;
+      if (db) {
+        logActivity(db, {
+          eventType: 'follow',
+          actorId: userId,
+          targetId: artistIdentifier,
+          targetType: 'user',
+          targetName: artistIdentifier,
+        }).catch(() => { /* activity logging non-critical */ });
+      }
+
+      // Increment follower count in D1 (non-blocking)
+      if (db) {
+        db.prepare(
+          `INSERT INTO follower_counts (artist_id, follower_count, last_updated)
+           VALUES (?, 1, datetime('now'))
+           ON CONFLICT(artist_id) DO UPDATE SET
+             follower_count = follower_count + 1,
+             last_updated = datetime('now')`
+        ).bind(artistIdentifier).run().catch(() => { /* follower count non-critical */ });
+      }
+
       return successResponse({ message: 'Now following artist',
         isFollowing: true });
 
@@ -163,6 +187,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await arrayRemove('users', userId, 'followedArtists', [artistIdentifier], {
         followedArtistsUpdatedAt: now
       });
+
+      // Decrement follower count in D1 (non-blocking)
+      const db = env?.DB;
+      if (db) {
+        db.prepare(
+          `UPDATE follower_counts SET follower_count = MAX(0, follower_count - 1), last_updated = datetime('now') WHERE artist_id = ?`
+        ).bind(artistIdentifier).run().catch(() => { /* follower count non-critical */ });
+      }
 
       return successResponse({ message: 'Unfollowed artist',
         isFollowing: false });
@@ -177,12 +209,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await arrayRemove('users', userId, 'followedArtists', [artistIdentifier], {
           followedArtistsUpdatedAt: now
         });
+
+        // Decrement follower count in D1 (non-blocking)
+        const db = env?.DB;
+        if (db) {
+          db.prepare(
+            `UPDATE follower_counts SET follower_count = MAX(0, follower_count - 1), last_updated = datetime('now') WHERE artist_id = ?`
+          ).bind(artistIdentifier).run().catch(() => { /* follower count non-critical */ });
+        }
+
         return successResponse({ message: 'Unfollowed artist',
           isFollowing: false });
       } else {
         await arrayUnion('users', userId, 'followedArtists', [artistIdentifier], {
           followedArtistsUpdatedAt: now
         });
+
+        // Increment follower count in D1 (non-blocking)
+        const db = env?.DB;
+        if (db) {
+          db.prepare(
+            `INSERT INTO follower_counts (artist_id, follower_count, last_updated)
+             VALUES (?, 1, datetime('now'))
+             ON CONFLICT(artist_id) DO UPDATE SET
+               follower_count = follower_count + 1,
+               last_updated = datetime('now')`
+          ).bind(artistIdentifier).run().catch(() => { /* follower count non-critical */ });
+        }
+
         return successResponse({ message: 'Now following artist',
           isFollowing: true });
       }

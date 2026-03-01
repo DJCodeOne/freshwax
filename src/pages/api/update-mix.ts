@@ -8,6 +8,7 @@ import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+import { scanTracklistForSupport } from '../../lib/dj-support';
 
 const log = createLogger('update-mix');
 
@@ -136,6 +137,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('public:50', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
     await kvDelete('public:20', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
     await kvDelete('public:100', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
+
+    // Auto-scan tracklist for catalog matches if tracklist was updated (non-blocking)
+    if (db && tracklist !== undefined && updateData.tracklistArray && (updateData.tracklistArray as string[]).length > 0) {
+      scanTracklistForSupport(db, mixId, currentUserId, mixData.djName || mixData.dj_name || 'Unknown DJ', updateData.tracklistArray as string[])
+        .catch(() => { /* tracklist scan non-critical */ });
+    }
 
     return successResponse({ message: 'Mix updated successfully' });
 

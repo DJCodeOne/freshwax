@@ -10,6 +10,9 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { kvDelete } from '../../lib/kv-cache';
 import { errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
+import { logActivity } from '../../lib/activity-feed';
+import { scanTracklistForSupport } from '../../lib/dj-support';
+import { broadcastActivity } from '../../lib/pusher';
 
 export const prerender = false;
 
@@ -321,6 +324,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('public:50', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
     await kvDelete('public:20', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
     await kvDelete('public:100', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
+
+    // Log to activity feed (non-blocking)
+    if (db) {
+      logActivity(db, {
+        eventType: 'new_mix',
+        actorId: authenticatedUserId,
+        actorName: djName || 'Unknown DJ',
+        targetId: mixId,
+        targetType: 'mix',
+        targetName: title,
+        targetImage: artworkUrl || undefined,
+        targetUrl: `/dj-mix/${mixId}/`,
+        metadata: { genre, durationSeconds, trackCount: tracklistArray.length },
+      }).catch(() => { /* activity logging non-critical */ });
+
+      // Broadcast real-time update to dashboard widgets (non-blocking)
+      broadcastActivity({
+        eventType: 'new_mix',
+        actorName: djName || 'Unknown DJ',
+        targetName: title,
+        targetUrl: `/dj-mix/${mixId}/`,
+      }, env).catch(() => { /* pusher non-critical */ });
+
+      // Auto-scan tracklist for catalog matches (non-blocking)
+      if (tracklistArray.length > 0) {
+        scanTracklistForSupport(db, mixId, authenticatedUserId, djName || 'Unknown DJ', tracklistArray)
+          .catch(() => { /* tracklist scan non-critical */ });
+      }
+    }
 
     log.info(`[upload-mix] Success: ${mixId} (${genre}, ${formatDuration(durationSeconds)}, ${tracklistArray.length} tracks)`);
 

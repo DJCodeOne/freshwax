@@ -9,6 +9,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { d1AddComment } from '../../lib/d1-catalog';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+import { logActivity } from '../../lib/activity-feed';
 
 export const prerender = false;
 
@@ -144,6 +145,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
 
     log.info('[add-comment] Added comment to:', releaseId);
+
+    // Log to activity feed (non-blocking)
+    if (db) {
+      logActivity(db, {
+        eventType: 'comment',
+        actorId: userId,
+        actorName: userName.trim(),
+        targetId: releaseId,
+        targetType: 'release',
+        targetUrl: `/item/${releaseId}/`,
+      }).catch(() => { /* activity logging non-critical */ });
+    }
 
     return successResponse({ comment: newComment }, 200, {
       headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }

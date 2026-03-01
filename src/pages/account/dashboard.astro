@@ -149,6 +149,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </div>
             </div>
           </div>
+
+          <div class="section">
+            <div class="section-header">
+              <h2>Recent Activity</h2>
+            </div>
+            <div id="activityFeed" class="activity-feed">
+              <div class="empty-state">
+                <p style="color: #a3a3a3; margin: 0;">Loading activity...</p>
+              </div>
+            </div>
+            <button id="loadMoreActivity" class="view-all-btn" style="display:none;margin-top:0.75rem;">Load More</button>
+          </div>
         </div>
 
         <!-- Orders Tab -->
@@ -858,6 +870,148 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
   }
 
+  // Activity feed state
+  var _feedCursor = null;
+  var _feedLoading = false;
+
+  // Event type display config
+  var EVENT_LABELS = {
+    'new_release': 'New Release',
+    'new_mix': 'New Mix',
+    'dj_went_live': 'Went Live',
+    'stream_ended': 'Stream Ended',
+    'follow': 'New Follow',
+    'like': 'Liked',
+    'comment': 'Commented',
+    'rating': 'Rated',
+    'dj_support': 'DJ Support'
+  };
+
+  var EVENT_COLORS = {
+    'new_release': '#dc2626',
+    'new_mix': '#f59e0b',
+    'dj_went_live': '#22c55e',
+    'stream_ended': '#6b7280',
+    'follow': '#3b82f6',
+    'like': '#ec4899',
+    'comment': '#8b5cf6',
+    'rating': '#f59e0b',
+    'dj_support': '#06b6d4'
+  };
+
+  function formatTimeAgo(dateStr) {
+    var now = Date.now();
+    var then = new Date(dateStr).getTime();
+    var diff = Math.floor((now - then) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return new Date(dateStr).toLocaleDateString();
+  }
+
+  function renderFeedEvent(ev) {
+    var color = EVENT_COLORS[ev.event_type] || '#6b7280';
+    var label = EVENT_LABELS[ev.event_type] || ev.event_type;
+    var actorHtml = ev.actor_name ? escapeHtml(ev.actor_name) : '';
+    var targetHtml = ev.target_name ? escapeHtml(ev.target_name) : '';
+    var timeHtml = formatTimeAgo(ev.created_at);
+
+    var linkStart = ev.target_url ? '<a href="' + escapeHtml(ev.target_url) + '" style="color:#dc2626;text-decoration:none;font-weight:600;">' : '<span style="font-weight:600;color:#fff;">';
+    var linkEnd = ev.target_url ? '</a>' : '</span>';
+
+    var description = '';
+    if (ev.event_type === 'new_release') {
+      description = linkStart + targetHtml + linkEnd + ' is now available';
+    } else if (ev.event_type === 'new_mix') {
+      description = (actorHtml ? '<strong style="color:#fff;">' + actorHtml + '</strong> uploaded ' : '') + linkStart + targetHtml + linkEnd;
+    } else if (ev.event_type === 'dj_went_live') {
+      description = '<strong style="color:#fff;">' + actorHtml + '</strong> is <span style="color:#22c55e;font-weight:700;">LIVE</span>';
+    } else if (ev.event_type === 'follow') {
+      description = '<strong style="color:#fff;">' + actorHtml + '</strong> followed ' + targetHtml;
+    } else if (ev.event_type === 'comment') {
+      description = '<strong style="color:#fff;">' + actorHtml + '</strong> commented on ' + linkStart + targetHtml + linkEnd;
+    } else if (ev.event_type === 'like') {
+      description = 'Someone liked ' + linkStart + targetHtml + linkEnd;
+    } else if (ev.event_type === 'rating') {
+      description = 'New rating on ' + linkStart + targetHtml + linkEnd;
+    } else if (ev.event_type === 'dj_support') {
+      description = '<strong style="color:#fff;">' + actorHtml + '</strong> supports ' + linkStart + targetHtml + linkEnd;
+    } else {
+      description = label + (targetHtml ? ': ' + targetHtml : '');
+    }
+
+    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #262626;">' +
+      '<div style="flex-shrink:0;width:8px;height:8px;border-radius:50%;background:' + color + ';margin-top:6px;"></div>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="color:#d4d4d4;font-size:13px;line-height:1.5;">' + description + '</div>' +
+        '<div style="color:#525252;font-size:11px;margin-top:2px;">' +
+          '<span style="background:' + color + '22;color:' + color + ';padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;text-transform:uppercase;margin-right:6px;">' + escapeHtml(label) + '</span>' +
+          timeHtml +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  async function loadActivityFeed(user) {
+    var feedEl = document.getElementById('activityFeed');
+    var loadMoreBtn = document.getElementById('loadMoreActivity');
+    if (!feedEl) return;
+
+    if (_feedLoading) return;
+    _feedLoading = true;
+
+    try {
+      var token = user ? await user.getIdToken() : null;
+      var url = '/api/feed/?mode=' + (token ? 'personal' : 'global') + '&limit=10';
+      if (_feedCursor) url += '&before=' + encodeURIComponent(_feedCursor);
+
+      var headers = {};
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+
+      var resp = await fetch(url, { headers: headers });
+      if (!resp.ok) throw new Error('Feed fetch failed');
+
+      var data = await resp.json();
+      var events = (data && data.events) || [];
+
+      if (!_feedCursor) {
+        // First load — replace content
+        if (events.length === 0) {
+          feedEl.innerHTML = '<div class="empty-state"><p style="color:#a3a3a3;margin:0;">No recent activity yet</p></div>';
+          if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+          return;
+        }
+        feedEl.innerHTML = '';
+      }
+
+      for (var i = 0; i < events.length; i++) {
+        feedEl.insertAdjacentHTML('beforeend', renderFeedEvent(events[i]));
+      }
+
+      _feedCursor = data.nextCursor || null;
+      if (loadMoreBtn) {
+        loadMoreBtn.style.display = _feedCursor ? '' : 'none';
+      }
+    } catch (e) {
+      if (!_feedCursor) {
+        feedEl.innerHTML = '<div class="empty-state"><p style="color:#a3a3a3;margin:0;">No recent activity yet</p></div>';
+      }
+    } finally {
+      _feedLoading = false;
+    }
+  }
+
+  // Load more button click handler
+  (function() {
+    var btn = document.getElementById('loadMoreActivity');
+    if (btn) {
+      btn.addEventListener('click', function() {
+        if (currentUser) loadActivityFeed(currentUser).catch(function() {});
+      });
+    }
+  })();
+
   // Fetch orders via API
   async function fetchOrders(userId) {
     try {
@@ -1247,6 +1401,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // Initialize Go Plus modal (module)
           subscriptionModule.initGoPlusModal();
           downloadsModule.initZipModal();
+
+          // Load activity feed (non-blocking)
+          loadActivityFeed(user).catch(function() {});
 
         } catch (error) {
           console.error('[Dashboard] Error loading dashboard:', error);

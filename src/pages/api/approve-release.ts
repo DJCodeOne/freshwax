@@ -6,6 +6,8 @@ import { d1UpsertRelease } from '../../lib/d1-catalog';
 import { requireAdminAuth } from '../../lib/admin';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import { createLogger, errorResponse, successResponse } from '../../lib/api-utils';
+import { logActivity } from '../../lib/activity-feed';
+import { broadcastActivity } from '../../lib/pusher';
 
 export const prerender = false;
 
@@ -100,6 +102,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('[approve-release] Cache invalidated');
 
     log.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);
+
+    // Log to activity feed (non-blocking)
+    if (action === 'approve' && db) {
+      logActivity(db, {
+        eventType: 'new_release',
+        actorId: (releaseData.submittedBy as string) || (releaseData.artistId as string) || undefined,
+        actorName: releaseData.artistName as string,
+        targetId: releaseId,
+        targetType: 'release',
+        targetName: `${releaseData.artistName} - ${releaseData.releaseName}`,
+        targetImage: releaseData.coverArtUrl as string || undefined,
+        targetUrl: `/item/${releaseId}/`,
+      }).catch(() => { /* activity logging non-critical */ });
+
+      // Broadcast real-time update to dashboard widgets (non-blocking)
+      broadcastActivity({
+        eventType: 'new_release',
+        actorName: releaseData.artistName as string,
+        targetName: `${releaseData.artistName} - ${releaseData.releaseName}`,
+        targetUrl: `/item/${releaseId}/`,
+      }, env).catch(() => { /* pusher non-critical */ });
+    }
 
     return successResponse({ message: `Release ${action}d successfully`,
       releaseId: releaseId,
