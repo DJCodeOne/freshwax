@@ -186,9 +186,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
               <!-- Waveform Player (below tracklist) -->
               <div class="waveform-section" id="waveformSection">
-                <div class="waveform-title">NOW PLAYING</div>
                 <div class="waveform-header">
-                  <span class="now-playing" id="nowPlayingText">Select a track</span>
+                  <span class="now-playing" id="nowPlayingText">No Audio Available</span>
                   <span class="track-time" id="trackTime">0:00 / 0:00</span>
                 </div>
                 <div class="waveform-wrapper">
@@ -1477,7 +1476,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             button.classList.remove('playing');
             drawWaveform(0, false);
             updateTrackTime(0, audio.duration);
-            document.getElementById('nowPlayingText').textContent = 'Select a track';
+            document.getElementById('nowPlayingText').textContent = 'No Audio Available';
           };
 
           audio.onerror = function() {
