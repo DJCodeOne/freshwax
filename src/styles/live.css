@@ -9202,6 +9202,11 @@ body:has(.playlist-modal:not(.hidden)) .playlist-player {
    ============================================ */
 
 @media (max-width: 768px) {
+  /* Force all playlist modal elements to respect container width */
+  .playlist-modal {
+    overflow: hidden !important;
+  }
+
   .playlist-modal-content,
   #playlistModal .modal-content {
     width: 100% !important;
@@ -9216,6 +9221,85 @@ body:has(.playlist-modal:not(.hidden)) .playlist-player {
     box-sizing: border-box !important;
   }
 
+  .playlist-modal-content *,
+  .playlist-modal-large * {
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+  }
+
+  .playlist-modal-body {
+    padding: 0.75rem !important;
+    overflow-x: hidden !important;
+  }
+
+  .playlist-columns {
+    gap: 1rem !important;
+    overflow: visible !important;
+  }
+
+  .queue-column {
+    padding-right: 0 !important;
+    border-right: none !important;
+  }
+
+  .my-playlist-column {
+    padding-left: 0 !important;
+  }
+
+  /* Hide Now Playing preview on mobile */
+  .queue-preview-side {
+    display: none !important;
+  }
+
+  .queue-split-container {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* URL input */
+  .playlist-url-input {
+    padding: 0.75rem 2.5rem 0.75rem 0.75rem !important;
+    font-size: 0.875rem !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .playlist-input-group {
+    width: 100% !important;
+  }
+
+  .playlist-add-section {
+    padding: 0.5rem 0 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Queue and Save buttons */
+  .input-button-group {
+    width: 100% !important;
+  }
+
+  .input-button-group button {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  /* Queue items */
+  .playlist-grid-item {
+    width: 100% !important;
+  }
+
+  .playlist-grid-item .playlist-grid-thumb {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    height: 38px !important;
+  }
+
+  .playlist-queue-grid {
+    width: 100% !important;
+  }
+
+  /* My Playlist header */
   .my-playlist-header {
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -9235,12 +9319,27 @@ body:has(.playlist-modal:not(.hidden)) .playlist-player {
     font-size: 0.75rem;
   }
 
+  /* Personal playlist items — compact */
   .personal-playlist-item {
     width: 100% !important;
     max-width: 100% !important;
     padding: 0.35rem 0.5rem !important;
-    box-sizing: border-box !important;
-    gap: 0.5rem;
+    gap: 0.5rem !important;
+    margin: 0 !important;
+  }
+
+  .personal-item-thumb {
+    width: 40px !important;
+    height: 28px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .personal-item-title {
+    font-size: 0.75rem !important;
+  }
+
+  .personal-item-meta {
+    font-size: 0.6rem !important;
   }
 
   .personal-item-actions {
@@ -9256,6 +9355,17 @@ body:has(.playlist-modal:not(.hidden)) .playlist-player {
     min-height: 32px;
     padding: 0.2rem 0.5rem;
     font-size: 0.7rem;
+  }
+
+  .my-playlist-grid {
+    width: 100% !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+  }
+
+  .my-playlist-section {
+    height: auto !important;
+    width: 100% !important;
   }
 
   /* Export modal mobile */
