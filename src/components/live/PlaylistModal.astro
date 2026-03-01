@@ -1866,26 +1866,30 @@
       max-height: 35vh;
     }
 
-    /* Fix right side cutoff — prevent any overflow clipping */
+    /* Fix right side cutoff — force everything within viewport */
+    .playlist-modal-large,
+    .playlist-modal-large *  {
+      box-sizing: border-box !important;
+    }
+
     .playlist-modal-large {
-      width: 100%;
+      width: 100vw;
       max-width: 100vw;
       height: 100vh;
       height: 100dvh;
       max-height: 100vh;
       max-height: 100dvh;
       border-radius: 0;
-      overflow-x: hidden;
+      overflow-x: hidden !important;
       overflow-y: auto;
-      box-sizing: border-box;
     }
 
     .playlist-modal-large .playlist-modal-body {
       padding: 0.75rem;
-      overflow-x: hidden;
+      overflow-x: hidden !important;
       overflow-y: auto;
-      box-sizing: border-box;
       width: 100%;
+      max-width: 100%;
     }
 
     /* Hide Now Playing preview + Recently Played on mobile */
@@ -2039,27 +2043,34 @@
       box-sizing: border-box;
     }
 
-    /* Columns stack — remove overflow hidden so content shows */
+    /* Columns stack — constrain to viewport width */
     .playlist-columns {
       overflow: visible;
-      width: 100%;
-      box-sizing: border-box;
+      width: 100% !important;
+      max-width: 100% !important;
+      gap: 1rem;
     }
 
     .playlist-column {
       overflow: visible;
-      width: 100%;
-      box-sizing: border-box;
+      width: 100% !important;
+      max-width: 100% !important;
     }
 
     .queue-column {
-      padding-right: 0;
+      padding-right: 0 !important;
+      padding-left: 0 !important;
+    }
+
+    .my-playlist-column {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
 
     .my-playlist-section {
       height: auto;
-      width: 100%;
-      box-sizing: border-box;
+      width: 100% !important;
+      max-width: 100% !important;
     }
   }
 </style>
