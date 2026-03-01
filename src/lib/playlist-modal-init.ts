@@ -80,7 +80,7 @@ function injectModalHTML() {
                 type="url"
                 id="playlistUrlInput"
                 class="playlist-url-input"
-                placeholder="Paste a YouTube Or SoundCloud Link Here..."
+                placeholder="Paste a YouTube Link..."
                 autocomplete="off"
               />
               <button id="clearPlaylistInput" class="clear-input-btn hidden" title="Clear input">

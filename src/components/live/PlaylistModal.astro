@@ -1846,6 +1846,21 @@
 
   /* Mobile: single column */
   @media (max-width: 640px) {
+    /* Header: more spacing between back, title, close */
+    .playlist-modal-large .playlist-modal-header {
+      padding: 1rem 1rem;
+      gap: 0.75rem;
+    }
+
+    .playlist-modal-large .playlist-modal-header h2 {
+      font-size: 1.1rem;
+    }
+
+    .back-btn {
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+    }
+
     .playlist-queue-grid {
       grid-template-columns: 1fr;
       max-height: 35vh;
@@ -1855,12 +1870,16 @@
       width: 100%;
       max-width: 100%;
       height: 100vh;
+      height: 100dvh;
       max-height: 100vh;
+      max-height: 100dvh;
       border-radius: 0;
+      overflow-y: auto;
     }
 
     .playlist-modal-large .playlist-modal-body {
       padding: 1rem;
+      overflow-y: auto;
     }
 
     .playlist-controls-simple {
@@ -1898,6 +1917,45 @@
 
     .input-button-group button {
       flex: 1;
+    }
+
+    /* My Playlist actions — wrap buttons so they aren't squashed */
+    .my-playlist-header {
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .my-playlist-actions {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .my-playlist-actions button,
+    .my-playlist-actions select {
+      font-size: 0.75rem;
+      padding: 0.35rem 0.6rem;
+    }
+
+    /* Personal playlist tracks — ensure visible and scrollable */
+    .my-playlist-grid {
+      max-height: none;
+      overflow-y: visible;
+      min-height: 100px;
+    }
+
+    /* Columns stack — remove overflow hidden so content shows */
+    .playlist-columns {
+      overflow: visible;
+    }
+
+    .playlist-column {
+      overflow: visible;
+    }
+
+    .my-playlist-section {
+      height: auto;
     }
   }
 </style>
