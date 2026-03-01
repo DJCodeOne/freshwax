@@ -6687,18 +6687,15 @@
   @media (max-width: 900px) {
     /* Hide sections based on active tab */
     .schedule-column,
-    .chat-column {
+    .chat-column,
+    .player-column {
       display: none;
     }
-    
+
     .schedule-column.mobile-active,
     .chat-column.mobile-active,
     .player-column.mobile-active {
       display: flex !important;
-    }
-    
-    .player-column {
-      display: flex;
     }
     
     .live-layout {
