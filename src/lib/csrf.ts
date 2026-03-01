@@ -50,6 +50,11 @@ const CSRF_SKIP = new Set([
   // WHIP proxy — whip-client.js sends raw SDP without CSRF tokens.
   // Stream key acts as auth (only revealed to authenticated DJs).
   '/api/livestream/whip-proxy/',
+  // Admin endpoints — authenticated via X-Admin-Key / requireAdminAuth
+  '/api/admin/backfill-followers/',
+  '/api/admin/scan-tracklists/',
+  // Cron — authenticated via CRON_SECRET / requireAdminAuth
+  '/api/cron/weekly-digest/',
 ]);
 
 /**
