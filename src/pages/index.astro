@@ -83,18 +83,16 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 
     <!-- Featured Releases Section -->
     <section class="releases-section">
-      <!-- Header Container -->
+      <!-- Section Header -->
       <div class="releases-header animate-fade-up" style="animation-delay: 0.8s;">
-
-        <!-- Background Pattern -->
-        <div class="releases-header-pattern"></div>
-
+        <div class="releases-header-line"></div>
         <div class="releases-header-content">
           <h2 class="releases-title">Latest Releases</h2>
           <p class="releases-subtitle">
-            Freshly pressed and ready to drop • {featuredReleases.length} most recent
+            {featuredReleases.length} freshly pressed and ready to drop
           </p>
         </div>
+        <div class="releases-header-line"></div>
       </div>
 
       {featuredReleases.length === 0 ? (
@@ -570,50 +568,41 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   }
 
   .releases-header {
-    background: linear-gradient(to bottom, #1f2937 0%, #374151 100%);
-    backdrop-filter: blur(20px);
-    border-radius: 0.75rem;
-    padding: 1.5rem 1rem;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    position: relative;
-    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem 0;
+    margin-bottom: 0.5rem;
   }
 
-  .releases-header-pattern {
-    position: absolute;
-    inset: 0;
-    opacity: 0.15;
-    pointer-events: none;
-    background-image: linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px);
-    background-size: 40px 40px;
+  .releases-header-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.5), transparent);
   }
 
   .releases-header-content {
     text-align: center;
-    position: relative;
-    z-index: 1;
+    flex-shrink: 0;
   }
 
   .releases-title {
     font-family: 'Inter', sans-serif;
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 900;
     color: #ffffff;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.35rem 0;
+    line-height: 1;
   }
 
   .releases-subtitle {
-    color: #cbd5e1;
+    color: rgba(255, 255, 255, 0.4);
     font-size: 0.8rem;
     margin: 0;
-    font-weight: 500;
-    letter-spacing: 0.02em;
+    font-weight: 400;
+    letter-spacing: 0.05em;
   }
 
   @media (min-width: 640px) {
@@ -622,13 +611,12 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     }
 
     .releases-header {
-      border-radius: 1rem;
-      padding: 2rem 1.5rem;
-      margin-bottom: 1.5rem;
+      gap: 2rem;
+      padding: 2.5rem 0;
     }
 
     .releases-title {
-      font-size: 1.875rem;
+      font-size: 2.5rem;
     }
 
     .releases-subtitle {
@@ -642,13 +630,12 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     }
 
     .releases-header {
-      padding: 2.5rem 2rem;
-      margin-bottom: 2rem;
+      gap: 2.5rem;
+      padding: 3rem 0;
     }
 
     .releases-title {
-      font-size: 2.25rem;
-      margin: 0 0 0.75rem 0;
+      font-size: 3rem;
     }
 
     .releases-subtitle {

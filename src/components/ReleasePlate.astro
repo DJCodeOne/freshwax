@@ -285,38 +285,41 @@ const totalDurationFormatted = totalDurationSeconds > 0
 >
   <div class="content-wrapper flex flex-col md:flex-row gap-6">
     <!-- LEFT: ARTWORK + BUY BUTTONS -->
-    <div class="relative flex-shrink-0 flex flex-col">
-      {isPreOrder && (
-        <div class="pre-order-badge absolute top-2 left-2 z-10 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg uppercase tracking-wide">
-          <span class="flex items-center gap-1">
-            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
-            Pre-order • {daysUntilRelease} day{daysUntilRelease !== 1 ? 's' : ''}
-          </span>
+    <div class="artwork-column relative flex-shrink-0 flex flex-col">
+      <div class="artwork-image">
+        {isPreOrder && (
+          <div class="pre-order-badge absolute top-2 left-2 z-10 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg uppercase tracking-wide">
+            <span class="flex items-center gap-1">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+              Pre-order • {daysUntilRelease} day{daysUntilRelease !== 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
+        {hasSale && (
+          <div class="sale-badge absolute top-2 right-2 z-10 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-black px-3 py-1.5 rounded-lg shadow-lg uppercase tracking-wide">
+            <span class="flex items-center gap-1">
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              {saleDiscount}% OFF
+            </span>
+          </div>
+        )}
+        <div class="w-64 h-64 bg-white rounded-md shadow-md mb-4 overflow-hidden border-2 border-gray-400">
+          <img
+            src={coverArtUrl}
+            srcset={hasSrcset ? `${srcsetThumb} 400w, ${srcsetCover} 800w` : undefined}
+            sizes={hasSrcset ? "256px" : undefined}
+            alt={`${releaseName} by ${artistName}`}
+            class="w-full h-full object-cover"
+            width="256"
+            height="256"
+            loading={priority ? "eager" : "lazy"}
+            fetchpriority={priority ? "high" : undefined}
+            decoding={priority ? "auto" : "async"}
+          />
         </div>
-      )}
-      {hasSale && (
-        <div class="sale-badge absolute top-2 right-2 z-10 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-black px-3 py-1.5 rounded-lg shadow-lg uppercase tracking-wide">
-          <span class="flex items-center gap-1">
-            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-            {saleDiscount}% OFF
-          </span>
-        </div>
-      )}
-      <div class="w-64 h-64 bg-white rounded-md shadow-md mb-4 overflow-hidden">
-        <img
-          src={coverArtUrl}
-          srcset={hasSrcset ? `${srcsetThumb} 400w, ${srcsetCover} 800w` : undefined}
-          sizes={hasSrcset ? "256px" : undefined}
-          alt={`${releaseName} by ${artistName}`}
-          class="w-full h-full object-cover"
-          width="256"
-          height="256"
-          loading={priority ? "eager" : "lazy"}
-          fetchpriority={priority ? "high" : undefined}
-          decoding={priority ? "auto" : "async"}
-        />
       </div>
-      
+
+      <div class="buy-actions-mobile flex flex-col">
       {/* NYOP Purchase UI - Simplified with Modal */}
       {nyopEnabled ? (
         <div class="w-64 nyop-container" data-release-id={id}>
@@ -371,7 +374,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
               )}
             </span>
           </button>
-        
+
         <button
           data-release-id={id}
           data-product-type="vinyl"
@@ -441,7 +444,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       <!-- Compact Info Row -->
       <div class="flex items-center justify-between w-64 mt-auto pt-3 px-1 relative z-10">
         <!-- Wishlist Button (always visible) -->
-        <button 
+        <button
           type="button"
           class="wishlist-btn flex items-center gap-1 text-sm hover:opacity-70 transition-opacity font-body font-semibold cursor-pointer"
           data-release-id={id}
@@ -459,12 +462,12 @@ const totalDurationFormatted = totalDurationSeconds > 0
           <svg class="w-4 h-4 wishlist-icon-filled text-red-500 hidden" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
           </svg>
-          <span class="wishlist-text text-white text-xs">Wishlist</span>
+          <span class="wishlist-text text-gray-800 text-xs">Wishlist</span>
         </button>
-        
+
         {isPreOrder && (
           <!-- Pre-order Link (only for upcoming releases) -->
-          <a 
+          <a
             href={`/item/${id}/`}
             class="preorder-link flex items-center gap-1 text-xs font-body font-semibold text-orange-500 hover:text-orange-400 transition-colors"
             title={`Pre-order - Available ${formattedDate}`}
@@ -475,12 +478,13 @@ const totalDurationFormatted = totalDurationSeconds > 0
             <span>Pre-order</span>
           </a>
         )}
-        
-        <span class="text-xs font-body font-semibold text-white">{tracksWithIds.length} tracks</span>
+
+        <span class="text-xs font-body font-semibold text-gray-800">{tracksWithIds.length} tracks</span>
+      </div>
       </div>
     </div>
 
-    <!-- MIDDLE: INFO SECTION -->
+    <!-- RIGHT: INFO SECTION -->
     <div class="flex-1 min-w-0 flex flex-col">
       <div class="flex flex-col h-full">
         <h3 class="release-title text-4xl text-red-600 leading-tight truncate mb-3" title={releaseName}>
@@ -1187,28 +1191,49 @@ const totalDurationFormatted = totalDurationSeconds > 0
      MOBILE OPTIMIZATIONS
      Target: 80% mobile/tablet users
      ============================================ */
-  
+
   /* Tablet: Stack layout */
   @media (max-width: 1024px) {
     .content-wrapper {
       flex-direction: column !important;
       gap: 1.25rem !important;
     }
-    
-    .content-wrapper > div:first-child {
+
+    /* Flatten artwork-column so its children become direct flex children */
+    .artwork-column {
+      display: contents !important;
+    }
+
+    .artwork-image {
       width: 100% !important;
       display: flex;
       flex-direction: column;
       align-items: center;
+      position: relative;
     }
-    
-    .content-wrapper > div:first-child img {
+
+    .artwork-image img {
       width: 100% !important;
       max-width: 300px !important;
       height: auto !important;
     }
 
-    .content-wrapper > div:first-child .flex.gap-2 {
+    /* Buy actions: pushed to bottom via order */
+    .buy-actions-mobile {
+      order: 99 !important;
+      width: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+    }
+
+    .buy-actions-mobile .flex.gap-2 {
+      width: 100% !important;
+      max-width: 300px !important;
+    }
+
+    .buy-actions-mobile .nyop-container,
+    .buy-actions-mobile .w-64 {
       width: 100% !important;
       max-width: 300px !important;
     }
@@ -1250,15 +1275,20 @@ const totalDurationFormatted = totalDurationSeconds > 0
     }
     
     /* Artwork section */
-    .content-wrapper > div:first-child img {
+    .artwork-image img {
       max-width: 100% !important;
       border-radius: 0.5rem !important;
     }
-    
+
     /* Buy buttons stack on small screens */
-    .content-wrapper > div:first-child .flex.gap-2 {
+    .buy-actions-mobile .flex.gap-2 {
       flex-direction: column !important;
       gap: 0.5rem !important;
+      max-width: 100% !important;
+    }
+
+    .buy-actions-mobile .w-64 {
+      width: 100% !important;
       max-width: 100% !important;
     }
     
