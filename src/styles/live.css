@@ -6897,14 +6897,57 @@
       max-height: none;
       overflow-y: visible;
     }
-    
+
     .schedule-header {
       padding: 1rem;
     }
-    
+
     .schedule-header h1,
     .schedule-header h2 {
       font-size: 2rem;
+    }
+
+    /* Schedule buttons — compact side-by-side on mobile */
+    .schedule-column.mobile-active .schedule-buttons {
+      flex-direction: row;
+      gap: 0.5rem;
+    }
+
+    .schedule-column.mobile-active .go-live-now-btn,
+    .schedule-column.mobile-active .book-btn {
+      padding: 0.5rem 0.75rem;
+      gap: 0.5rem;
+      border-radius: 8px;
+    }
+
+    .schedule-column.mobile-active .btn-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+    }
+
+    .schedule-column.mobile-active .btn-icon svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .schedule-column.mobile-active .btn-label {
+      font-size: 0.75rem;
+    }
+
+    .schedule-column.mobile-active .btn-sublabel {
+      font-size: 0.6rem;
+    }
+
+    /* Center empty state messages */
+    .schedule-column.mobile-active .empty-message {
+      text-align: center;
+      display: block;
+      padding: 1.5rem 0;
+    }
+
+    .schedule-column.mobile-active .sidebar-card {
+      text-align: center;
     }
   }
   
