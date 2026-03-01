@@ -26,10 +26,13 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 
     {mode === 'booking' && (
       <div class="header-booking-inline">
-        <span class="selection-count">No slots selected</span>
         <div class="booking-actions">
           <button type="button" class="clear-btn" aria-label="Clear selection">Clear</button>
           <button type="button" class="save-btn" disabled aria-label="Save booking">Save Booking</button>
+        </div>
+        <div class="booking-status-row">
+          <button type="button" class="refresh-btn" aria-label="Refresh schedule">↻</button>
+          <span class="selection-count">No slots selected</span>
         </div>
       </div>
     )}
@@ -45,7 +48,9 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           </label>
         </div>
       )}
-      <button type="button" class="refresh-btn" aria-label="Refresh schedule">↻</button>
+      {mode !== 'booking' && (
+        <button type="button" class="refresh-btn" aria-label="Refresh schedule">↻</button>
+      )}
     </div>
   </div>
 
@@ -258,6 +263,12 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     justify-content: center;
   }
 
+  .booking-status-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
   .header-booking-inline .selection-count {
     font-size: 0.875rem;
     font-weight: 600;
@@ -269,6 +280,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     display: flex;
     gap: 0.5rem;
   }
+
 
   .header-booking-inline .clear-btn,
   .header-booking-inline .cancel-btn {
@@ -1118,12 +1130,40 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
   @media (max-width: 640px) {
     .schedule-header {
       flex-direction: column;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+    }
+
+    .header-booking-inline {
+      flex-direction: column;
       gap: 0.75rem;
+      width: 100%;
+    }
+
+    .header-booking-inline .booking-actions {
+      width: 100%;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+
+    .header-booking-inline .booking-actions button {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+    }
+
+    .booking-status-row {
+      justify-content: center;
+    }
+
+    .header-booking-inline .selection-count {
+      font-size: 0.85rem;
     }
 
     .header-right {
       width: 100%;
-      justify-content: space-between;
+      justify-content: center;
+      gap: 0.75rem;
     }
 
     .booking-footer {

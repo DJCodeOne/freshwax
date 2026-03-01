@@ -6895,7 +6895,9 @@
     .schedule-column.mobile-active {
       padding: 0.75rem;
       max-height: none;
-      overflow-y: visible;
+      height: auto !important;
+      overflow-y: visible !important;
+      overflow-x: hidden;
     }
 
     .schedule-header {
@@ -6942,6 +6944,19 @@
 
     .schedule-column.mobile-active .btn-sublabel {
       display: none;
+    }
+
+    /* Allow schedule content to expand fully on mobile */
+    .schedule-column.mobile-active .sidebar-card,
+    .schedule-column.mobile-active .schedule-card {
+      overflow: visible;
+      max-height: none;
+      flex: none;
+    }
+
+    .schedule-column.mobile-active .schedule-list {
+      overflow-y: visible;
+      max-height: none;
     }
 
     /* Center empty state messages */
