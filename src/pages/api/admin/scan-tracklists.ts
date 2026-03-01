@@ -30,15 +30,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const start = Date.now();
 
   try {
-    // Fetch all mixes that have tracklists from D1
+    // Fetch all mixes from D1 — tracklist is inside the `data` JSON column as tracklistArray
     const { results: mixes } = await db.prepare(
-      `SELECT id, user_id, dj_name, tracklist FROM d1_mixes
-       WHERE tracklist IS NOT NULL AND tracklist != ''
+      `SELECT id, user_id, dj_name, data FROM dj_mixes
        ORDER BY created_at DESC`
     ).all();
 
     if (!mixes || mixes.length === 0) {
-      return successResponse({ message: 'No mixes with tracklists found', scanned: 0, matched: 0 });
+      return successResponse({ message: 'No mixes found', scanned: 0, matched: 0 });
     }
 
     let totalScanned = 0;
@@ -48,18 +47,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const mixId = mix.id as string;
       const djUserId = (mix.user_id as string) || null;
       const djName = (mix.dj_name as string) || 'Unknown DJ';
-      const tracklistRaw = mix.tracklist as string;
+      const dataRaw = mix.data as string;
 
-      // Parse tracklist — could be JSON array or newline-separated string
+      // Extract tracklistArray from the data JSON field
       let tracklistLines: string[] = [];
       try {
-        const parsed = JSON.parse(tracklistRaw);
-        if (Array.isArray(parsed)) {
-          tracklistLines = parsed.map((t: unknown) => String(t));
+        const parsed = JSON.parse(dataRaw);
+        const tracklistArray = parsed?.tracklistArray;
+        if (Array.isArray(tracklistArray)) {
+          tracklistLines = tracklistArray
+            .map((t: unknown) => String(t).trim())
+            .filter((l: string) => l.length > 0);
         }
       } catch {
-        // Not JSON — split by newlines
-        tracklistLines = tracklistRaw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        // data not valid JSON — skip this mix
+        log.warn(`Mix ${mixId}: could not parse data JSON`);
+        continue;
       }
 
       if (tracklistLines.length === 0) continue;

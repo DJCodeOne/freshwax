@@ -194,7 +194,7 @@ export async function getSupportsForMix(db: D1Database, mixId: string): Promise<
  * Scan tracklist lines against the catalog and insert support entries for matches.
  *
  * Each tracklist line is split on " - " to extract artist and title. Matching is
- * done against all published releases in d1_releases:
+ * done against all published releases in releases_v2:
  *   - Exact match on both artist AND title (case-insensitive) = confidence 1.0
  *   - Artist matches exactly AND title contains release title (or vice versa) = confidence 0.7
  *
@@ -213,7 +213,7 @@ export async function scanTracklistForSupport(
   try {
     // Step 1: Load all published releases
     const { results } = await db.prepare(
-      `SELECT id, title, artist_name FROM d1_releases WHERE status = 'live'`
+      `SELECT id, title, artist_name FROM releases_v2 WHERE status = 'live'`
     ).all();
 
     const releases = (results ?? []) as unknown as D1ReleaseRow[];

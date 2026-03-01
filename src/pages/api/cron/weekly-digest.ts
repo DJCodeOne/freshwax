@@ -22,8 +22,8 @@ const log = createLogger('weekly-digest');
 async function getTopReleases(db: D1Database, since: string): Promise<DigestRelease[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT id, title, artist_name, image_url, price, plays, likes, downloads
-       FROM d1_releases
+      `SELECT id, title, artist_name, cover_url, price_per_sale, plays, likes, downloads
+       FROM releases_v2
        WHERE status = 'live' AND created_at >= ?
        ORDER BY (COALESCE(plays,0) * 0.3 + COALESCE(likes,0) * 2 + COALESCE(downloads,0) * 1.5) DESC
        LIMIT 10`
@@ -33,8 +33,8 @@ async function getTopReleases(db: D1Database, since: string): Promise<DigestRele
       id: r.id as string,
       title: r.title as string,
       artistName: r.artist_name as string,
-      imageUrl: (r.image_url as string) || undefined,
-      price: r.price != null ? Number(r.price) : undefined,
+      imageUrl: (r.cover_url as string) || undefined,
+      price: r.price_per_sale != null ? Number(r.price_per_sale) : undefined,
       score: (Number(r.plays || 0) * 0.3) + (Number(r.likes || 0) * 2) + (Number(r.downloads || 0) * 1.5),
     }));
   } catch (err: unknown) {
@@ -47,7 +47,7 @@ async function getTopMixes(db: D1Database, since: string): Promise<DigestMix[]> 
   try {
     const { results } = await db.prepare(
       `SELECT id, title, dj_name, artwork_url, plays, likes
-       FROM d1_mixes
+       FROM dj_mixes
        WHERE created_at >= ?
        ORDER BY (COALESCE(plays,0) * 0.3 + COALESCE(likes,0) * 2) DESC
        LIMIT 5`
