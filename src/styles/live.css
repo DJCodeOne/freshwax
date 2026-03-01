@@ -6935,6 +6935,7 @@
 
     .schedule-column.mobile-active .btn-label {
       font-size: 1.5rem;
+      white-space: nowrap;
     }
 
     .schedule-column.mobile-active .btn-sublabel {
