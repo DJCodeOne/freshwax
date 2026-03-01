@@ -38,9 +38,9 @@ function setupMobileTabs() {
     });
   });
 
-  // Set initial state — chat active by default on mobile
-  if (window.innerWidth <= 900 && chatColumn) {
-    chatColumn.classList.add('mobile-active');
+  // Set initial state — player active by default on mobile
+  if (window.innerWidth <= 900 && playerColumn) {
+    playerColumn.classList.add('mobile-active');
   }
 
   // Chat notification badge
