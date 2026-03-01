@@ -1866,20 +1866,37 @@
       max-height: 35vh;
     }
 
+    /* Fix right side cutoff — prevent any overflow clipping */
     .playlist-modal-large {
       width: 100%;
-      max-width: 100%;
+      max-width: 100vw;
       height: 100vh;
       height: 100dvh;
       max-height: 100vh;
       max-height: 100dvh;
       border-radius: 0;
+      overflow-x: hidden;
       overflow-y: auto;
+      box-sizing: border-box;
     }
 
     .playlist-modal-large .playlist-modal-body {
-      padding: 1rem;
+      padding: 0.75rem;
+      overflow-x: hidden;
       overflow-y: auto;
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    /* Hide Now Playing preview + Recently Played on mobile */
+    .queue-preview-side {
+      display: none;
+    }
+
+    /* Queue split container — single column without preview */
+    .queue-split-container {
+      max-height: none;
+      overflow: visible;
     }
 
     .playlist-controls-simple {
@@ -1948,10 +1965,14 @@
     /* Columns stack — remove overflow hidden so content shows */
     .playlist-columns {
       overflow: visible;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .playlist-column {
       overflow: visible;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .my-playlist-section {
