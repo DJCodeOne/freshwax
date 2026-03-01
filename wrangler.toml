@@ -41,7 +41,7 @@ WHIP_BASE_URL = "https://stream.freshwax.co.uk"
 #   0 2 * * *    /api/cron/backup-d1               - Back up D1 tables to R2 as JSON (daily at 02:00 UTC)
 #   0 4 * * *    /api/cron/image-scan              - Scan R2 for non-WebP images
 #   0 10 * * *   /api/cron/verification-reminders  - Remind unverified users to verify email
-#   0 10 * * 0   /api/cron/weekly-digest            - Weekly "This Week on FreshWax" digest email (Sundays 10:00 UTC)
+#   0 10 * * SUN /api/cron/weekly-digest            - Weekly "This Week on FreshWax" digest email (Sundays 10:00 UTC) ✅ configured on freshwax-api Worker
 #   DISABLED     /api/cron/stock-alerts            - Low stock admin alerts (disabled)
 #
 # Auth: All cron endpoints require Authorization: Bearer $CRON_SECRET or X-Admin-Key header

@@ -33,10 +33,17 @@ function injectModalHTML() {
   const container = document.getElementById('playlistModal');
   if (!container) return;
 
+  // Detect mobile for inline style overrides (CSS can be cached/overridden)
+  const isMobile = window.innerWidth <= 768;
+  const mobileWrap = isMobile ? 'style="width:100%;max-width:100vw;overflow-x:hidden;box-sizing:border-box;"' : '';
+  const mobileBody = isMobile ? 'style="width:100%;max-width:100vw;overflow-x:hidden;overflow-y:auto;box-sizing:border-box;padding:0.75rem;"' : '';
+  const mobileCols = isMobile ? 'style="display:flex;flex-direction:column;gap:1rem;width:100%;max-width:100%;overflow:visible;"' : '';
+  const mobileCol = isMobile ? 'style="width:100%;max-width:100%;overflow:visible;padding:0;border:none;"' : '';
+
   // Replace the loading spinner with the full modal content
   container.innerHTML = `
   <div class="playlist-modal-backdrop"></div>
-  <div class="playlist-modal-content playlist-modal-large">
+  <div class="playlist-modal-content playlist-modal-large" ${mobileWrap}>
     <div class="playlist-modal-header">
       <button id="backFromPlaylist" class="back-btn" aria-label="Back to stream">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -53,7 +60,7 @@ function injectModalHTML() {
       </button>
     </div>
 
-    <div class="playlist-modal-body">
+    <div class="playlist-modal-body" ${mobileBody}>
       <div id="nowPlayingStrip" class="now-playing-strip hidden">
         <div class="now-playing-label">
           <span class="now-playing-pulse"></span>
@@ -64,8 +71,8 @@ function injectModalHTML() {
         </div>
       </div>
 
-      <div class="playlist-columns">
-        <div class="playlist-column queue-column">
+      <div class="playlist-columns" ${mobileCols}>
+        <div class="playlist-column queue-column" ${mobileCol}>
           <div class="playlist-add-section">
             <div id="playlistAuthNotice" class="playlist-auth-notice hidden">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -157,8 +164,8 @@ function injectModalHTML() {
           </div>
         </div>
 
-        <div class="playlist-column my-playlist-column">
-          <div id="myPlaylistSection" class="my-playlist-section" style="display: flex;">
+        <div class="playlist-column my-playlist-column" ${mobileCol}>
+          <div id="myPlaylistSection" class="my-playlist-section" style="display:flex;${isMobile ? 'width:100%;max-width:100%;height:auto;' : ''}">
             <div class="my-playlist-header">
               <div class="my-playlist-title-group">
                 <h3>My Playlist</h3>
