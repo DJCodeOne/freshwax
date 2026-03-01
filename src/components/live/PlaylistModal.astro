@@ -1936,6 +1936,45 @@
       flex: 1;
     }
 
+    /* Fix all containers bleeding right */
+    .playlist-modal-large .playlist-url-input {
+      padding: 0.75rem 2.5rem 0.75rem 0.75rem;
+      font-size: 0.875rem;
+      min-width: 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .playlist-modal-large .playlist-input-group {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .playlist-modal-large .playlist-add-section {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.5rem 0;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Queue items — constrain to container */
+    .playlist-grid-item {
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .playlist-grid-item .playlist-grid-thumb {
+      width: 50px !important;
+      min-width: 50px !important;
+      max-width: 50px !important;
+      height: 38px !important;
+    }
+
+    .playlist-queue-grid {
+      width: 100%;
+      box-sizing: border-box;
+    }
+
     /* My Playlist actions — wrap buttons so they aren't squashed */
     .my-playlist-header {
       flex-wrap: wrap;
@@ -1955,11 +1994,49 @@
       padding: 0.35rem 0.6rem;
     }
 
+    /* Personal playlist items — compact, no bleed */
+    .personal-playlist-item {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 0.35rem 0.5rem;
+      gap: 0.5rem;
+      margin: 0;
+    }
+
+    .personal-item-thumb {
+      width: 40px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+
+    .personal-item-info {
+      gap: 0.1rem;
+    }
+
+    .personal-item-title {
+      font-size: 0.75rem;
+    }
+
+    .personal-item-meta {
+      font-size: 0.6rem;
+    }
+
+    .personal-item-actions {
+      gap: 0.35rem;
+    }
+
+    .personal-item-actions button {
+      padding: 0.2rem 0.4rem;
+      font-size: 0.65rem;
+    }
+
     /* Personal playlist tracks — ensure visible and scrollable */
     .my-playlist-grid {
       max-height: none;
       overflow-y: visible;
       min-height: 100px;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     /* Columns stack — remove overflow hidden so content shows */
@@ -1975,8 +2052,14 @@
       box-sizing: border-box;
     }
 
+    .queue-column {
+      padding-right: 0;
+    }
+
     .my-playlist-section {
       height: auto;
+      width: 100%;
+      box-sizing: border-box;
     }
   }
 </style>
