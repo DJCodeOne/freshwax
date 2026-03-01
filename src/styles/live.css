@@ -6910,15 +6910,17 @@
     /* Schedule buttons — stacked horizontal pills on mobile */
     .schedule-column.mobile-active .schedule-buttons {
       flex-direction: column;
+      align-items: center;
       gap: 0.5rem;
     }
 
     .schedule-column.mobile-active .go-live-now-btn,
     .schedule-column.mobile-active .book-btn {
-      padding: 0.7rem 1rem;
+      padding: 0.7rem 1.5rem;
       gap: 0.5rem;
       border-radius: 999px;
       justify-content: center;
+      width: auto;
     }
 
     .schedule-column.mobile-active .btn-icon {
