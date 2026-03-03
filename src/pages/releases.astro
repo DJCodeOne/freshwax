@@ -109,17 +109,17 @@ const releaseItemList = {
       <div class="max-w-6xl mx-auto w-full">
         <!-- Page Header -->
         <header class="mb-12">
-          <div class="section-header-card">
-            <div class="section-header-pattern"></div>
-            <div class="section-header-content">
-              <h1 class="section-title">
-                All Releases
-              </h1>
-              <p class="section-subtitle">
+          <div class="releases-header">
+            <div class="releases-header-line"></div>
+            <div class="releases-header-center">
+              <h1 class="releases-title">All Releases</h1>
+              <p class="releases-subtitle">
                 Explore the library organised by label • {totalReleases} total releases
               </p>
             </div>
+            <div class="releases-header-line"></div>
           </div>
+          <div class="releases-divider"></div>
         </header>
 
         {totalReleases === 0 ? (
@@ -137,20 +137,20 @@ const releaseItemList = {
               >
                 <!-- Label Header -->
                 <div class="mb-6">
-                  <div class="flex flex-wrap items-center gap-4">
-                    <div class="inline-flex items-center bg-black border-l-4 border-red-600 pl-4 pr-6 py-3 shadow-lg">
-                      <div>
-                        <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase drop-shadow-md font-heading">
-                          {label}
-                        </h2>
-                        <p class="text-sm text-gray-300 mt-0.5">
-                          {releasesByLabel[label].length} release{releasesByLabel[label].length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
+                  <div class="label-header">
+                    <div class="label-header-line"></div>
+                    <div class="label-header-center">
+                      <h2 class="label-title">{label}</h2>
+                      <p class="label-count">
+                        {releasesByLabel[label].length} release{releasesByLabel[label].length !== 1 ? 's' : ''}
+                      </p>
                     </div>
+                    <div class="label-header-line"></div>
+                  </div>
 
-                    {/* Buy All Discography Button */}
-                    {releasesByLabel[label].length > 1 && (
+                  {/* Buy All Discography Button */}
+                  {releasesByLabel[label].length > 1 && (
+                    <div class="flex justify-center mt-3">
                       <button
                         class="buy-discography-btn flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold rounded-lg shadow-lg transition-all text-sm"
                         data-label={label}
@@ -168,8 +168,8 @@ const releaseItemList = {
                         </svg>
                         <span>Buy All ({releasesByLabel[label].length}) - £{releasesByLabel[label].reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}</span>
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 <!-- Releases Grid -->
@@ -341,6 +341,134 @@ const releaseItemList = {
   </script>
 
   <style>
+    /* Releases Header - matching index page style */
+    .releases-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 2rem 0;
+    }
+
+    .releases-header-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.5), transparent);
+      display: none;
+    }
+
+    .releases-header-center {
+      text-align: center;
+    }
+
+    .releases-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 400;
+      color: #ffffff;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0 0 0.35rem 0;
+      line-height: 1;
+    }
+
+    .releases-subtitle {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.8rem;
+      margin: 0;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+    }
+
+    @media (min-width: 640px) {
+      .releases-header {
+        gap: 2rem;
+        padding: 2.5rem 0;
+      }
+      .releases-header-line {
+        display: block;
+      }
+      .releases-title {
+        font-size: 3rem;
+      }
+      .releases-subtitle {
+        font-size: 0.9rem;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .releases-header {
+        gap: 2.5rem;
+        padding: 3rem 0;
+      }
+      .releases-title {
+        font-size: 4rem;
+      }
+    }
+
+    .releases-divider {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #dc2626, transparent);
+      margin-top: 0.5rem;
+    }
+
+    /* Label Headers - same red line style */
+    .label-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      padding: 1rem 0;
+    }
+
+    .label-header-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.4), transparent);
+      display: none;
+    }
+
+    .label-header-center {
+      text-align: center;
+    }
+
+    .label-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.75rem;
+      font-weight: 400;
+      color: #ffffff;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin: 0 0 0.25rem 0;
+      line-height: 1;
+    }
+
+    .label-count {
+      color: rgba(255, 255, 255, 0.35);
+      font-size: 0.75rem;
+      margin: 0;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+    }
+
+    @media (min-width: 640px) {
+      .label-header {
+        gap: 1.5rem;
+      }
+      .label-header-line {
+        display: block;
+      }
+      .label-title {
+        font-size: 2rem;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .label-title {
+        font-size: 2.5rem;
+      }
+    }
+
     /* Fonts loaded in Layout.astro */
 
     aside::-webkit-scrollbar {

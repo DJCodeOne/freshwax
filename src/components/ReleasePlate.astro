@@ -501,63 +501,9 @@ const totalDurationFormatted = totalDurationSeconds > 0
         </div>
         
         <div class="genre-section flex items-center gap-2 text-base text-gray-300 mb-4">
-          {displayCatalogNumber && (
-            <span class="text-sm px-2 py-1 bg-gray-700 text-white rounded font-medium">{displayCatalogNumber}</span>
-          )}
           {genre && (
-            <>
-              {displayCatalogNumber && <span class="text-gray-300">•</span>}
-              <span class="text-sm px-2 py-1 bg-gray-700 text-white rounded font-medium">{genre}</span>
-            </>
+            <span class="text-sm px-2 py-1 bg-gray-700 text-white rounded font-medium">{genre}</span>
           )}
-        </div>
-
-        <!-- Rating, Comments & Share Section -->
-        <div class="rating-section flex items-center gap-4 py-4 border-t border-gray-600">
-          <!-- 5-Star Rating Display -->
-          <div class="flex items-center gap-2">
-            <div class="star-rating-group flex items-center gap-0.5" data-release-id={id}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  class="rating-star transition-colors"
-                  data-release-id={id}
-                  data-star={star}
-                  title={`Rate ${star} out of 5`}
-                >
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-                  </svg>
-                </button>
-              ))}
-            </div>
-            <span class="text-sm font-semibold text-gray-300">
-              <span class="rating-value" data-release-id={id}>{finalRating.average.toFixed(1)}</span>
-              <span class="rating-count text-gray-300" data-release-id={id}> ({finalRating.count})</span>
-            </span>
-          </div>
-
-          <a 
-            href={`/item/${id}#comments-section`}
-            class="comments-button flex items-center gap-1.5 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all text-sm font-semibold border border-gray-600"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-            </svg>
-            <span class="comments-count">{comments?.length || 0}</span>
-          </a>
-
-          <button
-            class="share-button flex items-center gap-1.5 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all text-sm font-semibold border border-gray-600"
-            data-release-id={id}
-            data-title={releaseName}
-            data-artist={artistName}
-            data-artwork={coverArtUrl || '/place-holder.webp'}
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-            </svg>
-            Share
-          </button>
         </div>
 
         <!-- Release Details Box -->
@@ -1266,10 +1212,6 @@ const totalDurationFormatted = totalDurationSeconds > 0
       margin-top: 0 !important;
     }
 
-    .rating-section {
-      order: 4 !important;
-      border-top: none !important;
-    }
   }
   
   /* Mobile: Further optimizations */
@@ -1333,12 +1275,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       min-width: 0 !important;
     }
 
-    /* Rating section - wrap on mobile */
-    .flex.items-center.gap-4.py-4.border-t {
-      flex-wrap: wrap !important;
-      gap: 0.5rem !important;
-      justify-content: center !important;
-    }
+    /* Rating section - mobile layout */
 
     /* Smaller buttons on mobile */
     .comments-button,

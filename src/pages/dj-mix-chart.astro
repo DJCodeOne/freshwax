@@ -452,20 +452,26 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     
     .chart-item {
       grid-template-columns: 40px 60px 1fr;
-      padding: 1rem;
+      grid-template-rows: auto auto;
+      padding: 0.75rem;
     }
-    
+
     .rating-section {
       display: none;
     }
-    
+
     .artwork {
       width: 60px;
       height: 60px;
     }
-    
+
+    .mix-info {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
     .mix-info h2 {
-      font-size: 0.875rem;
+      font-size: 1rem;
       white-space: normal;
       overflow: visible;
       text-overflow: unset;
