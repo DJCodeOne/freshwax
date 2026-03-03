@@ -59,7 +59,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
           <p class="hero-subtitle animate-fade-up" style="animation-delay: 0.2s;">
             Jungle & Drum and Bass
           </p>
-          <div class="glass-panel animate-fade-up" style="animation-delay: 0.4s;">
+          <div class="glass-panel animate-fade-up nav-links-desktop" style="animation-delay: 0.4s;">
             <a href="/crates/" class="nav-item">Vinyl</a>
             <span class="dot-separator" aria-hidden="true">●</span>
             <a href="/releases/" class="nav-item">Digital</a>
@@ -152,7 +152,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   .hero-section {
     background: #000000;
     color: white;
-    padding: 3rem 0;
+    padding: 1.5rem 0;
     position: relative;
     overflow: hidden;
     box-shadow: inset 0 -2px 40px rgba(220, 38, 38, 0.1);
@@ -202,7 +202,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 
   @media (min-width: 375px) {
     .hero-section {
-      padding: 4rem 0;
+      padding: 2rem 0;
     }
 
     .hero-container {
@@ -212,13 +212,13 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     .hero-subtitle {
       font-size: 1rem;
       letter-spacing: 0.25em;
-      margin-bottom: 2rem;
+      margin-bottom: 0.75rem;
     }
   }
 
   @media (min-width: 640px) {
     .hero-section {
-      padding: 5rem 0;
+      padding: 3rem 0;
     }
 
     .hero-container {
@@ -228,7 +228,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     .hero-subtitle {
       font-size: 1.125rem;
       letter-spacing: 0.3em;
-      margin-bottom: 2.5rem;
+      margin-bottom: 2rem;
     }
   }
 
@@ -254,6 +254,17 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   .hero-content {
     max-width: 100%;
     overflow: hidden;
+  }
+
+  /* Hide nav links on mobile, show on md+ */
+  .nav-links-desktop {
+    display: none !important;
+  }
+
+  @media (min-width: 768px) {
+    .nav-links-desktop {
+      display: inline-flex !important;
+    }
   }
 
   /* Glass Panel - Mobile Base (stacked) */
@@ -359,7 +370,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 
     /* Fix 4: Hero section excessive padding */
     .hero-section {
-      padding: 2rem 0;
+      padding: 1rem 0;
     }
 
     .hero-container {
@@ -563,7 +574,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   .releases-section {
     max-width: 72rem;
     margin: 0 auto;
-    padding: 1.5rem 0.75rem;
+    padding: 0.5rem 0.75rem;
     overflow: hidden;
   }
 
@@ -571,8 +582,8 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    padding: 2rem 0;
-    margin-bottom: 0.5rem;
+    padding: 0.25rem 0;
+    margin-bottom: 0;
   }
 
   .releases-header-line {
@@ -587,9 +598,9 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   }
 
   .releases-title {
-    font-family: 'Inter', sans-serif;
-    font-size: 2rem;
-    font-weight: 900;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 400;
     color: #ffffff;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -612,11 +623,11 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 
     .releases-header {
       gap: 2rem;
-      padding: 2.5rem 0;
+      padding: 0.5rem 0;
     }
 
     .releases-title {
-      font-size: 2.5rem;
+      font-size: 3rem;
     }
 
     .releases-subtitle {
@@ -631,7 +642,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 
     .releases-header {
       gap: 2.5rem;
-      padding: 3rem 0;
+      padding: 0.75rem 0;
     }
 
     .releases-title {

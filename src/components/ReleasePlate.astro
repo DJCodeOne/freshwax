@@ -303,7 +303,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             </span>
           </div>
         )}
-        <div class="w-64 h-64 bg-white rounded-md shadow-md mb-4 overflow-hidden border-2 border-gray-400">
+        <div class="cover-glow w-64 h-64 bg-white rounded-md shadow-md mb-4 overflow-hidden border-2 border-gray-400">
           <img
             src={coverArtUrl}
             srcset={hasSrcset ? `${srcsetThumb} 400w, ${srcsetCover} 800w` : undefined}
@@ -320,6 +320,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       </div>
 
       <div class="buy-actions-mobile flex flex-col">
+      <div class="buy-container">
       {/* NYOP Purchase UI - Simplified with Modal */}
       {nyopEnabled ? (
         <div class="w-64 nyop-container" data-release-id={id}>
@@ -440,6 +441,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           </button>
         </div>
       )}
+      </div>
 
       <!-- Compact Info Row -->
       <div class="flex items-center justify-between w-64 mt-auto pt-3 px-1 relative z-10">
@@ -508,7 +510,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
         <!-- Release Details Box -->
         <div class="details-section mt-auto">
-          <a href={`/item/${id}/`} class="details-preview block bg-gradient-to-r from-gray-800 via-gray-900 to-black border-2 border-gray-600 hover:border-red-500 rounded-lg overflow-hidden cursor-pointer transition-all group shadow-lg">
+          <a href={`/item/${id}/`} class="details-preview block bg-gradient-to-r from-gray-800 via-gray-900 to-black border-2 border-gray-600 hover:border-red-500 rounded-lg overflow-hidden cursor-pointer transition-all group">
             <div class="flex items-stretch">
               <div class="flex-1 p-4">
                 <div class="text-xs text-white uppercase tracking-widest mb-2 font-heading font-bold flex items-center gap-2">
@@ -841,6 +843,11 @@ const totalDurationFormatted = totalDurationSeconds > 0
 </div>
 
 <style>
+  /* Cover Art Glow */
+  .cover-glow {
+    box-shadow: 0 0 16px rgba(220, 38, 38, 0.6), 0 0 32px rgba(220, 38, 38, 0.3), 0 0 48px rgba(220, 38, 38, 0.15);
+  }
+
   /* Custom Font Classes (fonts loaded globally in Layout.astro) */
   .release-title {
     font-family: 'Bebas Neue', sans-serif;
@@ -864,6 +871,19 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
   .font-body {
     font-family: 'Inter', sans-serif;
+  }
+
+  /* Buy buttons container */
+  .buy-container {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(30, 30, 30, 0.8));
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 0 12px rgba(220, 38, 38, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   /* NYOP (Name Your Own Price) Styles */
@@ -1184,6 +1204,11 @@ const totalDurationFormatted = totalDurationSeconds > 0
       max-width: 300px !important;
     }
 
+    .buy-actions-mobile .buy-container {
+      width: 100% !important;
+      max-width: 300px !important;
+    }
+
     /* Centre text on stacked layout */
     .content-wrapper > div:nth-child(2) {
       align-items: center !important;
@@ -1245,6 +1270,11 @@ const totalDurationFormatted = totalDurationSeconds > 0
     }
 
     .buy-actions-mobile .w-64 {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    .buy-actions-mobile .buy-container {
       width: 100% !important;
       max-width: 100% !important;
     }
