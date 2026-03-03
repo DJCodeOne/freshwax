@@ -114,8 +114,25 @@ const releaseItemList = {
             <div class="releases-header-center">
               <h1 class="releases-title">All Releases</h1>
               <p class="releases-subtitle">
-                Explore the library organised by label • {totalReleases} total releases
+                Explore the library organised by label
               </p>
+              <p class="releases-count">
+                {totalReleases} total releases
+              </p>
+              <!-- Mobile Label Selector -->
+              <div class="label-dropdown-wrap">
+                <div class="label-dropdown-container">
+                  <select id="label-select" class="label-dropdown" aria-label="Select a label to jump to">
+                    <option value="">Jump to label...</option>
+                    {sortedLabels.map((label) => (
+                      <option value={`label-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>{label} ({releasesByLabel[label].length})</option>
+                    ))}
+                  </select>
+                  <svg class="label-dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </div>
+              </div>
             </div>
             <div class="releases-header-line"></div>
           </div>
@@ -130,8 +147,8 @@ const releaseItemList = {
           </div>
         ) : (
           <div class="space-y-16">
-            {sortedLabels.map((label) => (
-              <section 
+            {sortedLabels.map((label, labelIdx) => (
+              <section
                 id={`label-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                 class="label-section scroll-mt-24"
               >
@@ -146,6 +163,11 @@ const releaseItemList = {
                       </p>
                     </div>
                     <div class="label-header-line"></div>
+                  </div>
+                  <div class="label-divider" aria-hidden="true">
+                    <div class="label-divider-line"></div>
+                    <div class="label-divider-diamond"></div>
+                    <div class="label-divider-line"></div>
                   </div>
 
                   {/* Buy All Discography Button */}
@@ -251,6 +273,20 @@ const releaseItemList = {
     document.addEventListener('astro:before-swap', () => {
       observer.disconnect();
     }, { once: true });
+
+    // Mobile label dropdown
+    var labelSelect = document.getElementById('label-select');
+    if (labelSelect) {
+      labelSelect.addEventListener('change', function() {
+        var val = labelSelect.value;
+        if (!val) return;
+        var el = document.getElementById(val);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          labelSelect.value = '';
+        }
+      });
+    }
 
     // Buy All Discography functionality — uses global FreshWaxCart from freshwax-cart.js
 
@@ -375,6 +411,14 @@ const releaseItemList = {
     .releases-subtitle {
       color: rgba(255, 255, 255, 0.4);
       font-size: 0.8rem;
+      margin: 0 0 0.25rem 0;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+    }
+
+    .releases-count {
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 0.75rem;
       margin: 0;
       font-weight: 400;
       letter-spacing: 0.05em;
@@ -468,6 +512,87 @@ const releaseItemList = {
         font-size: 2.5rem;
       }
     }
+
+    /* Mobile Label Dropdown */
+    .label-dropdown-wrap {
+      display: block;
+      margin-top: 0.75rem;
+    }
+
+    .label-dropdown-container {
+      position: relative;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+
+    .label-dropdown {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(30, 30, 30, 0.9));
+      border: 1px solid rgba(220, 38, 38, 0.4);
+      border-radius: 0.75rem;
+      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 0.875rem 2.5rem 0.875rem 1rem;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .label-dropdown:focus {
+      outline: none;
+      border-color: #dc2626;
+      box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.3);
+    }
+
+    .label-dropdown option {
+      background: #1a1a1a;
+      color: #ffffff;
+    }
+
+    .label-dropdown-arrow {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1.25rem;
+      height: 1.25rem;
+      color: #dc2626;
+      pointer-events: none;
+    }
+
+    @media (min-width: 1024px) {
+      .label-dropdown-wrap {
+        display: none;
+      }
+    }
+
+    /* Label Divider — mobile only */
+    .label-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 0 0 0;
+    }
+
+    .label-divider-line {
+      flex: 1;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #dc2626, transparent);
+      border-radius: 1px;
+    }
+
+    .label-divider-diamond {
+      width: 8px;
+      height: 8px;
+      background: #dc2626;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+      box-shadow: 0 0 8px rgba(220, 38, 38, 0.6);
+    }
+
 
     /* Fonts loaded in Layout.astro */
 

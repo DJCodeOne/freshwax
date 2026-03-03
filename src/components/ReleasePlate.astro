@@ -388,10 +388,10 @@ const totalDurationFormatted = totalDurationSeconds > 0
           data-includes-digital="true"
           data-is-preorder={isPreOrder ? 'true' : 'false'}
           disabled={!vinylAvailable}
-          class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${
+          class={`vinyl-btn add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${
             vinylAvailable
               ? (isPreOrder ? 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white')
-              : 'bg-red-900/40 text-red-300/50 cursor-not-allowed'
+              : 'bg-sky-600/40 text-sky-200/70 cursor-not-allowed'
           }`}
         >
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -489,11 +489,11 @@ const totalDurationFormatted = totalDurationSeconds > 0
     <!-- RIGHT: INFO SECTION -->
     <div class="flex-1 min-w-0 flex flex-col">
       <div class="flex flex-col h-full">
-        <h3 class="release-title text-4xl text-red-600 leading-tight truncate mb-3" title={releaseName}>
+        <h3 class="release-title text-4xl text-red-600 leading-tight truncate mb-4" title={releaseName}>
           {releaseName.length > 30 ? releaseName.substring(0, 27) + '...' : releaseName}
         </h3>
-        
-        <div class="space-y-1 mb-3">
+
+        <div class="space-y-2 mb-4">
           <p class="artist-name-font text-xl font-semibold text-white truncate" title={artistName}>
             {artistName.length > 30 ? artistName.substring(0, 27) + '...' : artistName}
           </p>
@@ -501,10 +501,13 @@ const totalDurationFormatted = totalDurationSeconds > 0
             {displayLabel ? `© ${displayLabel.length > 35 ? displayLabel.substring(0, 32) + '...' : displayLabel}` : '© Unknown Label'}
           </p>
         </div>
-        
-        <div class="genre-section flex items-center gap-2 text-base text-gray-300 mb-4">
+
+        <div class="genre-section flex items-center gap-2 text-base text-gray-300 mb-5 flex-wrap">
           {genre && (
             <span class="text-sm px-2 py-1 bg-gray-700 text-white rounded font-medium">{genre}</span>
+          )}
+          {displayCatalogNumber && (
+            <span class="text-sm px-2 py-1 bg-gray-700 text-white rounded font-medium font-body tracking-wide">{displayCatalogNumber}</span>
           )}
         </div>
 
@@ -875,15 +878,15 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
   /* Buy buttons container */
   .buy-container {
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(30, 30, 30, 0.8));
-    border: 1px solid rgba(220, 38, 38, 0.3);
-    border-radius: 0.75rem;
-    padding: 1rem;
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-    box-shadow: 0 0 12px rgba(220, 38, 38, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    box-shadow: none;
   }
 
   /* NYOP (Name Your Own Price) Styles */
@@ -1237,6 +1240,11 @@ const totalDurationFormatted = totalDurationSeconds > 0
       margin-top: 0 !important;
     }
 
+    /* Hide the icon emoji next to "Release Details" on mobile */
+    .details-section .text-xs span:first-child {
+      display: none !important;
+    }
+
   }
   
   /* Mobile: Further optimizations */
@@ -1278,7 +1286,12 @@ const totalDurationFormatted = totalDurationSeconds > 0
       width: 100% !important;
       max-width: 100% !important;
     }
-    
+
+    /* Hide unavailable vinyl button on mobile */
+    .vinyl-btn:disabled {
+      display: none !important;
+    }
+
     .add-to-cart {
       width: 100% !important;
       padding: 0.875rem 1rem !important;
