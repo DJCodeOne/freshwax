@@ -1670,13 +1670,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         try {
           const token = await user.getIdToken();
           window.ADMIN_KEY = token;
+          // Refresh __session cookie so SSR admin page auth (form POSTs) works
+          document.cookie = '__session=' + token + '; path=/; max-age=3600; SameSite=Lax; Secure';
           // Refresh token before it expires (every 45 min)
           if (window._adminTokenRefreshInterval) {
             clearInterval(window._adminTokenRefreshInterval);
           }
           window._adminTokenRefreshInterval = setInterval(async () => {
             if (window._firebaseUser) {
-              window.ADMIN_KEY = await window._firebaseUser.getIdToken();
+              var freshToken = await window._firebaseUser.getIdToken();
+              window.ADMIN_KEY = freshToken;
+              document.cookie = '__session=' + freshToken + '; path=/; max-age=3600; SameSite=Lax; Secure';
             }
           }, 45 * 60 * 1000);
         } catch (e){
