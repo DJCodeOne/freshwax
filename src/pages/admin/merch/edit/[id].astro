@@ -310,7 +310,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                 </div>
                 <div class="form-group">
                   <label class="form-label">Supplier</label>
-                  <input type="text" name="supplier" class="form-input" value={product.supplier || 'Fresh Wax'} />
+                  <input type="text" name="supplier" class="form-input" value={product.supplier || product.supplierName || 'Fresh Wax'} />
                 </div>
               </div>
               
