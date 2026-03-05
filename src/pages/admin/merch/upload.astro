@@ -481,18 +481,24 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         });
       });
 
+      // Prevent browser from opening dropped files in a new tab
+      document.addEventListener('dragover', (e) => e.preventDefault());
+      document.addEventListener('drop', (e) => e.preventDefault());
+
       // Image upload
       const imageInput = document.getElementById('imageInput');
       const dropZone = document.getElementById('imageDropZone');
-      
+
       dropZone.addEventListener('click', () => imageInput.click());
       dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         dropZone.classList.add('dragover');
       });
       dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
       dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         dropZone.classList.remove('dragover');
         handleImageFiles(e.dataTransfer.files);
       });

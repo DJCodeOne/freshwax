@@ -919,6 +919,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     renderImages();
   });
   
+  // Prevent browser from opening dropped files in a new tab
+  document.addEventListener('dragover', (e) => e.preventDefault());
+  document.addEventListener('drop', (e) => e.preventDefault());
+
   const MAX_IMAGES = 10;
   const imagesGrid = document.getElementById('imagesGrid');
   const uploadSlot = document.getElementById('uploadSlot');
