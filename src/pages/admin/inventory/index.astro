@@ -490,13 +490,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 </div>
               </div>
             </td>
-            <td style="text-align: center;">${product.category || '-'}</td>
+            <td style="text-align: center;">${product.categoryName || product.category || '-'}</td>
             <td style="text-align: center;"><strong>${product.totalStock || 0}</strong></td>
             <td style="text-align: center;">${product.reservedStock || 0}</td>
             <td style="text-align: center;">${product.soldStock || 0}</td>
             <td style="text-align: center;"><span style="padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 700; border-radius: 4px; ${statusClass === 'in-stock' ? 'background: #dcfce7; color: #166534;' : statusClass === 'low-stock' ? 'background: #fef3c7; color: #92400e;' : 'background: #fee2e2; color: #991b1b;'}">${statusText}</span></td>
             <td style="text-align: center;">
-              <div style="display: flex; gap: 0.5rem; justify-content: center;">
+              <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                <a href="/admin/merch/edit/${product.productId}/" style="padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; border: 2px solid #3b82f6; color: #3b82f6; background: #fff; cursor: pointer; text-decoration: none; display: inline-block;">Edit</a>
                 <button style="padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; border: 2px solid #22c55e; color: #22c55e; background: #fff; cursor: pointer;" data-action="open-receive" data-product="${product.productId}">+ Receive</button>
                 <button style="padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; border: 2px solid #f59e0b; color: #f59e0b; background: #fff; cursor: pointer;" data-action="open-receive" data-product="${product.productId}" data-operation="adjust">Adjust</button>
               </div>

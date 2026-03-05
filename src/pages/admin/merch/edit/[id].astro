@@ -37,6 +37,7 @@ if (Astro.request.method === 'POST') {
       sku: formData.get('sku') || '',
       description: formData.get('description') || '',
       category: formData.get('category') || 'general',
+      categoryName: formData.get('categoryName') || '',
       productType: formData.get('productType') || 'other',
       retailPrice: parseFloat(formData.get('retailPrice') as string) || 0,
       costPrice: parseFloat(formData.get('costPrice') as string) || null,
@@ -185,6 +186,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                 <div class="form-group">
                   <label class="form-label">Category</label>
                   <select name="category" class="form-select">
+                    <option value="freshwax" selected={product.category === 'freshwax'}>Fresh Wax</option>
+                    <option value="label" selected={product.category === 'label'}>Label</option>
+                    <option value="soundsystem" selected={product.category === 'soundsystem'}>Sound System</option>
+                    <option value="dj" selected={product.category === 'dj'}>DJ</option>
+                    <option value="crew" selected={product.category === 'crew'}>Crew</option>
                     <option value="clothing" selected={product.category === 'clothing'}>Clothing</option>
                     <option value="accessories" selected={product.category === 'accessories'}>Accessories</option>
                     <option value="vinyl" selected={product.category === 'vinyl'}>Vinyl</option>
@@ -192,6 +198,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                     <option value="general" selected={product.category === 'general'}>General</option>
                   </select>
                 </div>
+                <div class="form-group">
+                  <label class="form-label">Category Name</label>
+                  <input type="text" name="categoryName" class="form-input" value={product.categoryName || ''} placeholder="e.g., Underground Lair Recordings" maxlength="30" />
+                  <span class="form-hint">The label/DJ/crew name</span>
+                </div>
+              </div>
+
+              <div class="form-row">
                 <div class="form-group">
                   <label class="form-label">Product Type</label>
                   <select name="productType" class="form-select">
