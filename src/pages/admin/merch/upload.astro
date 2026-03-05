@@ -434,14 +434,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       'other': { hasSizes: false, hasColors: true }
     };
 
-    // Initialize
-    document.addEventListener('astro:page-load', async () => {
+    // Initialize — no View Transitions on this page, so run directly
+    (async () => {
       if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e) { return; } }
       loadSuppliers();
       setupEventListeners();
       updateTypeVisibility();
       updatePreview();
-    });
+    })();
 
     // Static button listeners
     document.getElementById('setAllVariantStockBtn').addEventListener('click', () => window.setAllVariantStock());
