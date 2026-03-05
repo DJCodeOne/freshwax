@@ -20,20 +20,22 @@ let products = [];
 let errorMessage = '';
 
 try {
-  const items = await queryCollection('merch', { limit: 100 });
+  const items = await queryCollection('merch', { limit: 100, skipCache: true });
   
   products = (items || []).map(item => ({
+    ...item,
     id: item.id,
     name: item.name || item.title || 'Untitled Item',
     description: item.description || '',
-    price: item.price || item.retailPrice || 0,
+    price: item.retailPrice || item.price || 0,
     salePrice: item.salePrice || null,
     onSale: item.onSale || false,
     costPrice: item.costPrice || null,
     currency: item.currency || 'GBP',
     images: item.images || (item.imageUrl ? [item.imageUrl] : []),
     primaryImage: item.images?.[0]?.url || item.primaryImage || item.images?.[0] || item.imageUrl || null,
-    category: item.category || item.categoryName || 'general',
+    category: item.category || 'general',
+    categoryName: item.categoryName || '',
     productType: item.productType || item.productTypeName || 'other',
     inStock: (item.totalStock ?? item.stock ?? 0) > 0,
     stock: item.totalStock ?? item.stock ?? 0,
@@ -44,7 +46,6 @@ try {
     published: item.published ?? item.status === 'published' ?? true,
     isLowStock: item.isLowStock || false,
     isOutOfStock: item.isOutOfStock || false,
-    ...item
   }));
   
   // Sort by name
@@ -100,6 +101,11 @@ const getStockDataAttr = (stock) => {
 
 // Category/type labels
 const categoryLabels = {
+  'freshwax': 'Fresh Wax',
+  'label': 'Label',
+  'soundsystem': 'Sound System',
+  'dj': 'DJ',
+  'crew': 'Crew',
   'clothing': 'Clothing',
   'accessories': 'Accessories',
   'vinyl': 'Vinyl',
@@ -197,7 +203,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                     <div class="item-info">
                       <h4>{product.name}</h4>
                       <p class="cell-mono">{product.sku}</p>
-                      <p class="cell-secondary">{categoryLabels[product.category] || product.category} • {typeLabels[product.productType] || product.productType}</p>
+                      <p class="cell-secondary">{product.categoryName || categoryLabels[product.category] || product.category} • {typeLabels[product.productType] || product.productType}</p>
                     </div>
                   </div>
                 </td>
