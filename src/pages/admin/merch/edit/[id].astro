@@ -928,12 +928,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     else if (action === 'save-crop') window.saveImageCrop();
   });
 
-  // Initialize variant grid and images immediately
-  // (AdminLayout does not use ViewTransitions, so astro:page-load never fires)
-  updatePresetButtons();
-  renderVariantGrid();
-  renderImages();
-  
   // Prevent browser from opening dropped files in a new tab
   document.addEventListener('dragover', (e) => e.preventDefault());
   document.addEventListener('drop', (e) => e.preventDefault());
@@ -1564,13 +1558,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   
   window.deleteProduct = deleteProduct;
   
+  // Initialize everything immediately
+  // (AdminLayout does not use ViewTransitions, so astro:page-load never fires)
+  updatePresetButtons();
+  renderVariantGrid();
+  renderImages();
+
   // Initialize drag events for existing items
   document.querySelectorAll('.image-item').forEach((item, idx) => {
     setupImageItemEvents(item, idx);
   });
-  
-  updateImageCount();
-  
-  // Update preview immediately to ensure correct image is shown
-  updatePreviewImage();
 </script>
