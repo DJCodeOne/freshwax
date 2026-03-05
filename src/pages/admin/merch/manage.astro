@@ -40,7 +40,7 @@ try {
     inStock: (item.totalStock ?? item.stock ?? 0) > 0,
     stock: item.totalStock ?? item.stock ?? 0,
     sku: item.sku || item.id,
-    supplier: item.supplierName || item.supplier || 'Fresh Wax',
+    supplier: item.supplier || item.supplierName || 'Fresh Wax',
     supplierCut: item.supplierCut || null,
     featured: item.featured || false,
     published: item.published ?? item.status === 'published' ?? true,

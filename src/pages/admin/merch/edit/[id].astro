@@ -45,6 +45,7 @@ if (Astro.request.method === 'POST') {
       onSale: formData.get('onSale') === 'on',
       stock: parseInt(formData.get('stock') as string) || 0,
       supplier: formData.get('supplier') || 'Fresh Wax',
+      supplierName: formData.get('supplier') || 'Fresh Wax',
       supplierCut: parseFloat(formData.get('supplierCut') as string) || null,
       featured: formData.get('featured') === 'on',
       published: formData.get('published') === 'on',
