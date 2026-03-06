@@ -697,28 +697,9 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .stat-plays {
-    background: linear-gradient(135deg, rgba(22, 163, 74, 0.35), rgba(21, 128, 61, 0.25));
-    border-color: rgba(22, 163, 74, 0.3);
-  }
   .stat-plays .stat-icon { color: #4ade80; }
-
-  .stat-downloads {
-    background: linear-gradient(135deg, rgba(220, 38, 38, 0.35), rgba(153, 27, 27, 0.25));
-    border-color: rgba(220, 38, 38, 0.3);
-  }
   .stat-downloads .stat-icon { color: #f87171; }
-
-  .stat-likes {
-    background: linear-gradient(135deg, rgba(225, 29, 72, 0.35), rgba(190, 18, 60, 0.25));
-    border-color: rgba(225, 29, 72, 0.3);
-  }
   .stat-likes .stat-icon { color: #fb7185; }
-
-  .stat-comments {
-    background: linear-gradient(135deg, rgba(13, 148, 136, 0.35), rgba(15, 118, 110, 0.25));
-    border-color: rgba(13, 148, 136, 0.3);
-  }
   .stat-comments .stat-icon { color: #2dd4bf; }
 
   .stat-icon {
