@@ -120,10 +120,10 @@
     animation: fadeInUp 1.2s ease-out;
   }
 
-  /* Hero Title - Mobile Base (3rem) */
+  /* Hero Title - Mobile Base */
   .hero-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 7rem;
+    font-size: 4.9rem;
     font-weight: 400;
     margin-bottom: 0.5rem;
     letter-spacing: 0.02em;
