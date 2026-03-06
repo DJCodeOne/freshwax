@@ -49,7 +49,7 @@ const { nonce = '' } = Astro.props;
         </div>
         
         <!-- Artwork + Track Info -->
-        <div class="flex items-center gap-2 sm:gap-3 flex-shrink min-w-0 sm:flex-shrink-0 sm:w-[280px]">
+        <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 sm:flex-initial sm:flex-shrink-0 sm:w-[280px]">
           <!-- Artwork (hidden on mobile to save space) -->
           <a id="mini-artwork-link" href="javascript:void(0)" class="hidden sm:block flex-shrink-0 relative group" role="link" aria-label="View release details">
             <div class="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
@@ -74,8 +74,8 @@ const { nonce = '' } = Astro.props;
           <div id="mini-player-live" aria-live="polite" aria-atomic="true" class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;"></div>
         </div>
         
-        <!-- CENTER: Controls - Fixed positioning -->
-        <div class="flex items-center justify-center gap-1 sm:gap-3 flex-1">
+        <!-- CENTER: Controls -->
+        <div class="flex items-center justify-center gap-1 sm:gap-3 flex-shrink-0 sm:flex-1">
           <!-- Shuffle Button (hidden on mobile - floating button handles it) -->
           <button id="mini-shuffle-btn" class="mini-shuffle-btn hidden sm:flex min-w-[44px] min-h-[44px] p-2.5 text-gray-300 hover:text-white transition-all hover:scale-110 active:scale-95 rounded-full flex-shrink-0" title="Shuffle Play" aria-label="Shuffle play">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -84,8 +84,8 @@ const { nonce = '' } = Astro.props;
           </button>
           
           <!-- Skip Back -->
-          <button id="mini-skip-back" class="min-w-[44px] min-h-[44px] p-2.5 text-gray-300 hover:text-white transition-all hover:scale-110 active:scale-95 flex-shrink-0" title="Back 10s / Previous" aria-label="Skip back 10 seconds">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button id="mini-skip-back" class="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] p-2 sm:p-2.5 text-gray-300 hover:text-white transition-all hover:scale-110 active:scale-95 flex-shrink-0" title="Back 10s / Previous" aria-label="Skip back 10 seconds">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"/>
             </svg>
           </button>
@@ -102,8 +102,8 @@ const { nonce = '' } = Astro.props;
           </button>
           
           <!-- Skip Forward -->
-          <button id="mini-skip-forward" class="min-w-[44px] min-h-[44px] p-2.5 text-gray-300 hover:text-white transition-all hover:scale-110 active:scale-95 flex-shrink-0" title="Forward 10s / Next" aria-label="Skip forward 10 seconds">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button id="mini-skip-forward" class="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] p-2 sm:p-2.5 text-gray-300 hover:text-white transition-all hover:scale-110 active:scale-95 flex-shrink-0" title="Forward 10s / Next" aria-label="Skip forward 10 seconds">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z"/>
             </svg>
           </button>
