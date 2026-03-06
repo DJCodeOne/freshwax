@@ -839,6 +839,31 @@ const merchItemList = {
             mainImg.src = t.dataset.src || '';
             thumbs.querySelectorAll('.thumb').forEach(function(x) { x.classList.remove('active'); });
             t.classList.add('active');
+
+            // Sync colour circle when thumbnail has a color association
+            var thumbUrl = t.dataset.src || '';
+            if (thumbUrl && currentProduct && currentProduct.imageObjects) {
+              var matchObj = currentProduct.imageObjects.find(function(img) {
+                return typeof img === 'object' && img.url === thumbUrl && img.color;
+              });
+              if (matchObj && matchObj.color) {
+                var colorOptions = document.getElementById('colorOptions');
+                if (colorOptions) {
+                  var matchBtn = null;
+                  colorOptions.querySelectorAll('.color-opt').forEach(function(b) {
+                    if (b.dataset.color && b.dataset.color.toLowerCase() === matchObj.color.toLowerCase()) {
+                      matchBtn = b;
+                    }
+                    b.classList.remove('selected');
+                  });
+                  if (matchBtn) {
+                    matchBtn.classList.add('selected');
+                    selectedColor = matchBtn.dataset.color || null;
+                    updateCartButton();
+                  }
+                }
+              }
+            }
           });
         });
       } else if (thumbs) {
