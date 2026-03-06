@@ -146,9 +146,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
   <div class="dj-mixes-main">
     <!-- Background Video -->
-    <video class="bg-video-overlay" autoplay muted loop playsinline preload="auto">
+    <video class="bg-video-overlay" id="bgVideo" autoplay muted loop playsinline preload="auto">
       <source src="/videos/dj-bg.mp4" type="video/mp4" />
     </video>
+    <script is:inline>
+      var bgV = document.getElementById('bgVideo');
+      if (bgV) bgV.playbackRate = 0.6;
+    </script>
     
     <!-- Hero Section -->
     <section class="hero-section">
