@@ -698,7 +698,7 @@
   }
 
   /* Mix Title - Mobile Base */
-  .mix-title {
+  h3.mix-title {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 3rem;
     font-weight: 400;
@@ -789,7 +789,7 @@
       gap: 1.1rem;
     }
 
-    .mix-title {
+    h3.mix-title {
       font-size: 3rem;
     }
 
@@ -846,7 +846,7 @@
       margin-bottom: 0.5rem;
     }
 
-    .mix-title {
+    h3.mix-title {
       font-size: 3.25rem;
       margin: 0 0 0.5rem 0;
       white-space: normal;
@@ -1647,7 +1647,7 @@
     padding: 0.75rem;
   }
 
-  .mix-title {
+  h3.mix-title {
     font-size: 3rem;
   }
 
