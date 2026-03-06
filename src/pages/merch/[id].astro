@@ -434,20 +434,32 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   @media (max-width: 600px) {
     .preview-page {
       padding: 0.5rem;
+      min-height: auto;
     }
-    
+
+    .preview-container {
+      flex: none;
+    }
+
+    .preview-box {
+      flex: none;
+      overflow: visible;
+    }
+
     .image-area {
-      min-height: 210px;
+      flex: none;
+      min-height: auto;
+      aspect-ratio: 1;
     }
-    
+
     .image-area:hover img.zoomable {
       transform: none;
     }
-    
+
     .zoom-hint {
       display: none;
     }
-    
+
     .thumb {
       width: 34px;
       height: 34px;
