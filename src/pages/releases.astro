@@ -388,7 +388,7 @@ const releaseItemList = {
       height: 100%;
       background-color: #000;
       background-image: url('/shop.webp');
-      background-size: cover;
+      background-size: 180%;
       background-position: center;
       background-repeat: no-repeat;
       opacity: 0;
@@ -396,6 +396,12 @@ const releaseItemList = {
       pointer-events: none;
       filter: blur(3px);
       animation: bg-fade-in 2s ease-out 0.3s forwards;
+    }
+
+    @media (min-width: 640px) {
+      .bg-image-overlay {
+        background-size: cover;
+      }
     }
 
     @keyframes bg-fade-in {
@@ -494,6 +500,9 @@ const releaseItemList = {
       gap: 1.25rem;
       padding: 1.25rem 1.25rem;
       background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 0.75rem;
     }
 
