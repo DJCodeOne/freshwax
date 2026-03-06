@@ -556,14 +556,15 @@
     font-family: 'Inter', sans-serif;
     font-size: 2rem;
     color: #fff;
-    margin: 0 0 0.25rem;
+    margin: 0 0 0.5rem;
+    padding-right: 3rem;
   }
 
   .modal-cat {
     font-size: 0.9rem;
     color: #888;
     text-transform: uppercase;
-    margin: 0 0 1rem;
+    margin: 0 0 0.75rem;
   }
 
   .modal-desc {
@@ -864,8 +865,8 @@
 
     .product-name { font-size: 1.1rem; }
 
-    .modal-info h2 { font-size: 1.5rem; }
-    .current-price { font-size: 1.5rem; }
+    .modal-info h2 { font-size: 1.25rem; }
+    .current-price { font-size: 1.35rem; }
   }
 
   /* Mobile modal: ensure Add to Cart is always visible */
@@ -889,8 +890,17 @@
     }
 
     .modal-info {
-      padding: 1rem 1.25rem;
-      padding-bottom: 0;
+      padding: 1rem 1.25rem 0.5rem;
+    }
+
+    .modal-info h2 {
+      font-size: 1.35rem;
+      margin-bottom: 0.375rem;
+      padding-right: 2.5rem;
+    }
+
+    .modal-cat {
+      margin-bottom: 0.625rem;
     }
 
     .modal-desc {
@@ -903,15 +913,19 @@
     }
 
     .modal-price {
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.875rem;
     }
 
     .option-section {
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .option-section legend {
+      margin-bottom: 0.625rem;
     }
 
     .stock-info {
-      margin-bottom: 0.75rem;
+      margin-bottom: 0.875rem;
     }
 
     .add-to-cart-btn {
@@ -924,7 +938,7 @@
     }
 
     .view-details-link {
-      padding: 0.75rem 0;
+      padding: 0.75rem 0 0.5rem;
       margin-top: 0;
     }
   }
