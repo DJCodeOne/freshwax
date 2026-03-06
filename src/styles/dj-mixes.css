@@ -669,7 +669,7 @@
   /* Mix Title - Mobile Base */
   .mix-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
+    font-size: 2.25rem;
     font-weight: 400;
     color: #dc2626;
     margin: 0 0 0.25rem 0;
@@ -685,7 +685,7 @@
   /* Mix DJ - Mobile Base */
   .mix-dj {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: 400;
     color: #ffffff;
     margin: 0;
@@ -759,11 +759,11 @@
     }
 
     .mix-title {
-      font-size: 1.75rem;
+      font-size: 2.25rem;
     }
 
     .mix-dj {
-      font-size: 1.25rem;
+      font-size: 1.5rem;
     }
 
     .mix-meta-row {
@@ -816,7 +816,7 @@
     }
 
     .mix-title {
-      font-size: 2.75rem;
+      font-size: 3.25rem;
       margin: 0 0 0.5rem 0;
       white-space: normal;
       display: -webkit-box;
@@ -825,7 +825,7 @@
     }
 
     .mix-dj {
-      font-size: 1.8rem;
+      font-size: 2.25rem;
     }
 
     .mix-meta-row {
@@ -1617,7 +1617,7 @@
   }
 
   .mix-title {
-    font-size: 1rem;
+    font-size: 1.35rem;
   }
 
   .mix-artist {

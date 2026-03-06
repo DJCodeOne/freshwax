@@ -69,8 +69,8 @@ const releaseItemList = {
 
   <div class="flex min-h-screen" style="background: transparent;">
     
-    <!-- Left Sidebar Navigation -->
-    <aside aria-label="Filter by label" class="w-80 bg-gradient-to-b from-gray-800 to-gray-900 border-r-2 border-white sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto flex-shrink-0 hidden lg:block shadow-2xl">
+    <!-- Left Sidebar Navigation (hidden - replaced by dropdown in header) -->
+    <aside aria-label="Filter by label" class="w-80 bg-gradient-to-b from-gray-800 to-gray-900 border-r-2 border-white sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto flex-shrink-0 hidden shadow-2xl">
       <div class="p-6">
         <!-- Header -->
         <div class="mb-6 pt-6 pb-6 border-t-2 border-b-2 border-red-600">
@@ -428,7 +428,7 @@ const releaseItemList = {
 
     .releases-title {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 2.5rem;
+      font-size: 4rem;
       font-weight: 400;
       color: #ffffff;
       letter-spacing: 0.08em;
@@ -469,7 +469,7 @@ const releaseItemList = {
         display: block;
       }
       .releases-title {
-        font-size: 3rem;
+        font-size: 4.5rem;
       }
       .releases-subtitle {
         font-size: 0.9rem;
@@ -482,7 +482,7 @@ const releaseItemList = {
         padding: 3rem 3rem;
       }
       .releases-title {
-        font-size: 4rem;
+        font-size: 6rem;
       }
     }
 
@@ -493,7 +493,7 @@ const releaseItemList = {
       justify-content: center;
       gap: 1.25rem;
       padding: 1.25rem 1.25rem;
-      background: rgba(0, 0, 0, 0.55);
+      background: rgba(0, 0, 0, 0.75);
       border-radius: 0.75rem;
     }
 
@@ -601,8 +601,8 @@ const releaseItemList = {
     }
 
     @media (min-width: 1024px) {
-      .label-dropdown-wrap {
-        display: none;
+      .label-dropdown-container {
+        max-width: 350px;
       }
     }
 
