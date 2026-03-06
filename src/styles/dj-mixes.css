@@ -2,6 +2,7 @@
   .dj-mixes-main {
     min-height: 100vh;
     position: relative;
+    overflow-x: hidden;
   }
 
   .bg-image-overlay {
@@ -163,7 +164,14 @@
     flex: 1;
     min-width: 0;
     max-width: 100%;
-    padding: 2rem 1.5rem;
+    padding: 1rem;
+    overflow-x: hidden;
+  }
+
+  @media (min-width: 480px) {
+    .mixes-section {
+      padding: 2rem 1.5rem;
+    }
   }
 
   @media (min-width: 1024px) {
@@ -177,9 +185,16 @@
   .mixes-header {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
-    padding: 2rem 0;
+    gap: 0.5rem;
+    padding: 1rem 0;
     margin-bottom: 0.5rem;
+  }
+
+  @media (min-width: 480px) {
+    .mixes-header {
+      gap: 1.5rem;
+      padding: 2rem 0;
+    }
   }
 
   .mixes-header-line {
@@ -190,10 +205,18 @@
 
   .mixes-header-center {
     text-align: center;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-width: 0;
     background: rgba(0, 0, 0, 0.6);
-    padding: 1rem 2rem;
+    padding: 0.75rem 1rem;
     border-radius: 0.5rem;
+  }
+
+  @media (min-width: 480px) {
+    .mixes-header-center {
+      flex-shrink: 0;
+      padding: 1rem 2rem;
+    }
   }
 
   .mixes-title {
@@ -581,6 +604,7 @@
     flex-shrink: 0;
     border-radius: 0.5rem;
     border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.4), 0 0 40px rgba(220, 38, 38, 0.2);
   }
 
   .mix-artwork {
@@ -863,15 +887,16 @@
     border-color: #b91c1c;
   }
 
-  /* Mobile: Icons only, no text */
+  /* Mobile: Icons with text */
   .action-btn .btn-icon {
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
   }
 
   .action-btn .btn-text {
-    display: none;
+    display: inline;
+    font-size: 0.65rem;
   }
 
   /* Action Buttons - Tablet (768px+) - Show text labels */

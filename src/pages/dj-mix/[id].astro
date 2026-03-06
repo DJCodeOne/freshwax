@@ -558,7 +558,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   )}
 
   <!-- Download Progress Modal -->
-  <div id="dlModal" class="fixed inset-0 z-[200] hidden" style="display:none;">
+  <div id="dlModal" class="fixed inset-0 z-[200]" style="display:none;">
     <div class="fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4">
       <div class="relative bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center">
@@ -1131,21 +1131,19 @@ Artist - Track Title
 
   function showDlModal(state, title, filename, statusText, pct) {
     if (!dlModal) return;
-    dlModal.classList.remove('hidden');
-    dlModal.style.display = '';
+    dlModal.style.display = 'flex';
     if (dlTitle) dlTitle.textContent = title || '';
     if (dlFilename) dlFilename.textContent = filename || '';
     if (dlStatus) dlStatus.textContent = statusText || '';
-    if (dlSpinner) dlSpinner.classList.toggle('hidden', state !== 'loading');
-    if (dlCheck) dlCheck.classList.toggle('hidden', state !== 'done');
-    if (dlError) dlError.classList.toggle('hidden', state !== 'error');
+    if (dlSpinner) dlSpinner.style.display = (state === 'loading') ? '' : 'none';
+    if (dlCheck) dlCheck.style.display = (state === 'done') ? '' : 'none';
+    if (dlError) dlError.style.display = (state === 'error') ? '' : 'none';
     if (dlBarWrap) dlBarWrap.style.display = (pct !== undefined && pct !== null) ? '' : 'none';
     if (dlBarFill && pct !== undefined && pct !== null) dlBarFill.style.width = pct + '%';
   }
 
   function hideDlModal() {
     if (!dlModal) return;
-    dlModal.classList.add('hidden');
     dlModal.style.display = 'none';
   }
 
