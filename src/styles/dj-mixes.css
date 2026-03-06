@@ -191,6 +191,9 @@
   .mixes-header-center {
     text-align: center;
     flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
   }
 
   .mixes-title {
@@ -202,14 +205,16 @@
     text-transform: uppercase;
     margin: 0 0 0.35rem 0;
     line-height: 1;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 0, 0, 0.7);
   }
 
   .mixes-subtitle {
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 0.8rem;
     margin: 0;
     font-weight: 400;
     letter-spacing: 0.05em;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
   }
 
   .mixes-divider {
