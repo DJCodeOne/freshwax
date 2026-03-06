@@ -5,18 +5,45 @@
     overflow-x: hidden;
   }
 
-  .bg-video-overlay {
+  /* Mobile: static image background */
+  .bg-image-mobile {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    background: url('/videos/dj-bg-poster.webp') center/cover no-repeat;
     opacity: 0;
     z-index: -1;
     pointer-events: none;
     filter: blur(6px);
     animation: bg-fade-in 2s ease-out 0.3s forwards;
+  }
+
+  /* Mobile: hide video */
+  .bg-video-overlay {
+    display: none;
+  }
+
+  /* Desktop: show video, hide static image */
+  @media (min-width: 768px) {
+    .bg-image-mobile {
+      display: none;
+    }
+    .bg-video-overlay {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      z-index: -1;
+      pointer-events: none;
+      filter: blur(6px);
+      animation: bg-fade-in 2s ease-out 0.3s forwards;
+    }
   }
 
   @keyframes bg-fade-in {

@@ -145,7 +145,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   <Header />
 
   <div class="dj-mixes-main">
-    <!-- Background Video -->
+    <!-- Background: static image on mobile, video on desktop -->
+    <div class="bg-image-mobile"></div>
     <video class="bg-video-overlay" id="bgVideo" autoplay muted loop playsinline preload="auto">
       <source src="/videos/dj-bg.mp4?v=2" type="video/mp4" />
     </video>
