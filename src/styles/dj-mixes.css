@@ -91,7 +91,11 @@
 
   /* Hero Section - Mobile Base */
   .hero-section {
-    background: linear-gradient(to bottom, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(20, 0, 0, 0.75) 50%, rgba(0, 0, 0, 0.7));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(220, 38, 38, 0.15);
+    box-shadow: 0 0 40px rgba(220, 38, 38, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     color: white;
     padding: 3rem 0;
     position: relative;
