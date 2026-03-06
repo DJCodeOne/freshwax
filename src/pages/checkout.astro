@@ -941,9 +941,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         return;
       }
 
-      // Validate form
+      // Validate form — use custom feedback instead of reportValidity()
+      // which is unreliable on mobile (validation tooltips often invisible)
       if (!form.checkValidity()) {
-        form.reportValidity();
+        const firstInvalid = form.querySelector(':invalid');
+        if (firstInvalid) {
+          firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Slight delay to let scroll finish before focusing
+          setTimeout(() => { try { firstInvalid.focus(); } catch(_e){} }, 300);
+        }
+        errorMsg.textContent = 'Please fill in all required fields before paying';
+        errorMsg.style.display = 'block';
         return;
       }
 
