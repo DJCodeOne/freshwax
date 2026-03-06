@@ -541,7 +541,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     ${artistName ? `<p style="margin: 0 0 0.375rem 0; font-size: 1rem; color: #6b7280;">${escapeHtml(artistName)}${labelName ? ' on ' + escapeHtml(labelName) : ''}</p>` : ''}
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                       <span style="display: inline-block; padding: 0.2rem 0.5rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 3px; border: 1px solid; ${getBadgeStyle(itemType)}">${escapeHtml(itemType)}</span>
-                      ${item.color ? `<span style="font-size: 0.9375rem; color: #6b7280;">${escapeHtml(typeof item.color === 'object' ? item.color.name : item.color)}</span>` : ''}
+                      ${item.color ? `<span style="font-size: 0.9375rem; color: #6b7280;">${escapeHtml((item.color && typeof item.color === 'object') ? item.color.name : item.color)}</span>` : ''}
                       ${item.size ? `<span style="font-size: 0.9375rem; color: #6b7280;">Size: ${escapeHtml(item.size)}</span>` : ''}
                       ${item.quantity > 1 ? `<span style="font-size: 0.9375rem; color: #6b7280;">×${item.quantity}</span>` : ''}
                     </div>
@@ -988,7 +988,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           quantity: item.quantity,
           image: item.image || item.artwork,
           size: item.size || null,
-          color: typeof item.color === 'object' ? item.color.name : item.color || null
+          color: (item.color && typeof item.color === 'object') ? item.color.name : (item.color || null)
         })),
         totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
         hasPhysicalItems,
@@ -1118,7 +1118,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             quantity: item.quantity,
             image: item.image || item.artwork,
             size: item.size || null,
-            color: typeof item.color === 'object' ? item.color.name : item.color || null
+            color: (item.color && typeof item.color === 'object') ? item.color.name : (item.color || null)
           })),
           totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
           hasPhysicalItems
