@@ -15,7 +15,7 @@
     opacity: 0;
     z-index: -1;
     pointer-events: none;
-    filter: blur(3px);
+    filter: blur(6px);
     animation: bg-fade-in 2s ease-out 0.3s forwards;
   }
 
