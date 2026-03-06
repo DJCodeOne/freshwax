@@ -115,12 +115,12 @@ const releaseItemList = {
           <div class="releases-header">
             <div class="releases-header-line"></div>
             <div class="releases-header-center">
-              <h1 class="releases-title">All Releases</h1>
+              <h1 class="releases-title"><span class="releases-title-desktop">All Releases</span><span class="releases-title-mobile">Explore the library</span></h1>
               <p class="releases-subtitle">
                 Explore the library organised by label
               </p>
               <p class="releases-count">
-                {totalReleases} total releases
+                <span class="releases-count-desktop">{totalReleases} total releases</span><span class="releases-count-mobile">{totalReleases} releases</span>
               </p>
               <!-- Mobile Label Selector -->
               <div class="label-dropdown-wrap">
@@ -445,20 +445,18 @@ const releaseItemList = {
       text-transform: uppercase;
       margin: 0 0 0.35rem 0;
       line-height: 1;
-      white-space: nowrap;
     }
 
-    .releases-subtitle {
-      color: rgba(255, 255, 255, 0.4);
-      font-size: 0.8rem;
-      margin: 0 0 0.25rem 0;
-      font-weight: 400;
-      letter-spacing: 0.05em;
-    }
+    /* Mobile: show "Explore the library", hide "All Releases" and subtitle */
+    .releases-title-desktop { display: none; }
+    .releases-title-mobile { display: inline; }
+    .releases-subtitle { display: none; }
+    .releases-count-desktop { display: none; }
+    .releases-count-mobile { display: inline; }
 
     .releases-count {
       color: rgba(255, 255, 255, 0.3);
-      font-size: 0.75rem;
+      font-size: 0.85rem;
       margin: 0;
       font-weight: 400;
       letter-spacing: 0.05em;
@@ -481,9 +479,12 @@ const releaseItemList = {
       .releases-title {
         font-size: 4.5rem;
       }
-      .releases-subtitle {
-        font-size: 0.9rem;
-      }
+      /* Desktop: show "All Releases", hide mobile text, show subtitle */
+      .releases-title-desktop { display: inline; }
+      .releases-title-mobile { display: none; }
+      .releases-subtitle { display: block; color: rgba(255, 255, 255, 0.4); font-size: 0.9rem; margin: 0 0 0.25rem 0; font-weight: 400; letter-spacing: 0.05em; }
+      .releases-count-desktop { display: inline; }
+      .releases-count-mobile { display: none; }
     }
 
     @media (min-width: 768px) {
