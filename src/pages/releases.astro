@@ -115,12 +115,15 @@ const releaseItemList = {
           <div class="releases-header">
             <div class="releases-header-line"></div>
             <div class="releases-header-center">
-              <h1 class="releases-title"><span class="releases-title-desktop">All Releases</span><span class="releases-title-mobile">Explore the library</span></h1>
-              <p class="releases-subtitle">
+              <h1 class="releases-title">All Releases</h1>
+              <p class="releases-subtitle releases-subtitle-desktop">
                 Explore the library organised by label
               </p>
+              <p class="releases-subtitle releases-subtitle-mobile">
+                Explore the library
+              </p>
               <p class="releases-count">
-                <span class="releases-count-desktop">{totalReleases} total releases</span><span class="releases-count-mobile">{totalReleases} releases</span>
+                {totalReleases} releases
               </p>
               <!-- Mobile Label Selector -->
               <div class="label-dropdown-wrap">
@@ -447,12 +450,9 @@ const releaseItemList = {
       line-height: 1;
     }
 
-    /* Mobile: show "Explore the library", hide "All Releases" and subtitle */
-    .releases-title-desktop { display: none; }
-    .releases-title-mobile { display: inline; }
-    .releases-subtitle { display: none; }
-    .releases-count-desktop { display: none; }
-    .releases-count-mobile { display: inline; }
+    /* Mobile: show short subtitle, hide long one */
+    .releases-subtitle-desktop { display: none; }
+    .releases-subtitle-mobile { display: block; color: rgba(255, 255, 255, 0.4); font-size: 0.8rem; margin: 0 0 0.25rem 0; font-weight: 400; letter-spacing: 0.05em; }
 
     .releases-count {
       color: rgba(255, 255, 255, 0.3);
@@ -479,12 +479,9 @@ const releaseItemList = {
       .releases-title {
         font-size: 4.5rem;
       }
-      /* Desktop: show "All Releases", hide mobile text, show subtitle */
-      .releases-title-desktop { display: inline; }
-      .releases-title-mobile { display: none; }
-      .releases-subtitle { display: block; color: rgba(255, 255, 255, 0.4); font-size: 0.9rem; margin: 0 0 0.25rem 0; font-weight: 400; letter-spacing: 0.05em; }
-      .releases-count-desktop { display: inline; }
-      .releases-count-mobile { display: none; }
+      /* Desktop: show full subtitle, hide short one */
+      .releases-subtitle-desktop { display: block; color: rgba(255, 255, 255, 0.4); font-size: 0.9rem; margin: 0 0 0.25rem 0; font-weight: 400; letter-spacing: 0.05em; }
+      .releases-subtitle-mobile { display: none; }
     }
 
     @media (min-width: 768px) {
