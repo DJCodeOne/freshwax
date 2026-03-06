@@ -847,24 +847,85 @@
 
   @media (max-width: 600px) {
     .hero-title { font-size: 2.5rem; }
-    
+
     .filters-row {
       gap: 0.75rem;
     }
-    
+
     .filter-item {
       flex: 1 1 100%;
     }
-    
+
     .products-grid {
       grid-template-columns: repeat(2, 1fr);
       gap: 0.75rem;
     }
-    
+
     .product-name { font-size: 1.1rem; }
-    
+
     .modal-info h2 { font-size: 1.5rem; }
     .current-price { font-size: 1.5rem; }
+  }
+
+  /* Mobile modal: ensure Add to Cart is always visible */
+  @media (max-width: 900px) {
+    .modal-overlay {
+      align-items: flex-end;
+      padding: 0;
+    }
+
+    .modal-box {
+      max-height: 95vh;
+      max-height: 95dvh;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .modal-image img {
+      aspect-ratio: 4/3;
+      max-height: 240px;
+      width: 100%;
+      object-fit: cover;
+    }
+
+    .modal-info {
+      padding: 1rem 1.25rem;
+      padding-bottom: 0;
+    }
+
+    .modal-desc {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .modal-price {
+      margin-bottom: 0.75rem;
+    }
+
+    .option-section {
+      margin-bottom: 0.75rem;
+    }
+
+    .stock-info {
+      margin-bottom: 0.75rem;
+    }
+
+    .add-to-cart-btn {
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+      border-radius: 0;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .view-details-link {
+      padding: 0.75rem 0;
+      margin-top: 0;
+    }
   }
 
 /* Gift Card Button in Filters Bar */
