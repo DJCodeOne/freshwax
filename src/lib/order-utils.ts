@@ -165,7 +165,19 @@ export async function reserveStock(
           }
 
           const variantStock = product.variantStock || {};
-          const variant = variantStock[res.variantKey];
+          let resolvedKey = res.variantKey;
+          if (!variantStock[resolvedKey]) {
+            // Fallback: try matching by single variant or size prefix
+            const keys = Object.keys(variantStock);
+            if (keys.length === 1) {
+              resolvedKey = keys[0];
+            } else {
+              const sizePrefix = resolvedKey.split('_')[0] + '_';
+              const sizeMatch = keys.find(k => k.startsWith(sizePrefix));
+              if (sizeMatch) resolvedKey = sizeMatch;
+            }
+          }
+          const variant = variantStock[resolvedKey];
           if (!variant) {
             await rollbackReservations(reservedSoFar);
             return { success: false, error: `Variant not found: ${res.variantKey}` };
@@ -174,11 +186,11 @@ export async function reserveStock(
           const available = (variant.stock || 0) - (variant.reserved || 0);
           if (available < res.quantity) {
             await rollbackReservations(reservedSoFar);
-            return { success: false, error: `Insufficient stock for ${res.variantKey}. Available: ${available}` };
+            return { success: false, error: `Insufficient stock for ${resolvedKey}. Available: ${available}` };
           }
 
           variant.reserved = (variant.reserved || 0) + res.quantity;
-          variantStock[res.variantKey] = variant;
+          variantStock[resolvedKey] = variant;
 
           let totalReserved = 0;
           Object.values(variantStock).forEach((v: unknown) => {
@@ -697,7 +709,16 @@ export async function validateStock(items: CartItem[]): Promise<{ available: boo
         if (item.size || item.color) {
           const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
           const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
-          const variantKey = size + '_' + color;
+          let variantKey = size + '_' + color;
+          if (!product.variantStock?.[variantKey]) {
+            const keys = Object.keys(product.variantStock || {});
+            if (keys.length === 1) {
+              variantKey = keys[0];
+            } else {
+              const sizeMatch = keys.find(k => k.startsWith(size + '_'));
+              if (sizeMatch) variantKey = sizeMatch;
+            }
+          }
           const variant = product.variantStock?.[variantKey];
           const variantStockAvailable = (variant?.stock ?? product.stock ?? 0) - (variant?.reserved ?? 0);
           if (variantStockAvailable < quantity) {
