@@ -250,7 +250,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artwork: item.artwork,
       artist: item.artist,
       artistId: item.artistId, // For Stripe Connect payouts
-      title: item.title
+      title: item.title,
+      brandAccountId: item.brandAccountId,
+      brandName: item.brandName
     }));
     const itemsJson = JSON.stringify(compressedItems);
 

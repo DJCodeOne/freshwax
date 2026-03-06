@@ -1,0 +1,340 @@
+---
+// src/pages/admin/merch/royalties.astro
+// Admin royalty ledger — view and manage brand royalties
+import { requireAdminAuth } from '../../../lib/admin';
+
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
+
+export const prerender = false;
+const csrfToken = Astro.locals.csrfToken || '';
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+---
+
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content={csrfToken} />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Royalty Ledger - Fresh Wax Admin</title>
+  <style is:global>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #000; }
+
+    .header { background: #000; color: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 20px; font-weight: 900; text-transform: uppercase; }
+    .header h1 span { color: #dc2626; }
+    .header-nav { display: flex; gap: 15px; }
+    .header-nav a { color: #fff; text-decoration: none; padding: 8px 16px; border: 2px solid #fff; font-weight: 700; font-size: 12px; text-transform: uppercase; }
+    .header-nav a:hover { background: #fff; color: #000; }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: #fff; border: 3px solid #000; padding: 20px; text-align: center; }
+    .stat-card h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #666; margin-bottom: 8px; }
+    .stat-card .stat-value { font-size: 28px; font-weight: 900; }
+    .stat-card .stat-value.pending { color: #f59e0b; }
+    .stat-card .stat-value.paid { color: #16a34a; }
+
+    .filters { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+    .filters select, .filters input { padding: 10px 14px; border: 2px solid #000; font-size: 14px; font-family: inherit; }
+    .filters select:focus-visible, .filters input:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+
+    .btn { padding: 10px 20px; border: 2px solid #000; background: #000; color: #fff; font-weight: 700; font-size: 13px; text-transform: uppercase; cursor: pointer; text-decoration: none; display: inline-block; }
+    .btn:hover { background: #333; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-danger { background: #dc2626; border-color: #dc2626; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-success { background: #16a34a; border-color: #16a34a; }
+    .btn-success:hover { background: #15803d; }
+    .btn-sm { padding: 6px 12px; font-size: 11px; }
+
+    .table-card { background: #fff; border: 3px solid #000; overflow-x: auto; }
+    .table-card h2 { font-size: 16px; font-weight: 900; text-transform: uppercase; padding: 20px 25px 15px; border-bottom: 2px solid #000; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #f9fafb; padding: 12px 15px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; font-weight: 700; border-bottom: 2px solid #eee; white-space: nowrap; }
+    td { padding: 12px 15px; border-bottom: 1px solid #eee; }
+    tr:hover td { background: #f9fafb; }
+
+    .badge { display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; border-radius: 3px; }
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-paid { background: #dcfce7; color: #166534; }
+
+    .check-col { width: 40px; text-align: center; }
+    .check-col input { width: 16px; height: 16px; cursor: pointer; }
+
+    .toolbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; border-bottom: 1px solid #eee; }
+
+    .empty-state { padding: 60px 20px; text-align: center; color: #999; }
+    .empty-state p { font-size: 16px; margin-bottom: 8px; }
+
+    .loading { padding: 40px; text-align: center; color: #666; }
+
+    .summary-row { background: #f0fdf4; font-weight: 700; }
+    .summary-row td { border-top: 2px solid #000; }
+  </style>
+</head>
+<body>
+  <script is:inline src="/csrf-protect.js"></script>
+  <header class="header">
+    <h1>Fresh <span>Wax</span> Royalty Ledger</h1>
+    <nav class="header-nav">
+      <a href="/admin/merch/suppliers/">Suppliers</a>
+      <a href="/admin/merch/manage/">Products</a>
+      <a href="/admin/">Dashboard</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="stats-row">
+      <div class="stat-card">
+        <h3>Total Pending</h3>
+        <div class="stat-value pending" id="statPending">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>Total Paid</h3>
+        <div class="stat-value paid" id="statPaid">-</div>
+      </div>
+      <div class="stat-card">
+        <h3>Entries</h3>
+        <div class="stat-value" id="statCount">-</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <select id="filterBrand" aria-label="Filter by brand">
+        <option value="">All Brands</option>
+      </select>
+      <select id="filterStatus" aria-label="Filter by status">
+        <option value="">All Status</option>
+        <option value="pending">Pending</option>
+        <option value="paid">Paid</option>
+      </select>
+      <button class="btn" id="btnRefresh" type="button">Refresh</button>
+      <button class="btn btn-success" id="btnMarkPaid" type="button" disabled>Mark Selected as Paid</button>
+    </div>
+
+    <div class="table-card">
+      <h2>Royalty Entries</h2>
+      <div id="tableContainer">
+        <div class="loading">Loading ledger...</div>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function() {
+      var entries = [];
+      var selectedIds = [];
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function formatPrice(amount) {
+        return '\u00A3' + (Number(amount) || 0).toFixed(2);
+      }
+
+      function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        var d = new Date(dateStr);
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+
+      async function loadLedger() {
+        var container = document.getElementById('tableContainer');
+        container.innerHTML = '<div class="loading">Loading ledger...</div>';
+
+        try {
+          var params = new URLSearchParams();
+          var brand = document.getElementById('filterBrand').value;
+          var status = document.getElementById('filterStatus').value;
+          if (brand) params.set('brand', brand);
+          if (status) params.set('status', status);
+
+          var headers = {};
+          if (window.ADMIN_KEY) headers['X-Admin-Key'] = window.ADMIN_KEY;
+
+          var response = await fetch('/api/admin/royalty-ledger/?' + params.toString(), { headers: headers });
+          if (!response.ok) throw new Error('Failed to load');
+          var data = await response.json();
+
+          entries = data.entries || [];
+          var totalPending = data.totalPending || 0;
+          var totalPaid = data.totalPaid || 0;
+
+          document.getElementById('statPending').textContent = formatPrice(totalPending);
+          document.getElementById('statPaid').textContent = formatPrice(totalPaid);
+          document.getElementById('statCount').textContent = String(entries.length);
+
+          // Populate brand filter (unique brands)
+          var brands = {};
+          for (var i = 0; i < entries.length; i++) {
+            var bn = entries[i].brand_name;
+            if (bn) brands[bn] = true;
+          }
+          var brandSelect = document.getElementById('filterBrand');
+          var currentBrand = brandSelect.value;
+          brandSelect.innerHTML = '<option value="">All Brands</option>';
+          var brandNames = Object.keys(brands).sort();
+          for (var j = 0; j < brandNames.length; j++) {
+            var opt = document.createElement('option');
+            opt.value = brandNames[j];
+            opt.textContent = brandNames[j];
+            if (brandNames[j] === currentBrand) opt.selected = true;
+            brandSelect.appendChild(opt);
+          }
+
+          renderTable();
+        } catch (err) {
+          container.innerHTML = '<div class="empty-state"><p>Failed to load ledger</p><p>' + escapeHtml(err.message) + '</p></div>';
+        }
+      }
+
+      function renderTable() {
+        var container = document.getElementById('tableContainer');
+
+        if (entries.length === 0) {
+          container.innerHTML = '<div class="empty-state"><p>No royalty entries found</p><p>Entries will appear here when branded merch is sold</p></div>';
+          return;
+        }
+
+        // Group by brand for summary
+        var brandTotals = {};
+        for (var i = 0; i < entries.length; i++) {
+          var e = entries[i];
+          var bn = e.brand_name || 'Unknown';
+          if (!brandTotals[bn]) brandTotals[bn] = { pending: 0, paid: 0 };
+          if (e.status === 'pending') brandTotals[bn].pending += (e.royalty_amount || 0);
+          else brandTotals[bn].paid += (e.royalty_amount || 0);
+        }
+
+        var html = '<table><thead><tr>' +
+          '<th class="check-col"><input type="checkbox" id="selectAll" aria-label="Select all" /></th>' +
+          '<th>Date</th>' +
+          '<th>Order</th>' +
+          '<th>Brand</th>' +
+          '<th>Item</th>' +
+          '<th>Qty</th>' +
+          '<th>Sale Total</th>' +
+          '<th>Royalty (10%)</th>' +
+          '<th>FW Share</th>' +
+          '<th>Status</th>' +
+          '</tr></thead><tbody>';
+
+        for (var i = 0; i < entries.length; i++) {
+          var e = entries[i];
+          var isPending = e.status === 'pending';
+          html += '<tr>' +
+            '<td class="check-col">' + (isPending ? '<input type="checkbox" class="row-check" data-id="' + escapeHtml(e.id) + '" aria-label="Select entry" />' : '') + '</td>' +
+            '<td>' + formatDate(e.created_at) + '</td>' +
+            '<td style="font-family: monospace; font-size: 12px;">' + escapeHtml(e.order_id ? e.order_id.substring(0, 12) + '...' : '-') + '</td>' +
+            '<td><strong>' + escapeHtml(e.brand_name) + '</strong></td>' +
+            '<td>' + escapeHtml(e.item_name) + '</td>' +
+            '<td style="text-align: center;">' + (e.quantity || 1) + '</td>' +
+            '<td>' + formatPrice(e.sale_total) + '</td>' +
+            '<td style="color: #16a34a; font-weight: 700;">' + formatPrice(e.royalty_amount) + '</td>' +
+            '<td>' + formatPrice(e.freshwax_amount) + '</td>' +
+            '<td><span class="badge ' + (isPending ? 'badge-pending' : 'badge-paid') + '">' + escapeHtml(e.status) + '</span>' +
+            (e.paid_at ? '<br><small style="color:#666;">' + formatDate(e.paid_at) + '</small>' : '') + '</td>' +
+            '</tr>';
+        }
+
+        // Summary rows per brand
+        var brandKeys = Object.keys(brandTotals).sort();
+        for (var k = 0; k < brandKeys.length; k++) {
+          var bt = brandTotals[brandKeys[k]];
+          if (bt.pending > 0) {
+            html += '<tr class="summary-row">' +
+              '<td></td><td colspan="6" style="text-align: right;">' + escapeHtml(brandKeys[k]) + ' — Pending:</td>' +
+              '<td style="color: #f59e0b; font-weight: 900;">' + formatPrice(bt.pending) + '</td>' +
+              '<td colspan="2"></td></tr>';
+          }
+        }
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+        // Wire up checkboxes
+        var selectAll = document.getElementById('selectAll');
+        if (selectAll) {
+          selectAll.addEventListener('change', function() {
+            var checks = container.querySelectorAll('.row-check');
+            for (var c = 0; c < checks.length; c++) {
+              checks[c].checked = selectAll.checked;
+            }
+            updateSelectedCount();
+          });
+        }
+
+        var checks = container.querySelectorAll('.row-check');
+        for (var c = 0; c < checks.length; c++) {
+          checks[c].addEventListener('change', updateSelectedCount);
+        }
+      }
+
+      function updateSelectedCount() {
+        var checks = document.querySelectorAll('.row-check:checked');
+        selectedIds = [];
+        for (var i = 0; i < checks.length; i++) {
+          selectedIds.push(checks[i].getAttribute('data-id'));
+        }
+        var btn = document.getElementById('btnMarkPaid');
+        btn.disabled = selectedIds.length === 0;
+        btn.textContent = selectedIds.length > 0
+          ? 'Mark ' + selectedIds.length + ' as Paid'
+          : 'Mark Selected as Paid';
+      }
+
+      async function markPaid() {
+        if (selectedIds.length === 0) return;
+        if (!confirm('Mark ' + selectedIds.length + ' entries as paid?')) return;
+
+        var btn = document.getElementById('btnMarkPaid');
+        btn.disabled = true;
+        btn.textContent = 'Processing...';
+
+        try {
+          var headers = { 'Content-Type': 'application/json' };
+          if (window.ADMIN_KEY) headers['X-Admin-Key'] = window.ADMIN_KEY;
+
+          var response = await fetch('/api/admin/mark-royalties-paid/', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ ids: selectedIds })
+          });
+
+          if (!response.ok) throw new Error('Failed to update');
+          var data = await response.json();
+
+          alert('Marked ' + (data.updated || selectedIds.length) + ' entries as paid');
+          selectedIds = [];
+          loadLedger();
+        } catch (err) {
+          alert('Error: ' + err.message);
+          btn.disabled = false;
+          btn.textContent = 'Mark Selected as Paid';
+        }
+      }
+
+      // Init
+      (async function() {
+        if (window.getAdminToken) {
+          try { await window.getAdminToken(); } catch (e) { return; }
+        }
+        loadLedger();
+      })();
+
+      document.getElementById('btnRefresh').addEventListener('click', loadLedger);
+      document.getElementById('btnMarkPaid').addEventListener('click', markPaid);
+      document.getElementById('filterBrand').addEventListener('change', loadLedger);
+      document.getElementById('filterStatus').addEventListener('change', loadLedger);
+    })();
+  </script>
+</body>
+</html>

@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, queryCollection, clearAllMerchCache, clearCache } from '../../lib/firebase-rest';
+import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import { saUpdateDocument, saSetDocument, getServiceAccountKeyWithProject } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
@@ -258,6 +259,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Clear merch caches so stock changes reflect immediately
     clearAllMerchCache();
+    await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => { /* KV cache invalidation — non-critical */ });
 
     return successResponse({ operation: operation,
       productId: productId,

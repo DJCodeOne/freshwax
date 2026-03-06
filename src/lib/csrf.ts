@@ -53,6 +53,8 @@ const CSRF_SKIP = new Set([
   // Admin endpoints — authenticated via X-Admin-Key / requireAdminAuth
   '/api/admin/backfill-followers/',
   '/api/admin/scan-tracklists/',
+  '/api/admin/mark-royalties-paid/',
+  '/api/admin/royalty-ledger/',
   // Cron — authenticated via CRON_SECRET / requireAdminAuth
   '/api/cron/weekly-digest/',
 ]);

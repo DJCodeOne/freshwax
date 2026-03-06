@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { createS3Client } from '../../lib/s3-client';
 import { getDocument, clearCache, clearAllMerchCache } from '../../lib/firebase-rest';
+import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import { saUpdateDocument, saGetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
@@ -167,6 +168,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Clear all merch caches to ensure fresh data on next page load
       clearAllMerchCache();
+      await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => { /* KV cache invalidation — non-critical */ });
 
       return successResponse({ message: 'Images updated successfully' });
     }
@@ -194,7 +196,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const textFields = [
       'name', 'description', 'sku', 'category', 'categoryName',
-      'supplierId', 'supplierName', 'supplierCode'
+      'brandAccountId', 'supplierId', 'supplierName', 'supplierCode'
     ];
 
     textFields.forEach(field => {
@@ -406,6 +408,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Clear all merch caches to ensure fresh data on next page load
     clearAllMerchCache();
+    await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => { /* KV cache invalidation — non-critical */ });
 
     return successResponse({ message: 'Product updated successfully',
       product: updatedProduct });

@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createS3Client } from '../../lib/s3-client';
 import { getDocument, clearAllMerchCache } from '../../lib/firebase-rest';
+import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import { saSetDocument, saUpdateDocument, getServiceAccountKeyWithProject } from '../../lib/firebase-service-account';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
@@ -94,6 +95,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const category = (formData.get('category') as string || 'freshwax').trim();
     const categoryName = (formData.get('categoryName') as string || 'Fresh Wax').trim();
+    const brandAccountId = (formData.get('brandAccountId') as string || '').trim();
 
     const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string || '5');
 
@@ -324,6 +326,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       description: description,
       category: category,
       categoryName: categoryName,
+      brandAccountId: brandAccountId || null,
       costPrice: costPrice,
       retailPrice: retailPrice,
       salePrice: salePrice,
@@ -420,6 +423,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Clear all merch caches to ensure fresh data on next page load
     clearAllMerchCache();
+    await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => { /* KV cache invalidation — non-critical */ });
 
     return successResponse({ message: 'Product uploaded successfully',
       productId: productId,

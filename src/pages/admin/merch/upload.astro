@@ -122,9 +122,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Category Name <span class="required">*</span></label>
-              <input type="text" class="form-input" id="categoryName" placeholder="e.g., Runnin' Records, Amen4Tekno" required maxlength="30" />
-              <div class="form-hint">The label/DJ/crew name</div>
+              <label class="form-label">Brand <span class="required">*</span></label>
+              <select class="form-select" id="categoryName" required>
+                <option value="Fresh Wax">Fresh Wax (no royalty)</option>
+              </select>
+              <input type="hidden" id="brandAccountId" value="" />
+              <div class="form-hint">Brand gets 10% royalty (except Fresh Wax)</div>
             </div>
           </div>
 
@@ -401,6 +404,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   <script>
 
+    // Escape helper for building HTML strings with user data
+    function escapeAttr(str) { return str ? String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+
     // State
     let uploadedImages = [];
     let suppliers = [];
@@ -528,7 +534,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       // Text inputs
       document.getElementById('productName').addEventListener('input', updatePreview);
       document.getElementById('sku').addEventListener('input', updatePreview);
-      document.getElementById('categoryName').addEventListener('input', updatePreview);
+      document.getElementById('categoryName').addEventListener('change', updatePreview);
       document.getElementById('retailPrice').addEventListener('input', updatePreview);
       document.getElementById('salePrice').addEventListener('input', updatePreview);
       document.getElementById('lowStockThreshold').addEventListener('input', updatePreview);
@@ -541,8 +547,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         });
       });
 
-      // Form inputs for preview
-      ['productName', 'category', 'categoryName', 'retailPrice', 'salePrice', 'lowStockThreshold'].forEach(id => {
+      // Form inputs for preview (categoryName is a <select> with its own change listener)
+      ['productName', 'category', 'retailPrice', 'salePrice', 'lowStockThreshold'].forEach(id => {
         document.getElementById(id).addEventListener('input', updatePreview);
       });
 
@@ -1135,6 +1141,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               document.getElementById('supplierCut').value = selected.dataset.cut;
             }
           });
+
+          // Also populate brand dropdown for royalty tracking
+          var brandSelect = document.getElementById('categoryName');
+          if (brandSelect) {
+            brandSelect.innerHTML = '<option value="Fresh Wax" data-brand-id="">Fresh Wax (no royalty)</option>' +
+              suppliers.map(function(s) { return '<option value="' + escapeAttr(s.name) + '" data-brand-id="' + escapeAttr(s.id) + '">' + escapeAttr(s.name) + ' (10% royalty)</option>'; }).join('');
+
+            brandSelect.addEventListener('change', function() {
+              var selected = brandSelect.selectedOptions[0];
+              document.getElementById('brandAccountId').value = selected ? (selected.dataset.brandId || '') : '';
+              updatePreview();
+            });
+          }
         }
       } catch (e) {
         console.error('Failed to load suppliers:', e);
@@ -1187,6 +1206,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         formData.append('description', document.getElementById('description').value.trim());
         formData.append('category', document.getElementById('category').value);
         formData.append('categoryName', document.getElementById('categoryName').value.trim());
+        formData.append('brandAccountId', document.getElementById('brandAccountId').value);
         
         // Pricing
         formData.append('costPrice', document.getElementById('costPrice').value || '0');

@@ -1920,8 +1920,7 @@ async function processSupplierPayments(params: {
   stripeSecretKey: string;
   env: Record<string, unknown>;
 }) {
-  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
-  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+  const { orderId, orderNumber, items, env } = params;
 
   try {
     // Filter to only merch items
@@ -1931,118 +1930,59 @@ async function processSupplierPayments(params: {
       return;
     }
 
-    // Group items by supplier
-    const supplierPayments: Record<string, {
-      supplierId: string;
-      supplierName: string;
-      supplierEmail: string;
-      stripeConnectId: string | null;
-      amount: number;
-      items: string[];
-    }> = {};
+    const db = env?.DB;
 
-    // Cache for merch product lookups
-    const merchCache: Record<string, unknown> = {};
-
+    // Process each merch item for royalty tracking
     for (const item of merchItems) {
-      // Get merch product data to find supplier
-      const productId = item.productId || item.merchId || item.id;
-      if (!productId) continue;
+      const brandName = (item.brandName || item.categoryName || 'Fresh Wax') as string;
+      const brandAccountId = (item.brandAccountId || '') as string;
 
-      let product = merchCache[productId];
-      if (!product) {
-        product = await getDocument('merch', productId);
-        if (product) {
-          merchCache[productId] = product;
+      // Fresh Wax branded items = no royalty, FW keeps 100%
+      if (!brandAccountId || brandName === 'Fresh Wax') {
+        continue;
+      }
+
+      const itemPrice = (item.price as number) || 0;
+      const quantity = (item.quantity as number) || 1;
+      const saleTotal = itemPrice * quantity;
+
+      // 10% royalty to brand, 90% to FreshWax
+      const royaltyAmount = Math.round(saleTotal * 0.10 * 100) / 100;
+      const freshwaxAmount = Math.round((saleTotal - royaltyAmount) * 100) / 100;
+
+      const entryId = `roy_${orderId}_${(item.productId || item.id || Date.now())}_${Math.random().toString(36).substr(2, 6)}`;
+
+      // Record to D1 royalty ledger
+      if (db) {
+        try {
+          const { d1RecordRoyalty } = await import('../../../lib/d1-catalog');
+          await d1RecordRoyalty(db, {
+            id: entryId,
+            orderId,
+            brandAccountId,
+            brandName,
+            itemId: (item.productId || item.id || '') as string,
+            itemName: (item.name || item.title || 'Item') as string,
+            quantity,
+            saleTotal,
+            royaltyPct: 10,
+            royaltyAmount,
+            freshwaxAmount
+          });
+          log.info('[Stripe Webhook] Royalty recorded:', brandName, formatPrice(royaltyAmount));
+        } catch (d1Err: unknown) {
+          log.error('[Stripe Webhook] D1 royalty record failed:', d1Err);
         }
       }
 
-      if (!product) {
-        // Merch product not found
-        continue;
-      }
-
-      // Get supplier ID from product
-      const supplierId = product.supplierId;
-      if (!supplierId) {
-        // No supplier ID on merch product
-        continue;
-      }
-
-      // Look up supplier for Connect details
-      let supplier = null;
+      // Update brand's pending balance in Firebase
       try {
-        supplier = await getDocument('merch-suppliers', supplierId);
-      } catch (e: unknown) {
-        // Supplier not found
+        await atomicIncrement('merch-suppliers', brandAccountId, {
+          pendingBalance: royaltyAmount,
+        });
+      } catch (fbErr: unknown) {
+        log.error('[Stripe Webhook] Failed to update brand pending balance:', fbErr);
       }
-
-      if (!supplier) continue;
-
-      // Calculate supplier share (same structure as releases/vinyl, but 5% Fresh Wax fee)
-      const itemPrice = item.price || 0;
-      const itemTotal = itemPrice * (item.quantity || 1);
-      const freshWaxFee = itemTotal * 0.05; // 5% for merch
-      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
-      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
-      const processingFeePerSeller = totalProcessingFee / totalItemCount;
-      const supplierShare = itemTotal - freshWaxFee - processingFeePerSeller;
-
-      // Group by supplier
-      if (!supplierPayments[supplierId]) {
-        supplierPayments[supplierId] = {
-          supplierId,
-          supplierName: supplier.name || 'Unknown Supplier',
-          supplierEmail: supplier.email || '',
-          stripeConnectId: supplier.stripeConnectId || null,
-          paypalEmail: supplier.paypalEmail || null,
-          payoutMethod: supplier.payoutMethod || null,
-          amount: 0,
-          items: []
-        };
-      }
-
-      supplierPayments[supplierId].amount += supplierShare;
-      supplierPayments[supplierId].items.push(item.name || item.title || 'Item');
-    }
-
-    // Process each supplier payment
-    const supplierPaypalConfig = getPayPalConfig(env);
-
-    for (const supplierId of Object.keys(supplierPayments)) {
-      const payment = supplierPayments[supplierId];
-
-      if (payment.amount <= 0) continue;
-
-      // Process supplier payment
-
-      // NOTE: Automatic payouts disabled - all supplier payouts are manual for now
-      // Always create pending payout for manual processing
-      // Create pending payout for supplier
-
-      await addDocument('pendingSupplierPayouts', {
-        supplierId: payment.supplierId,
-        supplierName: payment.supplierName,
-        supplierEmail: payment.supplierEmail,
-        paypalEmail: payment.paypalEmail,
-        stripeConnectId: payment.stripeConnectId,
-        payoutMethod: payment.payoutMethod,
-        orderId,
-        orderNumber,
-        amount: payment.amount,
-        currency: 'gbp',
-        status: 'pending',
-        items: payment.items,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-
-      // Update supplier's pending balance atomically
-      await atomicIncrement('merch-suppliers', payment.supplierId, {
-        pendingBalance: payment.amount,
-      });
-
-      // Pending supplier payout created
     }
 
   } catch (error: unknown) {

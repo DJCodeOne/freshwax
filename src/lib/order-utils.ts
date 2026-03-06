@@ -39,6 +39,8 @@ interface CartItem {
   sellerEmail?: string;
   stockistEmail?: string;
   artistEmail?: string;
+  brandAccountId?: string;
+  brandName?: string;
   discountPercent?: number;
   shippingCost?: number;
   cratesShippingCost?: number;
@@ -799,6 +801,9 @@ export async function validateAndGetPrices(
         const product = merchMap.get(item.productId);
         if (product) {
           serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
+          // Carry brand data for royalty tracking
+          item.brandAccountId = product.brandAccountId || '';
+          item.brandName = product.categoryName || 'Fresh Wax';
         }
       } else if (itemType === 'vinyl' || itemType === 'digital' || itemType === 'track' || itemType === 'release') {
         if (itemType === 'vinyl' && item.sellerId && !item.releaseId) {
@@ -2210,11 +2215,9 @@ function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknow
 function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>, merchItems: CartItem[]): string {
   const merchTotal = merchItems.reduce((sum: number, item: CartItem) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
   const subtotal = order.totals?.subtotal || merchTotal;
-  // Calculate fees deducted from supplier share (5% for merch)
-  const freshWaxFee = merchTotal * 0.05; // 5% Fresh Wax fee for merch
-  const processingFee = (merchTotal * 0.014) + (0.20 / Math.max(1, merchItems.length)); // Processing fee split
-  // Supplier net earnings = gross - fees
-  const supplierNetEarnings = merchTotal - freshWaxFee - processingFee;
+  // Brand royalty: 10% of sale total (FreshWax keeps 90%)
+  const brandRoyalty = Math.round(merchTotal * 0.10 * 100) / 100;
+  const freshWaxShare = Math.round((merchTotal - brandRoyalty) * 100) / 100;
   const customerPaid = order.totals?.total || subtotal;
 
   let itemsHtml = '';
@@ -2268,27 +2271,21 @@ function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>
     '</tr>' +
     itemsHtml +
     '<tr style="background: #dc2626;">' +
-    '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Your Earnings</td>' +
-    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">' + formatPrice(supplierNetEarnings) + '</td>' +
+    '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Brand Royalty (10%)</td>' +
+    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">' + formatPrice(brandRoyalty) + '</td>' +
     '</tr></table></td></tr>' +
     shippingHtml +
     '<tr><td style="padding-top: 20px;">' +
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
     '<div style="font-weight: 700; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
-    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">' + formatPrice(supplierNetEarnings) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Brand Royalty (10%):</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">' + formatPrice(brandRoyalty) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Item Price:</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">' + formatPrice(merchTotal) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee:</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">-' + formatPrice(processingFee) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Fee (5%):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">-' + formatPrice(freshWaxFee) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Sale Total:</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">' + formatPrice(merchTotal) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Share (90%):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">' + formatPrice(freshWaxShare) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
     '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table></div></td></tr>' +
-    '<tr><td style="padding-top: 20px;">' +
-    '<div style="padding: 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0;">' +
-    '<div style="font-weight: 700; color: #92400e; margin-bottom: 4px;">⚠️ Action Required</div>' +
-    '<div style="font-size: 14px; color: #78350f; line-height: 1.5;">Please package and dispatch this order. Once shipped, send tracking info to <a href="mailto:orders@freshwax.co.uk" style="color: #92400e;">orders@freshwax.co.uk</a></div>' +
-    '</div></td></tr>' +
     '<tr><td style="padding-top: 16px;">' +
     '<div style="font-size: 12px; color: #9ca3af;">Customer email: <strong style="color: #fff;">' + escapeHtml(order.customer.email) + '</strong></div>' +
     '</td></tr>' +

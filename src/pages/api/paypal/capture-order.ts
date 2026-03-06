@@ -678,280 +678,73 @@ async function processMerchSupplierPayments(params: {
   stripeSecretKey: string;
   env: Record<string, unknown>;
 }) {
-  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
-  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
-
-  const { createPayout, getPayPalConfig } = await import('../../../lib/paypal-payouts');
-  const paypalConfig = getPayPalConfig(env);
+  const { orderId, items, env } = params;
 
   try {
     // Filter to only merch items
     const merchItems = items.filter(item => item.type === 'merch');
 
     if (merchItems.length === 0) {
-      // No merch items - skip supplier payments
       return;
     }
 
-    // Processing merch supplier payments
+    const db = env?.DB;
 
-    // Group items by supplier
-    const supplierPayments: Record<string, {
-      supplierId: string;
-      supplierName: string;
-      supplierEmail: string;
-      stripeConnectId: string | null;
-      paypalEmail: string | null;
-      payoutMethod: string | null;
-      amount: number;
-      items: string[];
-    }> = {};
-
-    // Cache for merch product lookups
-    const merchCache: Record<string, unknown> = {};
-
+    // Process each merch item for royalty tracking
     for (const item of merchItems) {
-      // Get merch product data to find supplier
-      const productId = item.productId || item.merchId || item.id;
-      if (!productId) continue;
+      const brandName = (item.brandName || item.categoryName || 'Fresh Wax') as string;
+      const brandAccountId = (item.brandAccountId || '') as string;
 
-      let product = merchCache[productId];
-      if (!product) {
-        product = await getDocument('merch', productId);
-        if (product) {
-          merchCache[productId] = product;
+      // Fresh Wax branded items = no royalty, FW keeps 100%
+      if (!brandAccountId || brandName === 'Fresh Wax') {
+        continue;
+      }
+
+      const itemPrice = (item.price as number) || 0;
+      const quantity = (item.quantity as number) || 1;
+      const saleTotal = itemPrice * quantity;
+
+      // 10% royalty to brand, 90% to FreshWax
+      const royaltyAmount = Math.round(saleTotal * 0.10 * 100) / 100;
+      const freshwaxAmount = Math.round((saleTotal - royaltyAmount) * 100) / 100;
+
+      const entryId = `roy_${orderId}_${(item.productId || item.id || Date.now())}_${Math.random().toString(36).substr(2, 6)}`;
+
+      // Record to D1 royalty ledger
+      if (db) {
+        try {
+          const { d1RecordRoyalty } = await import('../../../lib/d1-catalog');
+          await d1RecordRoyalty(db, {
+            id: entryId,
+            orderId,
+            brandAccountId,
+            brandName,
+            itemId: (item.productId || item.id || '') as string,
+            itemName: (item.name || item.title || 'Item') as string,
+            quantity,
+            saleTotal,
+            royaltyPct: 10,
+            royaltyAmount,
+            freshwaxAmount
+          });
+          log.info('[PayPal] Royalty recorded:', brandName, royaltyAmount);
+        } catch (d1Err: unknown) {
+          log.error('[PayPal] D1 royalty record failed:', d1Err);
         }
       }
 
-      if (!product) {
-        log.warn('[PayPal] Merch product not found:', productId);
-        continue;
-      }
-
-      // Get supplier ID from product
-      const supplierId = product.supplierId;
-      if (!supplierId) {
-        // No supplier ID on merch product - keeping revenue
-        continue;
-      }
-
-      // Look up supplier for payout details
-      let supplier = null;
+      // Update brand's pending balance in Firebase
       try {
-        supplier = await getDocument('merch-suppliers', supplierId);
-      } catch (e: unknown) {
-        // Supplier not found
-      }
-
-      if (!supplier) continue;
-
-      // Calculate supplier share (same structure as releases/vinyl, but 5% Fresh Wax fee)
-      const itemPrice = item.price || 0;
-      const itemTotal = itemPrice * (item.quantity || 1);
-      const freshWaxFee = itemTotal * 0.05; // 5% for merch
-      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
-      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
-      const processingFeePerSeller = totalProcessingFee / totalItemCount;
-      const supplierShare = itemTotal - freshWaxFee - processingFeePerSeller;
-
-      // Group by supplier
-      if (!supplierPayments[supplierId]) {
-        supplierPayments[supplierId] = {
-          supplierId,
-          supplierName: supplier.name || 'Unknown Supplier',
-          supplierEmail: supplier.email || '',
-          stripeConnectId: supplier.stripeConnectId || null,
-          paypalEmail: supplier.paypalEmail || null,
-          payoutMethod: supplier.payoutMethod || null,
-          amount: 0,
-          items: []
-        };
-      }
-
-      supplierPayments[supplierId].amount += supplierShare;
-      supplierPayments[supplierId].items.push(item.name || item.title || 'Item');
-    }
-
-    // Processing supplier payments
-
-    // Process each supplier payment
-    for (const supplierId of Object.keys(supplierPayments)) {
-      const payment = supplierPayments[supplierId];
-
-      if (payment.amount <= 0) continue;
-
-      // Processing supplier payment
-
-      // Check preferred payout method
-      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && paypalConfig;
-      const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
-
-      if (usePayPal) {
-        // PayPal payout for supplier - deduct 2% payout fee
-        const paypalPayoutFee = payment.amount * 0.02;
-        const paypalAmount = payment.amount - paypalPayoutFee;
-
-        // Paying supplier via PayPal
-
-        try {
-          const paypalResult = await createPayout(paypalConfig!, {
-            email: payment.paypalEmail!,
-            amount: paypalAmount,
-            currency: 'GBP',
-            note: `Fresh Wax supplier payout for order #${orderNumber}`,
-            reference: `${orderId}-supplier-${payment.supplierId}`
-          });
-
-          if (paypalResult.success) {
-            await addDocument('supplierPayouts', {
-              supplierId: payment.supplierId,
-              supplierName: payment.supplierName,
-              supplierEmail: payment.supplierEmail,
-              paypalEmail: payment.paypalEmail,
-              paypalBatchId: paypalResult.batchId,
-              payoutMethod: 'paypal',
-              customerPaymentMethod: 'paypal',
-              orderId,
-              orderNumber,
-              amount: paypalAmount,
-              paypalPayoutFee: paypalPayoutFee,
-              currency: 'gbp',
-              status: 'completed',
-              items: payment.items,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              completedAt: new Date().toISOString()
-            });
-
-            // Atomically update supplier earnings to prevent race conditions
-            await atomicIncrement('merch-suppliers', payment.supplierId, {
-              totalEarnings: paypalAmount,
-            });
-            await updateDocument('merch-suppliers', payment.supplierId, {
-              lastPayoutAt: new Date().toISOString()
-            });
-
-            // Supplier PayPal payout created
-          } else {
-            throw new Error(paypalResult.error || 'PayPal payout failed');
-          }
-
-        } catch (paypalError: unknown) {
-          const paypalMessage = paypalError instanceof Error ? paypalError.message : String(paypalError);
-          log.error('[PayPal] Supplier PayPal payout failed:', paypalMessage);
-
-          await addDocument('pendingSupplierPayouts', {
-            supplierId: payment.supplierId,
-            supplierName: payment.supplierName,
-            supplierEmail: payment.supplierEmail,
-            paypalEmail: payment.paypalEmail,
-            payoutMethod: 'paypal',
-            customerPaymentMethod: 'paypal',
-            orderId,
-            orderNumber,
-            amount: paypalAmount,
-            paypalPayoutFee: paypalPayoutFee,
-            currency: 'gbp',
-            status: 'retry_pending',
-            items: payment.items,
-            failureReason: paypalMessage,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-
-      } else if (useStripe) {
-        // Stripe transfer for supplier
-        try {
-          const transfer = await stripe.transfers.create({
-            amount: Math.round(payment.amount * 100),
-            currency: 'gbp',
-            destination: payment.stripeConnectId!,
-            transfer_group: orderId,
-            metadata: {
-              orderId,
-              orderNumber,
-              supplierId: payment.supplierId,
-              supplierName: payment.supplierName,
-              type: 'merch_supplier',
-              platform: 'freshwax',
-              customerPaymentMethod: 'paypal'
-            }
-          });
-
-          await addDocument('supplierPayouts', {
-            supplierId: payment.supplierId,
-            supplierName: payment.supplierName,
-            supplierEmail: payment.supplierEmail,
-            stripeConnectId: payment.stripeConnectId,
-            stripeTransferId: transfer.id,
-            payoutMethod: 'stripe',
-            customerPaymentMethod: 'paypal',
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'completed',
-            items: payment.items,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            completedAt: new Date().toISOString()
-          });
-
-          // Atomically update supplier earnings to prevent race conditions
-          await atomicIncrement('merch-suppliers', payment.supplierId, {
-            totalEarnings: payment.amount,
-          });
-          await updateDocument('merch-suppliers', payment.supplierId, {
-            lastPayoutAt: new Date().toISOString()
-          });
-
-          // Supplier Stripe transfer created
-
-        } catch (transferError: unknown) {
-          const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
-          log.error('[PayPal] Supplier transfer failed:', transferMessage);
-
-          await addDocument('pendingSupplierPayouts', {
-            supplierId: payment.supplierId,
-            supplierName: payment.supplierName,
-            supplierEmail: payment.supplierEmail,
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'retry_pending',
-            items: payment.items,
-            failureReason: transferMessage,
-            customerPaymentMethod: 'paypal',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-      } else {
-        // Supplier not connected - store as pending
-        // Supplier not connected - storing pending
-
-        await addDocument('pendingSupplierPayouts', {
-          supplierId: payment.supplierId,
-          supplierName: payment.supplierName,
-          supplierEmail: payment.supplierEmail,
-          orderId,
-          orderNumber,
-          amount: payment.amount,
-          currency: 'gbp',
-          status: 'awaiting_connect',
-          items: payment.items,
-          notificationSent: false,
-          customerPaymentMethod: 'paypal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+        await atomicIncrement('merch-suppliers', brandAccountId, {
+          pendingBalance: royaltyAmount,
         });
+      } catch (fbErr: unknown) {
+        log.error('[PayPal] Failed to update brand pending balance:', fbErr);
       }
     }
   } catch (error: unknown) {
     log.error('[PayPal] processMerchSupplierPayments error:', error);
-    throw error;
+    // Don't throw - order was created, royalties can be retried
   }
 }
 
