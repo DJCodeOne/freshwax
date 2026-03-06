@@ -34,7 +34,7 @@ const { nonce = '' } = Astro.props;
     </div>
     
     <div class="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-3">
-      <div class="flex items-center gap-2 sm:gap-4">
+      <div class="flex items-center gap-1 sm:gap-4">
         
         <!-- LEFT: Spectrum Analyser -->
         <div id="spectrum-left" class="hidden lg:flex items-end gap-[2px] h-8 flex-shrink-0">
@@ -48,10 +48,10 @@ const { nonce = '' } = Astro.props;
           <div class="spectrum-bar" style="--bar-index: 7;"></div>
         </div>
         
-        <!-- Artwork + Track Info - FIXED WIDTH -->
-        <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 w-[120px] sm:w-[280px]">
-          <!-- Artwork -->
-          <a id="mini-artwork-link" href="javascript:void(0)" class="flex-shrink-0 relative group" role="link" aria-label="View release details">
+        <!-- Artwork + Track Info -->
+        <div class="flex items-center gap-2 sm:gap-3 flex-shrink min-w-0 sm:flex-shrink-0 sm:w-[280px]">
+          <!-- Artwork (hidden on mobile to save space) -->
+          <a id="mini-artwork-link" href="javascript:void(0)" class="hidden sm:block flex-shrink-0 relative group" role="link" aria-label="View release details">
             <div class="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
             <img
               id="mini-artwork"
@@ -75,7 +75,7 @@ const { nonce = '' } = Astro.props;
         </div>
         
         <!-- CENTER: Controls - Fixed positioning -->
-        <div class="flex items-center justify-center gap-2 sm:gap-3 flex-1">
+        <div class="flex items-center justify-center gap-1 sm:gap-3 flex-1">
           <!-- Shuffle Button (hidden on mobile - floating button handles it) -->
           <button id="mini-shuffle-btn" class="mini-shuffle-btn hidden sm:flex min-w-[44px] min-h-[44px] p-2.5 text-gray-300 hover:text-white transition-all hover:scale-110 active:scale-95 rounded-full flex-shrink-0" title="Shuffle Play" aria-label="Shuffle play">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -142,9 +142,9 @@ const { nonce = '' } = Astro.props;
           </div>
           
           <!-- Close button -->
-          <button id="mini-close" class="min-w-[44px] min-h-[44px] p-2.5 text-gray-300 hover:text-white transition-colors flex items-center justify-center" title="Close player" aria-label="Close player">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          <button id="mini-close" class="min-w-[36px] min-h-[36px] sm:min-w-[44px] sm:min-h-[44px] p-1.5 sm:p-2.5 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors flex items-center justify-center" title="Close player" aria-label="Close player">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </div>
