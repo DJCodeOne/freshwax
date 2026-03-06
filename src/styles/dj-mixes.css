@@ -704,7 +704,7 @@
   /* Mix Title - Mobile Base */
   h3.mix-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 3rem;
+    font-size: 2.1rem;
     font-weight: 400;
     color: #dc2626;
     margin: 0 0 0.25rem 0;
@@ -794,7 +794,7 @@
     }
 
     h3.mix-title {
-      font-size: 3rem;
+      font-size: 2.1rem;
     }
 
     .mix-dj {
@@ -1652,7 +1652,7 @@
   }
 
   h3.mix-title {
-    font-size: 3rem;
+    font-size: 2.1rem;
   }
 
   .mix-duration,
