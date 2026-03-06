@@ -180,70 +180,137 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     border: 2px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
   }
-  
+
   #cart-content .empty-cart h2 {
     font-family: 'Inter', sans-serif; font-weight: 700;
     font-size: 2rem;
     color: #dc2626;
     margin: 0 0 0.5rem 0;
   }
-  
+
   #cart-content .empty-cart p {
     color: #d1d5db;
     margin: 0 0 1.5rem 0;
   }
-  
-  /* Mobile cart item adjustments */
+
+  /* Mobile cart item adjustments — structured 2-row layout */
   @media (max-width: 600px) {
+    /* Each cart item: stack into a grid for clean mobile layout */
     #cart-content article {
-      gap: 0.75rem !important;
-      padding: 0.75rem !important;
+      display: grid !important;
+      grid-template-columns: 56px 1fr auto !important;
+      grid-template-rows: auto auto !important;
+      gap: 0.5rem 0.75rem !important;
+      padding: 0.875rem !important;
+      margin-bottom: 0.625rem !important;
+      align-items: start !important;
     }
-    
+
+    /* Image — row 1, col 1, spans both rows */
     #cart-content article > div:first-child {
+      grid-row: 1 / 3 !important;
+      grid-column: 1 !important;
       width: 56px !important;
       height: 56px !important;
+      align-self: center !important;
     }
-    
+
     #cart-content article img {
       width: 56px !important;
       height: 56px !important;
     }
-    
-    #cart-content h3 {
-      font-size: 1rem !important;
+
+    /* Title + badges — row 1, col 2, spans to col 3 */
+    #cart-content article > div:nth-child(2) {
+      grid-row: 1 !important;
+      grid-column: 2 / 4 !important;
+      min-width: 0 !important;
     }
-    
-    /* Stack price and remove on very small screens */
+
+    #cart-content h3 {
+      font-size: 0.9375rem !important;
+      line-height: 1.3 !important;
+      white-space: normal !important;
+      overflow: visible !important;
+      text-overflow: unset !important;
+    }
+
+    /* Quantity controls — row 2, col 2 */
+    #cart-content article > div:nth-child(3) {
+      grid-row: 2 !important;
+      grid-column: 2 !important;
+      align-self: center !important;
+    }
+
+    /* Price — row 2, col 3 */
+    #cart-content article > div:nth-child(4) {
+      grid-row: 2 !important;
+      grid-column: 3 !important;
+      align-self: center !important;
+      text-align: right !important;
+      min-width: unset !important;
+    }
+
+    /* Remove button — absolute top-right corner */
+    #cart-content article > button:last-child {
+      position: absolute !important;
+      top: 0.5rem !important;
+      right: 0.5rem !important;
+      width: 28px !important;
+      height: 28px !important;
+      font-size: 1rem !important;
+      border-radius: 50% !important;
+      z-index: 1 !important;
+    }
+
+    /* Article needs relative positioning for the remove button */
     #cart-content article {
-      flex-wrap: wrap !important;
+      position: relative !important;
+      padding-right: 2.5rem !important;
     }
   }
-  
+
   @media (max-width: 400px) {
     #cart-content article {
-      gap: 0.5rem !important;
-      padding: 0.625rem !important;
+      grid-template-columns: 48px 1fr auto !important;
+      padding: 0.75rem !important;
+      padding-right: 2.25rem !important;
+      gap: 0.375rem 0.625rem !important;
     }
-    
+
     #cart-content article > div:first-child {
       width: 48px !important;
       height: 48px !important;
     }
-    
+
     #cart-content article img {
       width: 48px !important;
       height: 48px !important;
     }
+
+    #cart-content h3 {
+      font-size: 0.875rem !important;
+    }
+
+    /* Slightly smaller quantity buttons */
+    #cart-content article > div:nth-child(3) button {
+      width: 26px !important;
+      height: 26px !important;
+      font-size: 0.875rem !important;
+    }
+
+    #cart-content article > div:nth-child(4) > div:first-child {
+      font-size: 0.9375rem !important;
+    }
   }
-  
+
   /* Touch-friendly cart controls */
   @media (hover: none) and (pointer: coarse) {
-    #cart-content button {
+    #cart-content article > div:nth-child(3) button {
       min-height: 44px !important;
       min-width: 44px !important;
     }
-    
+
     #cart-content a {
       min-height: 48px !important;
     }
