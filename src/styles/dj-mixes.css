@@ -5,17 +5,13 @@
     overflow-x: hidden;
   }
 
-  .bg-image-overlay {
+  .bg-video-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: #000;
-    background-image: url('/shop.webp');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    object-fit: cover;
     opacity: 0;
     z-index: -1;
     pointer-events: none;
@@ -77,10 +73,7 @@
   }
 
   .hero-grid-overlay {
-    position: absolute;
-    inset: 0;
-    background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
-    background-size: 55px 55px;
+    display: none;
   }
 
   .hero-container {
