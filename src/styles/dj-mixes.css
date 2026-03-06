@@ -235,15 +235,14 @@
   }
 
   .mixes-header-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.5), transparent);
+    display: none;
   }
 
   .mixes-header-center {
     text-align: center;
-    flex: 3;
+    flex: 1;
     min-width: 0;
+    width: 100%;
   }
 
   .mixes-title {
@@ -302,6 +301,8 @@
 
   @media (min-width: 640px) {
     .mixes-header { gap: 2rem; padding: 2.5rem 3.5rem; }
+    .mixes-header-line { display: block; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.5), transparent); }
+    .mixes-header-center { flex: 3; }
     .mixes-title { font-size: 3rem; }
     .mixes-subtitle { font-size: 0.9rem; }
   }
