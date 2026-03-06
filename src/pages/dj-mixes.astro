@@ -613,6 +613,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <div id="dlBarFill" class="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-300" style="width:0%"></div>
         </div>
         <p id="dlStatus" class="text-gray-300 text-sm">Starting...</p>
+        <button id="dlCancel" class="mt-3 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-semibold rounded-lg transition-colors duration-150">Cancel</button>
       </div>
     </div>
   </div>
@@ -1218,6 +1219,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     var dlBarWrap = document.getElementById('dlBarWrap');
     var dlBarFill = document.getElementById('dlBarFill');
     var dlStatus = document.getElementById('dlStatus');
+    var dlCancel = document.getElementById('dlCancel');
+    var dlAbortController = null;
 
     function showDlModal(state, title, filename, statusText, pct) {
       if (!dlModal) return;
@@ -1230,6 +1233,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       if (dlError) dlError.style.display = (state === 'error') ? '' : 'none';
       if (dlBarWrap) dlBarWrap.style.display = (pct !== undefined && pct !== null) ? '' : 'none';
       if (dlBarFill && pct !== undefined && pct !== null) dlBarFill.style.width = pct + '%';
+      if (dlCancel) dlCancel.style.display = (state === 'loading') ? '' : 'none';
     }
 
     function hideDlModal() {
@@ -1263,7 +1267,14 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         btn.classList.add('downloading');
         if (btnText) btnText.textContent = 'Downloading...';
 
+        dlAbortController = new AbortController();
         showDlModal('loading', 'Preparing Download', filename, 'Connecting...', null);
+
+        // Cancel button handler
+        var onCancel = function() {
+          if (dlAbortController) dlAbortController.abort();
+        };
+        if (dlCancel) dlCancel.addEventListener('click', onCancel, { once: true });
 
         // Track download
         trackDownload(mixId).then(function(result) {
@@ -1273,7 +1284,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         });
 
         try {
-          var response = await fetch(audioUrl);
+          var response = await fetch(audioUrl, { signal: dlAbortController.signal });
           if (!response.ok) {
             throw new Error('Download failed: ' + response.status);
           }
@@ -1321,6 +1332,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           btn.classList.remove('downloading');
           btn.classList.add('downloaded');
 
+          // Clean up cancel listener
+          if (dlCancel) dlCancel.removeEventListener('click', onCancel);
+
           // Auto-close modal and reset button after 2 seconds
           setTimeout(function() {
             hideDlModal();
@@ -1330,23 +1344,34 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           }, 2000);
 
         } catch (error) {
-          console.error('Download error:', error);
-          showDlModal('error', 'Download Failed', filename, 'Tap to close and retry', null);
-          if (btnText) btnText.textContent = 'Error - Retry';
-          btn.classList.remove('downloading');
+          // Clean up cancel listener
+          if (dlCancel) dlCancel.removeEventListener('click', onCancel);
 
-          // Close modal on click
-          if (dlModal) {
-            dlModal.addEventListener('click', function closeOnClick() {
-              hideDlModal();
-              dlModal.removeEventListener('click', closeOnClick);
-            }, { once: true });
-          }
-
-          setTimeout(function() {
+          if (error && error.name === 'AbortError') {
+            // User cancelled
+            hideDlModal();
             if (btnText) btnText.textContent = 'Download';
             btn.disabled = false;
-          }, 2000);
+            btn.classList.remove('downloading');
+          } else {
+            console.error('Download error:', error);
+            showDlModal('error', 'Download Failed', filename, 'Tap to close and retry', null);
+            if (btnText) btnText.textContent = 'Error - Retry';
+            btn.classList.remove('downloading');
+
+            // Close modal on click
+            if (dlModal) {
+              dlModal.addEventListener('click', function closeOnClick() {
+                hideDlModal();
+                dlModal.removeEventListener('click', closeOnClick);
+              }, { once: true });
+            }
+
+            setTimeout(function() {
+              if (btnText) btnText.textContent = 'Download';
+              btn.disabled = false;
+            }, 2000);
+          }
         }
       };
     });
