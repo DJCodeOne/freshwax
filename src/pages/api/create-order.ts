@@ -631,14 +631,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
             variantKey = size + '_' + color;
 
-            // Check if variant exists, otherwise try default
+            // Check if variant exists, otherwise try fallback matching
             if (!variantStock[variantKey]) {
               const keys = Object.keys(variantStock);
               if (keys.length === 1) {
                 variantKey = keys[0];
-              } else {
+              } else if (keys.length > 1) {
                 const sizeMatch = keys.find(k => k.startsWith(size + '_'));
-                if (sizeMatch) variantKey = sizeMatch;
+                const colorMatch = keys.find(k => k.endsWith('_' + color));
+                variantKey = sizeMatch || colorMatch || keys[0];
               }
             }
 

@@ -167,14 +167,16 @@ export async function reserveStock(
           const variantStock = product.variantStock || {};
           let resolvedKey = res.variantKey;
           if (!variantStock[resolvedKey]) {
-            // Fallback: try matching by single variant or size prefix
             const keys = Object.keys(variantStock);
+            const [sizePart, colorPart] = resolvedKey.split('_');
             if (keys.length === 1) {
+              // Only one variant — use it regardless of key name
               resolvedKey = keys[0];
-            } else {
-              const sizePrefix = resolvedKey.split('_')[0] + '_';
-              const sizeMatch = keys.find(k => k.startsWith(sizePrefix));
-              if (sizeMatch) resolvedKey = sizeMatch;
+            } else if (keys.length > 1) {
+              // Try size prefix match first, then color suffix, then first key
+              const sizeMatch = keys.find(k => k.startsWith(sizePart + '_'));
+              const colorMatch = keys.find(k => k.endsWith('_' + colorPart));
+              resolvedKey = sizeMatch || colorMatch || keys[0];
             }
           }
           const variant = variantStock[resolvedKey];
@@ -714,9 +716,10 @@ export async function validateStock(items: CartItem[]): Promise<{ available: boo
             const keys = Object.keys(product.variantStock || {});
             if (keys.length === 1) {
               variantKey = keys[0];
-            } else {
+            } else if (keys.length > 1) {
               const sizeMatch = keys.find(k => k.startsWith(size + '_'));
-              if (sizeMatch) variantKey = sizeMatch;
+              const colorMatch = keys.find(k => k.endsWith('_' + color));
+              variantKey = sizeMatch || colorMatch || keys[0];
             }
           }
           const variant = product.variantStock?.[variantKey];
