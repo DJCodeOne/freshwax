@@ -654,10 +654,8 @@ h1, h2, h3, h4, h5, h6 {
     flex-direction: column !important;
   }
   
-  /* Mobile typography */
-  h1 { font-size: 1.75rem !important; }
-  h2 { font-size: 1.5rem !important; }
-  h3 { font-size: 1.25rem !important; }
+  /* Mobile typography - removed blanket !important overrides
+     that were breaking page-specific heading sizes (dj-mixes, releases) */
   
   .section-title {
     font-size: 1.5rem !important;
