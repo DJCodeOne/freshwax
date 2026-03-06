@@ -4,8 +4,10 @@
 
 import { requireAdminAuth } from '../../../../lib/admin';
 import AdminLayout from '../../../../layouts/AdminLayout.astro';
-import { getDocument, clearCache, queryCollection } from '../../../../lib/firebase-rest';
+import { getDocument, clearCache, clearAllMerchCache, queryCollection } from '../../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../../lib/firebase-service-account';
+import { kvDelete, CACHE_CONFIG } from '../../../../lib/kv-cache';
+import { d1UpsertMerch } from '../../../../lib/d1-catalog';
 import '../../../../styles/admin/merch/edit.css';
 
 // Server-side admin auth check
@@ -86,8 +88,20 @@ if (Astro.request.method === 'POST') {
     }
 
     await saUpdateDocument(serviceAccountKey, projectId, 'merch', id as string, updateData);
-    // Clear cache so we fetch fresh data
+    // Clear all caches so merch page shows fresh data
     clearCache();
+    clearAllMerchCache();
+    await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => {});
+
+    // Dual-write to D1
+    const db = runtimeEnv?.DB;
+    if (db) {
+      try {
+        const freshDoc = await getDocument('merch', id as string);
+        if (freshDoc) await d1UpsertMerch(db, id as string, freshDoc);
+      } catch (_e) { /* D1 sync non-critical */ }
+    }
+
     successMessage = 'Product updated successfully!';
 
   } catch (error) {
