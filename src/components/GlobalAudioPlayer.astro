@@ -882,8 +882,9 @@ const { nonce = '' } = Astro.props;
         var queue = window.FreshWaxPlayer.shuffledQueue;
         var index = window.FreshWaxPlayer.shuffleIndex;
 
-        // Reset skip guard for this track
+        // Reset skip guard and clear any pending timers from previous track
         _skipInProgress = false;
+        clearTimeout(_shuffleRetryTimer);
 
         if (!queue || queue.length === 0) {
           console.error('[MINI-PLAYER] Empty shuffle queue');
@@ -975,6 +976,7 @@ const { nonce = '' } = Astro.props;
           // Wait for enough data to play before calling play()
           var playWhenReady = function() {
             audio.removeEventListener('canplay', playWhenReady);
+            clearTimeout(_shuffleRetryTimer);
             audio.play().then(function() {
               fadeInShuffleTrack();
             }).catch(function(err) {
