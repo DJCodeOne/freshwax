@@ -339,7 +339,7 @@ const { nonce = '' } = Astro.props;
   }
 
   .mini-btn-desktop {
-    display: none;
+    display: none !important;
   }
 
   @media (min-width: 640px) {
@@ -392,7 +392,15 @@ const { nonce = '' } = Astro.props;
     }
 
     .mini-btn-desktop {
-      display: flex;
+      display: none !important;
+    }
+
+    .mini-btn-desktop.has-mode {
+      display: inline-block !important;
+    }
+
+    .mini-btn-desktop.flex {
+      display: flex !important;
     }
   }
 
@@ -1202,9 +1210,9 @@ const { nonce = '' } = Astro.props;
         if (indicator) {
           if (mode) {
             indicator.textContent = mode;
-            indicator.style.display = 'inline-block';
+            indicator.classList.add('has-mode');
           } else {
-            indicator.style.display = 'none';
+            indicator.classList.remove('has-mode');
           }
         }
       }
