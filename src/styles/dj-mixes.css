@@ -208,15 +208,15 @@
     text-align: center;
     flex-shrink: 1;
     min-width: 0;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 0.75rem 1rem;
-    border-radius: 0.5rem;
+    background: rgba(0, 0, 0, 0.65);
+    padding: 1.25rem 2rem;
+    border-radius: 0.75rem;
   }
 
   @media (min-width: 480px) {
     .mixes-header-center {
       flex-shrink: 0;
-      padding: 1rem 2rem;
+      padding: 1.5rem 3rem;
     }
   }
 
@@ -230,6 +230,18 @@
     margin: 0 0 0.35rem 0;
     line-height: 1;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 0, 0, 0.7);
+  }
+
+  .mixes-subtitle-top {
+    color: rgba(255, 255, 255, 0.85);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin: 0 0 0.35rem 0;
+    line-height: 1;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
   }
 
   .mixes-subtitle {
@@ -689,24 +701,32 @@
 
   /* Stats - Mobile Base */
   .mix-stats {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
   }
 
   .stat {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.9rem;
-    color: #d1d5db;
+    justify-content: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: #e5e7eb;
     font-weight: 600;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .stat-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: #d1d5db;
+    flex-shrink: 0;
   }
 
   /* Mix Card - Tablet (640px+) */
@@ -738,11 +758,12 @@
     }
 
     .mix-stats {
-      gap: 1.1rem;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
     }
 
     .stat {
-      font-size: 0.95rem;
+      font-size: 0.8rem;
     }
   }
 
@@ -800,17 +821,20 @@
     }
 
     .mix-stats {
-      gap: 2.5rem;
+      display: flex;
+      gap: 8px;
     }
 
     .stat {
-      font-size: 1.15rem;
-      gap: 0.5rem;
+      flex: 1;
+      font-size: 0.9rem;
+      gap: 0.4rem;
+      padding: 8px 12px;
     }
 
     .stat-icon {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
     }
   }
 
@@ -818,137 +842,188 @@
      ACTION BUTTONS - MOBILE FIRST
      =========================================== */
 
-  /* Action Buttons - Mobile Base (icons only) */
-  .mix-actions {
-    display: flex;
-    gap: 0.25rem;
-    flex-wrap: nowrap;
+  /* Action Buttons Grid */
+  .mix-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
     width: 100%;
   }
 
-  .action-btn {
+  .mix-action-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.15rem;
-    padding: 0.35rem 0.3rem;
-    border-radius: 0.4rem;
-    font-size: 0.75rem;
+    gap: 3px;
+    padding: 10px 4px;
+    border-radius: 14px;
     font-weight: 700;
     text-transform: uppercase;
-    transition: background 0.2s ease, border-color 0.2s ease;
-    border: 1px solid #4b5563;
-    cursor: pointer;
     text-decoration: none;
-    background: #374151;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
     color: #ffffff;
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
+    font-family: inherit;
+    font-size: inherit;
+    background: rgba(55, 65, 81, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease, border-color 0.2s ease;
   }
 
-  .action-btn:hover {
-    background: #4b5563;
-    border-color: #6b7280;
+  .mix-action-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.35);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
   }
 
-  .action-btn.play-btn-action {
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-    border-color: #16a34a;
+  .mix-action-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
-  .action-btn.play-btn-action:hover {
-    background: linear-gradient(135deg, #15803d 0%, #166534 100%);
-    border-color: #15803d;
+  .mix-action-icon {
+    font-size: 20px;
+    line-height: 1;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
   }
 
-  .action-btn.like-btn:hover {
-    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-    border-color: #dc2626;
+  .mix-action-label {
+    font-size: 9px;
+    line-height: 1;
+    letter-spacing: 0.06em;
+    opacity: 0.9;
   }
 
+  /* Play - green glass with glow */
+  .mix-action-play {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.6), rgba(21, 128, 61, 0.5));
+    border-color: rgba(22, 163, 74, 0.5);
+    box-shadow: 0 0 10px rgba(22, 163, 74, 0.4), 0 0 20px rgba(22, 163, 74, 0.2), 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    animation: play-glow 2s ease-in-out infinite alternate;
+  }
+  .mix-action-play:hover {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.75), rgba(21, 128, 61, 0.65));
+    border-color: rgba(22, 163, 74, 0.7);
+    box-shadow: 0 0 16px rgba(22, 163, 74, 0.6), 0 0 30px rgba(22, 163, 74, 0.3), 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  @keyframes play-glow {
+    from {
+      box-shadow: 0 0 8px rgba(22, 163, 74, 0.35), 0 0 16px rgba(22, 163, 74, 0.15), 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    to {
+      box-shadow: 0 0 14px rgba(22, 163, 74, 0.55), 0 0 28px rgba(22, 163, 74, 0.25), 0 4px 16px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  /* Info - blue glass */
+  .mix-action-info {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.5), rgba(29, 78, 216, 0.4));
+    border-color: rgba(37, 99, 235, 0.4);
+  }
+  .mix-action-info:hover {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.7), rgba(29, 78, 216, 0.6));
+    border-color: rgba(37, 99, 235, 0.6);
+  }
+
+  /* Like - pink glass */
+  .mix-action-like {
+    background: linear-gradient(135deg, rgba(225, 29, 72, 0.5), rgba(190, 18, 60, 0.4));
+    border-color: rgba(225, 29, 72, 0.4);
+  }
+  .mix-action-like:hover {
+    background: linear-gradient(135deg, rgba(225, 29, 72, 0.7), rgba(190, 18, 60, 0.6));
+    border-color: rgba(225, 29, 72, 0.6);
+  }
+
+  /* Share - purple glass */
+  .mix-action-share {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.5), rgba(109, 40, 217, 0.4));
+    border-color: rgba(124, 58, 237, 0.4);
+  }
+  .mix-action-share:hover {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.7), rgba(109, 40, 217, 0.6));
+    border-color: rgba(124, 58, 237, 0.6);
+  }
+
+  /* Download - red glass */
+  .mix-action-download {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.5), rgba(153, 27, 27, 0.4));
+    border-color: rgba(220, 38, 38, 0.4);
+  }
+  .mix-action-download:hover {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.7), rgba(153, 27, 27, 0.6));
+    border-color: rgba(220, 38, 38, 0.6);
+  }
+
+  /* Comment - teal glass */
+  .mix-action-comment {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.5), rgba(15, 118, 110, 0.4));
+    border-color: rgba(13, 148, 136, 0.4);
+  }
+  .mix-action-comment:hover {
+    background: linear-gradient(135deg, rgba(13, 148, 136, 0.7), rgba(15, 118, 110, 0.6));
+    border-color: rgba(13, 148, 136, 0.6);
+  }
+
+  /* Like active state */
   .like-btn[data-liked="true"] .like-icon-btn {
-    fill: #dc2626;
-    stroke: #dc2626;
+    color: #dc2626;
   }
-
   .like-btn[data-liked="true"] .like-text-btn {
     display: none !important;
   }
-
   .like-btn[data-liked="true"] .liked-text-btn {
-    display: inline !important;
+    display: block !important;
   }
-
-  .action-btn.primary {
-    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-    border-color: #dc2626;
-  }
-
-  .action-btn.primary:hover {
-    background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
-    border-color: #b91c1c;
-  }
-
-  /* Mobile: Icons with text */
-  .action-btn .btn-icon {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-  }
-
-  .action-btn .btn-text {
-    display: block;
-    font-size: 0.6rem;
-    line-height: 1.1;
-    text-align: center;
-  }
-
-  /* Action Buttons - Tablet (768px+) - Show text labels */
-  @media (min-width: 768px) {
-    .mix-actions {
-      gap: 0.5rem;
-    }
-
-    .action-btn {
-      flex-direction: row;
-      gap: 0.35rem;
-      padding: 0.45rem 0.6rem;
-      font-size: 0.7rem;
-      white-space: nowrap;
-    }
-
-    .action-btn .btn-text {
-      display: inline;
-      font-size: 0.7rem;
-    }
-  }
-
-  /* Action Buttons - Desktop (1024px+) */
-  @media (min-width: 1024px) {
-    .action-btn {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.75rem;
-    }
-
-    .action-btn .btn-icon {
-      width: 15px;
-      height: 15px;
-    }
-  }
-
-  /* Note: Don't define .hidden here - it conflicts with Tailwind responsive utilities */
 
   /* Download button states */
-  .action-btn.downloading {
+  .mix-action-btn.downloading {
     opacity: 0.7;
     cursor: wait;
   }
-
-  .action-btn.downloaded {
-    background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
+  .mix-action-btn.downloaded {
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
     border-color: #16a34a !important;
+  }
+
+  /* Tablet+ (768px) — horizontal row */
+  @media (min-width: 768px) {
+    .mix-actions-grid {
+      display: flex;
+      gap: 6px;
+    }
+
+    .mix-action-btn {
+      flex: 1;
+      flex-direction: row;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+
+    .mix-action-icon {
+      font-size: 16px;
+    }
+
+    .mix-action-label {
+      font-size: 11px;
+    }
+  }
+
+  /* Desktop (1024px+) */
+  @media (min-width: 1024px) {
+    .mix-action-btn {
+      padding: 9px 14px;
+    }
+
+    .mix-action-label {
+      font-size: 12px;
+    }
   }
 
   /* Modal */

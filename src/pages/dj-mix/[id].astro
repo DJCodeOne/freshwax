@@ -214,7 +214,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <div class="flex flex-col lg:flex-row gap-4 sm:gap-6 md:gap-8">
             
             <!-- Info Column - Now First on Desktop -->
-            <div class="lg:flex-1 space-y-3 sm:space-y-4 md:space-y-6 order-1 lg:order-1 min-w-0">
+            <div class="lg:flex-1 space-y-3 sm:space-y-4 md:space-y-6 order-2 lg:order-1 min-w-0">
               <div class="text-center lg:text-left overflow-hidden">
                 <h1 class="text-4xl sm:text-5xl md:text-6xl font-black text-red-500 mb-2 md:mb-3 leading-tight uppercase drop-shadow-lg" title={title}>{title}</h1>
                 <p class="text-2xl md:text-3xl font-black text-white mb-1 md:mb-2 uppercase drop-shadow-md truncate" title={dj_name}>{dj_name}</p>
@@ -331,7 +331,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             </div>
 
             <!-- Artwork Column - Bottom Right -->
-            <div class="order-2 lg:order-2 flex flex-col items-center lg:items-end lg:justify-end lg:self-end flex-shrink-0">
+            <div class="order-1 lg:order-2 flex flex-col items-center lg:items-end lg:justify-end lg:self-end flex-shrink-0">
               <!-- Artwork -->
               <img
                 src={artwork_url}
@@ -1475,8 +1475,48 @@ Artist - Track Title
     }
   }
 
+  // Wait for Header's authReady if available (avoids double Firebase init)
+  async function waitForHeaderAuth() {
+    // Header.astro sets window.authReady — wait up to 3s for it
+    for (var i = 0; i < 30; i++) {
+      if (window.authReady) {
+        try {
+          var user = await window.authReady;
+          if (user) {
+            var profile = await fetchProfileFromCache(user);
+            updateCommentUI(user, profile.name, profile.avatarUrl);
+            return true;
+          }
+          return false;
+        } catch (e) { return false; }
+      }
+      await new Promise(function(r) { setTimeout(r, 100); });
+    }
+    return false;
+  }
+
+  function fetchProfileFromCache(user) {
+    var cacheKey = 'fw_user_profile_' + user.uid;
+    try {
+      var cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        var profile = JSON.parse(cached);
+        if (profile.cachedAt && Date.now() - profile.cachedAt < 300000) {
+          var displayName = user.displayName || profile.partnerDisplayName || (user.email ? user.email.split('@')[0] : 'User');
+          return { name: displayName, avatarUrl: profile.avatarUrl || user.photoURL || '' };
+        }
+      }
+    } catch (e) { /* ignore */ }
+    var fallbackName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+    return { name: fallbackName, avatarUrl: user.photoURL || '' };
+  }
+
   // Initialize Firebase Auth listener
   async function initFirebaseAuth() {
+    // Try Header's auth first (faster, avoids double SDK load)
+    var headerResolved = await waitForHeaderAuth();
+    if (headerResolved) return;
+
     try {
       const firebaseApp = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
       const firebaseAuth = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');

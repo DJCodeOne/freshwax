@@ -155,7 +155,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       <div class="hero-container">
         <div class="hero-content">
           <h1 class="hero-title">FRESH <span class="red">SESSIONS</span></h1>
-          <p class="hero-subtitle">Jungle & Drum and Bass DJ Sets</p>
+          <p class="hero-subtitle">Jungle & Drum and Bass<br class="sm:hidden" /> DJ Sets</p>
         </div>
       </div>
     </section>
@@ -227,7 +227,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <div class="mixes-header-line"></div>
           <div class="mixes-header-center">
             <h2 class="mixes-title">Latest Mixes</h2>
-            <p class="mixes-subtitle">Stream or download full DJ sets • <span id="mix-count">{mixes.length}</span> available</p>
+            <p class="mixes-subtitle">Stream or download full DJ sets<br class="sm:hidden" /> <span class="hidden sm:inline">•</span> <span id="mix-count">{mixes.length}</span> available</p>
           </div>
           <div class="mixes-header-line"></div>
         </div>
@@ -352,78 +352,74 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="mix-actions">
-                  <!-- Play Button -->
-                  <button 
-                    class="action-btn play-btn-action"
+                <div class="mix-actions-grid">
+                  <button
+                    class="mix-action-btn mix-action-play play-btn-action"
                     data-mix-id={mix.id}
                     title="Play"
+                    aria-label="Play mix"
                   >
-                    <svg class="btn-icon play-icon-btn" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                    <svg class="btn-icon pause-icon-btn hidden" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                    </svg>
-                    <span class="btn-text play-text-btn">Play</span>
+                    <span class="mix-action-icon play-icon-btn">&#9654;</span>
+                    <span class="mix-action-icon pause-icon-btn hidden">&#10074;&#10074;</span>
+                    <span class="mix-action-label play-text-btn">Play</span>
                   </button>
 
-                  <!-- Info Button -->
                   <a
                     href={`/dj-mix/${mix.id}/`}
-                    class="action-btn"
+                    class="mix-action-btn mix-action-info"
                     title="View Details"
+                    aria-label="View mix details"
                   >
-                    <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span class="btn-text">Info</span>
+                    <span class="mix-action-icon" style="font-style:normal;font-weight:900;font-size:17px;">&#9432;</span>
+                    <span class="mix-action-label">Info</span>
                   </a>
 
-                  <!-- Like Button -->
-                  <button 
-                    class="action-btn like-btn"
+                  <button
+                    class="mix-action-btn mix-action-like like-btn"
                     data-mix-id={mix.id}
                     data-liked="false"
                     title="Like"
+                    aria-label="Like mix"
                   >
-                    <svg class="btn-icon like-icon-btn" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                    <span class="btn-text like-text-btn">Like</span>
-                    <span class="btn-text liked-text-btn" style="display: none;">Liked</span>
+                    <span class="mix-action-icon like-icon-btn">&#9825;</span>
+                    <span class="mix-action-label like-text-btn">Like</span>
+                    <span class="mix-action-label liked-text-btn hidden">Liked</span>
                   </button>
 
-                  <!-- Share Button -->
                   <button
-                    class="action-btn share-btn"
+                    class="mix-action-btn mix-action-share share-btn"
                     data-mix-id={mix.id}
                     data-title={mix.title}
                     data-dj={mix.dj_name || mix.djName}
                     title="Share"
+                    aria-label="Share mix"
                   >
-                    <svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                    </svg>
-                    <span class="btn-text">Share</span>
+                    <span class="mix-action-icon">&#8599;</span>
+                    <span class="mix-action-label">Share</span>
                   </button>
 
-                  <!-- Download Button -->
                   <button
-                    class="action-btn primary download-btn"
+                    class="mix-action-btn mix-action-download download-btn"
                     data-mix-id={mix.id}
                     data-audio-url={mix.audio_url || mix.audioUrl || mix.mp3Url}
                     data-title={mix.title}
                     data-dj={mix.dj_name || mix.djName}
+                    aria-label="Download mix"
                   >
-                    <svg class="btn-icon download-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                    </svg>
-                    <svg class="btn-icon check-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span class="btn-text">Download</span>
+                    <span class="mix-action-icon download-icon">&#8681;</span>
+                    <span class="mix-action-icon check-icon hidden">&#10003;</span>
+                    <span class="mix-action-label">Download</span>
                   </button>
+
+                  <a
+                    href={`/dj-mix/${mix.id}/#comments-section`}
+                    class="mix-action-btn mix-action-comment"
+                    title="Comments"
+                    aria-label="View comments"
+                  >
+                    <span class="mix-action-icon">&#128172;</span>
+                    <span class="mix-action-label">Comment</span>
+                  </a>
                 </div>
               </div>
             </article>
@@ -597,6 +593,26 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             Spread the <span class="text-red-400 font-bold">vibes</span> - Share this mix with your crew
           </p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Download Progress Modal -->
+  <div id="dlModal" class="fixed inset-0 z-[200]" style="display:none;">
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+      <div class="relative bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center">
+        <div id="dlIcon" class="mx-auto mb-4 w-12 h-12">
+          <svg class="w-12 h-12 animate-spin" id="dlSpinner" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4m-3.93 7.07l-2.83-2.83M7.76 7.76L4.93 4.93"/></svg>
+          <svg class="w-12 h-12" id="dlCheck" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          <svg class="w-12 h-12" id="dlError" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </div>
+        <h3 id="dlTitle" class="text-white font-bold text-lg mb-1">Preparing Download</h3>
+        <p id="dlFilename" class="text-gray-400 text-xs mb-3 break-all" style="max-height:2.4em;overflow:hidden;"></p>
+        <div id="dlBarWrap" class="h-2 bg-gray-700 rounded-full overflow-hidden mb-3" style="display:none;">
+          <div id="dlBarFill" class="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-300" style="width:0%"></div>
+        </div>
+        <p id="dlStatus" class="text-gray-300 text-sm">Starting...</p>
       </div>
     </div>
   </div>
@@ -1192,78 +1208,145 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       window.globalAudio.addEventListener('ended', syncButtons);
     }
 
-    // Download buttons - async with proper feedback
+    // Download modal helpers
+    var dlModal = document.getElementById('dlModal');
+    var dlSpinner = document.getElementById('dlSpinner');
+    var dlCheck = document.getElementById('dlCheck');
+    var dlError = document.getElementById('dlError');
+    var dlTitle = document.getElementById('dlTitle');
+    var dlFilename = document.getElementById('dlFilename');
+    var dlBarWrap = document.getElementById('dlBarWrap');
+    var dlBarFill = document.getElementById('dlBarFill');
+    var dlStatus = document.getElementById('dlStatus');
+
+    function showDlModal(state, title, filename, statusText, pct) {
+      if (!dlModal) return;
+      dlModal.style.display = 'flex';
+      if (dlTitle) dlTitle.textContent = title || '';
+      if (dlFilename) dlFilename.textContent = filename || '';
+      if (dlStatus) dlStatus.textContent = statusText || '';
+      if (dlSpinner) dlSpinner.style.display = (state === 'loading') ? '' : 'none';
+      if (dlCheck) dlCheck.style.display = (state === 'done') ? '' : 'none';
+      if (dlError) dlError.style.display = (state === 'error') ? '' : 'none';
+      if (dlBarWrap) dlBarWrap.style.display = (pct !== undefined && pct !== null) ? '' : 'none';
+      if (dlBarFill && pct !== undefined && pct !== null) dlBarFill.style.width = pct + '%';
+    }
+
+    function hideDlModal() {
+      if (!dlModal) return;
+      dlModal.style.display = 'none';
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    // Download buttons - stream with progress modal
     document.querySelectorAll('.download-btn').forEach(function(btn) {
       if (btn.hasAttribute('data-download-init')) return;
       btn.setAttribute('data-download-init', 'true');
-      
+
       btn.onclick = async function(e) {
         e.preventDefault();
-        
+
         var mixId = btn.getAttribute('data-mix-id');
         var audioUrl = btn.getAttribute('data-audio-url');
         var title = btn.getAttribute('data-title');
         var dj = btn.getAttribute('data-dj');
         var filename = (dj + ' - ' + title + '.mp3').replace(/[^a-z0-9\s\-\.]/gi, '_');
-        
-        var downloadIcon = btn.querySelector('.download-icon');
-        var checkIcon = btn.querySelector('.check-icon');
-        var btnText = btn.querySelector('.btn-text');
-        
+
+        var btnText = btn.querySelector('.mix-action-label');
+
         btn.disabled = true;
         btn.classList.add('downloading');
         if (btnText) btnText.textContent = 'Downloading...';
-        
+
+        showDlModal('loading', 'Preparing Download', filename, 'Connecting...', null);
+
         // Track download
         trackDownload(mixId).then(function(result) {
           if (result && result.downloads !== undefined) {
             updateDownloadCount(mixId, result.downloads);
           }
         });
-        
+
         try {
-          // DJ mixes are free — fetch from CDN as blob to force download
           var response = await fetch(audioUrl);
           if (!response.ok) {
             throw new Error('Download failed: ' + response.status);
           }
 
-          var blob = await response.blob();
-          var blobUrl = window.URL.createObjectURL(blob);
+          var contentLength = response.headers.get('Content-Length');
+          var total = contentLength ? parseInt(contentLength, 10) : 0;
+          var blob;
 
+          if (total > 0 && response.body) {
+            // Stream with progress
+            showDlModal('loading', 'Downloading', filename, '0%', 0);
+            var reader = response.body.getReader();
+            var received = 0;
+            var chunks = [];
+
+            while (true) {
+              var result = await reader.read();
+              if (result.done) break;
+              chunks.push(result.value);
+              received += result.value.length;
+              var pct = Math.round((received / total) * 100);
+              showDlModal('loading', 'Downloading', filename, pct + '% — ' + formatBytes(received) + ' / ' + formatBytes(total), pct);
+            }
+
+            blob = new Blob(chunks, { type: 'audio/mpeg' });
+          } else {
+            // No Content-Length — fall back to blob with indeterminate progress
+            showDlModal('loading', 'Downloading', filename, 'Downloading...', null);
+            blob = await response.blob();
+          }
+
+          var blobUrl = window.URL.createObjectURL(blob);
           var link = document.createElement('a');
           link.href = blobUrl;
           link.download = filename;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-
           window.URL.revokeObjectURL(blobUrl);
-          
-          // Show success state
-          if (downloadIcon) downloadIcon.classList.add('hidden');
-          if (checkIcon) checkIcon.classList.remove('hidden');
+
+          // Show success in modal
+          showDlModal('done', 'Download Complete', filename, 'File saved to your device', 100);
+
           if (btnText) btnText.textContent = 'Downloaded!';
           btn.classList.remove('downloading');
           btn.classList.add('downloaded');
-          
-          // Reset after 3 seconds
+
+          // Auto-close modal and reset button after 2 seconds
           setTimeout(function() {
-            if (downloadIcon) downloadIcon.classList.remove('hidden');
-            if (checkIcon) checkIcon.classList.add('hidden');
+            hideDlModal();
             if (btnText) btnText.textContent = 'Download';
             btn.disabled = false;
             btn.classList.remove('downloaded');
-          }, 3000);
-          
+          }, 2000);
+
         } catch (error) {
           console.error('Download error:', error);
+          showDlModal('error', 'Download Failed', filename, 'Tap to close and retry', null);
           if (btnText) btnText.textContent = 'Error - Retry';
           btn.classList.remove('downloading');
-          
-          if (downloadIcon) downloadIcon.classList.remove('hidden');
-          if (checkIcon) checkIcon.classList.add('hidden');
-          btn.disabled = false;
+
+          // Close modal on click
+          if (dlModal) {
+            dlModal.addEventListener('click', function closeOnClick() {
+              hideDlModal();
+              dlModal.removeEventListener('click', closeOnClick);
+            }, { once: true });
+          }
+
+          setTimeout(function() {
+            if (btnText) btnText.textContent = 'Download';
+            btn.disabled = false;
+          }, 2000);
         }
       };
     });
