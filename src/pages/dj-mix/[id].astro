@@ -557,6 +557,26 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     </div>
   )}
 
+  <!-- Download Progress Modal -->
+  <div id="dlModal" class="fixed inset-0 z-[200] hidden" style="display:none;">
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+      <div class="relative bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center">
+        <div id="dlIcon" class="mx-auto mb-4 w-12 h-12">
+          <svg class="w-12 h-12 animate-spin" id="dlSpinner" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4m-3.93 7.07l-2.83-2.83M7.76 7.76L4.93 4.93"/></svg>
+          <svg class="w-12 h-12 hidden" id="dlCheck" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          <svg class="w-12 h-12 hidden" id="dlError" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </div>
+        <h3 id="dlTitle" class="text-white font-bold text-lg mb-1">Preparing Download</h3>
+        <p id="dlFilename" class="text-gray-400 text-xs mb-3 break-all" style="max-height:2.4em;overflow:hidden;"></p>
+        <div id="dlBarWrap" class="h-2 bg-gray-700 rounded-full overflow-hidden mb-3" style="display:none;">
+          <div id="dlBarFill" class="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-300" style="width:0%"></div>
+        </div>
+        <p id="dlStatus" class="text-gray-300 text-sm">Starting...</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Enhanced Share Modal -->
   <div id="share-modal" class="fixed inset-0 z-[100] hidden">
     <div class="fixed inset-0 bg-black/90 backdrop-blur-sm transition-opacity" id="share-modal-backdrop"></div>
@@ -1098,24 +1118,63 @@ Artist - Track Title
     });
   }
 
-  // Download button - async with proper feedback like dashboard
+  // Download modal helpers
+  var dlModal = document.getElementById('dlModal');
+  var dlSpinner = document.getElementById('dlSpinner');
+  var dlCheck = document.getElementById('dlCheck');
+  var dlError = document.getElementById('dlError');
+  var dlTitle = document.getElementById('dlTitle');
+  var dlFilename = document.getElementById('dlFilename');
+  var dlBarWrap = document.getElementById('dlBarWrap');
+  var dlBarFill = document.getElementById('dlBarFill');
+  var dlStatus = document.getElementById('dlStatus');
+
+  function showDlModal(state, title, filename, statusText, pct) {
+    if (!dlModal) return;
+    dlModal.classList.remove('hidden');
+    dlModal.style.display = '';
+    if (dlTitle) dlTitle.textContent = title || '';
+    if (dlFilename) dlFilename.textContent = filename || '';
+    if (dlStatus) dlStatus.textContent = statusText || '';
+    if (dlSpinner) dlSpinner.classList.toggle('hidden', state !== 'loading');
+    if (dlCheck) dlCheck.classList.toggle('hidden', state !== 'done');
+    if (dlError) dlError.classList.toggle('hidden', state !== 'error');
+    if (dlBarWrap) dlBarWrap.style.display = (pct !== undefined && pct !== null) ? '' : 'none';
+    if (dlBarFill && pct !== undefined && pct !== null) dlBarFill.style.width = pct + '%';
+  }
+
+  function hideDlModal() {
+    if (!dlModal) return;
+    dlModal.classList.add('hidden');
+    dlModal.style.display = 'none';
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  // Download button - stream with progress modal
   downloadBtn?.addEventListener('click', async function(e) {
     e.preventDefault();
     e.stopPropagation();
-    
-    const audioUrl = downloadBtn.getAttribute('data-audio-url');
-    const title = downloadBtn.getAttribute('data-title');
-    const dj = downloadBtn.getAttribute('data-dj');
-    const filename = (dj + ' - ' + title + '.mp3').replace(/[^a-z0-9\s\-\.]/gi, '_');
-    
-    const downloadIcon = downloadBtn.querySelector('.download-icon');
-    const checkIcon = downloadBtn.querySelector('.check-icon');
-    const downloadText = downloadBtn.querySelector('.download-text');
-    
+
+    var audioUrl = downloadBtn.getAttribute('data-audio-url');
+    var mixTitle = downloadBtn.getAttribute('data-title');
+    var dj = downloadBtn.getAttribute('data-dj');
+    var filename = (dj + ' - ' + mixTitle + '.mp3').replace(/[^a-z0-9\s\-\.]/gi, '_');
+
+    var downloadIcon = downloadBtn.querySelector('.download-icon');
+    var checkIcon = downloadBtn.querySelector('.check-icon');
+    var downloadText = downloadBtn.querySelector('.download-text');
+
     downloadBtn.disabled = true;
     downloadBtn.classList.add('downloading');
     if (downloadText) downloadText.textContent = 'Downloading...';
-    
+
+    showDlModal('loading', 'Preparing Download', filename, 'Connecting...', null);
+
     // Track download
     if (mixId) {
       fetch('/api/track-mix-download/', {
@@ -1126,49 +1185,84 @@ Artist - Track Title
         return response.json();
       }).then(function(data) {
         if (data.downloads !== undefined) {
-          const downloadsCount = document.getElementById('downloads-count');
+          var downloadsCount = document.getElementById('downloads-count');
           if (downloadsCount) downloadsCount.textContent = data.downloads;
         }
-      }).catch(function(error) {
-        console.error('Error tracking download:', error);
-      });
+      }).catch(function() {});
     }
-    
+
     try {
-      // DJ mixes are free — fetch from CDN as blob to force download
-      const response = await fetch(audioUrl);
+      var response = await fetch(audioUrl);
       if (!response.ok) throw new Error('Download failed: ' + response.status);
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+
+      var contentLength = response.headers.get('Content-Length');
+      var total = contentLength ? parseInt(contentLength, 10) : 0;
+
+      if (total > 0 && response.body) {
+        // Stream with progress
+        showDlModal('loading', 'Downloading', filename, '0%', 0);
+        var reader = response.body.getReader();
+        var received = 0;
+        var chunks = [];
+
+        while (true) {
+          var result = await reader.read();
+          if (result.done) break;
+          chunks.push(result.value);
+          received += result.value.length;
+          var pct = Math.round((received / total) * 100);
+          showDlModal('loading', 'Downloading', filename, pct + '% — ' + formatBytes(received) + ' / ' + formatBytes(total), pct);
+        }
+
+        var blob = new Blob(chunks, { type: 'audio/mpeg' });
+      } else {
+        // No Content-Length — fall back to blob with indeterminate progress
+        showDlModal('loading', 'Downloading', filename, 'Downloading...', null);
+        var blob = await response.blob();
+      }
+
+      var blobUrl = window.URL.createObjectURL(blob);
+      var link = document.createElement('a');
       link.href = blobUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
-      
-      // Show success state
+
+      // Show success in modal
+      showDlModal('done', 'Download Complete', filename, 'File saved to your device', 100);
+
+      // Show success on button
       if (downloadIcon) downloadIcon.classList.add('hidden');
       if (checkIcon) checkIcon.classList.remove('hidden');
       if (downloadText) downloadText.textContent = 'Downloaded!';
       downloadBtn.classList.remove('downloading');
       downloadBtn.classList.add('downloaded');
-      
-      // Reset after 3 seconds
+
+      // Auto-close modal and reset button after 2 seconds
       setTimeout(function() {
+        hideDlModal();
         if (downloadIcon) downloadIcon.classList.remove('hidden');
         if (checkIcon) checkIcon.classList.add('hidden');
         if (downloadText) downloadText.textContent = 'Download';
         downloadBtn.disabled = false;
         downloadBtn.classList.remove('downloaded');
-      }, 3000);
-      
+      }, 2000);
+
     } catch (error) {
-      console.error('Download error:', error);
+      showDlModal('error', 'Download Failed', filename, 'Tap to close and retry', null);
       if (downloadText) downloadText.textContent = 'Error - Retry';
       downloadBtn.classList.remove('downloading');
-      
+
+      // Close modal on click
+      if (dlModal) {
+        dlModal.addEventListener('click', function closeOnClick() {
+          hideDlModal();
+          dlModal.removeEventListener('click', closeOnClick);
+        }, { once: true });
+      }
+
       setTimeout(function() {
         if (downloadIcon) downloadIcon.classList.remove('hidden');
         if (checkIcon) checkIcon.classList.add('hidden');
