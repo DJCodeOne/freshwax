@@ -783,7 +783,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
             <!-- PayPal Button Container (hidden by default) -->
             <div id="paypalPaymentSection" style="display: none; width: 100%;">
-              <button type="button" id="customPaypalBtn" style="width: 100%; padding: 1rem; background: #FFC439; color: #003087; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; cursor: pointer; transition: background-color 0.2s, opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+              <button type="submit" id="customPaypalBtn" style="width: 100%; padding: 1rem; background: #FFC439; color: #003087; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; cursor: pointer; transition: background-color 0.2s, opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.217a.774.774 0 0 1 .763-.645h6.333c2.097 0 3.768.514 4.967 1.53 1.178 1.001 1.763 2.442 1.737 4.28-.023 1.596-.492 2.95-1.392 4.02-.888 1.054-2.118 1.808-3.654 2.24a15.42 15.42 0 0 1-4.108.52H7.7l-.625 6.175z" fill="#003087"/>
                   <path d="M23.048 7.667c-.03 1.651-.523 3.033-1.463 4.108-.953 1.088-2.256 1.86-3.87 2.293-1.157.31-2.47.466-3.896.466h-1.76a.774.774 0 0 0-.764.645l-1.14 7.218a.641.641 0 0 1-.633.54H6.5l-.09.528a.641.641 0 0 0 .634.74h4.022a.774.774 0 0 0 .763-.645l.704-4.46.045-.232a.774.774 0 0 1 .764-.645h.481c3.114 0 5.553-1.265 6.266-4.925.298-1.53.143-2.807-.658-3.704a3.198 3.198 0 0 0-.383-.327z" fill="#0070E0"/>
@@ -913,12 +913,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   const PAYPAL_CLIENT_ID = import.meta.env.PUBLIC_PAYPAL_CLIENT_ID || 'AZL6pU1E2TbA9DdGgLvljJsON4-IwXIyWsHhQ_Od-BtMXTZTTgThss7pVuZzscyovO1z7XZRKgLRwpmv';
 
   function loadPayPalSDK() {
-    // Set up custom PayPal button click handler
-    const customBtn = document.getElementById('customPaypalBtn');
-    if (customBtn && !customBtn.hasAttribute('data-paypal-init')) {
-      customBtn.setAttribute('data-paypal-init', 'true');
-      customBtn.addEventListener('click', handleCustomPayPalClick);
-    }
+    // PayPal button is now type="submit" — handled via handleSubmit() → handleCustomPayPalClick()
+    // No separate click handler needed (native form submission is more reliable on mobile)
   }
 
   async function handleCustomPayPalClick() {
@@ -941,13 +937,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         return;
       }
 
-      // Validate form — use custom feedback instead of reportValidity()
-      // which is unreliable on mobile (validation tooltips often invisible)
+      // Form validation is handled by native browser validation (button is type="submit")
+      // This is a safety fallback in case the function is called directly
       if (!form.checkValidity()) {
         const firstInvalid = form.querySelector(':invalid');
         if (firstInvalid) {
           firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Slight delay to let scroll finish before focusing
           setTimeout(() => { try { firstInvalid.focus(); } catch(_e){} }, 300);
         }
         errorMsg.textContent = 'Please fill in all required fields before paying';
@@ -1229,8 +1224,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     e.preventDefault();
     const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
 
-    // If PayPal is selected and not a free order, don't process here (PayPal buttons handle it)
-    if (selectedPaymentMethod === 'paypal' && total > 0) {
+    // Check if this is a free order (including when credit covers entire amount)
+    const finalTotal = Math.max(0, total - appliedCredit);
+    const isFreeOrder = finalTotal === 0;
+
+    // If PayPal is selected and not a free order, route to PayPal flow
+    if (selectedPaymentMethod === 'paypal' && !isFreeOrder) {
+      await handleCustomPayPalClick();
       return;
     }
 
@@ -1244,10 +1244,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     submitBtn.style.background = '#333';
     submitBtn.style.color = '#999';
     errorMsg.style.display = 'none';
-
-    // Check if this is a free order (including when credit covers entire amount)
-    const finalTotal = Math.max(0, total - appliedCredit);
-    const isFreeOrder = finalTotal === 0;
 
     if (isFreeOrder) {
       submitBtn.textContent = 'PROCESSING...';
