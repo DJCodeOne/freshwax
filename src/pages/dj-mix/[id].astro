@@ -1184,22 +1184,6 @@ Artist - Track Title
     };
     if (dlCancel) dlCancel.addEventListener('click', onCancel, { once: true });
 
-    // Track download
-    if (mixId) {
-      fetch('/api/track-mix-download/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mixId: mixId })
-      }).then(function(response) {
-        return response.json();
-      }).then(function(data) {
-        if (data.downloads !== undefined) {
-          var downloadsCount = document.getElementById('downloads-count');
-          if (downloadsCount) downloadsCount.textContent = data.downloads;
-        }
-      }).catch(function() {});
-    }
-
     try {
       var response = await fetch(audioUrl, { signal: dlAbortController.signal });
       if (!response.ok) throw new Error('Download failed: ' + response.status);
@@ -1241,6 +1225,22 @@ Artist - Track Title
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
+
+      // Track download only after successful completion
+      if (mixId) {
+        fetch('/api/track-mix-download/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mixId: mixId })
+        }).then(function(response) {
+          return response.json();
+        }).then(function(data) {
+          if (data.downloads !== undefined) {
+            var downloadsCount = document.getElementById('downloads-count');
+            if (downloadsCount) downloadsCount.textContent = data.downloads;
+          }
+        }).catch(function() {});
+      }
 
       // Show success in modal
       showDlModal('done', 'Download Complete', filename, 'File saved to your device', 100);

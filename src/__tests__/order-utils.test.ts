@@ -422,10 +422,10 @@ describe('reserveStock', () => {
   });
 
   it('fails when variant not found', async () => {
+    // Empty variantStock — product exists but has no stock entries
     mockGetDocument.mockResolvedValue({
-      variantStock: {
-        'l_black': { stock: 10, reserved: 0 },
-      },
+      variantStock: {},
+      _updateTime: '2024-01-01T00:00:00Z',
     });
 
     const items = [

@@ -107,21 +107,21 @@ function getMixDuration(mix: Record<string, unknown>): number | null {
   return null;
 }
 
-// Extract unique genres from mixes for filter
+// All genres from upload form — always show all, even with 0 mixes
+const allGenres = ['Jungle', 'Drum and Bass', 'Hardcore', 'Jungle Techno', 'Old Skool', 'Tribal', 'Ragga Jungle', 'Darkstep', 'Techstep', 'Breakcore'];
+
+// Count mixes per genre
 const genreCounts = new Map<string, number>();
 mixes.forEach(mix => {
   const genre = (mix.genre || 'Jungle & D&B') as string;
   genreCounts.set(genre, (genreCounts.get(genre) || 0) + 1);
 });
 
-// Sort genres by count (most common first), then alphabetically
-const sortedGenres = Array.from(genreCounts.entries())
-  .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-  .map(([genre, count]) => ({ genre, count }));
+const sortedGenres = allGenres.map(genre => ({ genre, count: genreCounts.get(genre) || 0 }));
 
-// Core genres to always show (if they exist)
-const coreGenres = ['Jungle', 'Drum and Bass', 'Ragga Jungle', 'Hardcore', 'Old Skool'];
-const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
+// Legacy — kept for sidebar compatibility
+const coreGenres = allGenres;
+const otherGenres: { genre: string; count: number }[] = [];
 
 // Preload first mix artwork for faster LCP
 const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
@@ -227,28 +227,23 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <div class="mixes-header-line"></div>
           <div class="mixes-header-center">
             <h2 class="mixes-title">Latest Mixes</h2>
-            <p class="mixes-subtitle">Stream or download full DJ sets<br class="sm:hidden" /> <span class="hidden sm:inline">•</span> <span id="mix-count">{mixes.length}</span> available</p>
+            <p class="mixes-subtitle">Stream or download full DJ sets</p>
+            <p class="mixes-subtitle mixes-count"><span id="mix-count">{mixes.length}</span> available</p>
+            <div class="mixes-upload-row">
+              <a href="/upload-mix/" class="upload-mix-btn">
+                📤 Upload Mix
+              </a>
+            </div>
+            <div class="mixes-divider"></div>
           </div>
           <div class="mixes-header-line"></div>
         </div>
-        <div class="mixes-divider"></div>
-        <div class="mixes-upload-row">
-          <a href="/upload-mix/" class="upload-mix-btn">
-            📤 Upload Mix
-          </a>
-        </div>
 
-        <!-- Mobile Genre Filter (horizontal scroll) -->
+        <!-- Genre Filter -->
         <div class="genre-filter-mobile">
           <div class="genre-filter-scroll">
             <button class="genre-filter-btn active" data-genre="all">All ({mixes.length})</button>
-            {coreGenres.map(genre => {
-              const genreData = sortedGenres.find(g => g.genre === genre);
-              return genreData ? (
-                <button class="genre-filter-btn" data-genre={genre}>{genre} ({genreData.count})</button>
-              ) : null;
-            })}
-            {otherGenres.map(({ genre, count }) => (
+            {sortedGenres.map(({ genre, count }) => (
               <button class="genre-filter-btn" data-genre={genre}>{genre} ({count})</button>
             ))}
           </div>
@@ -325,25 +320,25 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
                 <!-- Stats Row -->
                 <div class="mix-stats">
-                  <span class="stat">
+                  <span class="stat stat-plays">
                     <svg class="stat-icon" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z"/>
                     </svg>
                     <span class="plays-count" data-mix-id={mix.id}>{mix.plays || 0}</span> plays
                   </span>
-                  <span class="stat">
+                  <span class="stat stat-downloads">
                     <svg class="stat-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                     </svg>
                     <span class="downloads-count" data-mix-id={mix.id}>{mix.downloads || 0}</span> downloads
                   </span>
-                  <span class="stat">
+                  <span class="stat stat-likes">
                     <svg class="stat-icon" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                     </svg>
                     <span class="likes-count" data-mix-id={mix.id}>{mix.likes || 0}</span> likes
                   </span>
-                  <span class="stat">
+                  <span class="stat stat-comments">
                     <svg class="stat-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
@@ -1276,13 +1271,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         };
         if (dlCancel) dlCancel.addEventListener('click', onCancel, { once: true });
 
-        // Track download
-        trackDownload(mixId).then(function(result) {
-          if (result && result.downloads !== undefined) {
-            updateDownloadCount(mixId, result.downloads);
-          }
-        });
-
         try {
           var response = await fetch(audioUrl, { signal: dlAbortController.signal });
           if (!response.ok) {
@@ -1324,6 +1312,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           link.click();
           document.body.removeChild(link);
           window.URL.revokeObjectURL(blobUrl);
+
+          // Track download only after successful completion
+          trackDownload(mixId).then(function(result) {
+            if (result && result.downloads !== undefined) {
+              updateDownloadCount(mixId, result.downloads);
+            }
+          });
 
           // Show success in modal
           showDlModal('done', 'Download Complete', filename, 'File saved to your device', 100);
