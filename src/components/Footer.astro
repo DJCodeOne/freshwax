@@ -5,10 +5,10 @@ const currentYear = new Date().getFullYear();
 
 <footer class="bg-gray-900 text-gray-300 relative z-50 pb-20 lg:pb-0" role="contentinfo">
   <div class="container mx-auto px-4 py-6 sm:py-8">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      
+    <div class="footer-grid">
+
       <!-- About Section -->
-      <div class="lg:col-span-2">
+      <div class="footer-about">
         <a href="/" class="inline-block mb-3 bg-white rounded-lg p-2">
           <img src="/logo.webp" alt="Fresh Wax" class="h-10 w-auto" translate="no" width="120" height="40" loading="lazy" decoding="async" />
         </a>
@@ -34,32 +34,33 @@ const currentYear = new Date().getFullYear();
         </div>
       </div>
 
-      <!-- Quick Links - SEO Important -->
-      <div>
-        <h3 class="text-white font-bold text-base mb-3">Shop</h3>
-        <ul class="space-y-2 text-sm">
-          <li><a href="/releases/" class="hover:text-white transition-colors">All Releases</a></li>
-          <li><a href="/weekly-chart/" class="hover:text-white transition-colors">Weekly Chart</a></li>
-          <li><a href="/pre-orders/" class="hover:text-white transition-colors">Pre-Orders</a></li>
-          <li><a href="/dj-mixes/" class="hover:text-white transition-colors">DJ Mixes</a></li>
-          <li><a href="/dj-mix-chart/" class="hover:text-white transition-colors">Mix Chart</a></li>
-          <li><a href="/merch/" class="hover:text-white transition-colors">Merchandise</a></li>
-          <li><a href="/giftcards/" class="hover:text-white transition-colors">Gift Cards</a></li>
-          <li><a href="/live/" class="hover:text-white transition-colors">Live Stream</a></li>
-        </ul>
-      </div>
+      <!-- Quick Links + Info Links - side by side on mobile -->
+      <div class="footer-links">
+        <div>
+          <h3 class="text-white font-bold text-base mb-3">Shop</h3>
+          <ul class="space-y-1.5 text-sm">
+            <li><a href="/releases/" class="hover:text-white transition-colors">All Releases</a></li>
+            <li><a href="/weekly-chart/" class="hover:text-white transition-colors">Weekly Chart</a></li>
+            <li><a href="/pre-orders/" class="hover:text-white transition-colors">Pre-Orders</a></li>
+            <li><a href="/dj-mixes/" class="hover:text-white transition-colors">DJ Mixes</a></li>
+            <li><a href="/dj-mix-chart/" class="hover:text-white transition-colors">Mix Chart</a></li>
+            <li><a href="/merch/" class="hover:text-white transition-colors">Merchandise</a></li>
+            <li><a href="/giftcards/" class="hover:text-white transition-colors">Gift Cards</a></li>
+            <li><a href="/live/" class="hover:text-white transition-colors">Live Stream</a></li>
+          </ul>
+        </div>
 
-      <!-- Info Links - SEO & Legal -->
-      <div>
-        <h3 class="text-white font-bold text-base mb-3">Information</h3>
-        <ul class="space-y-2 text-sm">
-          <li><a href="/about/" class="hover:text-white transition-colors">About Us</a></li>
-          <li><a href="/contact/" class="hover:text-white transition-colors">Contact</a></li>
-          <li><a href="/shipping/" class="hover:text-white transition-colors">Shipping & Returns</a></li>
-          <li><a href="/privacy/" class="hover:text-white transition-colors">Privacy Policy</a></li>
-          <li><a href="/cookies/" class="hover:text-white transition-colors">Cookie Policy</a></li>
-          <li><a href="/terms/" class="hover:text-white transition-colors">Terms & Conditions</a></li>
-        </ul>
+        <div>
+          <h3 class="text-white font-bold text-base mb-3">Information</h3>
+          <ul class="space-y-1.5 text-sm">
+            <li><a href="/about/" class="hover:text-white transition-colors">About Us</a></li>
+            <li><a href="/contact/" class="hover:text-white transition-colors">Contact</a></li>
+            <li><a href="/shipping/" class="hover:text-white transition-colors">Shipping</a></li>
+            <li><a href="/privacy/" class="hover:text-white transition-colors">Privacy Policy</a></li>
+            <li><a href="/cookies/" class="hover:text-white transition-colors">Cookie Policy</a></li>
+            <li><a href="/terms/" class="hover:text-white transition-colors">Terms</a></li>
+          </ul>
+        </div>
       </div>
     </div>
 
@@ -112,5 +113,45 @@ const currentYear = new Date().getFullYear();
     </div>
   </div>
 </footer>
+
+<style>
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .footer-links {
+    display: contents;
+  }
+
+  @media (max-width: 767px) {
+    .footer-grid {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+
+    .footer-links {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .footer-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .footer-about {
+      grid-column: 1 / -1;
+    }
+
+    .footer-links {
+      display: contents;
+    }
+  }
+</style>
 
 <script is:inline src="/newsletter-form.js" defer></script>
