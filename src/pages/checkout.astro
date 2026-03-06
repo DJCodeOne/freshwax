@@ -783,13 +783,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
             <!-- PayPal Button Container (hidden by default) -->
             <div id="paypalPaymentSection" style="display: none; width: 100%;">
-              <button type="submit" id="customPaypalBtn" style="width: 100%; padding: 1rem; background: #FFC439; color: #003087; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; cursor: pointer; transition: background-color 0.2s, opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <button type="button" id="customPaypalBtn" style="width: 100%; padding: 1rem; background: #FFC439; color: #003087; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; cursor: pointer; transition: background-color 0.2s, opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; position: relative; -webkit-tap-highlight-color: rgba(0,0,0,0.1);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none;">
                   <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.217a.774.774 0 0 1 .763-.645h6.333c2.097 0 3.768.514 4.967 1.53 1.178 1.001 1.763 2.442 1.737 4.28-.023 1.596-.492 2.95-1.392 4.02-.888 1.054-2.118 1.808-3.654 2.24a15.42 15.42 0 0 1-4.108.52H7.7l-.625 6.175z" fill="#003087"/>
                   <path d="M23.048 7.667c-.03 1.651-.523 3.033-1.463 4.108-.953 1.088-2.256 1.86-3.87 2.293-1.157.31-2.47.466-3.896.466h-1.76a.774.774 0 0 0-.764.645l-1.14 7.218a.641.641 0 0 1-.633.54H6.5l-.09.528a.641.641 0 0 0 .634.74h4.022a.774.774 0 0 0 .763-.645l.704-4.46.045-.232a.774.774 0 0 1 .764-.645h.481c3.114 0 5.553-1.265 6.266-4.925.298-1.53.143-2.807-.658-3.704a3.198 3.198 0 0 0-.383-.327z" fill="#0070E0"/>
                   <path d="M21.754 7.151a7.12 7.12 0 0 0-.877-.19 11.24 11.24 0 0 0-1.79-.133h-5.276a.752.752 0 0 0-.741.632l-1.12 7.1-.032.207a.774.774 0 0 1 .764-.645h1.59c3.127 0 5.574-1.27 6.29-4.944.021-.109.04-.215.055-.318.213-1.143.001-1.921-.863-2.71z" fill="#003087"/>
                 </svg>
-                PAY WITH PAYPAL
+                <span style="pointer-events: none;">PAY WITH PAYPAL</span>
               </button>
               <p style="text-align: center; font-size: 0.8125rem; color: #6b7280; margin-top: 0.75rem;">
                 You'll be redirected to PayPal to complete payment
@@ -913,16 +913,21 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   const PAYPAL_CLIENT_ID = import.meta.env.PUBLIC_PAYPAL_CLIENT_ID || 'AZL6pU1E2TbA9DdGgLvljJsON4-IwXIyWsHhQ_Od-BtMXTZTTgThss7pVuZzscyovO1z7XZRKgLRwpmv';
 
   function loadPayPalSDK() {
-    // PayPal button is now type="submit" — handled via handleSubmit() → handleCustomPayPalClick()
-    // No separate click handler needed (native form submission is more reliable on mobile)
+    // PayPal button uses document-level click delegation (see bottom of script)
+    // No SDK loading needed — custom button calls handleCustomPayPalClick() directly
   }
 
   async function handleCustomPayPalClick() {
     const customBtn = document.getElementById('customPaypalBtn');
     const errorMsg = document.getElementById('error-message');
 
+    if (!customBtn || !errorMsg) return;
+
     // Prevent double-submit
     if (customBtn.disabled) return;
+
+    // Immediate visual feedback so user knows the tap registered
+    customBtn.style.opacity = '0.7';
 
     try {
       // Skip email verification on checkout
@@ -937,8 +942,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         return;
       }
 
-      // Form validation is handled by native browser validation (button is type="submit")
-      // This is a safety fallback in case the function is called directly
+      // Validate form fields
       if (!form.checkValidity()) {
         const firstInvalid = form.querySelector(':invalid');
         if (firstInvalid) {
@@ -947,6 +951,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
         errorMsg.textContent = 'Please fill in all required fields before paying';
         errorMsg.style.display = 'block';
+        errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        customBtn.style.opacity = '1';
         return;
       }
 
@@ -1041,14 +1047,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       console.error('PayPal error:', error);
       errorMsg.textContent = (error instanceof Error ? error.message : null) || 'PayPal error. Please try again.';
       errorMsg.style.display = 'block';
+      errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
       // Reset button - restore original state
       customBtn.disabled = false;
-      customBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      customBtn.style.opacity = '1';
+      customBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none;">
         <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.217a.774.774 0 0 1 .763-.645h6.333c2.097 0 3.768.514 4.967 1.53 1.178 1.001 1.763 2.442 1.737 4.28-.023 1.596-.492 2.95-1.392 4.02-.888 1.054-2.118 1.808-3.654 2.24a15.42 15.42 0 0 1-4.108.52H7.7l-.625 6.175z" fill="#003087"/>
         <path d="M23.048 7.667c-.03 1.651-.523 3.033-1.463 4.108-.953 1.088-2.256 1.86-3.87 2.293-1.157.31-2.47.466-3.896.466h-1.76a.774.774 0 0 0-.764.645l-1.14 7.218a.641.641 0 0 1-.633.54H6.5l-.09.528a.641.641 0 0 0 .634.74h4.022a.774.774 0 0 0 .763-.645l.704-4.46.045-.232a.774.774 0 0 1 .764-.645h.481c3.114 0 5.553-1.265 6.266-4.925.298-1.53.143-2.807-.658-3.704a3.198 3.198 0 0 0-.383-.327z" fill="#0070E0"/>
         <path d="M21.754 7.151a7.12 7.12 0 0 0-.877-.19 11.24 11.24 0 0 0-1.79-.133h-5.276a.752.752 0 0 0-.741.632l-1.12 7.1-.032.207a.774.774 0 0 1 .764-.645h1.59c3.127 0 5.574-1.27 6.29-4.944.021-.109.04-.215.055-.318.213-1.143.001-1.921-.863-2.71z" fill="#003087"/>
-      </svg> PAY WITH PAYPAL`;
+      </svg> <span style="pointer-events: none;">PAY WITH PAYPAL</span>`;
     }
   }
 
@@ -1228,9 +1236,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const finalTotal = Math.max(0, total - appliedCredit);
     const isFreeOrder = finalTotal === 0;
 
-    // If PayPal is selected and not a free order, route to PayPal flow
+    // If PayPal is selected and not a free order, don't process here
+    // (PayPal is handled by document-level click delegation below)
     if (selectedPaymentMethod === 'paypal' && !isFreeOrder) {
-      await handleCustomPayPalClick();
       return;
     }
 
@@ -1540,6 +1548,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     userTypeChecked = true;
     renderCheckout();
   }
+
+  // Document-level click delegation for PayPal button
+  // This is more reliable on mobile than attaching handlers to dynamically-created buttons
+  // because it catches clicks regardless of when the button was rendered or re-rendered
+  document.addEventListener('click', function(e) {
+    const target = e.target.closest('#customPaypalBtn');
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    handleCustomPayPalClick();
+  });
 
   // Reset buttons when page is restored from bfcache (browser back/forward)
   window.addEventListener('pageshow', function(event) {
