@@ -36,18 +36,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
   <div class="crates-main">
     <!-- Background -->
-    <div class="bg-overlay"></div>
-
-    <!-- Hero Section -->
-    <section class="hero-section">
-      <div class="hero-grid"></div>
-      <div class="hero-container">
-        <div class="hero-content">
-          <h1 class="hero-title">DIG THE <span class="red">CRATES</span></h1>
-          <p class="hero-subtitle">Vinyl marketplace for stockists, shops & collectors</p>
-        </div>
-      </div>
-    </section>
+    <div class="bg-image-overlay"></div>
 
     <!-- Main Content with Sidebar -->
     <div class="crates-layout">
@@ -92,15 +81,16 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
       <!-- Main Listings Content -->
       <section class="listings-section">
-        <!-- Header -->
-        <div class="section-header-card">
-          <div class="section-header-pattern"></div>
-          <div class="section-header-content">
-            <h2 class="section-title" id="sectionTitle">All Vinyl Collections</h2>
-            <p class="section-subtitle">
-              <span id="listingCount">0</span> records available
-            </p>
+        <!-- Page Header -->
+        <div class="crates-header">
+          <div class="crates-title-row">
+            <div class="crates-header-line"></div>
+            <h1 class="crates-title">Dig The <span class="red">Crates</span></h1>
+            <div class="crates-header-line"></div>
           </div>
+          <p class="crates-subtitle">Vinyl marketplace for stockists, shops & collectors</p>
+          <p class="crates-count"><span id="listingCount">0</span> records available</p>
+          <div class="crates-divider"></div>
         </div>
 
         <!-- Action Buttons -->
@@ -173,20 +163,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 </Layout>
 
 <style>
-  /* Page Entrance Animations */
-  @keyframes fadeSlideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+  /* Animations */
+  @keyframes bg-fade-in {
+    to { opacity: 0.45; }
   }
 
-  @keyframes fadeSlideDown {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 
   /* Main Container */
@@ -195,238 +178,54 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     position: relative;
   }
 
-  .bg-overlay {
+  /* Background Image — animated fade-in like releases page */
+  .bg-image-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
+    background-color: #000;
+    background-image: url('/shop.webp');
+    background-size: 180%;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0;
     z-index: -1;
-  }
-
-  /* Hero Section */
-  .hero-section {
-    background: linear-gradient(to bottom, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
-    color: white;
-    padding: 3rem 0;
-    position: relative;
-    overflow: hidden;
-    z-index: 10;
-    border-bottom: 4px solid #dc2626;
-    animation: fadeSlideUp 0.6s ease-out 0.1s both;
-  }
-
-  .hero-grid {
-    position: absolute;
-    inset: 0;
-    background-image: linear-gradient(rgba(220, 38, 38, 0.03) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(220, 38, 38, 0.03) 1px, transparent 1px);
-    background-size: 50px 50px;
-  }
-
-  .hero-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1rem;
-    text-align: center;
-    position: relative;
-    z-index: 10;
-  }
-
-  .hero-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 3rem;
-    font-weight: 400;
-    margin: 0;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    animation: fadeSlideUp 0.6s ease-out 0.2s both;
-  }
-
-  .hero-title .red {
-    color: #dc2626;
-  }
-
-  .hero-subtitle {
-    font-size: 0.9rem;
-    color: #d1d5db;
-    font-weight: 400;
-    letter-spacing: 0.15em;
-    margin: 0.75rem 0 0 0;
-    text-transform: uppercase;
-    animation: fadeSlideUp 0.5s ease-out 0.3s both;
+    pointer-events: none;
+    filter: blur(3px);
+    animation: bg-fade-in 2s ease-out 0.3s forwards;
   }
 
   @media (min-width: 640px) {
-    .hero-section { padding: 4rem 0; }
-    .hero-title { font-size: 4.5rem; }
-    .hero-subtitle { font-size: 1rem; letter-spacing: 0.2em; }
+    .bg-image-overlay {
+      background-size: cover;
+    }
   }
 
-  @media (min-width: 1024px) {
-    .hero-section { padding: 5rem 0; }
-    .hero-title { font-size: 5.5rem; }
-    .hero-subtitle { font-size: 1.1rem; letter-spacing: 0.25em; }
-  }
-
-  /* Layout - matches releases.astro */
+  /* Layout — single centered column (no sidebar) */
   .crates-layout {
-    display: flex;
+    display: block;
     min-height: 100vh;
-    background: #000;
-  }
-
-  /* Sidebar - matches releases.astro */
-  .collections-sidebar {
-    width: 320px;
-    flex-shrink: 0;
-    background: linear-gradient(to bottom, #1f2937, #111827);
-    border-right: 2px solid #fff;
-    position: sticky;
-    top: 73px;
-    height: calc(100vh - 73px);
-    overflow-y: auto;
-    display: none;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  }
-
-  @media (min-width: 1024px) {
-    .collections-sidebar { display: block; }
-  }
-
-  .sidebar-inner {
-    padding: 1.5rem;
-  }
-
-  .sidebar-header {
-    margin-bottom: 1.5rem;
-    padding-top: 1.5rem;
-    padding-bottom: 1.5rem;
-    border-top: 2px solid #dc2626;
-    border-bottom: 2px solid #dc2626;
-  }
-
-  .sidebar-red-border {
-    display: none;
-  }
-
-  .sidebar-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-  }
-
-  .sidebar-subtitle {
-    font-size: 0.875rem;
-    color: #d1d5db;
-    margin: 0;
-  }
-
-  .sidebar-divider {
-    height: 1px;
-    background: #374151;
-    margin: 0.5rem 0;
-  }
-
-  .collection-nav {
-    padding: 0.75rem;
-    max-height: calc(100vh - 280px);
-    overflow-y: auto;
-  }
-
-  .collection-nav-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.875rem 1rem;
     background: transparent;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.15s;
-    margin-bottom: 0.25rem;
   }
 
-  .collection-nav-btn:hover {
-    background: rgba(220, 38, 38, 0.1);
+  /* Sidebar — hidden at all breakpoints (kept in DOM for JS) */
+  .collections-sidebar {
+    display: none !important;
   }
 
-  .collection-nav-btn.active {
-    background: rgba(220, 38, 38, 0.15);
-    border-left: 3px solid #dc2626;
-  }
-
-  .collection-nav-btn.deals-btn {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
-  }
-
-  .collection-nav-btn.deals-btn:hover {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
-  }
-
-  .collection-nav-content {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .collection-name {
-    color: #fff;
-    font-size: 0.9rem;
-    font-weight: 500;
-    text-align: left;
-  }
-
-  .collection-count {
-    background: rgba(255, 255, 255, 0.1);
-    color: #d1d5db;
-    font-size: 0.75rem;
-    padding: 0.125rem 0.5rem;
-    border-radius: 10px;
-  }
-
-  .collection-count.deals-badge {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
-  }
-
-  .collection-arrow {
-    width: 16px;
-    height: 16px;
-    color: #6b7280;
-    opacity: 0;
-    transition: opacity 0.15s;
-  }
-
-  .collection-nav-btn:hover .collection-arrow,
-  .collection-nav-btn.active .collection-arrow {
-    opacity: 1;
-    color: #dc2626;
-  }
-
-  .loading-text {
-    text-align: center;
-    padding: 1rem;
-    color: #6b7280;
-    font-size: 0.85rem;
-  }
-
-  /* Main Content - matches releases.astro */
+  /* Main Content — centered like releases page */
   .listings-section {
-    flex: 1;
-    min-width: 0;
-    padding: 2rem 1rem 2rem 2rem;
+    max-width: 72rem;
+    margin: 0 auto;
+    width: 100%;
+    padding: 2rem 1rem;
   }
 
   @media (min-width: 640px) {
     .listings-section {
-      padding: 2rem 1.5rem 2rem 2rem;
+      padding: 2.5rem 1.5rem;
     }
   }
 
@@ -436,20 +235,120 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     }
   }
 
-  @media (max-width: 1023px) {
-    .listings-section {
-      padding: 1.5rem 1rem;
+  /* Crates Header — glassmorphism container matching releases */
+  .crates-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.35rem;
+    padding: 1.75rem 1.5rem;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 0, 0, 0.85) 50%, rgba(0, 0, 0, 0.8));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(220, 38, 38, 0.15);
+    border-radius: 0.75rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 0 30px rgba(220, 38, 38, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%),
+      linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    -webkit-mask-composite: destination-in;
+    mask-image:
+      linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%),
+      linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    mask-composite: intersect;
+  }
+
+  .crates-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    width: 100%;
+  }
+
+  .crates-header-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #dc2626, transparent);
+    display: none;
+  }
+
+  .crates-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 400;
+    color: #ffffff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .crates-title .red {
+    color: #dc2626;
+  }
+
+  .crates-subtitle {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8rem;
+    margin: 0;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+  }
+
+  .crates-count {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.85rem;
+    margin: 0;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+  }
+
+  .crates-divider {
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, #dc2626, transparent);
+    margin-top: 0.75rem;
+  }
+
+  @media (min-width: 640px) {
+    .crates-header {
+      gap: 0.35rem;
+      padding: 2.5rem 3rem;
+    }
+    .crates-title-row {
+      gap: 2rem;
+    }
+    .crates-header-line {
+      display: block;
+    }
+    .crates-title {
+      font-size: 4.5rem;
+    }
+    .crates-subtitle {
+      font-size: 0.9rem;
     }
   }
 
-  .listings-inner {
-    max-width: 1100px;
-    margin: 0 auto;
+  @media (min-width: 768px) {
+    .crates-header {
+      padding: 3rem 3rem;
+    }
+    .crates-title-row {
+      gap: 2.5rem;
+    }
+    .crates-title {
+      font-size: 6rem;
+    }
   }
 
+  /* Action Buttons — centered below header */
   .action-buttons {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
   }
@@ -494,15 +393,44 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
   }
 
-  /* Mobile Filters */
+  /* Collection Filter Chips — visible at all screen sizes */
   .collection-filter-mobile {
     display: block;
     margin-bottom: 1.5rem;
     overflow: hidden;
   }
 
-  @media (min-width: 1024px) {
-    .collection-filter-mobile { display: none; }
+  .filter-scroll {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filter-btn {
+    flex-shrink: 0;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #374151;
+    border-radius: 20px;
+    color: #d1d5db;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    background: rgba(220, 38, 38, 0.15);
+    border-color: #dc2626;
+    color: #fff;
+  }
+
+  .filter-btn.deals-filter {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #22c55e;
   }
 
   /* Condition Modal */
@@ -623,12 +551,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     text-align: center;
   }
 
-  @media (max-width: 1024px) {
-    .condition-grades {
-      grid-template-columns: repeat(4, 1fr);
-    }
-  }
-
   @media (max-width: 768px) {
     .condition-grades {
       grid-template-columns: repeat(3, 1fr);
@@ -670,40 +592,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       font-size: 0.7rem;
     }
   }
-
-  .filter-scroll {
-    display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .filter-btn {
-    flex-shrink: 0;
-    padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid #374151;
-    border-radius: 20px;
-    color: #d1d5db;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-    white-space: nowrap;
-  }
-
-  .filter-btn:hover, .filter-btn.active {
-    background: rgba(220, 38, 38, 0.15);
-    border-color: #dc2626;
-    color: #fff;
-  }
-
-  .filter-btn.deals-filter {
-    background: rgba(34, 197, 94, 0.1);
-    border-color: rgba(34, 197, 94, 0.3);
-    color: #22c55e;
-  }
-
 
   /* Listings Grid */
   .listings-grid {
@@ -748,6 +636,23 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   .empty-state p {
     color: #d1d5db;
     margin: 0;
+  }
+
+  /* Hidden sidebar elements (kept for JS compatibility) */
+  .sidebar-inner,
+  .sidebar-header,
+  .sidebar-red-border,
+  .sidebar-title,
+  .sidebar-subtitle,
+  .sidebar-divider,
+  .collection-nav,
+  .collection-nav-btn,
+  .collection-nav-content,
+  .collection-name,
+  .collection-count,
+  .collection-arrow,
+  .loading-text {
+    /* Styles not needed — sidebar is hidden */
   }
 </style>
 
@@ -835,7 +740,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     width: 100%;
   }
 
-  /* Seller Section Headers */
+  /* Seller Section Headers — label-header style matching releases page */
   .seller-section {
     margin-bottom: 4rem;
     scroll-margin-top: 6rem;
@@ -845,34 +750,113 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     margin-bottom: 1.5rem;
   }
 
-  .seller-header-inner {
-    display: inline-flex;
+  /* Label Header — glassmorphism container for seller sections */
+  .label-header {
+    display: flex;
     flex-direction: column;
-    background: #000;
-    border-left: 4px solid #dc2626;
-    padding: 0.75rem 1.5rem 0.75rem 1rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    align-items: center;
+    text-align: center;
+    gap: 0.25rem;
+    padding: 1.75rem 1.25rem;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
+    -webkit-mask-image:
+      linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%),
+      linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%);
+    -webkit-mask-composite: destination-in;
+    mask-image:
+      linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%),
+      linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%);
+    mask-composite: intersect;
   }
 
-  .seller-name {
+  .label-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    width: 100%;
+  }
+
+  .label-header-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.5), transparent);
+    display: none;
+  }
+
+  .label-title {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 1.75rem;
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: 0.08em;
+    font-weight: 400;
+    color: #ffffff;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     margin: 0;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-    line-height: 1.2;
+    line-height: 1;
   }
 
-  .seller-count {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1rem;
+  .label-count {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 0.75rem;
+    margin: 0;
     font-weight: 400;
-    color: #dc2626;
     letter-spacing: 0.05em;
-    margin: 0.25rem 0 0 0;
+  }
+
+  .label-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0 0 0;
+    width: 100%;
+  }
+
+  .label-divider-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #dc2626, transparent);
+    border-radius: 1px;
+  }
+
+  .label-divider-diamond {
+    width: 8px;
+    height: 8px;
+    background: #dc2626;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+    box-shadow: 0 0 8px rgba(220, 38, 38, 0.6);
+  }
+
+  @media (min-width: 640px) {
+    .label-header {
+      gap: 0.25rem;
+      padding: 2rem 2rem;
+    }
+    .label-title-row {
+      gap: 1.5rem;
+    }
+    .label-header-line {
+      display: block;
+    }
+    .label-title {
+      font-size: 2rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .label-header {
+      padding: 2.25rem 2.5rem;
+    }
+    .label-title-row {
+      gap: 2rem;
+    }
+    .label-title {
+      font-size: 2.5rem;
+    }
   }
 
   .seller-listings {
@@ -917,24 +901,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
   .show-more-btn:hover svg {
     transform: translateY(2px);
-  }
-
-  @media (min-width: 640px) {
-    .seller-name {
-      font-size: 2rem;
-    }
-    .seller-count {
-      font-size: 1.1rem;
-    }
-  }
-
-  @media (min-width: 768px) {
-    .seller-name {
-      font-size: 2.25rem;
-    }
-    .seller-count {
-      font-size: 1.15rem;
-    }
   }
 
   /* Main 3-column layout */
@@ -1605,9 +1571,18 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       const sellerHeader = `
         <div class="seller-section" id="seller-${sellerKey}" data-seller-key="${sellerKey}">
           <div class="seller-header">
-            <div class="seller-header-inner">
-              <h3 class="seller-name">${escapeHtml(seller.name)}</h3>
-              <p class="seller-count">${sellerListings.length} release${sellerListings.length !== 1 ? 's' : ''}</p>
+            <div class="label-header">
+              <div class="label-title-row">
+                <div class="label-header-line"></div>
+                <h3 class="label-title">${escapeHtml(seller.name)}</h3>
+                <div class="label-header-line"></div>
+              </div>
+              <p class="label-count">${sellerListings.length} release${sellerListings.length !== 1 ? 's' : ''}</p>
+              <div class="label-divider" aria-hidden="true">
+                <div class="label-divider-line"></div>
+                <div class="label-divider-diamond"></div>
+                <div class="label-divider-line"></div>
+              </div>
             </div>
           </div>
           <div class="seller-listings" data-expanded="false">
