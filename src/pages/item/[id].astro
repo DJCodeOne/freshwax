@@ -399,9 +399,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
             <div class="item-info">
               <div>
-                <h1 class="text-xl sm:text-2xl md:text-5xl font-black text-red-500 mb-2 md:mb-3 leading-tight uppercase drop-shadow-lg" title={releaseName}>{releaseName}</h1>
+                <h1 class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-red-500 mb-2 md:mb-3 leading-tight uppercase drop-shadow-lg" title={releaseName}>{releaseName}</h1>
                 <div class="flex items-center gap-3 mb-1 md:mb-2">
-                  <p class="text-lg sm:text-xl md:text-3xl font-black text-white uppercase drop-shadow-md" title={artistName}>{artistName}</p>
+                  <p class="text-lg sm:text-xl md:text-2xl font-black text-white uppercase drop-shadow-md" title={artistName}>{artistName}</p>
                   <div class="flex items-center gap-2 ml-auto">
                   <button
                     id="followArtistBtn"
@@ -499,8 +499,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                     class={`add-to-cart  px-4 py-3.5 border-2 border-white flex items-center justify-center gap-2 transition-all font-black text-base uppercase w-full ${
                       isPreOrder
                         ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg'
-                        : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white buy-glow-green'
+                        : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white'
                     }`}
+                    style={isPreOrder ? undefined : 'box-shadow: 0 0 10px rgba(22, 163, 74, 0.6), 0 0 20px rgba(22, 163, 74, 0.4), 0 0 40px rgba(22, 163, 74, 0.2);'}
                   >
                     {isPreOrder ? (
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1171,16 +1172,30 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   .item-meta { order: 4; }
   .item-extra { order: 5; }
 
-  @media (min-width: 1024px) {
+  @media (min-width: 768px) {
     .item-detail-grid {
-      grid-template-columns: 1fr 2fr;
-      gap: 2rem;
+      grid-template-columns: 300px 1fr;
+      gap: 1.5rem;
     }
     .item-cover { grid-column: 1; grid-row: 1; order: unset; }
     .item-buy { grid-column: 1; grid-row: 2; order: unset; }
     .item-extra { grid-column: 1; grid-row: 3; order: unset; }
     .item-info { grid-column: 2; grid-row: 1; order: unset; }
     .item-meta { grid-column: 2; grid-row: 2 / span 2; order: unset; }
+  }
+
+  @media (min-width: 1024px) {
+    .item-detail-grid {
+      grid-template-columns: 350px 1fr;
+      gap: 2rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .item-detail-grid {
+      grid-template-columns: 400px 1fr;
+      gap: 2.5rem;
+    }
   }
 
   /* Cover Art Glow */
