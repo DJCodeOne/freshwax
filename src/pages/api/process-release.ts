@@ -100,7 +100,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Metadata not found - ensure info.json exists in submission folder');
     }
 
-    log.info(`Loaded metadata: ${metadata.artistName} - ${metadata.releaseName}`);
+    // Normalize metadata field names — different upload paths may use different keys
+    const artistName = String(metadata.artistName || metadata.artist || metadata.artist_name || 'Unknown Artist');
+    const releaseName = String(metadata.releaseName || metadata.title || metadata.release_name || metadata.album || 'Unknown Release');
+    // Store back for downstream use
+    metadata.artistName = artistName;
+    metadata.releaseName = releaseName;
+
+    log.info(`Loaded metadata: ${artistName} - ${releaseName}`);
+    log.debug('Metadata keys:', Object.keys(metadata).join(', '));
 
     // List all files in submission folder (handle pagination)
     const files: string[] = [];
@@ -167,9 +175,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Generate release ID and folder name
     const timestamp = Date.now();
-    const sanitizedArtist = metadata.artistName.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30);
+    const sanitizedArtist = artistName.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 30);
     const releaseId = `${sanitizedArtist}_FW-${timestamp}`;
-    const releaseFolderName = createReleaseFolderName(metadata.artistName, metadata.releaseName);
+    const releaseFolderName = createReleaseFolderName(artistName, releaseName);
     const releaseFolder = `releases/${releaseFolderName}`;
 
     log.info(`Target folder: ${releaseFolder}`);
@@ -410,7 +418,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Look up artist by email to get proper ownership ID
     let artistOwnerId = '';
-    let artistOwnerEmail = metadata.email || '';
+    let artistOwnerEmail = String(metadata.email || '');
     if (artistOwnerEmail) {
       try {
         // Normalize email for lookup (handle gmail/googlemail)
@@ -543,12 +551,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('Inner error:', error);
-    return errorResponse('Processing failed');
+    const errMsg = error instanceof Error ? error.message : String(error);
+    log.error('Inner error:', errMsg);
+    return errorResponse(`Processing failed: ${errMsg}`);
   }
 
   } catch (outerError: unknown) {
-    log.error('Outer error (uncaught):', outerError);
-    return errorResponse('An internal error occurred');
+    const errMsg = outerError instanceof Error ? outerError.message : String(outerError);
+    log.error('Outer error (uncaught):', errMsg);
+    return errorResponse(`An internal error occurred: ${errMsg}`);
   }
 };
