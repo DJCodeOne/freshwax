@@ -1611,6 +1611,9 @@ function showLiveStream(stream) {
     // Use cssText to set !important which overrides CSS animations
     initOverlay.style.cssText = 'display: none !important; animation: none !important;';
   }
+  // Hide playlist loading overlay
+  var playlistLoadOv = document.getElementById('playlistLoadingOverlay');
+  if (playlistLoadOv) playlistLoadOv.classList.add('hidden');
 
   // Update live badge (main page) - remove loading, add live
   const liveBadge = document.getElementById('liveBadge');
@@ -1776,12 +1779,17 @@ function showLiveStream(stream) {
 function setupHlsPlayer(stream) {
   document.getElementById('audioPlayer')?.classList.add('hidden');
   document.getElementById('videoPlayer')?.classList.remove('hidden');
-  
+
   const videoElement = document.getElementById('hlsVideoElement');
   const twitchEmbed = document.getElementById('twitchEmbed');
-  
+  const playlistPlayer = document.getElementById('playlistPlayer');
+  const playlistLoadingOverlay = document.getElementById('playlistLoadingOverlay');
+
   if (videoElement) videoElement.classList.remove('hidden');
   if (twitchEmbed) twitchEmbed.classList.add('hidden');
+  // Hide playlist player so it doesn't cover the HLS video
+  if (playlistPlayer) { playlistPlayer.classList.add('hidden'); playlistPlayer.style.display = 'none'; }
+  if (playlistLoadingOverlay) { playlistLoadingOverlay.classList.add('hidden'); }
   
   // Normalize to correct base URL (fixes old trycloudflare.com URLs)
   // For relay streams, use audioStreamUrl or relaySource.url
@@ -2636,12 +2644,17 @@ function floatTo16BitPCM(input) {
 function setupTwitchPlayer(stream) {
   document.getElementById('audioPlayer')?.classList.add('hidden');
   document.getElementById('videoPlayer')?.classList.remove('hidden');
-  
+
   const videoElement = document.getElementById('hlsVideoElement');
   const twitchEmbed = document.getElementById('twitchEmbed');
-  
+
   if (videoElement) videoElement.classList.add('hidden');
   if (twitchEmbed) twitchEmbed.classList.remove('hidden');
+  // Hide playlist player so it doesn't cover the stream
+  var pp = document.getElementById('playlistPlayer');
+  if (pp) { pp.classList.add('hidden'); pp.style.display = 'none'; }
+  var plo = document.getElementById('playlistLoadingOverlay');
+  if (plo) plo.classList.add('hidden');
   
   const parent = window.location.hostname;
   
@@ -2663,6 +2676,9 @@ function setupTwitchPlayer(stream) {
 function setupAudioPlayer(stream) {
   document.getElementById('audioPlayer')?.classList.remove('hidden');
   document.getElementById('videoPlayer')?.classList.add('hidden');
+  // Hide playlist overlays
+  var plo = document.getElementById('playlistLoadingOverlay');
+  if (plo) plo.classList.add('hidden');
 
   const audio = document.getElementById('audioElement');
   const playBtn = document.getElementById('playBtn');
