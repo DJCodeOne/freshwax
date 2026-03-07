@@ -178,8 +178,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             log(`Release ID: ${data.releaseId}`);
             log(`Tracks: ${data.tracks}`);
             log(`Cover: ${data.coverUrl}`);
-
-            showToast('Release processed successfully!');
+            if (data.warning) {
+              log(`WARNING: ${data.warning}`);
+              showToast('Processed with warnings — check log', 'error');
+            } else {
+              showToast('Release processed successfully!');
+            }
 
             // Remove row with animation
             row.style.opacity = '0';

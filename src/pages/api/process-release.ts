@@ -441,6 +441,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest(`No audio files found for ${metadataTracks.length} track(s). Please ensure audio files are uploaded with the submission.`);
     }
 
+    // Warn if metadata track count doesn't match audio files found
+    const trackCountMismatch = metadataTracks.length > 0 && metadataTracks.length !== tracks.length;
+    if (trackCountMismatch) {
+      log.warn(`Track count mismatch: metadata has ${metadataTracks.length} tracks, found ${tracks.length} audio files`);
+    }
+
     const now = new Date().toISOString();
 
     // Look up artist by email to get proper ownership ID
@@ -559,14 +565,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Created release: ${releaseId}`);
 
-    // Delete submission files after successful processing
-    try {
-      log.info(`Deleting submission files from ${submissionPrefix}/`);
-      const keysToDelete = files.map(f => f);
-      await r2.delete(keysToDelete);
-      log.info(`Deleted ${keysToDelete.length} submission files`);
-    } catch (deleteError: unknown) {
-      log.warn('Failed to delete some submission files:', deleteError);
+    // Delete submission files after successful processing (but keep if track count mismatch)
+    if (trackCountMismatch) {
+      log.warn(`Keeping submission files due to track count mismatch (metadata: ${metadataTracks.length}, actual: ${tracks.length})`);
+    } else {
+      try {
+        log.info(`Deleting submission files from ${submissionPrefix}/`);
+        const keysToDelete = files.map(f => f);
+        await r2.delete(keysToDelete);
+        log.info(`Deleted ${keysToDelete.length} submission files`);
+      } catch (deleteError: unknown) {
+        log.warn('Failed to delete some submission files:', deleteError);
+      }
     }
 
     return successResponse({
@@ -574,7 +584,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artist: metadata.artistName,
       title: metadata.releaseName,
       tracks: tracks.length,
-      coverUrl: artworkUrl
+      coverUrl: artworkUrl,
+      ...(trackCountMismatch ? { warning: `Track count mismatch: metadata has ${metadataTracks.length} tracks but only ${tracks.length} audio file(s) were found. Submission files kept for re-processing.` } : {})
     });
 
   } catch (error: unknown) {
