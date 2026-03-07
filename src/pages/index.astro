@@ -85,14 +85,14 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     <section class="releases-section">
       <!-- Section Header -->
       <div class="releases-header animate-fade-up" style="animation-delay: 0.8s;">
-        <div class="releases-header-line"></div>
-        <div class="releases-header-content">
+        <div class="releases-title-row">
+          <div class="releases-header-line"></div>
           <h2 class="releases-title">Latest Releases</h2>
-          <p class="releases-subtitle">
-            {featuredReleases.length} freshly pressed and ready to drop
-          </p>
+          <div class="releases-header-line"></div>
         </div>
-        <div class="releases-header-line"></div>
+        <p class="releases-subtitle">
+          {featuredReleases.length} freshly pressed and ready to drop
+        </p>
       </div>
 
       {featuredReleases.length === 0 ? (
@@ -607,21 +607,26 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 
   .releases-header {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
+    text-align: center;
+    gap: 0.35rem;
     padding: 0.25rem 0;
     margin-bottom: 0;
+  }
+
+  .releases-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    width: 100%;
   }
 
   .releases-header-line {
     flex: 1;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.5), transparent);
-  }
-
-  .releases-header-content {
-    text-align: center;
-    flex-shrink: 0;
   }
 
   .releases-title {
@@ -631,7 +636,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     color: #ffffff;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    margin: 0 0 0.35rem 0;
+    margin: 0;
     line-height: 1;
   }
 
@@ -648,9 +653,8 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
       padding: 2rem 1.25rem;
     }
 
-    .releases-header {
+    .releases-title-row {
       gap: 2rem;
-      padding: 0.5rem 0;
     }
 
     .releases-title {
@@ -667,9 +671,8 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
       padding: 3rem 1.5rem;
     }
 
-    .releases-header {
+    .releases-title-row {
       gap: 2.5rem;
-      padding: 0.75rem 0;
     }
 
     .releases-title {
