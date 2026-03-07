@@ -1397,6 +1397,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     width: 100%;
   }
 
+  /* WaveSurfer region resize handles — make wider and grabbable */
+  :global(#modalWaveform [data-resize]) {
+    width: 12px !important;
+    background: #dc2626 !important;
+    opacity: 0.85 !important;
+    cursor: ew-resize !important;
+    z-index: 5 !important;
+    border-radius: 2px;
+    transition: opacity 0.15s;
+  }
+  :global(#modalWaveform [data-resize]:hover) {
+    opacity: 1 !important;
+  }
+  :global(#modalWaveform [data-resize="left"]) {
+    left: -4px !important;
+  }
+  :global(#modalWaveform [data-resize="right"]) {
+    right: -4px !important;
+  }
+
   .region-controls {
     background: #fff;
     border: 1px solid #ddd;
