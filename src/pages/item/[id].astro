@@ -496,10 +496,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                     data-label-name={labelName}
                     data-artwork={coverArtUrl}
                     data-is-preorder={isPreOrder ? 'true' : 'false'}
-                    class={`add-to-cart  px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-all font-black text-base uppercase w-full ${
+                    class={`add-to-cart  px-4 py-3.5 border-2 border-white flex items-center justify-center gap-2 transition-all font-black text-base uppercase w-full ${
                       isPreOrder
-                        ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'
-                        : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white'
+                        ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg'
+                        : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white buy-glow-green'
                     }`}
                   >
                     {isPreOrder ? (
@@ -1186,6 +1186,14 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   /* Cover Art Glow */
   .cover-art-glow {
     box-shadow: 0 0 16px rgba(220, 38, 38, 0.6), 0 0 32px rgba(220, 38, 38, 0.3), 0 0 48px rgba(220, 38, 38, 0.15);
+  }
+
+  /* Green glow on buy buttons */
+  .buy-glow-green {
+    box-shadow: 0 0 12px rgba(22, 163, 74, 0.5), 0 0 24px rgba(22, 163, 74, 0.25);
+  }
+  .buy-glow-green:hover {
+    box-shadow: 0 0 16px rgba(22, 163, 74, 0.6), 0 0 32px rgba(22, 163, 74, 0.35);
   }
 
   /* NYOP (Name Your Own Price) Styles */

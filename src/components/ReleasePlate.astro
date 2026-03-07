@@ -354,7 +354,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-label-name={labelName}
             data-artwork={coverArtUrl}
             data-is-preorder={isPreOrder ? 'true' : 'false'}
-            class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+            class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-sm' : 'bg-green-600 hover:bg-green-700 text-white buy-glow-green'}`}
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {isPreOrder ? (
@@ -849,6 +849,14 @@ const totalDurationFormatted = totalDurationSeconds > 0
   /* Cover Art Glow */
   .cover-glow {
     box-shadow: 0 0 16px rgba(220, 38, 38, 0.6), 0 0 32px rgba(220, 38, 38, 0.3), 0 0 48px rgba(220, 38, 38, 0.15);
+  }
+
+  /* Green glow on buy buttons */
+  .buy-glow-green {
+    box-shadow: 0 0 12px rgba(22, 163, 74, 0.5), 0 0 24px rgba(22, 163, 74, 0.25);
+  }
+  .buy-glow-green:hover {
+    box-shadow: 0 0 16px rgba(22, 163, 74, 0.6), 0 0 32px rgba(22, 163, 74, 0.35);
   }
 
   /* Custom Font Classes (fonts loaded globally in Layout.astro) */
