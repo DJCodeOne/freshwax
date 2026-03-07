@@ -104,9 +104,18 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
       ) : (
         <div style="margin-top: 1.5rem;">
           {featuredReleases.map((release, i) => (
-            <div id={release.id} style="scroll-margin-top: 1.5rem;" class="release-item">
-              <ReleasePlate {...release} priority={i === 0} />
-            </div>
+            <>
+              <div id={release.id} style="scroll-margin-top: 1.5rem;" class="release-item">
+                <ReleasePlate {...release} priority={i === 0} />
+              </div>
+              {i < featuredReleases.length - 1 && (
+                <div class="release-divider" aria-hidden="true">
+                  <div class="release-divider-line"></div>
+                  <div class="release-divider-diamond"></div>
+                  <div class="release-divider-line"></div>
+                </div>
+              )}
+            </>
           ))}
         </div>
       )}
@@ -324,11 +333,29 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   .release-item {
     animation: fadeInUp 0.6s ease-out backwards;
     padding: 1.5rem 0;
-    border-bottom: 2px solid #dc2626;
   }
 
-  .release-item:last-child {
-    border-bottom: none;
+  /* Diamond divider between releases */
+  .release-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+  }
+
+  .release-divider-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #dc2626, transparent);
+    border-radius: 1px;
+  }
+
+  .release-divider-diamond {
+    width: 8px;
+    height: 8px;
+    background: #dc2626;
+    transform: rotate(45deg);
+    flex-shrink: 0;
   }
 
   .release-item:nth-child(1) { animation-delay: 0.05s; }
