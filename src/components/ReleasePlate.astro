@@ -355,7 +355,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-artwork={coverArtUrl}
             data-is-preorder={isPreOrder ? 'true' : 'false'}
             class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-sm' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-            style={isPreOrder ? undefined : 'box-shadow: 0 0 10px rgba(22, 163, 74, 0.6), 0 0 20px rgba(22, 163, 74, 0.4), 0 0 40px rgba(22, 163, 74, 0.2);'}
+            style={isPreOrder ? undefined : 'animation: buy-glow-pulse 2s ease-in-out infinite; box-shadow: 0 0 12px rgba(22, 163, 74, 0.7), 0 0 24px rgba(22, 163, 74, 0.5), 0 0 48px rgba(22, 163, 74, 0.3);'}
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {isPreOrder ? (
@@ -852,12 +852,10 @@ const totalDurationFormatted = totalDurationSeconds > 0
     box-shadow: 0 0 16px rgba(220, 38, 38, 0.6), 0 0 32px rgba(220, 38, 38, 0.3), 0 0 48px rgba(220, 38, 38, 0.15);
   }
 
-  /* Green glow on buy buttons */
-  .buy-glow-green {
-    box-shadow: 0 0 10px rgba(22, 163, 74, 0.6), 0 0 20px rgba(22, 163, 74, 0.4), 0 0 40px rgba(22, 163, 74, 0.2);
-  }
-  .buy-glow-green:hover {
-    box-shadow: 0 0 14px rgba(22, 163, 74, 0.7), 0 0 28px rgba(22, 163, 74, 0.5), 0 0 50px rgba(22, 163, 74, 0.3);
+  /* Green glow pulse on buy buttons */
+  @keyframes buy-glow-pulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(22, 163, 74, 0.7), 0 0 24px rgba(22, 163, 74, 0.5), 0 0 48px rgba(22, 163, 74, 0.3); }
+    50% { box-shadow: 0 0 18px rgba(22, 163, 74, 0.9), 0 0 36px rgba(22, 163, 74, 0.6), 0 0 60px rgba(22, 163, 74, 0.4); }
   }
 
   /* Custom Font Classes (fonts loaded globally in Layout.astro) */

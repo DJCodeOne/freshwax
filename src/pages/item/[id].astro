@@ -444,7 +444,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                           ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg'
                           : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white'
                       }`}
-                      style={isPreOrder ? undefined : 'box-shadow: 0 0 10px rgba(22, 163, 74, 0.6), 0 0 20px rgba(22, 163, 74, 0.4), 0 0 40px rgba(22, 163, 74, 0.2);'}
+                      style={isPreOrder ? undefined : 'animation: buy-glow-pulse 2s ease-in-out infinite; box-shadow: 0 0 12px rgba(22, 163, 74, 0.7), 0 0 24px rgba(22, 163, 74, 0.5), 0 0 48px rgba(22, 163, 74, 0.3);'}
                     >
                       {isPreOrder ? (
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -609,11 +609,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                     <p class="text-xs md:text-sm text-gray-300 uppercase font-black mb-1">Track Count</p>
                     <p class="text-sm md:text-base text-white font-bold">{tracksWithIds.length} {tracksWithIds.length === 1 ? 'Track' : 'Tracks'}</p>
                   </div>
-                  <div class="hidden md:block bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
+                  <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
                     <p class="text-xs md:text-sm text-gray-300 uppercase font-black mb-1">Mastered By</p>
                     <p class="text-sm md:text-base text-white font-bold">{masteredBy || '—'}</p>
                   </div>
-                  <div class="hidden md:block bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
+                  <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
                     <p class="text-xs md:text-sm text-gray-300 uppercase font-black mb-1">Recorded</p>
                     <p class="text-sm md:text-base text-white font-bold">{recordingLocation && recordingYear ? `${recordingLocation}, ${recordingYear}` : '—'}</p>
                   </div>
@@ -1198,12 +1198,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     box-shadow: 0 0 16px rgba(220, 38, 38, 0.6), 0 0 32px rgba(220, 38, 38, 0.3), 0 0 48px rgba(220, 38, 38, 0.15);
   }
 
-  /* Green glow on buy buttons */
-  .buy-glow-green {
-    box-shadow: 0 0 10px rgba(22, 163, 74, 0.6), 0 0 20px rgba(22, 163, 74, 0.4), 0 0 40px rgba(22, 163, 74, 0.2);
-  }
-  .buy-glow-green:hover {
-    box-shadow: 0 0 14px rgba(22, 163, 74, 0.7), 0 0 28px rgba(22, 163, 74, 0.5), 0 0 50px rgba(22, 163, 74, 0.3);
+  /* Green glow pulse on buy buttons */
+  @keyframes buy-glow-pulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(22, 163, 74, 0.7), 0 0 24px rgba(22, 163, 74, 0.5), 0 0 48px rgba(22, 163, 74, 0.3); }
+    50% { box-shadow: 0 0 18px rgba(22, 163, 74, 0.9), 0 0 36px rgba(22, 163, 74, 0.6), 0 0 60px rgba(22, 163, 74, 0.4); }
   }
 
   /* NYOP (Name Your Own Price) Styles */
