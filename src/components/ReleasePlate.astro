@@ -852,11 +852,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
     box-shadow: 0 0 16px rgba(220, 38, 38, 0.6), 0 0 32px rgba(220, 38, 38, 0.3), 0 0 48px rgba(220, 38, 38, 0.15);
   }
 
-  /* Green glow pulse on buy buttons */
-  @keyframes buy-glow-pulse {
-    0%, 100% { box-shadow: 0 0 12px rgba(22, 163, 74, 0.7), 0 0 24px rgba(22, 163, 74, 0.5), 0 0 48px rgba(22, 163, 74, 0.3); }
-    50% { box-shadow: 0 0 18px rgba(22, 163, 74, 0.9), 0 0 36px rgba(22, 163, 74, 0.6), 0 0 60px rgba(22, 163, 74, 0.4); }
-  }
+  /* Green glow pulse on buy buttons — must be :global so inline style can reference it */
 
   /* Custom Font Classes (fonts loaded globally in Layout.astro) */
   .release-title {
@@ -1393,6 +1389,12 @@ const totalDurationFormatted = totalDurationSeconds > 0
     .track-row {
       min-height: 52px !important;
     }
+  }
+</style>
+<style is:global>
+  @keyframes buy-glow-pulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(22, 163, 74, 0.7), 0 0 24px rgba(22, 163, 74, 0.5), 0 0 48px rgba(22, 163, 74, 0.3); }
+    50% { box-shadow: 0 0 18px rgba(22, 163, 74, 0.9), 0 0 36px rgba(22, 163, 74, 0.6), 0 0 60px rgba(22, 163, 74, 0.4); }
   }
 </style>
 
