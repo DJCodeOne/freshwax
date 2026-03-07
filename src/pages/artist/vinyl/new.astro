@@ -178,10 +178,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <span class="hint">WAV, MP3, FLAC, OGG supported</span>
           </label>
 
-          <!-- Loading state -->
+          <!-- Loading state with progress bar -->
           <div class="audio-loading" id="modalAudioLoading" style="display:none;">
-            <div class="spinner"></div>
-            <span>Loading waveform...</span>
+            <div class="upload-progress-container">
+              <div class="upload-progress-icon">🎵</div>
+              <div class="upload-progress-text" id="uploadProgressText">Loading audio...</div>
+              <div class="upload-progress-bar-track">
+                <div class="upload-progress-bar-fill" id="uploadProgressBar" style="width:0%"></div>
+              </div>
+              <div class="upload-progress-pct" id="uploadProgressPct">0%</div>
+            </div>
           </div>
 
           <!-- Waveform editor -->
@@ -225,7 +231,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" id="cancelWaveformModal">Cancel</button>
-          <button type="button" class="btn btn-primary" id="confirmWaveformModal" disabled>Use This Sample</button>
+          <button type="button" class="btn btn-primary" id="confirmWaveformModal" disabled>
+            <span class="btn-label">Use This Sample</span>
+            <span class="btn-processing" style="display:none;"><span class="spinner-sm"></span> Processing clip...</span>
+          </button>
         </div>
       </div>
     </div>
@@ -703,16 +712,39 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     audioLabel.style.display = 'none';
     audioLoading.style.display = 'flex';
 
+    var progressBar = document.getElementById('uploadProgressBar');
+    var progressText = document.getElementById('uploadProgressText');
+    var progressPct = document.getElementById('uploadProgressPct');
+
+    function setProgress(pct, text) {
+      progressBar.style.width = pct + '%';
+      progressPct.textContent = Math.round(pct) + '%';
+      if (text) progressText.textContent = text;
+    }
+
+    setProgress(0, 'Reading file...');
+
     try {
-      const { wavesurfer: ws, regions } = initModalWaveform();
+      var fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      setProgress(5, 'Reading ' + fileSizeMB + ' MB...');
+
+      var { wavesurfer: ws, regions } = initModalWaveform();
+
+      setProgress(15, 'Generating waveform...');
 
       // Load the file directly as blob (avoids CSP blob: URL issues)
       await ws.loadBlob(file);
 
+      setProgress(55, 'Decoding audio...');
+
       // Store decoded audio for later extraction
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const arrayBuffer = await file.arrayBuffer();
+      var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      var arrayBuffer = await file.arrayBuffer();
+
+      setProgress(70, 'Decoding audio...');
       modalOriginalAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+      setProgress(90, 'Setting up editor...');
 
       // Get duration and set initial region
       const totalDuration = ws.getDuration();
@@ -735,6 +767,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       // Update display
       document.getElementById('modalTrackName').textContent = file.name;
       updateModalRegionDisplay();
+
+      setProgress(100, 'Done!');
 
       // Show waveform editor
       audioLoading.style.display = 'none';
@@ -831,11 +865,21 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       return;
     }
 
-    const track = tracks.find(t => t.id === currentEditingTrackId);
+    var track = tracks.find(t => t.id === currentEditingTrackId);
     if (!track) return;
 
+    // Show processing state
+    var confirmBtn = document.getElementById('confirmWaveformModal');
+    var btnLabel = confirmBtn.querySelector('.btn-label');
+    var btnProcessing = confirmBtn.querySelector('.btn-processing');
+    confirmBtn.disabled = true;
+    btnLabel.style.display = 'none';
+    btnProcessing.style.display = 'inline-flex';
+
     // Extract the selected region and convert to MP3
-    const audioBlob = await extractAndConvertRegion(modalOriginalAudioBuffer, modalRegionStart, modalRegionEnd);
+    // Use setTimeout to let the UI update before heavy processing
+    await new Promise(function(r) { setTimeout(r, 50); });
+    var audioBlob = await extractAndConvertRegion(modalOriginalAudioBuffer, modalRegionStart, modalRegionEnd);
 
     if (audioBlob) {
       track.audioBlob = audioBlob;
@@ -846,6 +890,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       // Update the track row display
       renderTracklist();
     }
+
+    // Reset button state
+    btnLabel.style.display = '';
+    btnProcessing.style.display = 'none';
+    confirmBtn.disabled = false;
 
     closeWaveformModal();
   });
@@ -1329,7 +1378,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
+    padding: 2rem;
     color: #666;
     padding: 2rem;
   }
@@ -1349,6 +1398,63 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     border-top-color: #000;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+  }
+
+  .upload-progress-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .upload-progress-icon {
+    font-size: 2rem;
+  }
+
+  .upload-progress-text {
+    font-size: 0.9rem;
+    color: #333;
+    font-weight: 500;
+  }
+
+  .upload-progress-bar-track {
+    width: 100%;
+    height: 8px;
+    background: #e5e5e5;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .upload-progress-bar-fill {
+    height: 100%;
+    background: #000;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  .upload-progress-pct {
+    font-size: 0.8rem;
+    color: #666;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .spinner-sm {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+  }
+
+  .btn-processing {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   /* Waveform Editor Styles */
