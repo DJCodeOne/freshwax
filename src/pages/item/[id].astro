@@ -399,8 +399,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
             <div class="item-info">
               <div>
-                <h1 class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-red-500 mb-2 md:mb-3 leading-tight uppercase drop-shadow-lg" title={releaseName}>{releaseName}</h1>
-                <div class="flex items-center gap-3 mb-1 md:mb-2">
+                <h1 class="text-xl sm:text-2xl md:text-3xl font-black text-red-500 mb-1 md:mb-2 leading-tight uppercase drop-shadow-lg" title={releaseName}>{releaseName}</h1>
+                <div class="flex items-center gap-3 mb-1 md:mb-1">
                   <p class="text-lg sm:text-xl md:text-2xl font-black text-white uppercase drop-shadow-md" title={artistName}>{artistName}</p>
                   <div class="flex items-center gap-2 ml-auto">
                   <button
@@ -1172,9 +1172,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   .item-meta { order: 4; }
   .item-extra { order: 5; }
 
-  @media (min-width: 768px) {
+  @media (min-width: 1024px) {
     .item-detail-grid {
-      grid-template-columns: 300px 1fr;
+      grid-template-columns: 1fr 2fr;
       gap: 1.5rem;
     }
     .item-cover { grid-column: 1; grid-row: 1; order: unset; }
@@ -1182,20 +1182,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     .item-extra { grid-column: 1; grid-row: 3; order: unset; }
     .item-info { grid-column: 2; grid-row: 1; order: unset; }
     .item-meta { grid-column: 2; grid-row: 2 / span 2; order: unset; }
-  }
-
-  @media (min-width: 1024px) {
-    .item-detail-grid {
-      grid-template-columns: 350px 1fr;
-      gap: 2rem;
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .item-detail-grid {
-      grid-template-columns: 400px 1fr;
-      gap: 2.5rem;
-    }
   }
 
   /* Cover Art Glow */
