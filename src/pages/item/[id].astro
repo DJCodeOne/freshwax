@@ -1175,13 +1175,14 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   @media (min-width: 1024px) {
     .item-detail-grid {
       grid-template-columns: 1fr 2fr;
+      grid-auto-flow: dense;
       gap: 1.5rem;
     }
-    .item-cover { grid-column: 1; grid-row: 1; order: unset; }
-    .item-buy { grid-column: 1; grid-row: 2; order: unset; }
-    .item-extra { grid-column: 1; grid-row: 3; order: unset; }
-    .item-info { grid-column: 2; grid-row: 1; order: unset; }
-    .item-meta { grid-column: 2; grid-row: 2 / span 2; order: unset; }
+    .item-cover { grid-column: 1; order: unset; }
+    .item-buy { grid-column: 1; order: unset; }
+    .item-extra { grid-column: 1; order: unset; }
+    .item-info { grid-column: 2; order: unset; }
+    .item-meta { grid-column: 2; order: unset; }
   }
 
   /* Cover Art Glow */
