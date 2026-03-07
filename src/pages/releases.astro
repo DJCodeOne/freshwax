@@ -425,6 +425,14 @@ const releaseItemList = {
       border-radius: 0.75rem;
       margin-bottom: 0.5rem;
       box-shadow: 0 0 30px rgba(220, 38, 38, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      -webkit-mask-image:
+        linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%),
+        linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+      -webkit-mask-composite: destination-in;
+      mask-image:
+        linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%),
+        linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+      mask-composite: intersect;
     }
 
     .releases-header-line {
@@ -507,6 +515,14 @@ const releaseItemList = {
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 0.75rem;
+      -webkit-mask-image:
+        linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%),
+        linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+      -webkit-mask-composite: destination-in;
+      mask-image:
+        linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%),
+        linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+      mask-composite: intersect;
     }
 
     .label-header-line {
