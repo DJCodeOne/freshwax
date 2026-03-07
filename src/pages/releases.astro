@@ -125,23 +125,23 @@ const releaseItemList = {
               <p class="releases-count">
                 {totalReleases} releases
               </p>
-              <!-- Mobile Label Selector -->
-              <div class="label-dropdown-wrap">
-                <div class="label-dropdown-container">
-                  <select id="label-select" class="label-dropdown" aria-label="Select a label to jump to">
-                    <option value="">Jump to label...</option>
-                    {sortedLabels.map((label) => (
-                      <option value={`label-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>{label} ({releasesByLabel[label].length})</option>
-                    ))}
-                  </select>
-                  <svg class="label-dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                  </svg>
-                </div>
-              </div>
             </div>
             <div class="releases-header-line"></div>
             <div class="releases-divider"></div>
+          </div>
+          <!-- Label Selector — below hero -->
+          <div class="label-dropdown-wrap">
+            <div class="label-dropdown-container">
+              <select id="label-select" class="label-dropdown" aria-label="Select a label to jump to">
+                <option value="">Jump to label...</option>
+                {sortedLabels.map((label) => (
+                  <option value={`label-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>{label} ({releasesByLabel[label].length})</option>
+                ))}
+              </select>
+              <svg class="label-dropdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </div>
           </div>
         </header>
 
@@ -561,10 +561,11 @@ const releaseItemList = {
       }
     }
 
-    /* Mobile Label Dropdown */
+    /* Label Dropdown — sits below hero */
     .label-dropdown-wrap {
       display: block;
-      margin-top: 0.75rem;
+      margin-top: 1rem;
+      text-align: center;
     }
 
     .label-dropdown-container {
