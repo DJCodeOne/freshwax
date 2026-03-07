@@ -459,6 +459,19 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             </video>
             <!-- Playlist embeds will be injected here when active -->
             <div id="playlistPlayer" class="playlist-player hidden"></div>
+            <!-- Playlist loading overlay - hides glitchy embed loading -->
+            <div id="playlistLoadingOverlay" class="playlist-loading-overlay hidden">
+              <div class="playlist-loading-content">
+                <div class="playlist-loading-bars">
+                  <div class="pl-bar"></div>
+                  <div class="pl-bar"></div>
+                  <div class="pl-bar"></div>
+                  <div class="pl-bar"></div>
+                  <div class="pl-bar"></div>
+                </div>
+                <p class="playlist-loading-text">Initialising...</p>
+              </div>
+            </div>
           </div>
 
         </div>

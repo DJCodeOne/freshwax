@@ -8458,6 +8458,74 @@ body:has(.playlist-modal:not(.hidden)) .playlist-player {
 }
 
 /* =====================================================
+   PLAYLIST LOADING OVERLAY
+   ===================================================== */
+
+.playlist-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: opacity 0.5s ease-out;
+}
+
+.playlist-loading-overlay.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.playlist-loading-overlay.hidden {
+  display: none;
+}
+
+.playlist-loading-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.playlist-loading-text {
+  color: #999;
+  font-size: 0.95rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.playlist-loading-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 32px;
+}
+
+.pl-bar {
+  width: 4px;
+  background: #dc2626;
+  border-radius: 2px;
+  animation: pl-bar-bounce 1.2s ease-in-out infinite;
+}
+
+.pl-bar:nth-child(1) { height: 8px; animation-delay: 0s; }
+.pl-bar:nth-child(2) { height: 16px; animation-delay: 0.1s; }
+.pl-bar:nth-child(3) { height: 24px; animation-delay: 0.2s; }
+.pl-bar:nth-child(4) { height: 16px; animation-delay: 0.3s; }
+.pl-bar:nth-child(5) { height: 8px; animation-delay: 0.4s; }
+
+@keyframes pl-bar-bounce {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+/* =====================================================
    RELAY STREAM ATTRIBUTION
    ===================================================== */
 

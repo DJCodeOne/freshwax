@@ -1837,6 +1837,14 @@ export class PlaylistManager {
       hlsVideo.classList.add('hidden');
     }
 
+    // Show loading overlay while playlist embed loads
+    const loadingOverlay = document.getElementById('playlistLoadingOverlay');
+    if (loadingOverlay) {
+      loadingOverlay.classList.remove('hidden', 'fade-out');
+      // Safety: auto-hide after 15s in case playing event never fires
+      setTimeout(() => this.hidePlaylistLoadingOverlay(), 15000);
+    }
+
     if (videoPlayer) {
       videoPlayer.classList.remove('hidden');
       videoPlayer.style.display = 'block';
@@ -1847,6 +1855,17 @@ export class PlaylistManager {
       playlistPlayer.style.display = 'block';
     }
 
+  }
+
+  /** Hide the playlist loading overlay with a fade */
+  public hidePlaylistLoadingOverlay(): void {
+    const loadingOverlay = document.getElementById('playlistLoadingOverlay');
+    if (loadingOverlay && !loadingOverlay.classList.contains('hidden')) {
+      loadingOverlay.classList.add('fade-out');
+      setTimeout(() => {
+        loadingOverlay.classList.add('hidden');
+      }, 500);
+    }
   }
 
   /**
@@ -2033,6 +2052,8 @@ export class PlaylistManager {
     if (state === 'playing') {
       this.playbackStartedTime = Date.now();
       this.playlist.isPlaying = true;
+      // Hide the loading overlay now that audio is actually playing
+      this.hidePlaylistLoadingOverlay();
       // Update UI and enable emojis when video plays (including from player controls)
       this.renderUI();
       // Dispatch event for live-stream.js to sync button and enable emojis
