@@ -113,20 +113,20 @@ const releaseItemList = {
         <!-- Page Header -->
         <header class="mb-12">
           <div class="releases-header">
-            <div class="releases-header-line"></div>
-            <div class="releases-header-center">
+            <div class="releases-title-row">
+              <div class="releases-header-line"></div>
               <h1 class="releases-title">All Releases</h1>
-              <p class="releases-subtitle releases-subtitle-desktop">
-                Explore the library organised by label
-              </p>
-              <p class="releases-subtitle releases-subtitle-mobile">
-                Explore the library
-              </p>
-              <p class="releases-count">
-                {totalReleases} releases
-              </p>
+              <div class="releases-header-line"></div>
             </div>
-            <div class="releases-header-line"></div>
+            <p class="releases-subtitle releases-subtitle-desktop">
+              Explore the library organised by label
+            </p>
+            <p class="releases-subtitle releases-subtitle-mobile">
+              Explore the library
+            </p>
+            <p class="releases-count">
+              {totalReleases} releases
+            </p>
             <div class="releases-divider"></div>
           </div>
           <!-- Label Selector — below hero -->
@@ -161,19 +161,19 @@ const releaseItemList = {
                 <!-- Label Header -->
                 <div class="mb-6">
                   <div class="label-header">
-                    <div class="label-header-line"></div>
-                    <div class="label-header-center">
+                    <div class="label-title-row">
+                      <div class="label-header-line"></div>
                       <h2 class="label-title">{label}</h2>
-                      <p class="label-count">
-                        {releasesByLabel[label].length} release{releasesByLabel[label].length !== 1 ? 's' : ''}
-                      </p>
-                      <div class="label-divider" aria-hidden="true">
-                        <div class="label-divider-line"></div>
-                        <div class="label-divider-diamond"></div>
-                        <div class="label-divider-line"></div>
-                      </div>
+                      <div class="label-header-line"></div>
                     </div>
-                    <div class="label-header-line"></div>
+                    <p class="label-count">
+                      {releasesByLabel[label].length} release{releasesByLabel[label].length !== 1 ? 's' : ''}
+                    </p>
+                    <div class="label-divider" aria-hidden="true">
+                      <div class="label-divider-line"></div>
+                      <div class="label-divider-diamond"></div>
+                      <div class="label-divider-line"></div>
+                    </div>
                   </div>
 
                   {/* Buy All Discography Button */}
@@ -411,12 +411,13 @@ const releaseItemList = {
       to { opacity: 0.7; }
     }
 
-    /* Releases Header - matching index page style */
+    /* Releases Header - column layout with title-row for line centering */
     .releases-header {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 1.5rem;
+      text-align: center;
+      gap: 0.35rem;
       padding: 1.75rem 1.5rem;
       background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 0, 0, 0.85) 50%, rgba(0, 0, 0, 0.8));
       backdrop-filter: blur(12px);
@@ -435,16 +436,19 @@ const releaseItemList = {
       mask-composite: intersect;
     }
 
+    .releases-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      width: 100%;
+    }
+
     .releases-header-line {
       flex: 1;
       height: 2px;
       background: linear-gradient(90deg, transparent, #dc2626, transparent);
       display: none;
-    }
-
-    .releases-header-center {
-      text-align: center;
-      flex: 3;
     }
 
     .releases-title {
@@ -454,14 +458,14 @@ const releaseItemList = {
       color: #ffffff;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      margin: 0 0 0.35rem 0;
+      margin: 0;
       line-height: 1;
       white-space: nowrap;
     }
 
     /* Mobile: show short subtitle, hide long one */
     .releases-subtitle-desktop { display: none; }
-    .releases-subtitle-mobile { display: block; color: rgba(255, 255, 255, 0.4); font-size: 0.8rem; margin: 0 0 0.25rem 0; font-weight: 400; letter-spacing: 0.05em; }
+    .releases-subtitle-mobile { display: block; color: rgba(255, 255, 255, 0.4); font-size: 0.8rem; margin: 0; font-weight: 400; letter-spacing: 0.05em; }
 
     .releases-count {
       color: rgba(255, 255, 255, 0.3);
@@ -473,14 +477,18 @@ const releaseItemList = {
 
     .releases-divider {
       height: 2px;
+      width: 100%;
       background: linear-gradient(90deg, transparent, #dc2626, transparent);
-      margin-top: 1.25rem;
+      margin-top: 0.75rem;
     }
 
     @media (min-width: 640px) {
       .releases-header {
-        gap: 2rem;
+        gap: 0.35rem;
         padding: 2.5rem 3rem;
+      }
+      .releases-title-row {
+        gap: 2rem;
       }
       .releases-header-line {
         display: block;
@@ -489,26 +497,29 @@ const releaseItemList = {
         font-size: 4.5rem;
       }
       /* Desktop: show full subtitle, hide short one */
-      .releases-subtitle-desktop { display: block; color: rgba(255, 255, 255, 0.4); font-size: 0.9rem; margin: 0 0 0.25rem 0; font-weight: 400; letter-spacing: 0.05em; }
+      .releases-subtitle-desktop { display: block; color: rgba(255, 255, 255, 0.4); font-size: 0.9rem; margin: 0; font-weight: 400; letter-spacing: 0.05em; }
       .releases-subtitle-mobile { display: none; }
     }
 
     @media (min-width: 768px) {
       .releases-header {
-        gap: 2.5rem;
         padding: 3rem 3rem;
+      }
+      .releases-title-row {
+        gap: 2.5rem;
       }
       .releases-title {
         font-size: 6rem;
       }
     }
 
-    /* Label Headers - same red line style with dark background */
+    /* Label Headers - column layout with title-row for line centering */
     .label-header {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 1.25rem;
+      text-align: center;
+      gap: 0.25rem;
       padding: 1.25rem 1.25rem;
       background: rgba(0, 0, 0, 0.85);
       backdrop-filter: blur(12px);
@@ -525,16 +536,19 @@ const releaseItemList = {
       mask-composite: intersect;
     }
 
+    .label-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem;
+      width: 100%;
+    }
+
     .label-header-line {
       flex: 1;
       height: 2px;
       background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.5), transparent);
       display: none;
-    }
-
-    .label-header-center {
-      text-align: center;
-      flex: 3;
     }
 
     .label-title {
@@ -544,7 +558,7 @@ const releaseItemList = {
       color: #ffffff;
       letter-spacing: 0.06em;
       text-transform: uppercase;
-      margin: 0 0 0.25rem 0;
+      margin: 0;
       line-height: 1;
     }
 
@@ -558,8 +572,11 @@ const releaseItemList = {
 
     @media (min-width: 640px) {
       .label-header {
-        gap: 1.5rem;
+        gap: 0.25rem;
         padding: 1.5rem 2rem;
+      }
+      .label-title-row {
+        gap: 1.5rem;
       }
       .label-header-line {
         display: block;
@@ -572,6 +589,9 @@ const releaseItemList = {
     @media (min-width: 768px) {
       .label-header {
         padding: 1.75rem 2.5rem;
+      }
+      .label-title-row {
+        gap: 2rem;
       }
       .label-title {
         font-size: 2.5rem;
