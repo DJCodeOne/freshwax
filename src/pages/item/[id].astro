@@ -1194,12 +1194,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     box-shadow: 0 0 16px rgba(220, 38, 38, 0.6), 0 0 32px rgba(220, 38, 38, 0.3), 0 0 48px rgba(220, 38, 38, 0.15);
   }
 
-  /* Green glow pulse on buy buttons */
-  @keyframes buy-glow-pulse {
-    0%, 100% { box-shadow: 0 0 12px rgba(22, 163, 74, 0.7), 0 0 24px rgba(22, 163, 74, 0.5), 0 0 48px rgba(22, 163, 74, 0.3); }
-    50% { box-shadow: 0 0 18px rgba(22, 163, 74, 0.9), 0 0 36px rgba(22, 163, 74, 0.6), 0 0 60px rgba(22, 163, 74, 0.4); }
-  }
-
   /* NYOP (Name Your Own Price) Styles */
   .nyop-container-item {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -1408,6 +1402,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       min-height: 44px;
       min-width: 44px;
     }
+  }
+</style>
+<style is:global>
+  @keyframes buy-glow-pulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(22, 163, 74, 0.7), 0 0 24px rgba(22, 163, 74, 0.5), 0 0 48px rgba(22, 163, 74, 0.3); }
+    50% { box-shadow: 0 0 18px rgba(22, 163, 74, 0.9), 0 0 36px rgba(22, 163, 74, 0.6), 0 0 60px rgba(22, 163, 74, 0.4); }
   }
 </style>
 
