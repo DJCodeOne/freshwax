@@ -99,18 +99,26 @@ async function processReleaseArtwork(
     const bodyBytes = await getResponse.Body.transformToByteArray();
     log.info(`Fetched cover art: ${r2Key} (${(bodyBytes.length / 1024).toFixed(1)}KB)`);
 
-    // 2. Process to 800x800 WebP cover
-    const coverResult = await processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 800, 80);
+    // Skip WASM processing for large images (>5MB) to avoid Worker CPU timeout
+    const MAX_SIZE_FOR_PROCESSING = 5 * 1024 * 1024;
+    if (bodyBytes.length > MAX_SIZE_FOR_PROCESSING) {
+      log.info(`Artwork too large for WASM processing (${(bodyBytes.length / (1024 * 1024)).toFixed(1)}MB), using original`);
+      const originalArtworkUrl = `${cdnDomain}/${r2Key}`;
+      return { coverUrl: originalArtworkUrl, thumbUrl: originalArtworkUrl, originalArtworkUrl };
+    }
 
-    // 3. Process to 400x400 WebP thumbnail
-    const thumbResult = await processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 400, 75);
+    // 2. Process cover + thumb in parallel
+    const [coverResult, thumbResult] = await Promise.all([
+      processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 800, 80),
+      processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 400, 75),
+    ]);
 
-    // 4. Determine output keys
+    // 3. Determine output keys
     const dir = r2Key.substring(0, r2Key.lastIndexOf('/') + 1);
     const coverKey = `${dir}cover${imageExtension(coverResult.format)}`;
     const thumbKey = `${dir}thumb${imageExtension(thumbResult.format)}`;
 
-    // 5. Upload both image files
+    // 4. Upload both image files
     await Promise.all([
       s3Client.send(new PutObjectCommand({
         Bucket: r2Config.bucketName,
@@ -131,7 +139,7 @@ async function processReleaseArtwork(
     log.info(`Processed cover: ${coverKey} (${(coverResult.buffer.length / 1024).toFixed(1)}KB)`);
     log.info(`Processed thumb: ${thumbKey} (${(thumbResult.buffer.length / 1024).toFixed(1)}KB)`);
 
-    // 6. Keep original file for full-res download by buyers
+    // 5. Keep original file for full-res download by buyers
     const originalArtworkUrl = `${cdnDomain}/${r2Key}`;
     log.info(`Kept original for downloads: ${r2Key}`);
 
