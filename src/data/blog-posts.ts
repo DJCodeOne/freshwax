@@ -15,6 +15,38 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'underground-lair-recordings-merch',
+    title: 'New Merch Drop: Underground Lair Recordings',
+    excerpt: 'Underground Lair Recordings has landed on Fresh Wax Merch with hoodies and t-shirts in a range of colours. Rep the label.',
+    featuredImage: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=800&q=80',
+    category: 'Merch',
+    publishedAt: '2026-03-08',
+    author: 'Fresh Wax',
+    tags: ['merch', 'underground lair recordings', 'hoodies', 't-shirts', 'clothing', 'jungle', 'drum and bass'],
+    content: `
+      <p>We're buzzing to announce that <strong>Underground Lair Recordings</strong> has just dropped their official merch on Fresh Wax. If you know the label, you already know the score — deep, dark jungle and drum & bass from some of the most respected names in the scene.</p>
+
+      <h2>What's Available</h2>
+      <p>The first drop includes:</p>
+      <ul>
+        <li><strong>Hoodies</strong> — heavyweight, comfortable, and built for those cold nights on the way to the dance. Available in a range of colours.</li>
+        <li><strong>T-shirts</strong> — classic fit tees with the Underground Lair branding. Multiple colourways to choose from.</li>
+      </ul>
+      <p>All items feature the official Underground Lair Recordings artwork, so you're repping the label properly — no generic prints, just the real thing.</p>
+
+      <h2>Why It Matters</h2>
+      <p>When you buy merch through Fresh Wax, you're putting money directly back into the scene. Every sale supports the label, helps fund future releases, and keeps the underground moving. It's not just a hoodie — it's a statement that you back the music.</p>
+
+      <h2>Multiple Colours</h2>
+      <p>We know everyone's got their preference, so the range comes in different colours across both hoodies and tees. Whether you want something understated or something that stands out, there's an option for you. Check out the product pages to see what's in stock.</p>
+
+      <h2>How It Works</h2>
+      <p>Fresh Wax Merch is a marketplace where labels, sound systems, and DJs sell their official gear. We handle the listing, photos, and shipping — the label sends us the stock and we do the rest. It's sale or return, so there's zero risk for the sellers and you get authentic merch delivered to your door.</p>
+
+      <p>Head over to the <a href="/merch/">Merch Store</a> and grab yours before they're gone.</p>
+    `
+  },
+  {
     slug: 'go-live-from-your-phone',
     title: 'Go Live From Your Phone: No Software, No Laptop, No Problem',
     excerpt: 'DJs can now broadcast live on Fresh Wax straight from a mobile phone or tablet. No OBS, no BUTT, no complex setup — just tap and go.',
