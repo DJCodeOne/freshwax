@@ -7165,18 +7165,9 @@
       display: none;
     }
 
-    /* Hide turntable decks on mobile — keep waveform for visual feedback */
-    .turntables-row .vinyl-container {
+    /* Hide turntables, waveform and sound wave on mobile */
+    .turntables-row {
       display: none !important;
-    }
-    .turntables-row .tonearm-left,
-    .turntables-row .tonearm-right {
-      display: none !important;
-    }
-
-    .audio-waveform {
-      height: 60px !important;
-      gap: 2px !important;
     }
 
     .sound-wave-wrapper {
