@@ -6180,7 +6180,14 @@
       width: 3px;
     }
     .audio-dj-info {
-      display: none;
+      display: block;
+      padding: 1rem 0;
+    }
+    .audio-dj-name {
+      font-size: 1.25rem;
+    }
+    .audio-show-title {
+      font-size: 0.8125rem;
     }
 
     /* Hide playlist track title overlay in video player */
@@ -7158,13 +7165,18 @@
       display: none;
     }
 
-    /* Hide turntable decks, waveform, and sound wave on mobile — saves space */
-    .turntables-row {
+    /* Hide turntable decks on mobile — keep waveform for visual feedback */
+    .turntables-row .vinyl-container {
+      display: none !important;
+    }
+    .turntables-row .tonearm-left,
+    .turntables-row .tonearm-right {
       display: none !important;
     }
 
     .audio-waveform {
-      display: none !important;
+      height: 60px !important;
+      gap: 2px !important;
     }
 
     .sound-wave-wrapper {
