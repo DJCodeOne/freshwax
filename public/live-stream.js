@@ -9,6 +9,26 @@ import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/
 let pusher = null;
 let chatChannel = null;
 
+// Screen Wake Lock — keeps screen on during live stream (mobile)
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', function() { wakeLock = null; });
+  } catch (e) {
+    // Wake lock request failed (e.g. low battery, background tab)
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release().catch(function() {});
+    wakeLock = null;
+  }
+}
+
 // Load Pusher script eagerly so it's available for all components
 (async function loadPusherEagerly() {
   if (window.Pusher) return; // Already loaded
@@ -1183,7 +1203,12 @@ function handleVisibilityChange() {
   if (document.hidden) {
     // Page hidden - audio continues in background on mobile
   } else {
-    // Page visible - prevent race condition by marking sync time IMMEDIATELY
+    // Page visible - re-acquire wake lock (released automatically when tab hidden)
+    if (window.isLiveStreamActive) {
+      requestWakeLock();
+    }
+
+    // Prevent race condition by marking sync time IMMEDIATELY
     // This prevents handlePlaylistUpdate from disabling the button before sync completes
     lastSyncTime = Date.now();
 
@@ -1414,6 +1439,9 @@ function setChatEnabled(enabled) {
 // Stop all live stream players (HLS video, HLS audio, direct audio)
 // Called when stream ends to ensure external clients stop playing
 function stopLiveStream() {
+  // Release screen wake lock
+  releaseWakeLock();
+
   // Destroy HLS video player
   if (hlsPlayer) {
     try {
@@ -1567,6 +1595,7 @@ function showLiveStream(stream) {
     window.emojiAnimationsEnabled = true; // Enable emoji animations when live
     setReactionButtonsEnabled(true); // Enable reaction buttons
     setChatEnabled(true); // Enable chat when live
+    requestWakeLock(); // Keep screen on during live stream (mobile)
     hidePlaylistWave(); // Hide sound wave
     showLiveMeters(); // Show LED meters for live stream
   } catch (e) {
