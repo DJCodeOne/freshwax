@@ -114,7 +114,8 @@ export async function whipConnect(whipUrl, mediaStream, callbacks) {
     if (!params.encodings || params.encodings.length === 0) {
       params.encodings = [{}];
     }
-    params.encodings[0].maxBitrate = 2500000; // 2.5 Mbps default
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    params.encodings[0].maxBitrate = isMobile ? 1000000 : 2500000; // 1 Mbps mobile, 2.5 Mbps desktop
     videoSender.setParameters(params).catch(function() {
       // Ignore — not all browsers support this
     });

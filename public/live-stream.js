@@ -1883,14 +1883,14 @@ function setupHlsPlayer(stream) {
       hlsPlayer = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        // Fast start settings - reduced initial buffer for quicker connection
-        maxBufferLength: window.isMobileDevice ? 10 : 15,
-        maxMaxBufferLength: window.isMobileDevice ? 30 : 60,
+        // Buffer settings — balanced for stable playback
+        maxBufferLength: window.isMobileDevice ? 20 : 30,
+        maxMaxBufferLength: window.isMobileDevice ? 45 : 90,
         maxBufferSize: 30 * 1000 * 1000, // 30MB max buffer
         maxBufferHole: 0.5,
-        // Live sync - start from live edge quickly
-        liveSyncDurationCount: 2,
-        liveMaxLatencyDurationCount: 5,
+        // Live sync — 10s behind live edge for stability
+        liveSyncDurationCount: 5,
+        liveMaxLatencyDurationCount: 10,
         liveDurationInfinity: true,
         liveBackBufferLength: 30,
         // Faster initial manifest parsing
@@ -1977,12 +1977,13 @@ function setupHlsPlayer(stream) {
               networkRetryCount++;
               if (networkRetryCount <= MAX_NETWORK_RETRIES) {
                 hlsPlayer.startLoad();
+                var retryDelay = Math.min(1000 * Math.pow(2, networkRetryCount - 1), 16000);
                 setTimeout(() => {
                   if (!isPlaying) {
                     showReconnecting();
                     hlsPlayer.loadSource(hlsUrl);
                   }
-                }, 1000); // Faster retry - 1 second
+                }, retryDelay); // Exponential backoff: 1s, 2s, 4s, 8s, 16s
               } else {
                 hlsPlayer.destroy();
                 hlsPlayer = null;
@@ -2748,7 +2749,16 @@ function setupAudioPlayer(stream) {
       }
       window.audioHlsPlayer = new Hls({
         enableWorker: true,
-        lowLatencyMode: true
+        lowLatencyMode: true,
+        maxBufferLength: 20,
+        maxMaxBufferLength: 45,
+        liveSyncDurationCount: 5,
+        liveMaxLatencyDurationCount: 10,
+        liveBackBufferLength: 30,
+        liveDurationInfinity: true,
+        startPosition: -1,
+        fragLoadingMaxRetry: 6,
+        fragLoadingRetryDelay: 200
       });
       window.audioHlsPlayer.loadSource(audioUrl);
       window.audioHlsPlayer.attachMedia(audio);
