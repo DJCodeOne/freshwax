@@ -6189,6 +6189,9 @@
     .audio-show-title {
       font-size: 0.8125rem;
     }
+    .audio-live-badge {
+      display: none;
+    }
 
     /* Hide playlist track title overlay in video player */
     #audio-title {
