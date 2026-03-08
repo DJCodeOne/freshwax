@@ -262,6 +262,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // For relay streams: refresh metadata from the station every 5 minutes
+    // The Shoutcast `song` field contains the current DJ/show name (e.g. "BSOD - Introspection Sessions")
+    // The `servertitle` field is just the static station name (e.g. "THE UNDERGROUND LAIR STREAM")
     for (const stream of liveStreams) {
       if (!stream.isRelay || !stream.relaySource?.url) continue;
 
@@ -272,8 +274,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         // Use cached relay metadata
         stream.relayNowPlaying = cachedMeta.nowPlaying as string || undefined;
         stream.relayServerTitle = cachedMeta.serverTitle as string || undefined;
-        if (cachedMeta.serverTitle) {
-          stream.title = cachedMeta.serverTitle as string;
+        if (cachedMeta.nowPlaying) {
+          stream.title = cachedMeta.nowPlaying as string;
         }
         continue;
       }
@@ -298,12 +300,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
         stream.relayNowPlaying = stationStatus.nowPlaying;
         stream.relayServerTitle = stationStatus.serverTitle;
 
-        // If the station has a server title (DJ/show name), update the slot
-        if (stationStatus.serverTitle && stationStatus.serverTitle !== stream.title) {
-          stream.title = stationStatus.serverTitle;
+        // Use the song/now-playing field as the title (contains DJ/show name)
+        // servertitle is just the static station name
+        if (stationStatus.nowPlaying && stationStatus.nowPlaying !== stream.title) {
+          stream.title = stationStatus.nowPlaying;
           // Fire-and-forget: update Firestore slot title so it persists
           updateDocument('livestreamSlots', stream.id as string, {
-            title: stationStatus.serverTitle,
+            title: stationStatus.nowPlaying,
             updatedAt: new Date().toISOString()
           }).catch(() => {});
           // Invalidate status cache so next poll sees the update
