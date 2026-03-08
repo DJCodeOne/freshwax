@@ -2,12 +2,13 @@
 // Check if any stream is currently live - D1 first, Firebase fallback
 // NOW USES CLOUDFLARE CACHE API (FREE & UNLIMITED) instead of KV
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { d1GetLiveSlots, d1GetScheduledSlots, d1GetSlotById } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { createLogger, successResponse, jsonResponse as sharedJsonResponse } from '../../../lib/api-utils';
+import { APPROVED_RELAY_STATIONS, checkStationLive } from '../../../lib/relay-stations';
 
 const log = createLogger('[livestream/status]');
 
@@ -258,6 +259,59 @@ export const GET: APIRoute = async ({ request, locals }) => {
       await setCached(statusCacheKey, result, CACHE_TTL.OFFLINE_STATUS);
 
       return jsonResponse(result, 200, 30);
+    }
+
+    // For relay streams: refresh metadata from the station every 5 minutes
+    for (const stream of liveStreams) {
+      if (!stream.isRelay || !stream.relaySource?.url) continue;
+
+      // Check if we should refresh (every 5 minutes, keyed by slot ID)
+      const relayCacheKey = `relay-meta-${stream.id}`;
+      const cachedMeta = await getCached(relayCacheKey);
+      if (cachedMeta) {
+        // Use cached relay metadata
+        stream.relayNowPlaying = cachedMeta.nowPlaying as string || undefined;
+        stream.relayServerTitle = cachedMeta.serverTitle as string || undefined;
+        if (cachedMeta.serverTitle) {
+          stream.title = cachedMeta.serverTitle as string;
+        }
+        continue;
+      }
+
+      // Fetch fresh metadata from the station
+      const station = APPROVED_RELAY_STATIONS.find(s =>
+        s.streamUrl === stream.relaySource.url || s.httpsStreamUrl === stream.relaySource.url
+      );
+      if (!station) continue;
+
+      try {
+        const stationStatus = await checkStationLive(station);
+        const meta = {
+          nowPlaying: stationStatus.nowPlaying || '',
+          serverTitle: stationStatus.serverTitle || '',
+          listeners: stationStatus.listeners || 0
+        };
+
+        // Cache for 5 minutes
+        await setCached(relayCacheKey, meta, 300);
+
+        stream.relayNowPlaying = stationStatus.nowPlaying;
+        stream.relayServerTitle = stationStatus.serverTitle;
+
+        // If the station has a server title (DJ/show name), update the slot
+        if (stationStatus.serverTitle && stationStatus.serverTitle !== stream.title) {
+          stream.title = stationStatus.serverTitle;
+          // Fire-and-forget: update Firestore slot title so it persists
+          updateDocument('livestreamSlots', stream.id as string, {
+            title: stationStatus.serverTitle,
+            updatedAt: new Date().toISOString()
+          }).catch(() => {});
+          // Invalidate status cache so next poll sees the update
+          await invalidateStatusCache();
+        }
+      } catch (e: unknown) {
+        log.warn('Failed to refresh relay metadata:', e);
+      }
     }
 
     // Sort by startedAt desc

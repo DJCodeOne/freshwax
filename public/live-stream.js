@@ -1649,7 +1649,11 @@ function showLiveStream(stream) {
     avgRating: (stream.averageRating || 0).toFixed(1),
     streamDescription: stream.description || 'No description',
     audioDjName: displayName || 'DJ',
-    audioShowTitle: stream.isRelay ? `Relayed from ${stream.relaySource?.stationName || 'External Station'}` : (stream.title || 'Live on Fresh Wax'),
+    audioShowTitle: stream.isRelay
+      ? (stream.relayNowPlaying
+        ? `Now Playing: ${stream.relayNowPlaying}`
+        : `Relayed from ${stream.relaySource?.stationName || 'External Station'}`)
+      : (stream.title || 'Live on Fresh Wax'),
     // Fullscreen mode elements
     fsStreamTitle: stream.title || 'Live Stream',
     fsDjName: displayName || 'DJ',

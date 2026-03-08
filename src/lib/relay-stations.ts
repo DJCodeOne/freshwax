@@ -30,7 +30,14 @@ export const APPROVED_RELAY_STATIONS: RelayStation[] = [
 ];
 
 // Check if a station is currently live
-export async function checkStationLive(station: RelayStation): Promise<{ isLive: boolean; nowPlaying?: string; listeners?: number }> {
+export interface StationStatus {
+  isLive: boolean;
+  nowPlaying?: string;
+  listeners?: number;
+  serverTitle?: string; // Current show/DJ name from the station
+}
+
+export async function checkStationLive(station: RelayStation): Promise<StationStatus> {
   if (!station.checkUrl) {
     return { isLive: true }; // Assume live if no check URL
   }
@@ -56,7 +63,8 @@ export async function checkStationLive(station: RelayStation): Promise<{ isLive:
           return {
             isLive,
             nowPlaying: isLive ? data.song : undefined,
-            listeners: data.listeners
+            listeners: data.listeners,
+            serverTitle: data.servertitle || data.title || undefined
           };
         }
       } catch {

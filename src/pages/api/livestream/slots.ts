@@ -393,6 +393,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       for (const liveSlot of firebaseLiveSlots) {
         const slotEnd = new Date(liveSlot.endTime as string);
         if (now > slotEnd) {
+          // Relay streams stay alive until manually ended (unless another DJ needs the slot)
+          const isRelayStream = liveSlot.isRelay === true;
+
           // Check if ANOTHER DJ has a slot starting soon — only cut off if someone else needs the slot
           const upcomingAllSlots = await queryCollection('livestreamSlots', {
             filters: [{ field: 'startTime', op: 'GREATER_THAN_OR_EQUAL', value: slotEnd.toISOString() }],
@@ -407,6 +410,22 @@ export const GET: APIRoute = async ({ request, locals }) => {
             // Another DJ's slot starts within 15 minutes of this slot's end
             return nextStart.getTime() - slotEnd.getTime() <= 15 * 60 * 1000;
           });
+
+          // Relay streams: skip auto-end unless another DJ is waiting
+          if (isRelayStream && !anotherDjWaiting) {
+            // Extend the relay endTime by another 24 hours so it doesn't keep triggering
+            const newEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            try {
+              await updateDocument('livestreamSlots', liveSlot.id, {
+                endTime: newEnd.toISOString(),
+                updatedAt: now.toISOString()
+              });
+              await syncSlotStatusToD1(db, liveSlot.id, 'live', { endTime: newEnd.toISOString() });
+            } catch (extErr: unknown) {
+              log.warn('Failed to extend relay endTime:', extErr);
+            }
+            continue;
+          }
 
           // Enforce max duration: 2hr standard, 2hr + approved event hours for Plus
           const startedAt = new Date((liveSlot.startedAt || liveSlot.startTime) as string);
@@ -1555,11 +1574,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      // Calculate end time (top of next hour)
-      const endTime = new Date(now);
-      endTime.setMinutes(0, 0, 0);
-      endTime.setHours(endTime.getHours() + 1);
-      if (now.getMinutes() >= 55) endTime.setHours(endTime.getHours() + 1);
+      // Relay streams run until manually ended — set endTime 24 hours ahead
+      const endTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
       // Generate a relay stream key
       const relaySlotId = generateId();
