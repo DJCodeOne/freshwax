@@ -18,7 +18,7 @@ export const blogPosts: BlogPost[] = [
     slug: 'go-live-from-your-phone',
     title: 'Go Live From Your Phone: No Software, No Laptop, No Problem',
     excerpt: 'DJs can now broadcast live on Fresh Wax straight from a mobile phone or tablet. No OBS, no BUTT, no complex setup — just tap and go.',
-    featuredImage: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&q=80',
+    featuredImage: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80',
     category: 'Live',
     publishedAt: '2026-03-08',
     author: 'Fresh Wax',
