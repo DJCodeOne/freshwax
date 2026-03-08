@@ -15,6 +15,69 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'go-live-from-your-phone',
+    title: 'Go Live From Your Phone: No Software, No Laptop, No Problem',
+    excerpt: 'DJs can now broadcast live on Fresh Wax straight from a mobile phone or tablet. No OBS, no BUTT, no complex setup — just tap and go.',
+    featuredImage: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&q=80',
+    category: 'Live',
+    publishedAt: '2026-03-08',
+    author: 'Fresh Wax',
+    tags: ['live streaming', 'mobile', 'go live', 'browser streaming', 'dj sets', 'WebRTC'],
+    content: `
+      <p>We've just rolled out a feature that a lot of DJs have been asking for: <strong>Go Live directly from your phone or tablet</strong>. No laptop required. No OBS. No BUTT. No messing about with audio routing software. Just open the page, hit Go Live, and you're broadcasting.</p>
+
+      <h2>Why This Matters</h2>
+      <p>Until now, going live on Fresh Wax meant setting up streaming software like OBS or BUTT on a laptop or desktop, configuring your audio source, and connecting to the server. That's fine if you've got the gear and the know-how, but not every DJ has access to a full studio setup every time they want to stream.</p>
+      <p>Maybe you're at a mate's house playing tunes. Maybe you're at a party and want to share the vibe. Maybe you just don't own a laptop. Whatever the reason, this update means <strong>if you've got a phone, you can go live</strong>.</p>
+
+      <h2>How It Works</h2>
+      <p>If you're a Fresh Wax Plus member with a booked time slot, you'll see a "Go Live from Browser" link in the DJ Lobby. Tap it and you'll land on a purpose-built mobile streaming page. Here's what happens:</p>
+      <ol>
+        <li>Your phone's microphone picks up the audio (point it at the speakers)</li>
+        <li>Optionally enable your camera for a video feed</li>
+        <li>Tap <strong>Go Live</strong> — that's it, you're broadcasting</li>
+      </ol>
+      <p>The stream goes out to all listeners on the <a href="/live/">Live</a> page in real time. Chat, reactions, the lot — everything works exactly the same as a traditional stream.</p>
+
+      <h2>Let's Be Honest About Audio Quality</h2>
+      <p>We're not going to pretend this sounds the same as a proper studio stream. It doesn't. When you're streaming from a phone microphone pointed at speakers, you're going to get:</p>
+      <ul>
+        <li>Ambient room noise and crowd sounds</li>
+        <li>Some compression and frequency loss from the phone mic</li>
+        <li>Possible distortion if the volume is cranked</li>
+      </ul>
+      <p>But here's the thing: <strong>that's the charm</strong>. Some of the best pirate radio recordings sound rough as anything, and that raw energy is part of what makes them special. A phone stream from a house party has a vibe that a perfectly clean studio mix just doesn't capture.</p>
+      <p>And for some DJs, this is the <strong>only option</strong>. If the choice is between streaming from your phone or not streaming at all, we'd rather you stream.</p>
+
+      <h2>Tips for Better Mobile Streams</h2>
+      <p>If you want to get the best possible quality from a phone stream, here are a few tips:</p>
+      <ul>
+        <li><strong>Get close to the speakers</strong> but not so close that the mic clips — find the sweet spot</li>
+        <li><strong>Use a phone stand or prop it up</strong> so it stays steady, especially if you've got the camera on</li>
+        <li><strong>Turn off notifications</strong> — you don't want WhatsApp pings interrupting your set</li>
+        <li><strong>Keep the phone plugged in</strong> — streaming eats battery</li>
+        <li><strong>WiFi over 4G/5G</strong> — more stable connection means fewer dropouts</li>
+        <li><strong>Close other apps</strong> — free up as much processing power as possible</li>
+      </ul>
+
+      <h2>OBS Is Still King</h2>
+      <p>If you've got access to a laptop and proper streaming software, that's still going to give you the best results. A direct audio feed into OBS or BUTT, properly configured, will always sound better than a phone mic in a room. The traditional setup isn't going anywhere — this is an <strong>additional option</strong>, not a replacement.</p>
+      <p>Think of it like this: OBS is your studio session, phone streaming is your field recording. Both have their place.</p>
+
+      <h2>Get Started</h2>
+      <p>To use browser streaming, you need:</p>
+      <ul>
+        <li>An approved DJ account — either by hitting the required number of likes on your mixes, having a live code, or being approved by an admin</li>
+        <li>A booked time slot on the <a href="/live/schedule/">schedule</a></li>
+        <li>A phone or tablet with a working microphone</li>
+        <li>A modern browser (Chrome, Safari, Firefox, Edge)</li>
+      </ul>
+      <p>That's it. No downloads, no config files, no port forwarding, no paid subscription required. Just book your slot, open the link, and go live.</p>
+
+      <p>Head to the <a href="/live/">Live</a> section to see what's streaming now, or check the <a href="/live/schedule/">schedule</a> to book your next set.</p>
+    `
+  },
+  {
     slug: 'discover-new-releases',
     title: 'Discover New Releases on Fresh Wax',
     excerpt: 'Explore the latest digital releases from jungle and drum & bass artists, with vinyl editions available on select titles.',
