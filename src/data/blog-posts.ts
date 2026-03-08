@@ -31,7 +31,7 @@ export const blogPosts: BlogPost[] = [
       <p>Maybe you're at a mate's house playing tunes. Maybe you're at a party and want to share the vibe. Maybe you just don't own a laptop. Whatever the reason, this update means <strong>if you've got a phone, you can go live</strong>.</p>
 
       <h2>How It Works</h2>
-      <p>If you're a Fresh Wax Plus member with a booked time slot, you'll see a "Go Live from Browser" link in the DJ Lobby. Tap it and you'll land on a purpose-built mobile streaming page. Here's what happens:</p>
+      <p>If you're an approved DJ with a booked time slot, you'll see a "Go Live from Browser" link in the DJ Lobby. Tap it and you'll land on a purpose-built mobile streaming page. Here's what happens:</p>
       <ol>
         <li>Your phone's microphone picks up the audio (point it at the speakers)</li>
         <li>Optionally enable your camera for a video feed</li>
@@ -229,7 +229,7 @@ export const blogPosts: BlogPost[] = [
       <p>We host regular streaming sessions throughout the week. Check our schedule to find out when your favourite DJs are going live, or just drop in whenever you see the live indicator.</p>
 
       <h2>Go Live Yourself</h2>
-      <p>Fresh Wax Plus members can broadcast their own sets through our platform. It's a great way to build your audience and connect with like-minded heads from around the world.</p>
+      <p>Approved DJs can broadcast their own sets through our platform. It's a great way to build your audience and connect with like-minded heads from around the world.</p>
 
       <p>Head to our <a href="/live/">Live</a> section to see what's streaming now or check the schedule for upcoming sessions.</p>
     `
