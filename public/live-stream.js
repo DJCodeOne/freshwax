@@ -1609,9 +1609,15 @@ function showLiveStream(stream) {
   window.currentStreamData = stream; // Cache stream data for instant restoration on page nav
   window.firebaseAuth = auth;
 
-  // Update TODAY'S LINEUP if relay stream (it may not be in slots API)
-  if (stream.isRelay && typeof window.renderTodaySchedule === 'function') {
-    window.renderTodaySchedule();
+  // Update TODAY'S LINEUP and NOW PLAYING sidebar for relay streams
+  // Status API refreshes Shoutcast metadata every 5 min — push updated title to sidebar
+  if (stream.isRelay) {
+    if (typeof window.renderTodaySchedule === 'function') {
+      window.renderTodaySchedule();
+    }
+    // Update NOW PLAYING card in sidebar with fresh relay title
+    var liveDjNameCard = document.getElementById('liveDjNameCard');
+    if (liveDjNameCard) liveDjNameCard.textContent = stream.title || 'Relay Stream';
   }
 
   // Show/hide relay attribution based on stream type

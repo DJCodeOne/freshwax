@@ -2637,17 +2637,26 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 
     // Include current live relay stream if not already in slots list
     // Check both scheduleCache and live-stream.js global state for relay streams
-    const currentLive = scheduleCache?.currentLive || window.liveStreamState?.currentStream;
-    if (currentLive && currentLive.isRelay && !todaySlots.find(s => s.id === currentLive.id || s.id === currentLive.slotId)) {
-      todaySlots.unshift({
-        id: currentLive.id || currentLive.slotId,
-        djName: currentLive.djName,
-        title: currentLive.title,
-        startTime: currentLive.startTime || currentLive.startedAt,
-        endTime: currentLive.endTime,
-        status: 'live',
-        isRelay: true
-      });
+    // Prefer liveStreamState for relays — status API refreshes Shoutcast metadata every 5 min
+    var statusStream = window.liveStreamState?.currentStream;
+    var cachedLive = scheduleCache?.currentLive;
+    var currentLive = (statusStream && statusStream.isRelay) ? statusStream : (cachedLive || statusStream);
+    if (currentLive && currentLive.isRelay) {
+      var existingSlot = todaySlots.find(s => s.id === currentLive.id || s.id === currentLive.slotId);
+      if (existingSlot) {
+        // Update existing slot title with fresh Shoutcast metadata
+        if (currentLive.title) existingSlot.title = currentLive.title;
+      } else {
+        todaySlots.unshift({
+          id: currentLive.id || currentLive.slotId,
+          djName: currentLive.djName,
+          title: currentLive.title,
+          startTime: currentLive.startTime || currentLive.startedAt,
+          endTime: currentLive.endTime,
+          status: 'live',
+          isRelay: true
+        });
+      }
     }
 
     // Sort by start time
