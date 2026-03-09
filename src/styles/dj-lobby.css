@@ -8582,7 +8582,7 @@
   }
 
   /* Ensure text sits above background video */
-  .butt-audio-preview .audio-only-placeholder > *:not(.stream-bg-video) {
+  .butt-audio-preview .audio-only-placeholder > *:not(.stream-bg-video):not(.audio-placeholder-branding) {
     position: relative;
     z-index: 1;
   }
@@ -8818,7 +8818,7 @@
   }
 
   /* Ensure text sits above background video */
-  #audioPreview .audio-only-placeholder > *:not(.stream-bg-video) {
+  #audioPreview .audio-only-placeholder > *:not(.stream-bg-video):not(.audio-placeholder-branding) {
     position: relative;
     z-index: 1;
   }

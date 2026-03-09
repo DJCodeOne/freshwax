@@ -3153,9 +3153,14 @@
   }
 
   /* Ensure all content sits above the video */
-  .audio-only-placeholder > *:not(.stream-bg-video),
-  .fs-audio-placeholder > *:not(.stream-bg-video) {
+  .audio-only-placeholder > *:not(.stream-bg-video):not(.audio-placeholder-branding),
+  .fs-audio-placeholder > *:not(.stream-bg-video):not(.fs-audio-placeholder-branding) {
     position: relative;
+    z-index: 1;
+  }
+
+  .audio-placeholder-branding,
+  .fs-audio-placeholder-branding {
     z-index: 1;
   }
 
