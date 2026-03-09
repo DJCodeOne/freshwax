@@ -1428,7 +1428,7 @@ function setChatEnabled(enabled) {
 
   if (chatInput) {
     chatInput.disabled = !enabled;
-    chatInput.placeholder = enabled ? 'Type a message...' : 'Chat available when stream is live...';
+    chatInput.placeholder = enabled ? 'Message...' : 'Chat available when stream is live...';
   }
   if (chatSend) {
     chatSend.disabled = !enabled;
