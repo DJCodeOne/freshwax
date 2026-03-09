@@ -7216,6 +7216,12 @@
       display: none;
     }
 
+    .relay-attribution {
+      font-size: 0.65rem;
+      bottom: 0.5rem;
+      left: 0.5rem;
+    }
+
     .dj-info-center {
       width: 100%;
       justify-content: center;
