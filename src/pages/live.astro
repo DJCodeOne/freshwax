@@ -113,17 +113,19 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         </div>
         <!-- Fullscreen Audio Placeholder (BUTT mode) -->
         <div id="fsAudioPlaceholder" class="fs-audio-placeholder hidden">
-          <!-- Fresh Wax branding top right -->
-          <div class="fs-audio-placeholder-branding">
-            <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+          <!-- Badge top left -->
+          <div class="fs-audio-live-badge">
+            <span class="fs-live-pulse"></span>
+            <span id="fsAudioBadgeText">AUDIO ONLY</span>
           </div>
+          <!-- DJ Info top center -->
           <div class="fs-audio-dj-info">
             <div class="fs-audio-dj-name" id="fsAudioDjName">DJ Name</div>
             <div class="fs-audio-show-title">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
-            <div class="fs-audio-live-badge">
-              <span class="fs-live-pulse"></span>
-              <span id="fsAudioBadgeText">AUDIO ONLY</span>
-            </div>
+          </div>
+          <!-- Fresh Wax branding bottom right -->
+          <div class="fs-audio-placeholder-branding">
+            <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
           </div>
           <!-- Background video loop (fullscreen) -->
           <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
@@ -358,18 +360,19 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
               <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
                 <source src="/stream-bg.webm" type="video/webm" />
               </video>
-              <!-- Fresh Wax branding top right -->
-              <div class="audio-placeholder-branding">
-                <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+              <!-- Badge top left -->
+              <div class="audio-live-badge">
+                <span class="live-pulse"></span>
+                <span id="audioBadgeText">AUDIO ONLY</span>
               </div>
-              <!-- DJ Info at top -->
+              <!-- DJ Info top center -->
               <div class="audio-dj-info">
                 <div class="audio-dj-name" id="audioDjName">DJ Name</div>
                 <div class="audio-show-title" id="audioShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
-                <div class="audio-live-badge">
-                  <span class="live-pulse"></span>
-                  <span id="audioBadgeText">AUDIO ONLY</span>
-                </div>
+              </div>
+              <!-- Fresh Wax branding bottom right -->
+              <div class="audio-placeholder-branding">
+                <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
               </div>
             </div>
             <audio id="audioElement" crossorigin="anonymous" preload="auto"></audio>
