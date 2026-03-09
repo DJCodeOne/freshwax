@@ -55,6 +55,7 @@ function createFloatingEmoji(startX, startY, emojiList) {
       pointerEvents: 'none',
       zIndex: '99999',
       opacity: '1',
+      transform: 'translateX(-50%)',
       transition: 'opacity 0.5s ease-out',
       margin: '0',
       padding: '0'
@@ -85,7 +86,7 @@ function createFloatingEmoji(startX, startY, emojiList) {
     pointerEvents: 'none',
     zIndex: '99999',
     opacity: '1',
-    transform: 'scale(0)',
+    transform: 'translateX(-50%) scale(0)',
     margin: '0',
     padding: '0'
   });
@@ -123,7 +124,7 @@ function createFloatingEmoji(startX, startY, emojiList) {
     heart.style.left = (posX + wiggle) + 'px';
     heart.style.top = (posY - moveY) + 'px';
     heart.style.opacity = String(opacity);
-    heart.style.transform = 'scale(' + scale + ')';
+    heart.style.transform = 'translateX(-50%) scale(' + scale + ')';
 
     if (progress < 1) {
       requestAnimationFrame(animate);
