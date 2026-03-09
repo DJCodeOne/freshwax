@@ -2533,9 +2533,14 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       if (!s.startTime.startsWith(today)) return false;
       if (s.status === 'cancelled' || s.status === 'completed') return false;
 
-      // Hide expired slots (endTime has passed) unless currently live
+      // Hide expired slots (endTime has passed)
+      // For 'live' status: still hide if endTime passed AND no active stream detected
       const endTime = new Date(s.endTime);
-      if (endTime < now && s.status !== 'live') return false;
+      if (endTime < now) {
+        if (s.status !== 'live') return false;
+        // Stale 'live' slot — hide if live-stream.js says no stream is active
+        if (!window.isLiveStreamActive && !window.streamDetectedThisSession) return false;
+      }
 
       // Show if live, scheduled, in_lobby, or queued
       return ['live', 'scheduled', 'in_lobby', 'queued'].includes(s.status);

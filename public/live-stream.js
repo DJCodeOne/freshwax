@@ -1339,6 +1339,8 @@ async function checkLiveStatus(skipCache = false) {
       // Track when stream ended (for 10-second delay before resuming playlist)
       if (wasLiveStreamActive && !streamEndedAt) {
         streamEndedAt = Date.now();
+        // Refresh Today's Lineup so the completed DJ slot disappears
+        if (typeof window.refreshSchedule === 'function') window.refreshSchedule();
       }
 
       // Only resume playlist after 10-second delay (gives time for DJ handoffs)
@@ -1491,6 +1493,10 @@ function stopLiveStream() {
   window.isLiveStreamActive = false;
   window.streamDetectedThisSession = false;
   setLiveStreamPlaying(false);
+
+  // Hide relay attribution when stream stops
+  const relayAttr = document.getElementById('relayAttribution');
+  if (relayAttr) relayAttr.style.display = 'none';
 }
 
 // Show offline state
@@ -1552,9 +1558,16 @@ function showOfflineState(scheduled) {
     setChatEnabled(false);
   }
 
+  // Hide relay attribution when offline
+  const relayAttribution = document.getElementById('relayAttribution');
+  if (relayAttribution) relayAttribution.style.display = 'none';
+
+  // Re-render Today's Lineup to prune expired slots
+  if (typeof window.renderTodaySchedule === 'function') window.renderTodaySchedule();
+
   document.getElementById('offlineState')?.classList.remove('hidden');
   document.getElementById('liveState')?.classList.add('hidden');
-  
+
   if (scheduled.length > 0) {
     document.getElementById('scheduledStreams')?.classList.remove('hidden');
     const list = document.getElementById('scheduledList');
