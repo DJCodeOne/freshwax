@@ -7200,11 +7200,15 @@
     .inline-controls { order: 2; }
     .inline-reactions {
       order: 3;
-      width: 100%;
+      flex: 1 0 100%;
       padding: 0;
       background: transparent;
       border-radius: 0;
       overflow: visible;
+    }
+    .inline-reactions .inline-btn.reaction-btn {
+      flex: 1 1 0;
+      min-width: 0;
     }
 
     /* DJ Info Bar - mobile */
