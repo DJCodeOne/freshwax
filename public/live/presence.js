@@ -148,23 +148,33 @@ export async function setupLiveStatusListener(deps) {
     var reactionChannelName = 'stream-' + streamId;
     var reactionChannel = statusPusher.subscribe(reactionChannelName);
 
+    // Update like count from both dedicated like-update events and combined reaction events
+    function updateLikeCount(totalLikes) {
+      if (!totalLikes || totalLikes <= 0) return;
+      var likeCountEl = document.getElementById('likeCount');
+      var fsLikes = document.getElementById('fsLikes');
+      if (likeCountEl) likeCountEl.textContent = totalLikes;
+      if (fsLikes) fsLikes.textContent = totalLikes;
+    }
+
     reactionChannel.bind('like-update', function(data) {
-      if (data.totalLikes > 0) {
-        var likeCountEl = document.getElementById('likeCount');
-        var fsLikes = document.getElementById('fsLikes');
-        if (likeCountEl) likeCountEl.textContent = data.totalLikes;
-        if (fsLikes) fsLikes.textContent = data.totalLikes;
-      }
+      updateLikeCount(data.totalLikes);
+    });
+
+    // Reactions now include totalLikes in the payload (merged to save Pusher messages)
+    reactionChannel.bind('reaction', function(data) {
+      if (data.totalLikes) updateLikeCount(data.totalLikes);
     });
 
     reactionChannel.bind('viewer-update', function(data) {
-      if (data.count !== undefined) {
+      var count = data.count !== undefined ? data.count : data.currentViewers;
+      if (count !== undefined) {
         var viewerEl = document.getElementById('viewerCount');
         var fsViewers = document.getElementById('fsViewers');
         var chatViewers = document.getElementById('chatViewers');
-        if (viewerEl) viewerEl.textContent = data.count;
-        if (fsViewers) fsViewers.textContent = data.count;
-        if (chatViewers) chatViewers.textContent = data.count + ' watching';
+        if (viewerEl) viewerEl.textContent = count;
+        if (fsViewers) fsViewers.textContent = count;
+        if (chatViewers) chatViewers.textContent = count + ' watching';
       }
     });
 

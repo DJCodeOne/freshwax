@@ -209,7 +209,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Remove listener
       activeCount = await removeListener(streamId, userId);
 
-      // Broadcast update via Pusher
+      // Broadcast viewer count change via Pusher (only on actual join/leave, not heartbeat)
       const channel = `stream-${streamId}`;
       await triggerPusher(channel, 'viewer-update', {
         count: activeCount,
@@ -220,11 +220,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return successResponse({ message: 'Left stream',
         activeViewers: activeCount });
 
-    } else {
-      // Join or heartbeat - both upsert the listener
+    } else if (action === 'join') {
+      // Join — upsert and broadcast the count change
       activeCount = await upsertListener(streamId, userId, userName, avatarUrl);
 
-      // Broadcast update via Pusher
       const channel = `stream-${streamId}`;
       await triggerPusher(channel, 'viewer-update', {
         count: activeCount,
@@ -232,7 +231,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         timestamp: Date.now()
       }, env);
 
-      return successResponse({ message: action === 'join' ? 'Joined as listener' : 'Heartbeat received',
+      return successResponse({ message: 'Joined as listener',
+        activeViewers: activeCount });
+
+    } else {
+      // Heartbeat — just refresh the KV timestamp, no Pusher broadcast needed
+      activeCount = await upsertListener(streamId, userId, userName, avatarUrl);
+
+      return successResponse({ message: 'Heartbeat received',
         activeViewers: activeCount });
     }
 

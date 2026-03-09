@@ -93,20 +93,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Broadcast emoji reaction to all viewers via Pusher and increment counter
         const { sessionId } = data;
         const channel = `stream-${streamId}`;
-        const reactionData = {
-          type: emojiType || 'emoji',
-          emoji: emoji || '❤️',
-          userName: userName || 'Someone',
-          userId: userId || null,
-          sessionId: sessionId || null,
-          timestamp: now
-        };
 
-        log.info('[react.ts] Broadcasting emoji to channel:', channel, 'data:', reactionData);
-        const pusherSuccess = await triggerPusher(channel, 'reaction', reactionData, env);
-        log.info('[react.ts] Pusher broadcast result:', pusherSuccess);
-
-        // Atomically increment total likes counter
+        // Atomically increment total likes counter first
         let totalLikes = 0;
         try {
           const result = await atomicIncrement('livestreamSlots', streamId, { totalLikes: 1 });
@@ -117,17 +105,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
             totalLikes = result.newValues.totalLikes ?? 0;
           } catch (e2: unknown) {
             // Stream doesn't exist in either collection (playlist mode) - that's OK
-            log.info('[react] Stream not found for reaction counter, skipping increment');
           }
         }
 
-        // Broadcast updated like count to all viewers
-        if (totalLikes > 0) {
-          await triggerPusher(channel, 'like-update', {
-            totalLikes,
-            timestamp: now
-          }, env);
-        }
+        // Single combined broadcast: reaction data + updated like count
+        const reactionData = {
+          type: emojiType || 'emoji',
+          emoji: emoji || '❤️',
+          userName: userName || 'Someone',
+          userId: userId || null,
+          sessionId: sessionId || null,
+          totalLikes: totalLikes || undefined,
+          timestamp: now
+        };
+
+        const pusherSuccess = await triggerPusher(channel, 'reaction', reactionData, env);
 
         if (!pusherSuccess) {
           return ApiErrors.serverError('Failed to broadcast reaction via Pusher');
@@ -286,13 +278,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Atomically increment total views
         await atomicIncrement(collection, streamId, { totalViews: 1 });
 
-        // Broadcast viewer count update to all viewers
-        await triggerPusher(`stream-${streamId}`, 'viewer-update', {
-          currentViewers,
-          peakViewers,
-          timestamp: now
-        }, env);
-
+        // Viewer count broadcasts are handled by listeners.ts — no Pusher here
         return successResponse({ sessionId: viewerSession.sessionId,
           currentViewers,
           peakViewers });
@@ -317,15 +303,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
 
             // Atomically decrement viewer count in correct collection
-            const { doc: leaveDoc, collection: leaveCollection } = await getStreamDocument(streamId);
+            const { collection: leaveCollection } = await getStreamDocument(streamId);
             await atomicIncrement(leaveCollection, streamId, { currentViewers: -1 });
 
-            // Broadcast updated viewer count
-            const newViewerCount = Math.max(0, (leaveDoc?.currentViewers || 1) - 1);
-            await triggerPusher(`stream-${streamId}`, 'viewer-update', {
-              currentViewers: newViewerCount,
-              timestamp: now
-            }, env);
+            // Viewer count broadcasts are handled by listeners.ts — no Pusher here
           }
         }
 
@@ -371,13 +352,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         const shoutoutChannel = `stream-${streamId}`;
-        log.info('[react.ts] Broadcasting shoutout to channel:', shoutoutChannel);
         const shoutoutSuccess = await triggerPusher(shoutoutChannel, 'shoutout', {
           name: userName || 'Someone',
           message: message,
           timestamp: now
         }, env);
-        log.info('[react.ts] Shoutout broadcast result:', shoutoutSuccess);
 
         if (!shoutoutSuccess) {
           return ApiErrors.serverError('Failed to broadcast shoutout via Pusher');

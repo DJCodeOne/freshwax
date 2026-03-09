@@ -2904,11 +2904,11 @@ async function joinStream(streamId) {
   // Send initial heartbeat
   sendHeartbeat(streamId);
 
-  // Heartbeat every 30 seconds - track both live stream and playlist listeners
+  // Heartbeat every 60 seconds - track both live stream and playlist listeners
   setInterval(() => {
     const activeStreamId = currentStream ? currentStream.id : 'playlist-global';
     sendHeartbeat(activeStreamId);
-  }, 30000);
+  }, 60000);
 
   // Leave on page unload
   window.addEventListener('beforeunload', () => {
@@ -3065,6 +3065,12 @@ async function setupChat(streamId) {
   // Skip on fullpage - it has its own reaction handler
   if (!window.location.pathname.includes('/live/fullpage')) {
     chatChannel.bind('reaction', (data) => {
+      // Update like count from merged reaction payload (saves a separate Pusher message)
+      if (data.totalLikes) {
+        const likeCount = document.getElementById('likeCount');
+        if (likeCount) likeCount.textContent = data.totalLikes;
+      }
+
       // Skip if this is our own reaction (we already showed it locally)
       // Use a session-based check to allow same user on multiple devices
       const reactionSessionId = data.sessionId || data.userId;
@@ -3105,9 +3111,14 @@ async function setupChat(streamId) {
 
   // Listen for viewer count updates
   chatChannel.bind('viewer-update', (data) => {
-    const viewerCount = document.getElementById('viewerCount');
-    if (viewerCount && data.totalViews !== undefined || data.currentViewers !== undefined) {
-      viewerCount.textContent = data.totalViews || data.currentViewers;
+    const count = data.count !== undefined ? data.count : (data.currentViewers !== undefined ? data.currentViewers : data.totalViews);
+    if (count !== undefined) {
+      const viewerCount = document.getElementById('viewerCount');
+      const fsViewers = document.getElementById('fsViewers');
+      const chatViewers = document.getElementById('chatViewers');
+      if (viewerCount) viewerCount.textContent = count;
+      if (fsViewers) fsViewers.textContent = count;
+      if (chatViewers) chatViewers.textContent = count + ' watching';
     }
   });
 

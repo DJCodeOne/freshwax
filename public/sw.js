@@ -1,7 +1,7 @@
 // Fresh Wax Service Worker
 // Provides offline support, caching, and PWA features
 
-const CACHE_VERSION = 33;
+const CACHE_VERSION = 35;
 const STATIC_CACHE = `freshwax-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `freshwax-dynamic-v${CACHE_VERSION}`;
 const KNOWN_CACHES = [STATIC_CACHE, DYNAMIC_CACHE];
