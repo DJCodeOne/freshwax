@@ -3168,28 +3168,35 @@
     z-index: 1;
   }
 
-  /* Semi-transparent backgrounds for text readability over video */
+  /* Semi-transparent backgrounds with soft blurred edges for text readability over video */
   .audio-dj-name,
   .fs-audio-dj-name {
-    background: rgba(0, 0, 0, 0.6);
-    padding: 0.2em 0.6em;
-    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.3em 0.8em;
+    border-radius: 8px;
     display: inline-block;
+    box-shadow: 0 0 16px 10px rgba(0, 0, 0, 0.4);
   }
 
   .audio-show-title,
   .fs-audio-show-title {
-    background: rgba(0, 0, 0, 0.5);
-    padding: 0.15em 0.5em;
-    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.2em 0.6em;
+    border-radius: 8px;
     display: inline-block;
+    box-shadow: 0 0 14px 8px rgba(0, 0, 0, 0.35);
   }
 
   .audio-placeholder-branding,
   .fs-audio-placeholder-branding {
-    background: rgba(0, 0, 0, 0.5);
-    padding: 0.2em 0.5em;
-    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.3em 0.6em;
+    border-radius: 8px;
+    box-shadow: 0 0 14px 8px rgba(0, 0, 0, 0.35);
+  }
+
+  .audio-live-badge {
+    box-shadow: 0 0 12px 6px rgba(0, 0, 0, 0.3);
   }
 
   .audio-placeholder-branding {
@@ -6251,7 +6258,7 @@
       font-size: 1.25rem;
     }
     .audio-show-title {
-      font-size: 0.8125rem;
+      display: none;
     }
     .audio-live-badge {
       top: 0.5rem;

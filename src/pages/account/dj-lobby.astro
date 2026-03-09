@@ -470,44 +470,39 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <!-- BUTT Audio-Only Placeholder -->
                 <div id="buttAudioPreview" class="butt-audio-preview hidden">
                   <div class="audio-only-placeholder">
-                    <!-- Fresh Wax branding top right -->
-                    <div class="audio-placeholder-branding">
-                      <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
-                    </div>
-                    <!-- DJ Info at top -->
-                    <div class="audio-dj-info">
-                      <div class="audio-dj-name" id="buttPreviewDjName">DJ Name</div>
-                      <div class="audio-show-title" id="buttPreviewShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
-                      <div class="audio-live-badge">
-                        <span class="live-pulse"></span>
-                        AUDIO ONLY
-                      </div>
-                    </div>
-                    <!-- Background video loop -->
                     <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
                       <source src="/stream-bg.webm" type="video/webm" />
                     </video>
+                    <div class="audio-live-badge">
+                      <span class="live-pulse"></span>
+                      AUDIO ONLY
+                    </div>
+                    <div class="audio-dj-info">
+                      <div class="audio-dj-name" id="buttPreviewDjName">DJ Name</div>
+                      <div class="audio-show-title" id="buttPreviewShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
+                    </div>
+                    <div class="audio-placeholder-branding">
+                      <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+                    </div>
                   </div>
                 </div>
                 <!-- Relay Preview Placeholder -->
                 <div id="relayPreview" class="butt-audio-preview hidden">
                   <div class="audio-only-placeholder">
-                    <div class="audio-placeholder-branding">
-                      <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+                    <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
+                      <source src="/stream-bg.webm" type="video/webm" />
+                    </video>
+                    <div class="audio-live-badge">
+                      <span class="live-pulse"></span>
+                      RELAY
                     </div>
                     <div class="audio-dj-info">
                       <div class="audio-dj-name" id="relayPreviewDjName">DJ Name</div>
                       <div class="audio-show-title" id="relayPreviewStationName">Relayed from <span class="brand-fresh">Station</span></div>
-                      <div class="audio-live-badge">
-                        <span class="live-pulse"></span>
-                        RELAY
-                      </div>
                     </div>
-                    <!-- Background video loop -->
-                    <!-- Background video loop -->
-                    <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
-                      <source src="/stream-bg.webm" type="video/webm" />
-                    </video>
+                    <div class="audio-placeholder-branding">
+                      <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+                    </div>
                   </div>
                 </div>
                 <!-- Hidden audio element for Icecast/BUTT stream -->
@@ -588,23 +583,24 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
                 <div id="audioPreview" class="audio-preview hidden">
                   <div class="audio-only-placeholder">
-                    <!-- Fresh Wax branding top right -->
-                    <div class="audio-placeholder-branding">
-                      <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
-                    </div>
-                    <!-- DJ Info at top -->
-                    <div class="audio-dj-info">
-                      <div class="audio-dj-name" id="lobbyLiveDjName">DJ Name</div>
-                      <div class="audio-show-title" id="lobbyLiveShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
-                      <div class="audio-live-badge">
-                        <span class="live-pulse"></span>
-                        <span id="lobbyLiveBadgeText">AUDIO ONLY</span>
-                      </div>
-                    </div>
                     <!-- Background video loop -->
                     <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
                       <source src="/stream-bg.webm" type="video/webm" />
                     </video>
+                    <!-- Badge top left -->
+                    <div class="audio-live-badge">
+                      <span class="live-pulse"></span>
+                      <span id="lobbyLiveBadgeText">AUDIO ONLY</span>
+                    </div>
+                    <!-- DJ Info top center -->
+                    <div class="audio-dj-info">
+                      <div class="audio-dj-name" id="lobbyLiveDjName">DJ Name</div>
+                      <div class="audio-show-title" id="lobbyLiveShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
+                    </div>
+                    <!-- Branding bottom right -->
+                    <div class="audio-placeholder-branding">
+                      <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+                    </div>
                   </div>
                   <audio id="audioElement" crossorigin="anonymous" autoplay></audio>
                 </div>
