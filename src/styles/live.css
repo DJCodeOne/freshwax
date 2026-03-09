@@ -2874,6 +2874,7 @@
     gap: 3rem;
     padding: 2rem;
     background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
+    overflow: hidden;
   }
 
   .fs-audio-placeholder-branding {
@@ -3133,6 +3134,50 @@
     height: 100%;
     background: transparent;
     position: relative;
+    overflow: hidden;
+  }
+
+  /* Background video behind audio-only content */
+  .stream-bg-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    opacity: 0.7;
+  }
+
+  /* Ensure all content sits above the video */
+  .audio-only-placeholder > *:not(.stream-bg-video),
+  .fs-audio-placeholder > *:not(.stream-bg-video) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Semi-transparent backgrounds for text readability over video */
+  .audio-dj-name,
+  .fs-audio-dj-name {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 0.2em 0.6em;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .audio-show-title,
+  .fs-audio-show-title {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.15em 0.5em;
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  .audio-placeholder-branding,
+  .fs-audio-placeholder-branding {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 0.2em 0.5em;
+    border-radius: 4px;
   }
 
   .audio-placeholder-branding {

@@ -483,48 +483,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         AUDIO ONLY
                       </div>
                     </div>
-                    <!-- Turntables row: Left deck, Waveform, Right deck -->
-                    <div class="turntables-row">
-                      <!-- Left Deck -->
-                      <div class="vinyl-container vinyl-left">
-                        <div class="vinyl-record">
-                          <div class="vinyl-label">
-                            <img id="buttVinylAvatar" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
-                          </div>
-                          <div class="vinyl-grooves"></div>
-                        </div>
-                        <div class="tonearm tonearm-left"></div>
-                      </div>
-                      <!-- Waveform in center -->
-                      <div class="audio-waveform">
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                      </div>
-                      <!-- Right Deck -->
-                      <div class="vinyl-container vinyl-right">
-                        <div class="vinyl-record">
-                          <div class="vinyl-label vinyl-label-right">
-                            <img id="buttVinylAvatar2" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
-                          </div>
-                          <div class="vinyl-grooves"></div>
-                        </div>
-                        <div class="tonearm tonearm-right"></div>
-                      </div>
-                    </div>
+                    <!-- Background video loop -->
+                    <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
+                      <source src="/stream-bg.webm" type="video/webm" />
+                    </video>
                   </div>
                 </div>
                 <!-- Relay Preview Placeholder -->
@@ -541,44 +503,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         RELAY
                       </div>
                     </div>
-                    <div class="turntables-row">
-                      <div class="vinyl-container vinyl-left">
-                        <div class="vinyl-record">
-                          <div class="vinyl-label">
-                            <img id="relayVinylAvatar" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
-                          </div>
-                          <div class="vinyl-grooves"></div>
-                        </div>
-                        <div class="tonearm tonearm-left"></div>
-                      </div>
-                      <div class="audio-waveform">
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                      </div>
-                      <div class="vinyl-container vinyl-right">
-                        <div class="vinyl-record">
-                          <div class="vinyl-label vinyl-label-right">
-                            <img id="relayVinylAvatar2" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
-                          </div>
-                          <div class="vinyl-grooves"></div>
-                        </div>
-                        <div class="tonearm tonearm-right"></div>
-                      </div>
-                    </div>
+                    <!-- Background video loop -->
+                    <!-- Background video loop -->
+                    <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
+                      <source src="/stream-bg.webm" type="video/webm" />
+                    </video>
                   </div>
                 </div>
                 <!-- Hidden audio element for Icecast/BUTT stream -->
@@ -672,48 +601,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         <span id="lobbyLiveBadgeText">AUDIO ONLY</span>
                       </div>
                     </div>
-                    <!-- Turntables row: Left deck, Waveform, Right deck -->
-                    <div class="turntables-row">
-                      <!-- Left Deck -->
-                      <div class="vinyl-container vinyl-left">
-                        <div class="vinyl-record">
-                          <div class="vinyl-label">
-                            <img id="liveVinylAvatar" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
-                          </div>
-                          <div class="vinyl-grooves"></div>
-                        </div>
-                        <div class="tonearm tonearm-left"></div>
-                      </div>
-                      <!-- Waveform in center -->
-                      <div class="audio-waveform">
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                        <div class="audio-bar"></div>
-                      </div>
-                      <!-- Right Deck -->
-                      <div class="vinyl-container vinyl-right">
-                        <div class="vinyl-record">
-                          <div class="vinyl-label vinyl-label-right">
-                            <img id="liveVinylAvatar2" src="/place-holder.webp" alt="DJ" class="vinyl-avatar" />
-                          </div>
-                          <div class="vinyl-grooves"></div>
-                        </div>
-                        <div class="tonearm tonearm-right"></div>
-                      </div>
-                    </div>
+                    <!-- Background video loop -->
+                    <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
+                      <source src="/stream-bg.webm" type="video/webm" />
+                    </video>
                   </div>
                   <audio id="audioElement" crossorigin="anonymous" autoplay></audio>
                 </div>
