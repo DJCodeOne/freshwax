@@ -7212,16 +7212,13 @@
       display: none;
     }
 
-
-    .dj-info-center,
     .dj-info-right {
-      width: 100%;
-      justify-content: center;
+      display: none;
     }
 
-    .dj-info-right {
-      border-top: 1px solid #333;
-      padding-top: 0.5rem;
+    .dj-info-center {
+      width: 100%;
+      justify-content: center;
     }
 
     .dj-info-name {

@@ -2611,7 +2611,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           </div>
           ${showTitle ? `<span class="schedule-title">${slot.title}</span>` : ''}
           <div class="schedule-times">
-            <span class="schedule-time-range">${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}</span>
+            <span class="schedule-time-range">${isRelay ? 'Relayed from The Underground Lair' : `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`}</span>
           </div>
         </div>
         ${isMySlot && (slot.status === 'scheduled' || slot.status === 'queued') ? `<button class="cancel-slot-btn" data-cancel-slot="${slot.id}">×</button>` : ''}
