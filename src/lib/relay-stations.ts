@@ -60,9 +60,14 @@ export async function checkStationLive(station: RelayStation): Promise<StationSt
         if (json.type === 'result' && json.data && json.data[0]) {
           const data = json.data[0];
           const isLive = data.server === 'Online' && data.sourcestate === true;
+          // Strip "UNKNOWN - " prefix from song title (Shoutcast sends this when no artist is set)
+          let songTitle = data.song;
+          if (songTitle && typeof songTitle === 'string') {
+            songTitle = songTitle.replace(/^UNKNOWN\s*-\s*/i, '').trim() || songTitle;
+          }
           return {
             isLive,
-            nowPlaying: isLive ? data.song : undefined,
+            nowPlaying: isLive ? songTitle : undefined,
             listeners: data.listeners,
             serverTitle: data.servertitle || data.title || undefined
           };
