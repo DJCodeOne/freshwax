@@ -2879,7 +2879,7 @@
 
   .fs-audio-placeholder-branding {
     position: absolute;
-    bottom: 1.5rem;
+    top: 1.5rem;
     right: 1.5rem;
     font-family: 'Bebas Neue', sans-serif;
     font-size: 2rem;
@@ -2898,34 +2898,19 @@
     display: none;
   }
 
-  .fs-audio-dj-info {
+  /* Relay info group - bottom right (fullscreen) */
+  .fs-audio-relay-info {
     position: absolute;
-    top: 1.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-    white-space: nowrap;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
   }
 
-  .fs-audio-dj-name {
-    font-family: 'Inter', sans-serif;
-    font-size: 3rem;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: 2px;
-    margin-bottom: 0.5rem;
-    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
-  }
-
-  .fs-audio-show-title {
-    font-size: 1.25rem;
-    color: #888;
-  }
-
-  .fs-audio-live-badge {
-    position: absolute;
-    top: 1.5rem;
-    left: 1.5rem;
+  .fs-audio-relay-info .fs-audio-live-badge {
+    position: static;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -2937,6 +2922,12 @@
     font-weight: 600;
     color: #16a34a;
     letter-spacing: 1px;
+  }
+
+  .fs-audio-relay-source {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 0.5px;
   }
 
   .fs-live-pulse {
@@ -3199,9 +3190,17 @@
     box-shadow: 0 0 12px 6px rgba(0, 0, 0, 0.3);
   }
 
+  .audio-relay-source,
+  .fs-audio-relay-source {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.2em 0.5em;
+    border-radius: 8px;
+    box-shadow: 0 0 12px 6px rgba(0, 0, 0, 0.3);
+  }
+
   .audio-placeholder-branding {
     position: absolute;
-    bottom: 1rem;
+    top: 1rem;
     right: 1rem;
     font-family: 'Bebas Neue', sans-serif;
     font-size: 1.5rem;
@@ -3372,34 +3371,25 @@
     border-radius: 2px;
   }
 
-  /* DJ Info - positioned top center */
-  .audio-dj-info {
+  /* Relay info group - bottom right */
+  .audio-relay-info {
     position: absolute;
-    top: 1rem;
-    left: 50%;
-    transform: translateX(-50%);
-    text-align: center;
-    white-space: nowrap;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.4rem;
   }
 
-  .audio-dj-name {
-    font-family: 'Inter', sans-serif;
-    font-size: 2rem;
-    color: #fff;
-    letter-spacing: 1px;
-    margin-bottom: 0.25rem;
+  .audio-relay-source {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 0.5px;
   }
 
-  .audio-show-title {
-    font-size: 1rem;
-    color: #888;
-  }
-
-  /* Live/Relay badge - positioned top left */
+  /* Live/Relay badge */
   .audio-live-badge {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -6251,23 +6241,19 @@
     .audio-waveform .audio-bar {
       width: 3px;
     }
-    .audio-dj-info {
-      top: 0.5rem;
-    }
-    .audio-dj-name {
-      font-size: 1.25rem;
-    }
-    .audio-show-title {
-      display: none;
-    }
     .audio-live-badge {
-      top: 0.5rem;
-      left: 0.5rem;
       font-size: 0.6rem;
       padding: 0.2rem 0.5rem;
     }
-    .audio-placeholder-branding {
+    .audio-relay-info {
       bottom: 0.5rem;
+      right: 0.5rem;
+    }
+    .audio-relay-source {
+      font-size: 0.6rem;
+    }
+    .audio-placeholder-branding {
+      top: 0.5rem;
       right: 0.5rem;
       font-size: 1rem;
     }

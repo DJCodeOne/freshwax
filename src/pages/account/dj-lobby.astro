@@ -473,16 +473,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
                       <source src="/stream-bg.webm" type="video/webm" />
                     </video>
-                    <div class="audio-live-badge">
-                      <span class="live-pulse"></span>
-                      AUDIO ONLY
-                    </div>
-                    <div class="audio-dj-info">
-                      <div class="audio-dj-name" id="buttPreviewDjName">DJ Name</div>
-                      <div class="audio-show-title" id="buttPreviewShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
-                    </div>
                     <div class="audio-placeholder-branding">
                       <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+                    </div>
+                    <div class="audio-relay-info">
+                      <div class="audio-live-badge">
+                        <span class="live-pulse"></span>
+                        AUDIO ONLY
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -492,16 +490,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
                       <source src="/stream-bg.webm" type="video/webm" />
                     </video>
-                    <div class="audio-live-badge">
-                      <span class="live-pulse"></span>
-                      RELAY
-                    </div>
-                    <div class="audio-dj-info">
-                      <div class="audio-dj-name" id="relayPreviewDjName">DJ Name</div>
-                      <div class="audio-show-title" id="relayPreviewStationName">Relayed from <span class="brand-fresh">Station</span></div>
-                    </div>
                     <div class="audio-placeholder-branding">
                       <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+                    </div>
+                    <div class="audio-relay-info">
+                      <div class="audio-live-badge">
+                        <span class="live-pulse"></span>
+                        RELAY
+                      </div>
+                      <div class="audio-relay-source" id="relayPreviewStationName">Relayed from The Underground Lair</div>
                     </div>
                   </div>
                 </div>
@@ -587,19 +584,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
                       <source src="/stream-bg.webm" type="video/webm" />
                     </video>
-                    <!-- Badge top left -->
-                    <div class="audio-live-badge">
-                      <span class="live-pulse"></span>
-                      <span id="lobbyLiveBadgeText">AUDIO ONLY</span>
-                    </div>
-                    <!-- DJ Info top center -->
-                    <div class="audio-dj-info">
-                      <div class="audio-dj-name" id="lobbyLiveDjName">DJ Name</div>
-                      <div class="audio-show-title" id="lobbyLiveShowTitle">Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></div>
-                    </div>
-                    <!-- Branding bottom right -->
+                    <!-- Branding top right -->
                     <div class="audio-placeholder-branding">
                       <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+                    </div>
+                    <!-- Relay badge + source bottom right -->
+                    <div class="audio-relay-info">
+                      <div class="audio-live-badge">
+                        <span class="live-pulse"></span>
+                        <span id="lobbyLiveBadgeText">RELAY</span>
+                      </div>
+                      <div class="audio-relay-source">Relayed from The Underground Lair</div>
                     </div>
                   </div>
                   <audio id="audioElement" crossorigin="anonymous" autoplay></audio>
