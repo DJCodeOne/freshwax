@@ -710,26 +710,33 @@ const csrfToken = Astro.locals.csrfToken || '';
     <!-- Background video playlist cycling -->
     <script is:inline nonce={nonce}>
       (function() {
-        if (window.__bgVideoCycleInit) return;
-        window.__bgVideoCycleInit = true;
-        var vids = document.querySelectorAll('.stream-bg-video[data-sources]');
-        if (!vids.length) return;
-        vids.forEach(function(v) {
-          v.addEventListener('ended', function() {
-            var sources = v.getAttribute('data-sources').split(',');
-            var idx = parseInt(v.getAttribute('data-src-index') || '0', 10);
-            idx = (idx + 1) % sources.length;
-            v.setAttribute('data-src-index', String(idx));
-            var src = v.querySelector('source');
-            if (src) {
-              src.setAttribute('src', sources[idx]);
-            } else {
-              v.setAttribute('src', sources[idx]);
-            }
-            v.load();
-            v.play().catch(function() {});
+        function initBgVideos() {
+          var vids = document.querySelectorAll('.stream-bg-video[data-sources]');
+          vids.forEach(function(v) {
+            if (v._bgCycleInit) return;
+            v._bgCycleInit = true;
+            v.addEventListener('ended', function() {
+              var sources = v.getAttribute('data-sources').split(',');
+              var idx = parseInt(v.getAttribute('data-src-index') || '0', 10);
+              idx = (idx + 1) % sources.length;
+              v.setAttribute('data-src-index', String(idx));
+              var src = v.querySelector('source');
+              if (src) {
+                src.setAttribute('src', sources[idx]);
+              } else {
+                v.setAttribute('src', sources[idx]);
+              }
+              v.load();
+              v.play().catch(function() {});
+            });
           });
-        });
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initBgVideos, { once: true });
+        } else {
+          initBgVideos();
+        }
+        document.addEventListener('astro:page-load', initBgVideos);
       })();
     </script>
 
