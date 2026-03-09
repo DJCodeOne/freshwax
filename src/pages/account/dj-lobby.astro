@@ -476,12 +476,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     <div class="audio-placeholder-branding">
                       <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
                     </div>
-                    <div class="audio-relay-info">
-                      <div class="audio-live-badge">
-                        <span class="live-pulse"></span>
-                        AUDIO ONLY
-                      </div>
-                    </div>
                   </div>
                 </div>
                 <!-- Relay Preview Placeholder -->
@@ -492,13 +486,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     </video>
                     <div class="audio-placeholder-branding">
                       <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
-                    </div>
-                    <div class="audio-relay-info">
-                      <div class="audio-live-badge">
-                        <span class="live-pulse"></span>
-                        RELAY
-                      </div>
-                      <div class="audio-relay-source" id="relayPreviewStationName">Relayed from The Underground Lair</div>
                     </div>
                   </div>
                 </div>
@@ -587,14 +574,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     <!-- Branding top right -->
                     <div class="audio-placeholder-branding">
                       <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
-                    </div>
-                    <!-- Relay badge + source bottom right -->
-                    <div class="audio-relay-info">
-                      <div class="audio-live-badge">
-                        <span class="live-pulse"></span>
-                        <span id="lobbyLiveBadgeText">RELAY</span>
-                      </div>
-                      <div class="audio-relay-source">Relayed from The Underground Lair</div>
                     </div>
                   </div>
                   <audio id="audioElement" crossorigin="anonymous" autoplay></audio>
