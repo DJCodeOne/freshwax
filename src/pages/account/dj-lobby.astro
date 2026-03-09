@@ -470,7 +470,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <!-- BUTT Audio-Only Placeholder -->
                 <div id="buttAudioPreview" class="butt-audio-preview hidden">
                   <div class="audio-only-placeholder">
-                    <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
+                    <video class="stream-bg-video" autoplay muted playsinline preload="none" data-sources="/stream-bg.webm,/stream-bg-2.webm" data-src-index="0">
                       <source src="/stream-bg.webm" type="video/webm" />
                     </video>
                     <div class="audio-placeholder-branding">
@@ -481,7 +481,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <!-- Relay Preview Placeholder -->
                 <div id="relayPreview" class="butt-audio-preview hidden">
                   <div class="audio-only-placeholder">
-                    <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
+                    <video class="stream-bg-video" autoplay muted playsinline preload="none" data-sources="/stream-bg.webm,/stream-bg-2.webm" data-src-index="0">
                       <source src="/stream-bg.webm" type="video/webm" />
                     </video>
                     <div class="audio-placeholder-branding">
@@ -568,7 +568,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <div id="audioPreview" class="audio-preview hidden">
                   <div class="audio-only-placeholder">
                     <!-- Background video loop -->
-                    <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
+                    <video class="stream-bg-video" autoplay muted playsinline preload="none" data-sources="/stream-bg.webm,/stream-bg-2.webm" data-src-index="0">
                       <source src="/stream-bg.webm" type="video/webm" />
                     </video>
                     <!-- Branding top right -->

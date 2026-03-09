@@ -114,7 +114,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <!-- Fullscreen Audio Placeholder (BUTT mode) -->
         <div id="fsAudioPlaceholder" class="fs-audio-placeholder hidden">
           <!-- Background video loop (fullscreen) -->
-          <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
+          <video class="stream-bg-video" autoplay muted playsinline preload="none" data-sources="/stream-bg.webm,/stream-bg-2.webm" data-src-index="0">
             <source src="/stream-bg.webm" type="video/webm" />
           </video>
           <!-- Branding top right -->
@@ -347,7 +347,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           <div id="audioPlayer" class="audio-player hidden">
             <div class="audio-only-placeholder">
               <!-- Background video loop -->
-              <video class="stream-bg-video" autoplay muted loop playsinline preload="none">
+              <video class="stream-bg-video" autoplay muted playsinline preload="none" data-sources="/stream-bg.webm,/stream-bg-2.webm" data-src-index="0">
                 <source src="/stream-bg.webm" type="video/webm" />
               </video>
               <!-- Branding top right -->

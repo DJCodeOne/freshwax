@@ -6839,7 +6839,7 @@
       border-radius: 8px;
       min-height: auto !important;
       height: auto !important;
-      max-height: 60vh !important;
+      max-height: 65vh !important;
       overflow: hidden !important;
       flex: none !important;
       position: relative !important;
@@ -6853,7 +6853,7 @@
       width: 100% !important;
       max-width: 100% !important;
       height: 100% !important;
-      max-height: 60vh !important;
+      max-height: 65vh !important;
       overflow: hidden !important;
     }
 
@@ -6862,7 +6862,7 @@
       width: 100% !important;
       max-width: 100% !important;
       height: 100% !important;
-      max-height: 60vh !important;
+      max-height: 65vh !important;
       aspect-ratio: 16/9;
       object-fit: contain !important;
     }
