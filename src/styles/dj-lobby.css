@@ -8578,6 +8578,13 @@
     height: 100%;
     background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
     position: relative;
+    overflow: hidden;
+  }
+
+  /* Ensure text sits above background video */
+  .butt-audio-preview .audio-only-placeholder > *:not(.stream-bg-video) {
+    position: relative;
+    z-index: 1;
   }
 
   .butt-audio-preview .audio-placeholder-branding {
@@ -8790,6 +8797,13 @@
     height: 100%;
     background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
     position: relative;
+    overflow: hidden;
+  }
+
+  /* Ensure text sits above background video */
+  #audioPreview .audio-only-placeholder > *:not(.stream-bg-video) {
+    position: relative;
+    z-index: 1;
   }
 
   #audioPreview .audio-placeholder-branding {
