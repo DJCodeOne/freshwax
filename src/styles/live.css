@@ -109,7 +109,7 @@
     font-size: 0.85rem;
     font-weight: 500;
     z-index: 50;
-    opacity: 0.8;
+    opacity: 0.4;
     text-shadow: 0 1px 3px rgba(0,0,0,0.8);
     pointer-events: none;
     display: none;
