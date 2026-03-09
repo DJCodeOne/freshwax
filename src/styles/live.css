@@ -7198,7 +7198,7 @@
     }
     .player-controls > .play-btn { order: 1; }
     .inline-controls { order: 2; }
-    .inline-reactions { order: 3; width: 100%; }
+    .inline-reactions { order: 3; width: 100%; padding-left: 0; padding-right: 0; }
 
     /* DJ Info Bar - mobile */
     .dj-info-bar {
