@@ -7216,6 +7216,10 @@
       display: none;
     }
 
+    .dj-info-label {
+      display: none;
+    }
+
     .dj-info-center {
       width: 100%;
       justify-content: center;
@@ -7358,13 +7362,7 @@
     }
 
     .dj-info-right {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      width: 100%;
-      border-top: none;
-      padding-top: 0;
+      display: none;
     }
 
     .dj-info-name {
@@ -7376,7 +7374,7 @@
     }
 
     .dj-info-label {
-      font-size: 9px;
+      display: none;
     }
 
     .dj-info-bar .dj-avatar {
