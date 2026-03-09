@@ -180,7 +180,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     let liveStreams = liveSlots.map(slot => ({
       id: slot.id,
       slotId: slot.id,
-      title: slot.title || `${slot.djName}'s Stream`,
+      title: (slot.title || `${slot.djName}'s Stream`).replace(/^UNKNOWN\s*-\s*/i, ''),
       djName: slot.djName,
       djId: slot.djId,
       djAvatar: slot.djAvatar || '/place-holder.webp',
@@ -275,7 +275,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         stream.relayNowPlaying = cachedMeta.nowPlaying as string || undefined;
         stream.relayServerTitle = cachedMeta.serverTitle as string || undefined;
         if (cachedMeta.nowPlaying) {
-          stream.title = cachedMeta.nowPlaying as string;
+          stream.title = (cachedMeta.nowPlaying as string).replace(/^UNKNOWN\s*-\s*/i, '');
         }
         continue;
       }
