@@ -539,10 +539,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST: Book, cancel, go live, etc.
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
-  const rateLimitPost = checkRateLimit(`livestream-slots-post:${clientId}`, RateLimiters.standard);
-  if (!rateLimitPost.allowed) {
-    return rateLimitResponse(rateLimitPost.retryAfter!);
-  }
 
   initServices(locals);
   const env = locals?.runtime?.env;
@@ -561,6 +557,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const data = parseResult.data;
     const { action } = data;
+
+    // Rate limit per action type — heartbeats get their own bucket so they
+    // don't starve critical actions like endStream
+    const rlKey = action === 'heartbeat'
+      ? `slots-heartbeat:${clientId}`
+      : `livestream-slots-post:${clientId}`;
+    const rateLimitPost = checkRateLimit(rlKey, RateLimiters.standard);
+    if (!rateLimitPost.allowed) {
+      return rateLimitResponse(rateLimitPost.retryAfter!);
+    }
     const now = new Date();
     const nowISO = now.toISOString();
 
