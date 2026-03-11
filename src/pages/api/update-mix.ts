@@ -77,8 +77,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (description !== undefined) {
-      updateData.description = description.slice(0, 150);
-      updateData.shoutOuts = description.slice(0, 150);
+      updateData.description = description.slice(0, 300);
+      updateData.shoutOuts = description.slice(0, 300);
     }
 
     // Update artwork URL if provided (from artwork upload)

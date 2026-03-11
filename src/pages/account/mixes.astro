@@ -109,8 +109,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <!-- Description -->
           <div class="form-group">
             <label for="editDescription">Description</label>
-            <textarea id="editDescription" name="description" rows="4" maxlength="150" placeholder="Add a description..."></textarea>
-            <div class="char-counter"><span id="charCount">0</span> / 150 characters</div>
+            <textarea id="editDescription" name="description" rows="4" maxlength="300" placeholder="Add a description..."></textarea>
+            <div class="char-counter"><span id="charCount">0</span> / 300 characters</div>
             
             <!-- Emoji Selector -->
             <div class="emoji-container">
@@ -402,7 +402,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   const descriptionTextarea = document.getElementById('editDescription');
   const charCountEl = document.getElementById('charCount');
   const charCounterEl = document.querySelector('.char-counter');
-  const maxDescChars = 150;
+  const maxDescChars = 300;
   const maxTitleChars = 22;
   
   // Artwork elements
