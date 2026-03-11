@@ -96,23 +96,42 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // CRITICAL: Verify the audio file actually exists in R2 before saving metadata
     // This prevents orphaned mix entries when uploads fail or are cancelled
+    // Uses R2 native binding instead of HTTP HEAD to avoid Cloudflare self-fetch issues
     try {
       log.info(`[finalize-upload] Verifying audio file exists: ${audioUrl}`);
-      const verifyResponse = await fetchWithTimeout(audioUrl, { method: 'HEAD' }, 10000);
+      const R2_CONFIG = getR2Config(env);
+      // Extract R2 key from the public URL (strip the domain prefix)
+      const r2Key = audioUrl
+        .replace(R2_CONFIG.publicDomain + '/', '')
+        .replace(R2_CONFIG.publicUrl + '/', '');
 
-      if (!verifyResponse.ok) {
-        log.error(`[finalize-upload] Audio file not found: ${audioUrl} (status: ${verifyResponse.status})`);
-        return ApiErrors.badRequest('Audio file upload incomplete or failed. Please try uploading again.');
+      const r2 = env?.R2;
+      if (r2) {
+        // Use native R2 binding for reliable verification
+        const headResult = await r2.head(r2Key);
+        if (!headResult) {
+          log.error(`[finalize-upload] Audio file not found in R2: ${r2Key}`);
+          return ApiErrors.badRequest('Audio file upload incomplete or failed. Please try uploading again.');
+        }
+        if (headResult.size < 1000) {
+          log.error(`[finalize-upload] Audio file too small or empty: ${headResult.size} bytes`);
+          return ApiErrors.badRequest('Audio file appears to be empty or incomplete. Please try uploading again.');
+        }
+        log.info(`[finalize-upload] Audio file verified via R2 binding: ${headResult.size} bytes`);
+      } else {
+        // Fallback to HTTP HEAD if R2 binding unavailable
+        const verifyResponse = await fetchWithTimeout(audioUrl, { method: 'HEAD' }, 10000);
+        if (!verifyResponse.ok) {
+          log.error(`[finalize-upload] Audio file not found: ${audioUrl} (status: ${verifyResponse.status})`);
+          return ApiErrors.badRequest('Audio file upload incomplete or failed. Please try uploading again.');
+        }
+        const contentLength = verifyResponse.headers.get('content-length');
+        if (!contentLength || parseInt(contentLength) < 1000) {
+          log.error(`[finalize-upload] Audio file too small or empty: ${contentLength} bytes`);
+          return ApiErrors.badRequest('Audio file appears to be empty or incomplete. Please try uploading again.');
+        }
+        log.info(`[finalize-upload] Audio file verified via HTTP: ${contentLength} bytes`);
       }
-
-      // Also check file has content (not empty)
-      const contentLength = verifyResponse.headers.get('content-length');
-      if (!contentLength || parseInt(contentLength) < 1000) {
-        log.error(`[finalize-upload] Audio file too small or empty: ${contentLength} bytes`);
-        return ApiErrors.badRequest('Audio file appears to be empty or incomplete. Please try uploading again.');
-      }
-
-      log.info(`[finalize-upload] Audio file verified: ${contentLength} bytes`);
     } catch (verifyError: unknown) {
       log.error(`[finalize-upload] Failed to verify audio file:`, verifyError);
       return ApiErrors.badRequest('Could not verify audio file. Please try uploading again.');
