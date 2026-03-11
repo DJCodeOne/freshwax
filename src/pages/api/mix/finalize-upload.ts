@@ -148,38 +148,45 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const artworkResp = await fetchWithTimeout(artworkUrl, {}, 15000);
         if (artworkResp.ok) {
           const artworkBuffer = await artworkResp.arrayBuffer();
-          const processed = await processImageToSquareWebP(artworkBuffer, 800, 80);
+
+          // Process artwork + thumbnail in parallel to avoid Worker timeout
+          const [processed, thumb] = await Promise.all([
+            processImageToSquareWebP(artworkBuffer, 800, 80),
+            processImageToSquareWebP(artworkBuffer, 400, 75).catch(() => null),
+          ]);
+
           const artworkKey = `dj-mixes/${mixId}/artwork${imageExtension(processed.format)}`;
 
-          await s3Client.send(new PutObjectCommand({
-            Bucket: R2_CONFIG.bucketName,
-            Key: artworkKey,
-            Body: Buffer.from(processed.buffer),
-            ContentType: imageContentType(processed.format),
-            CacheControl: 'public, max-age=31536000',
-          }));
+          // Upload artwork + thumbnail in parallel
+          const uploads: Promise<unknown>[] = [
+            s3Client.send(new PutObjectCommand({
+              Bucket: R2_CONFIG.bucketName,
+              Key: artworkKey,
+              Body: Buffer.from(processed.buffer),
+              ContentType: imageContentType(processed.format),
+              CacheControl: 'public, max-age=31536000',
+            }))
+          ];
 
+          if (thumb) {
+            const thumbKey = `dj-mixes/${mixId}/thumb${imageExtension(thumb.format)}`;
+            uploads.push(
+              s3Client.send(new PutObjectCommand({
+                Bucket: R2_CONFIG.bucketName,
+                Key: thumbKey,
+                Body: Buffer.from(thumb.buffer),
+                ContentType: imageContentType(thumb.format),
+                CacheControl: 'public, max-age=31536000',
+              })).then(() => {
+                finalThumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
+                log.info(`[finalize-upload] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
+              })
+            );
+          }
+
+          await Promise.all(uploads);
           finalArtworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
           log.info(`[finalize-upload] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
-
-          // Generate 400x400 thumbnail for listing pages
-          try {
-            const thumb = await processImageToSquareWebP(artworkBuffer, 400, 75);
-            const thumbKey = `dj-mixes/${mixId}/thumb${imageExtension(thumb.format)}`;
-
-            await s3Client.send(new PutObjectCommand({
-              Bucket: R2_CONFIG.bucketName,
-              Key: thumbKey,
-              Body: Buffer.from(thumb.buffer),
-              ContentType: imageContentType(thumb.format),
-              CacheControl: 'public, max-age=31536000',
-            }));
-
-            finalThumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
-            log.info(`[finalize-upload] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
-          } catch (thumbErr: unknown) {
-            log.error('[finalize-upload] Thumbnail generation failed (non-critical):', thumbErr);
-          }
         }
       } catch (imgErr: unknown) {
         log.error('[finalize-upload] WebP processing failed, using original:', imgErr);

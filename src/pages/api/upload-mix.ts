@@ -214,50 +214,67 @@ export const POST: APIRoute = async ({ request, locals }) => {
       let artworkBody: Buffer;
 
       try {
-        const processed = await processImageToSquareWebP(artworkBuffer, 800, 80);
+        // Process artwork + thumbnail in parallel to avoid Worker timeout
+        const [processed, thumb] = await Promise.all([
+          processImageToSquareWebP(artworkBuffer, 800, 80),
+          processImageToSquareWebP(artworkBuffer, 400, 75).catch(() => null),
+        ]);
+
         artworkKey = `${folderPath}/artwork${imageExtension(processed.format)}`;
         artworkContentType = imageContentType(processed.format);
         artworkBody = Buffer.from(processed.buffer);
         log.info(`[upload-mix] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
+
+        // Upload artwork + thumbnail in parallel
+        const uploads: Promise<unknown>[] = [
+          s3Client.send(new PutObjectCommand({
+            Bucket: R2_CONFIG.bucketName,
+            Key: artworkKey,
+            Body: artworkBody,
+            ContentType: artworkContentType,
+            CacheControl: 'public, max-age=31536000',
+          }))
+        ];
+
+        let thumbKey: string | undefined;
+        if (thumb) {
+          thumbKey = `${folderPath}/thumb${imageExtension(thumb.format)}`;
+          uploads.push(
+            s3Client.send(new PutObjectCommand({
+              Bucket: R2_CONFIG.bucketName,
+              Key: thumbKey,
+              Body: Buffer.from(thumb.buffer),
+              ContentType: imageContentType(thumb.format),
+              CacheControl: 'public, max-age=31536000',
+            }))
+          );
+        }
+
+        await Promise.all(uploads);
+        uploadedR2Keys.push(artworkKey);
+        artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
+
+        if (thumbKey) {
+          uploadedR2Keys.push(thumbKey);
+          thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
+          log.info(`[upload-mix] Thumbnail generated: ${thumb!.width}x${thumb!.height} ${thumb!.format}`);
+        }
       } catch (imgErr: unknown) {
         log.error('[upload-mix] WebP processing failed, using original:', imgErr);
         const artworkExt = artworkFile.name.split('.').pop() || 'jpg';
         artworkKey = `${folderPath}/artwork.${artworkExt}`;
         artworkContentType = artworkFile.type;
         artworkBody = Buffer.from(artworkBuffer);
-      }
 
-      await s3Client.send(
-        new PutObjectCommand({
+        await s3Client.send(new PutObjectCommand({
           Bucket: R2_CONFIG.bucketName,
           Key: artworkKey,
           Body: artworkBody,
           ContentType: artworkContentType,
           CacheControl: 'public, max-age=31536000',
-        })
-      );
-      uploadedR2Keys.push(artworkKey);
-
-      artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
-
-      // Generate 400x400 thumbnail for listing pages
-      try {
-        const thumb = await processImageToSquareWebP(artworkBuffer, 400, 75);
-        const thumbKey = `${folderPath}/thumb${imageExtension(thumb.format)}`;
-        await s3Client.send(
-          new PutObjectCommand({
-            Bucket: R2_CONFIG.bucketName,
-            Key: thumbKey,
-            Body: Buffer.from(thumb.buffer),
-            ContentType: imageContentType(thumb.format),
-            CacheControl: 'public, max-age=31536000',
-          })
-        );
-        uploadedR2Keys.push(thumbKey);
-        thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
-        log.info(`[upload-mix] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
-      } catch (thumbErr: unknown) {
-        log.error('[upload-mix] Thumbnail generation failed (non-critical):', thumbErr);
+        }));
+        uploadedR2Keys.push(artworkKey);
+        artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
       }
     } else {
       artworkUrl = '/place-holder.webp';
