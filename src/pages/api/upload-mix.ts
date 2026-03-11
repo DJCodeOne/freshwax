@@ -81,7 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const artworkFile = formData.get('artworkFile') as File | null;
     const djNameFromForm = (formData.get('djName') as string || '').trim().slice(0, 30);
     const mixTitle = (formData.get('mixTitle') as string || '').trim().slice(0, 50);
-    const mixDescription = (formData.get('mixDescription') as string || '').trim().slice(0, 150);
+    const mixDescription = (formData.get('mixDescription') as string || '').trim().slice(0, 300);
     const genre = (formData.get('genre') as string || 'Jungle').trim().slice(0, 30);
     const tracklistRaw = (formData.get('tracklist') as string || '').trim().slice(0, 1500);
     const durationSeconds = parseInt(formData.get('durationSeconds') as string || '0', 10) || 0;
