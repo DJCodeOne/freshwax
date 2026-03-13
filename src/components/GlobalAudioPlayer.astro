@@ -449,11 +449,19 @@ const { nonce = '' } = Astro.props;
     }
   }
 
-  /* Ensure mini-player sits at absolute bottom with no gap */
+  /* Desktop: mini-player at absolute bottom */
   #mini-player {
     bottom: 0 !important;
     margin-bottom: 0 !important;
     padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Mobile: mini-player sits above the bottom nav bar */
+  @media (max-width: 1023px) {
+    #mini-player {
+      bottom: 56px !important;
+      padding-bottom: 0;
+    }
   }
 
   /* Progress bar handle - always visible when playing */

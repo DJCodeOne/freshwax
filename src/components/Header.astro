@@ -415,10 +415,7 @@ const firebaseConfig = {
     transition: bottom 0.3s ease-out;
   }
 
-  /* Push bottom nav up when mini-player is visible */
-  body:has(#mini-player.visible) #fwx-mobile-nav {
-    bottom: 70px;
-  }
+  /* Mini-player now sits above the nav bar, no need to push nav up */
 
   @media (max-width: 1023px) {
     #fwx-mobile-nav {
