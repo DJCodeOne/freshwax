@@ -194,13 +194,13 @@
     flex: 1;
     min-width: 0;
     max-width: 100%;
-    padding: 1rem;
+    padding: 0 1rem 1rem;
     overflow-x: hidden;
   }
 
   @media (min-width: 480px) {
     .mixes-section {
-      padding: 2rem 1.5rem;
+      padding: 0 1.5rem 2rem;
     }
   }
 
@@ -208,7 +208,7 @@
     .mixes-section {
       max-width: 1125px;
       margin: 0 auto;
-      padding: 2.5rem 2rem;
+      padding: 0 2rem 2.5rem;
     }
   }
 
