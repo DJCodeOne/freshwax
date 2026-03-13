@@ -456,11 +456,18 @@ const { nonce = '' } = Astro.props;
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
-  /* Mobile: mini-player sits above the bottom nav bar */
+  /* Mobile: mini-player sits above the bottom nav bar when visible */
   @media (max-width: 1023px) {
     #mini-player {
       bottom: 56px !important;
       padding-bottom: 0;
+      /* Override translate-y-full so hidden state pushes fully off-screen
+         (translate-y-full only moves by its own height, but bottom:56px
+         means it still peeks above the nav) */
+      translate: 0 calc(100% + 56px);
+    }
+    #mini-player.visible {
+      translate: 0 0;
     }
   }
 
