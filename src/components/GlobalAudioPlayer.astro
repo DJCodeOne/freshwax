@@ -609,6 +609,20 @@ const { nonce = '' } = Astro.props;
       var SHUFFLE_FADE_DURATION = 3; // seconds for fade out
       var shuffleFadingOut = false;
 
+      // Track active fade intervals so we can clean them up between tracks
+      var _fadeInInterval = null;
+      var _fadeOutInterval = null;
+
+      // Track active event listener refs for cleanup between tracks
+      var _currentSeekOnce = null;
+      var _currentPlayWhenReady = null;
+
+      // Clear all active fade intervals
+      function clearFadeIntervals() {
+        if (_fadeInInterval) { clearInterval(_fadeInInterval); _fadeInInterval = null; }
+        if (_fadeOutInterval) { clearInterval(_fadeOutInterval); _fadeOutInterval = null; }
+      }
+
       // Fade in new track - accessible from playCurrentShuffleTrack
       function fadeInShuffleTrack() {
         var targetVolume = shuffleTargetVolume || 1.0;
@@ -619,12 +633,16 @@ const { nonce = '' } = Astro.props;
 
         globalAudio.volume = 0;
 
-        var fadeTimer = setInterval(function() {
+        // Clear any previous fade-in
+        if (_fadeInInterval) clearInterval(_fadeInInterval);
+
+        _fadeInInterval = setInterval(function() {
           step++;
           globalAudio.volume = Math.min(targetVolume, volumeStep * step);
 
           if (step >= fadeSteps) {
-            clearInterval(fadeTimer);
+            clearInterval(_fadeInInterval);
+            _fadeInInterval = null;
             globalAudio.volume = targetVolume;
           }
         }, fadeInterval);
@@ -639,12 +657,16 @@ const { nonce = '' } = Astro.props;
         var volumeStep = startVolume / fadeSteps;
         var step = 0;
 
-        var fadeTimer = setInterval(function() {
+        // Clear any previous fade-out
+        if (_fadeOutInterval) clearInterval(_fadeOutInterval);
+
+        _fadeOutInterval = setInterval(function() {
           step++;
           globalAudio.volume = Math.max(0, startVolume - (volumeStep * step));
 
           if (step >= fadeSteps) {
-            clearInterval(fadeTimer);
+            clearInterval(_fadeOutInterval);
+            _fadeOutInterval = null;
             shuffleFadingOut = false;
             playNextShuffleTrack();
           }
@@ -1083,9 +1105,18 @@ const { nonce = '' } = Astro.props;
         var queue = window.FreshWaxPlayer.shuffledQueue;
         var index = window.FreshWaxPlayer.shuffleIndex;
 
-        // Reset skip guard and clear any pending timers from previous track
+        // Reset ALL state for new track
         _skipInProgress = false;
+        shuffleFadingOut = false;
         clearTimeout(_shuffleRetryTimer);
+        clearFadeIntervals();
+
+        // Clean up stale event listeners from previous track
+        var audio = document.getElementById('global-audio');
+        if (audio) {
+          if (_currentSeekOnce) { audio.removeEventListener('loadedmetadata', _currentSeekOnce); _currentSeekOnce = null; }
+          if (_currentPlayWhenReady) { audio.removeEventListener('canplay', _currentPlayWhenReady); _currentPlayWhenReady = null; }
+        }
 
         if (!queue || queue.length === 0) {
           console.error('[MINI-PLAYER] Empty shuffle queue');
@@ -1163,20 +1194,22 @@ const { nonce = '' } = Astro.props;
           var SHUFFLE_START_TIME = 60;
 
           // Wait for audio to be ready, then seek to start position
-          var seekOnce = function() {
+          _currentSeekOnce = function() {
             if (audio.duration && audio.duration > SHUFFLE_START_TIME + 10) {
               audio.currentTime = SHUFFLE_START_TIME;
             } else if (audio.duration && audio.duration > 30) {
               // If track is shorter than 70s, start at 30% into track
               audio.currentTime = audio.duration * 0.3;
             }
-            audio.removeEventListener('loadedmetadata', seekOnce);
+            audio.removeEventListener('loadedmetadata', _currentSeekOnce);
+            _currentSeekOnce = null;
           };
-          audio.addEventListener('loadedmetadata', seekOnce);
+          audio.addEventListener('loadedmetadata', _currentSeekOnce);
 
           // Wait for enough data to play before calling play()
-          var playWhenReady = function() {
-            audio.removeEventListener('canplay', playWhenReady);
+          _currentPlayWhenReady = function() {
+            audio.removeEventListener('canplay', _currentPlayWhenReady);
+            _currentPlayWhenReady = null;
             clearTimeout(_shuffleRetryTimer);
             audio.play().then(function() {
               fadeInShuffleTrack();
@@ -1191,11 +1224,14 @@ const { nonce = '' } = Astro.props;
               }
             });
           };
-          audio.addEventListener('canplay', playWhenReady);
+          audio.addEventListener('canplay', _currentPlayWhenReady);
 
           // Fallback: if canplay doesn't fire within 8 seconds, skip
           _shuffleRetryTimer = setTimeout(function() {
-            audio.removeEventListener('canplay', playWhenReady);
+            if (_currentPlayWhenReady) {
+              audio.removeEventListener('canplay', _currentPlayWhenReady);
+              _currentPlayWhenReady = null;
+            }
             if (!_skipInProgress) {
               _skipInProgress = true;
               console.error('[MINI-PLAYER] Track load timeout, skipping');
