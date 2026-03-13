@@ -1053,16 +1053,26 @@ const merchItemList = {
           }
         }
 
+        var sizeVal = selectedSize && selectedSize !== 'none' ? selectedSize : null;
+        var colorVal = selectedColor && selectedColor !== 'none' ? selectedColor : null;
+
+        // Build display name with size/colour suffix
+        var displayName = currentProduct.name;
+        var details = [];
+        if (sizeVal) details.push(sizeVal);
+        if (colorVal) details.push(colorVal);
+        if (details.length > 0) displayName += ' (' + details.join(' / ') + ')';
+
         var item = {
           id: currentProduct.id,
-          name: currentProduct.name,
-          type: 'merch',  // Important: identifies as physical merch not digital
+          name: displayName,
+          type: 'merch',
           price: currentProduct.onSale && currentProduct.salePrice
             ? currentProduct.salePrice
             : currentProduct.retailPrice,
           image: cartImage,
-          size: selectedSize !== 'none' ? selectedSize : undefined,
-          color: selectedColor !== 'none' ? selectedColor : undefined,
+          size: sizeVal,
+          color: colorVal,
           quantity: 1
         };
 

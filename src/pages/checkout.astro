@@ -539,13 +539,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   <div class="checkout-item-info">
                     <h3 class="checkout-item-title">${escapeHtml(item.name)}</h3>
                     <span class="checkout-item-badge" style="${getBadgeStyle(itemType)}">${escapeHtml(itemType)}</span>
-                    ${item.color ? `<span class="checkout-item-detail">${escapeHtml((item.color && typeof item.color === 'object') ? item.color.name : item.color)}</span>` : ''}
+                    ${item.color ? `<span class="checkout-item-detail">Colour: ${escapeHtml((item.color && typeof item.color === 'object') ? item.color.name : item.color)}</span>` : ''}
                     ${item.size ? `<span class="checkout-item-detail">Size: ${escapeHtml(item.size)}</span>` : ''}
                     ${item.quantity > 1 ? `<span class="checkout-item-detail">Qty: ${item.quantity}</span>` : ''}
-                    <div class="checkout-item-price">
-                      <span class="checkout-item-amount">£${(item.price * item.quantity).toFixed(2)}</span>
-                      ${item.quantity > 1 ? `<span class="checkout-item-each">£${item.price.toFixed(2)} each</span>` : ''}
-                    </div>
+                  </div>
+                  <div class="checkout-item-price">
+                    <span class="checkout-item-amount">£${(item.price * item.quantity).toFixed(2)}</span>
+                    ${item.quantity > 1 ? `<span class="checkout-item-each">£${item.price.toFixed(2)} each</span>` : ''}
                   </div>
                 </article>
               `}).join('')}
