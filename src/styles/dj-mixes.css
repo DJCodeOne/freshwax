@@ -212,112 +212,19 @@
     }
   }
 
-  .mixes-header {
+  .mixes-upload-bar {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 1.75rem 1.5rem;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 0, 0, 0.85) 50%, rgba(0, 0, 0, 0.8));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(220, 38, 38, 0.15);
-    border-radius: 0.75rem;
-    box-shadow: 0 0 30px rgba(220, 38, 38, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    -webkit-mask-image:
-      linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%),
-      linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
-    -webkit-mask-composite: destination-in;
-    mask-image:
-      linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%),
-      linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
-    mask-composite: intersect;
+    gap: 1.5rem;
+    padding: 1rem 0;
+    margin-bottom: 0.75rem;
   }
 
-  @media (min-width: 480px) {
-    .mixes-header {
-      gap: 1.5rem;
-      padding: 2.5rem 3rem;
-    }
-  }
-
-  .mixes-header-line {
-    display: none;
-  }
-
-  .mixes-header-center {
-    text-align: center;
+  .mixes-upload-bar-line {
     flex: 1;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .mixes-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.5rem;
-    font-weight: 400;
-    color: #ffffff;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    text-align: center;
-    width: 100%;
-    margin: 0 0 0.75rem 0;
-    line-height: 1;
-    white-space: nowrap;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 0, 0, 0.7);
-  }
-
-  .mixes-subtitle-top {
-    color: rgba(255, 255, 255, 0.85);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.4rem;
-    font-weight: 400;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    margin: 0 0 0.35rem 0;
-    line-height: 1;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-  }
-
-  .mixes-subtitle {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.8rem;
-    margin: 0;
-    font-weight: 400;
-    letter-spacing: 0.05em;
-    line-height: 1.5;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-  }
-
-  .mixes-count {
-    margin-top: 0.25rem;
-    font-size: 0.75rem;
-    opacity: 0.8;
-  }
-
-  .mixes-divider {
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #dc2626, transparent);
-    margin-top: 1.25rem;
-  }
-
-  .mixes-upload-row {
-    text-align: center;
-    margin-top: 1.25rem;
-  }
-
-  @media (min-width: 640px) {
-    .mixes-header { gap: 2rem; padding: 2.5rem 3.5rem; }
-    .mixes-header-line { display: block; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.5), transparent); }
-    .mixes-header-center { flex: 3; }
-    .mixes-title { font-size: 3rem; }
-    .mixes-subtitle { font-size: 0.9rem; }
-  }
-
-  @media (min-width: 768px) {
-    .mixes-header { gap: 2.5rem; padding: 3rem 4rem; }
-    .mixes-title { font-size: 4rem; }
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.4), transparent);
   }
 
   .upload-mix-btn {

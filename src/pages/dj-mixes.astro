@@ -229,20 +229,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
       <!-- Main Mixes Content -->
       <section class="mixes-section">
-        <!-- Header Container -->
-        <div class="mixes-header">
-          <div class="mixes-header-line"></div>
-          <div class="mixes-header-center">
-            <p class="mixes-subtitle">Stream or download full DJ sets</p>
-            <p class="mixes-subtitle mixes-count"><span id="mix-count">{mixes.length}</span> available</p>
-            <div class="mixes-upload-row">
-              <a href="/upload-mix/" class="upload-mix-btn">
-                📤 Upload Mix
-              </a>
-            </div>
-            <div class="mixes-divider"></div>
-          </div>
-          <div class="mixes-header-line"></div>
+        <!-- Upload Bar -->
+        <div class="mixes-upload-bar">
+          <div class="mixes-upload-bar-line"></div>
+          <a href="/upload-mix/" class="upload-mix-btn">
+            📤 Upload Mix
+          </a>
+          <div class="mixes-upload-bar-line"></div>
         </div>
 
         <!-- Genre Filter -->
