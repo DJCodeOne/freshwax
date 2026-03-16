@@ -188,11 +188,10 @@ const csrfToken = Astro.locals.csrfToken || '';
     <link rel="dns-prefetch" href="https://www.gstatic.com" />
     <!-- GIPHY requests now proxied through /api/giphy/search/ - no direct client calls -->
 
-    <!-- Font preload - discover the Google Fonts stylesheet early -->
+    <!-- Google Fonts — async load to avoid render-blocking (display=swap prevents FOIT) -->
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" />
-
-    <!-- Google Fonts - render-blocking is acceptable since display=swap prevents FOIT -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" /></noscript>
     
     <!-- SEO Component - comprehensive meta tags and structured data -->
     <SEO 

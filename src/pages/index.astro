@@ -21,8 +21,9 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 ---
 
 <Layout title="Fresh Wax - Jungle & Drum and Bass Music Store" description="Fresh Wax is an independent UK jungle and drum & bass record label and music store. Shop vinyl records, digital downloads, DJ mixes, and merch." image={firstArtwork || undefined}>
+  <link rel="preload" href="/videos/hero-turntable-poster.webp" as="image" fetchpriority="high" slot="head" />
   {firstArtwork && firstThumb ? (
-    <link rel="preload" as="image" imagesrcset={`${firstThumb.replace(/ /g, '%20')} 400w, ${firstArtwork.replace(/ /g, '%20')} 800w`} imagesizes="256px" slot="head" />
+    <link rel="preload" as="image" imagesrcset={`${firstThumb.replace(/ /g, '%20')} 400w, ${firstArtwork.replace(/ /g, '%20')} 800w`} imagesizes="(min-width: 768px) 256px, 200px" slot="head" />
   ) : firstArtwork ? (
     <link rel="preload" href={firstArtwork} as="image" slot="head" />
   ) : null}
@@ -40,8 +41,9 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
         muted
         loop
         playsinline
-        preload="auto"
+        preload="none"
         poster="/videos/hero-turntable-poster.webp"
+        fetchpriority="low"
         aria-hidden="true"
       >
         <source src="/videos/hero-turntable.webm" type="video/webm" />
@@ -569,17 +571,14 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 
   .animate-fade-up {
     animation: fadeUp 0.5s ease-out forwards;
-    opacity: 0;
   }
 
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out forwards;
-    opacity: 0;
   }
 
   .animate-fade-down-delayed {
     animation: fadeDown 0.5s ease-out forwards;
-    opacity: 0;
   }
 
   @keyframes livePulse {
@@ -641,7 +640,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   }
 
   .releases-subtitle {
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 0.8rem;
     margin: 0;
     font-weight: 400;

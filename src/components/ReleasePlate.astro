@@ -335,7 +335,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-nyop-min={nyopMinPrice}
             data-nyop-suggested={nyopSuggestedPrice}
             data-is-preorder={isPreOrder ? 'true' : 'false'}
-            class="nyop-open-modal w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm shadow-sm font-body bg-green-600 hover:bg-green-700 text-white"
+            class="nyop-open-modal w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm shadow-sm font-body bg-green-700 hover:bg-green-800 text-white"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -354,8 +354,8 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-label-name={labelName}
             data-artwork={coverArtUrl}
             data-is-preorder={isPreOrder ? 'true' : 'false'}
-            class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-sm' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-            style={isPreOrder ? undefined : 'animation: buy-glow-pulse 2s ease-in-out infinite; box-shadow: 0 0 12px rgba(22, 163, 74, 0.7), 0 0 24px rgba(22, 163, 74, 0.5), 0 0 48px rgba(22, 163, 74, 0.3);'}
+            class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-sm' : 'bg-green-700 hover:bg-green-800 text-white'}`}
+            style={isPreOrder ? undefined : 'animation: buy-glow-pulse 2s ease-in-out infinite; box-shadow: 0 0 12px rgba(21, 128, 61, 0.7), 0 0 24px rgba(21, 128, 61, 0.5), 0 0 48px rgba(21, 128, 61, 0.3);'}
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {isPreOrder ? (
