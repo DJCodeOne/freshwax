@@ -21,7 +21,6 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 ---
 
 <Layout title="Fresh Wax - Jungle & Drum and Bass Music Store" description="Fresh Wax is an independent UK jungle and drum & bass record label and music store. Shop vinyl records, digital downloads, DJ mixes, and merch." image={firstArtwork || undefined}>
-  <link rel="preload" href="/videos/hero-turntable-poster.webp" as="image" fetchpriority="high" slot="head" />
   {firstArtwork && firstThumb ? (
     <link rel="preload" as="image" imagesrcset={`${firstThumb.replace(/ /g, '%20')} 400w, ${firstArtwork.replace(/ /g, '%20')} 800w`} imagesizes="(min-width: 768px) 256px, 200px" slot="head" />
   ) : firstArtwork ? (
@@ -34,18 +33,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     <!-- Welcome Hero Section -->
     <section class="hero-section">
 
-      <!-- Hero background — poster image for fast LCP, video overlays lazily on desktop -->
-      <img
-        id="hero-poster"
-        class="hero-video"
-        src="/videos/hero-turntable-poster.webp"
-        alt=""
-        width="832"
-        height="468"
-        fetchpriority="high"
-        aria-hidden="true"
-        style="object-fit:cover"
-      />
+      <!-- Hero background — CSS background-image so text is LCP (no image load dependency) -->
       <video
         id="hero-video"
         class="hero-video"
@@ -59,7 +47,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
         style="display:none"
       ></video>
       <script is:inline>
-      (function(){if(window.innerWidth>=768){var v=document.getElementById('hero-video');var p=document.getElementById('hero-poster');if(v){var s1=document.createElement('source');s1.src='/videos/hero-turntable.webm';s1.type='video/webm';var s2=document.createElement('source');s2.src='/videos/hero-turntable.mp4';s2.type='video/mp4';v.appendChild(s1);v.appendChild(s2);v.addEventListener('canplay',function(){v.style.display='';if(p)p.style.display='none';},{once:true});v.load()}}})();
+      (function(){if(window.innerWidth>=768){var v=document.getElementById('hero-video');if(v){var s1=document.createElement('source');s1.src='/videos/hero-turntable.webm';s1.type='video/webm';var s2=document.createElement('source');s2.src='/videos/hero-turntable.mp4';s2.type='video/mp4';v.appendChild(s1);v.appendChild(s2);v.addEventListener('canplay',function(){v.style.display='';},{once:true});v.load()}}})();
       </script>
 
       <!-- Dark overlay for text readability -->
@@ -183,7 +171,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 
   /* Hero Section */
   .hero-section {
-    background: #000000;
+    background: #000000 url('/videos/hero-turntable-poster.webp') center/cover no-repeat;
     color: white;
     padding: 1.5rem 0;
     position: relative;
