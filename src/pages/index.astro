@@ -33,7 +33,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     <!-- Welcome Hero Section -->
     <section class="hero-section">
 
-      <!-- Hero background — CSS background-image so text is LCP (no image load dependency) -->
+      <!-- Hero background — dark gradient so text is LCP (no image load dependency) -->
       <video
         id="hero-video"
         class="hero-video"
@@ -171,7 +171,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 
   /* Hero Section */
   .hero-section {
-    background: #000000 url('/videos/hero-turntable-poster.webp') center/cover no-repeat;
+    background: radial-gradient(ellipse at center, #111 0%, #0a0a0a 60%, #000 100%);
     color: white;
     padding: 1.5rem 0;
     position: relative;
