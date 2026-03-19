@@ -461,7 +461,7 @@ const csrfToken = Astro.locals.csrfToken || '';
     {!hideShuffle && <FloatingShuffleButton nonce={nonce} />}
 
     <!-- Spacer for mini player -->
-    <div id="mini-player-spacer" class="h-0 transition-all duration-300"></div>
+    <div id="mini-player-spacer" class="h-0 transition-[height] duration-300"></div>
     
     <!-- Cookie consent banner (UK GDPR/PECR compliant, granular categories) -->
     <!-- Injected via JS to avoid being in initial DOM and becoming LCP element -->

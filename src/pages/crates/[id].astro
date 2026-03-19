@@ -43,7 +43,7 @@ try {
       }
     }
   }
-} catch (_) {
+} catch (_: unknown) {
   // Timeout or network error — fall back to generic meta tags
 }
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
@@ -1571,7 +1571,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       // Add to localStorage bag
       let bagRaw = '[]';
       try { bagRaw = localStorage.getItem('freshwax_bag') || bagRaw; } catch (e) {}
-      let bag = JSON.parse(bagRaw);
+      var bag;
+      try {
+        bag = JSON.parse(bagRaw);
+      } catch (e) {
+        bag = [];
+      }
 
       // Check if already in bag
       const existingIndex = bag.findIndex(b => b.id === item.id && b.type === 'vinyl');

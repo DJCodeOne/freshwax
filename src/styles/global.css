@@ -211,7 +211,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .nav-button-new-releases {
-  @apply relative px-3 py-1 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold text-sm hover:shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center gap-1;
+  @apply relative px-3 py-1 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold text-sm hover:shadow-lg transition-[transform,box-shadow] duration-200 transform hover:scale-105 flex items-center gap-1;
   box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
 }
 

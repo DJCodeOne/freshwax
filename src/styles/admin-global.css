@@ -62,7 +62,7 @@
   }
 
   .admin-nav-item {
-    @apply w-full flex items-center gap-3 px-6 py-3.5 bg-transparent border-none text-white/70 text-base font-medium cursor-pointer transition-all text-left relative hover:bg-white/10 hover:text-white;
+    @apply w-full flex items-center gap-3 px-6 py-3.5 bg-transparent border-none text-white/70 text-base font-medium cursor-pointer transition-colors text-left relative hover:bg-white/10 hover:text-white;
   }
 
   .admin-nav-item.active {
@@ -74,7 +74,7 @@
   }
 
   .admin-logout-btn {
-    @apply m-6 py-3.5 bg-white/10 border border-white/20 text-white font-semibold cursor-pointer transition-all rounded-md hover:bg-white/20;
+    @apply m-6 py-3.5 bg-white/10 border border-white/20 text-white font-semibold cursor-pointer transition-colors rounded-md hover:bg-white/20;
   }
 
   /* Main Content */
@@ -99,7 +99,7 @@
   }
 
   .admin-refresh-btn {
-    @apply flex items-center gap-2 px-6 py-3 bg-black text-white border-2 border-black font-semibold cursor-pointer transition-all hover:bg-white hover:text-black hover:shadow-[4px_4px_0_#000] hover:-translate-x-1 hover:-translate-y-1;
+    @apply flex items-center gap-2 px-6 py-3 bg-black text-white border-2 border-black font-semibold cursor-pointer transition-[color,background-color,box-shadow,transform] hover:bg-white hover:text-black hover:shadow-[4px_4px_0_#000] hover:-translate-x-1 hover:-translate-y-1;
   }
 
   .admin-content {
@@ -112,7 +112,7 @@
   }
 
   .admin-stat-card {
-    @apply bg-white border-2 border-black p-6 flex items-center gap-5 transition-all hover:shadow-[8px_8px_0_#000] hover:-translate-x-1 hover:-translate-y-1;
+    @apply bg-white border-2 border-black p-6 flex items-center gap-5 transition-[box-shadow,transform] hover:shadow-[8px_8px_0_#000] hover:-translate-x-1 hover:-translate-y-1;
   }
 
   .admin-stat-icon {
@@ -168,7 +168,7 @@
   }
 
   .admin-filter-tab {
-    @apply px-5 py-3 bg-white border-2 border-black text-black font-semibold cursor-pointer transition-all text-sm hover:bg-gray-50;
+    @apply px-5 py-3 bg-white border-2 border-black text-black font-semibold cursor-pointer transition-colors text-sm hover:bg-gray-50;
   }
 
   .admin-filter-tab.active {
@@ -179,7 +179,7 @@
   .admin-btn-primary,
   .admin-btn-secondary,
   .admin-btn-danger {
-    @apply flex items-center gap-2 px-6 py-3 font-semibold cursor-pointer transition-all border-2 border-black text-base;
+    @apply flex items-center gap-2 px-6 py-3 font-semibold cursor-pointer transition-colors border-2 border-black text-base;
   }
 
   .admin-btn-primary {
@@ -262,7 +262,7 @@
   }
 
   .admin-btn-icon {
-    @apply w-8 h-8 flex items-center justify-center border-2 cursor-pointer transition-all bg-white;
+    @apply w-8 h-8 flex items-center justify-center border-2 cursor-pointer transition-colors bg-white;
   }
 
   .admin-btn-icon.success {

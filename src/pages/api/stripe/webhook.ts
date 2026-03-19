@@ -20,7 +20,8 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { createOrder, validateStock } from '../../../lib/order-utils';
-import { getDocument, queryCollection, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion, invalidateReleasesCache, clearAllMerchCache } from '../../../lib/firebase-rest';
+import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { logStripeEvent } from '../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { redeemReferralCode } from '../../../lib/referral-codes';
@@ -1457,6 +1458,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
         metadata: { orderId: result.orderId, orderNumber: result.orderNumber, amount: session.amount_total / 100 },
         processingTimeMs: Date.now() - startTime
       }).catch(e => log.error('[Stripe Webhook] Log error:', e)); // Don't let logging failures affect response
+
+      // Invalidate KV + in-memory caches so stale stock data is not served
+      const hasReleaseItems = items.some((i: Record<string, unknown>) =>
+        i.type === 'digital' || i.type === 'release' || i.type === 'track' || i.type === 'vinyl'
+      );
+      const hasMerchItems = items.some((i: Record<string, unknown>) => i.type === 'merch');
+
+      if (hasReleaseItems) {
+        invalidateReleasesCache();
+        await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+        await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+      }
+      if (hasMerchItems) {
+        clearAllMerchCache();
+        await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => { /* KV cache invalidation — non-critical */ });
+      }
     }
 
     // Handle payment_intent.succeeded (backup for session complete)

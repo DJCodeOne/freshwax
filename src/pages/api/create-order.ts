@@ -33,7 +33,7 @@ const OrderItemSchema = z.object({
   isPreOrder: z.boolean().nullish(),
   releaseDate: z.string().nullish(),
   sellerId: z.string().nullish(),
-}).passthrough();
+}).strip();
 
 const OrderCustomerSchema = z.object({
   email: z.string().email('Valid email required'),
@@ -41,7 +41,7 @@ const OrderCustomerSchema = z.object({
   lastName: z.string().min(1, 'Last name required'),
   phone: z.string().nullish(),
   userId: z.string().nullish(),
-}).passthrough();
+}).strip();
 
 const OrderShippingSchema = z.object({
   address1: z.string().nullish(),
@@ -50,7 +50,7 @@ const OrderShippingSchema = z.object({
   county: z.string().nullish(),
   postcode: z.string().nullish(),
   country: z.string().nullish(),
-}).passthrough().nullish();
+}).strip().nullish();
 
 const CreateOrderSchema = z.object({
   customer: OrderCustomerSchema,
@@ -61,10 +61,10 @@ const CreateOrderSchema = z.object({
     subtotal: z.number().optional(),
     shipping: z.number().optional(),
     total: z.number().positive('Total must be positive'),
-  }).passthrough().optional(),
+  }).strip().optional(),
   paymentMethod: z.string().optional(),
   idToken: z.string().optional(),
-}).passthrough();
+}).strip();
 
 const log = createLogger('create-order');
 

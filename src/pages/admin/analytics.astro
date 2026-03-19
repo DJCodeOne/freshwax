@@ -52,7 +52,7 @@ const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
             limit: 2000
           });
           console.debug(`[analytics] Firebase: ${entries.length} ledger entries`);
-        } catch (fbErr) {
+        } catch (fbErr: unknown) {
           console.error('[analytics] Firebase failed, trying D1:', fbErr);
         }
       }
@@ -60,11 +60,11 @@ const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
         try {
           entries = await d1GetLedgerEntries(db, { limit: 2000 });
           console.debug(`[analytics] D1 fallback: ${entries.length} ledger entries`);
-        } catch (d1Err) {
+        } catch (d1Err: unknown) {
           console.error('[analytics] D1 also failed:', d1Err);
         }
       }
-    } catch (e){
+    } catch (e: unknown){
       console.error('Error fetching ledger:', e);
     }
     return entries;
@@ -85,7 +85,7 @@ const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
         o.status !== 'cancelled' &&
         o.paymentMethod !== 'test_mode'
       );
-    } catch (e){
+    } catch (e: unknown){
       console.error('Error fetching orders:', e);
       return [];
     }
@@ -100,7 +100,7 @@ const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
           priceMap[r.id] = r.price ?? 0;
         }
       });
-    } catch (e){
+    } catch (e: unknown){
       console.error('Error fetching releases:', e);
     }
     return priceMap;
@@ -262,7 +262,7 @@ try {
     totalDownloads += mix.downloads || 0;
     totalLikes += mix.likes || 0;
   });
-} catch (e){
+} catch (e: unknown){
   console.error('Error fetching mixes:', e);
 }
 
