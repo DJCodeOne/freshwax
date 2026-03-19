@@ -450,12 +450,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
                 const approvedHours = eventReqs.length > 0 ? (eventReqs[0].hoursRequested || 0) : 0;
                 // Plus base = 4hr minimum, or 2hr + approved event hours (whichever is greater)
                 maxDurationMs = Math.max(4, 2 + approvedHours) * 60 * 60 * 1000;
-              } catch (evErr) {
+              } catch (evErr: unknown) {
                 // If event check fails, give Plus users 4hr default
                 maxDurationMs = 4 * 60 * 60 * 1000;
               }
             }
-          } catch (userErr) {
+          } catch (userErr: unknown) {
             log.warn('Could not check DJ subscription for auto-end:', userErr);
           }
           const exceededMaxDuration = streamDurationMs >= maxDurationMs;
@@ -1646,7 +1646,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: unknown) {
     log.error('POST Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return ApiErrors.serverError('Failed to process request: ' + errorMessage);
+    return ApiErrors.serverError('Failed to process request');
   }
 };
 

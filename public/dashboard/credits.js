@@ -1,6 +1,11 @@
 // Dashboard — credits/gift card module
 // Handles credit balance display, transactions, and gift card redemption
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 var ctx = null;
 var userCreditBalance = 0;
 var creditTransactions = [];
@@ -77,8 +82,8 @@ function renderTransactions(transactions) {
 
     return '<div class="transaction-item ' + (isCredit ? 'credit' : 'debit') + '">' +
       '<div class="transaction-info">' +
-        '<span class="transaction-desc">' + txn.description + '</span>' +
-        '<span class="transaction-date">' + date + '</span>' +
+        '<span class="transaction-desc">' + escapeHtml(txn.description) + '</span>' +
+        '<span class="transaction-date">' + escapeHtml(date) + '</span>' +
       '</div>' +
       '<span class="transaction-amount ' + (isCredit ? 'positive' : 'negative') + '">' +
         (isCredit ? '+' : '') + '£' + Math.abs(txn.amount).toFixed(2) +

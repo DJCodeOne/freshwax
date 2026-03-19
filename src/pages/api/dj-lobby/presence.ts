@@ -492,7 +492,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
     if (staleIds.length > 0) {
       // Delete each stale presence document
-      await Promise.all(staleIds.map(id => deleteDocument('djLobbyPresence', id)));
+      await Promise.allSettled(staleIds.map(id => deleteDocument('djLobbyPresence', id)));
 
       // Invalidate cache
       onlineDjsCache.delete('online-djs');

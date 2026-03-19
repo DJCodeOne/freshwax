@@ -337,7 +337,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     invalidateMixesCache();
 
     // Invalidate KV cache for mixes list so all edge workers serve fresh data
-    const MIXES_CACHE = { prefix: 'mixes' };
+    const MIXES_CACHE = { prefix: 'dj-mixes' };
     await kvDelete('public:50', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
     await kvDelete('public:20', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
     await kvDelete('public:100', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });

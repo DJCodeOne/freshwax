@@ -1,6 +1,11 @@
 // Dashboard — orders tab module
 // Handles order rendering and stats calculation
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 var ctx = null;
 
 export function init(context) {
@@ -37,12 +42,12 @@ export function renderOrders(ordersList, containerId) {
     return '<div class="order-card">' +
       '<div class="order-header">' +
         '<div class="order-header-left">' +
-          '<div class="order-number">' + (order.orderNumber || 'Order') + '</div>' +
-          '<div class="order-date">' + orderDate + '</div>' +
+          '<div class="order-number">' + escapeHtml(order.orderNumber || 'Order') + '</div>' +
+          '<div class="order-date">' + escapeHtml(orderDate) + '</div>' +
         '</div>' +
         '<div class="order-header-right">' +
           '<div class="order-total">£' + (order.totals?.total?.toFixed(2) || '0.00') + '</div>' +
-          '<span class="order-status ' + statusClass + '">' + statusText + '</span>' +
+          '<span class="order-status ' + statusClass + '">' + escapeHtml(statusText) + '</span>' +
         '</div>' +
       '</div>' +
       '<div class="order-items">' +
@@ -53,11 +58,11 @@ export function renderOrders(ordersList, containerId) {
                          itemType === 'track' ? 'track' : 'digital';
           var itemImage = item.image || item.artwork || item.artworkUrl || item.coverArtUrl || item.downloads?.artworkUrl || '/place-holder.webp';
           return '<div class="order-item">' +
-            '<img src="' + itemImage + '" alt="' + (item.name || item.title || 'Order item') + '" class="order-item-image">' +
+            '<img src="' + escapeHtml(itemImage) + '" alt="' + escapeHtml(item.name || item.title || 'Order item') + '" class="order-item-image">' +
             '<div class="order-item-details">' +
-              '<div class="order-item-name">' + (item.name || item.title || 'Item') + '</div>' +
+              '<div class="order-item-name">' + escapeHtml(item.name || item.title || 'Item') + '</div>' +
               '<div class="order-item-meta">' +
-                '<span class="order-item-type ' + typeClass + '">' + itemType + '</span>' +
+                '<span class="order-item-type ' + typeClass + '">' + escapeHtml(itemType) + '</span>' +
                 (item.quantity > 1 ? '<span class="order-item-qty">&times; ' + item.quantity + '</span>' : '') +
               '</div>' +
             '</div>' +
@@ -65,7 +70,7 @@ export function renderOrders(ordersList, containerId) {
           '</div>';
         }).join('') +
       '</div>' +
-      '<a href="/order-confirmation/' + order.id + '/" class="order-view-link">' +
+      '<a href="/order-confirmation/' + escapeHtml(order.id) + '/" class="order-view-link">' +
         'View Order Details' +
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
           '<path d="M5 12h14M12 5l7 7-7 7"/>' +

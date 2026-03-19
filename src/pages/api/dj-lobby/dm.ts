@@ -466,13 +466,13 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
 
     // Delete all messages
-    await Promise.all(messages.map(msg => deleteDocument(`djDirectMessages/${channelId}/messages`, msg.id)));
+    await Promise.allSettled(messages.map(msg => deleteDocument(`djDirectMessages/${channelId}/messages`, msg.id)));
 
     // Delete the channel document
     await deleteDocument('djDirectMessages', channelId);
 
     // Notify both users that conversation was cleared
-    await Promise.all([
+    await Promise.allSettled([
       triggerPusher(`private-dj-${userId}`, 'dm-cleared', { channelId, targetId }, env),
       triggerPusher(`private-dj-${targetId}`, 'dm-cleared', { channelId, targetId: userId }, env)
     ]);

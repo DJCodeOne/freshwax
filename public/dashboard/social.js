@@ -1,6 +1,11 @@
 // Dashboard — social module (wishlist + following)
 // Handles wishlist and following tabs
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 var ctx = null;
 var wishlistLoaded = false;
 var followingLoaded = false;
@@ -78,18 +83,18 @@ export async function loadWishlist(userId) {
           var genre = release.genre || '';
           var labelCode = release.labelCode || '';
 
-          return '<div class="wishlist-card" data-release-id="' + release.id + '">' +
+          return '<div class="wishlist-card" data-release-id="' + escapeHtml(release.id) + '">' +
             '<div class="wishlist-card-artwork">' +
-              '<a href="/item/' + release.id + '/">' +
-                '<img src="' + (release.coverArtUrl || '/place-holder.webp') + '" alt="' + release.releaseName + '" loading="lazy">' +
+              '<a href="/item/' + escapeHtml(release.id) + '/">' +
+                '<img src="' + escapeHtml(release.coverArtUrl || '/place-holder.webp') + '" alt="' + escapeHtml(release.releaseName) + '" loading="lazy">' +
               '</a>' +
             '</div>' +
             '<div class="wishlist-card-content">' +
-              '<h4 class="wishlist-card-title">' + (release.releaseName || 'Unknown') + '</h4>' +
-              '<p class="wishlist-card-artist">by ' + (release.artistName || 'Unknown Artist') + '</p>' +
+              '<h4 class="wishlist-card-title">' + escapeHtml(release.releaseName || 'Unknown') + '</h4>' +
+              '<p class="wishlist-card-artist">by ' + escapeHtml(release.artistName || 'Unknown Artist') + '</p>' +
               '<div class="wishlist-card-meta">' +
-                (genre ? '<span class="wishlist-card-tag">' + genre + '</span>' : '') +
-                (labelCode ? '<span class="wishlist-card-tag">' + labelCode + '</span>' : '') +
+                (genre ? '<span class="wishlist-card-tag">' + escapeHtml(genre) + '</span>' : '') +
+                (labelCode ? '<span class="wishlist-card-tag">' + escapeHtml(labelCode) + '</span>' : '') +
                 '<span class="wishlist-card-tag" style="background:#22c55e;color:#fff;">DIGITAL</span>' +
                 (hasVinyl ? '<span class="wishlist-card-tag" style="background:#dc2626;color:#fff;">VINYL</span>' : '') +
               '</div>' +
@@ -100,7 +105,7 @@ export async function loadWishlist(userId) {
                 (hasVinyl ? '<span class="price-vinyl"><span class="price-label">Vinyl</span> £' + vinylPrice.toFixed(2) + '</span>' : '') +
               '</div>' +
               '<div class="wishlist-card-actions">' +
-                '<a href="/item/' + release.id + '/" class="wishlist-btn-view">View</a>' +
+                '<a href="/item/' + escapeHtml(release.id) + '/" class="wishlist-btn-view">View</a>' +
               '</div>' +
             '</div>' +
           '</div>';
@@ -285,18 +290,18 @@ export async function loadFollowing(userId) {
           var latestRelease = artist.latestRelease;
           var releaseCount = artist.releaseCount || 0;
 
-          return '<div class="following-card" data-artist-name="' + artist.artistName + '">' +
-            '<img src="' + (artist.coverArtUrl || '/place-holder.webp') + '" alt="' + artist.artistName + '" class="following-card-avatar">' +
-            '<h4 class="following-card-name">' + artist.artistName + '</h4>' +
+          return '<div class="following-card" data-artist-name="' + escapeHtml(artist.artistName) + '">' +
+            '<img src="' + escapeHtml(artist.coverArtUrl || '/place-holder.webp') + '" alt="' + escapeHtml(artist.artistName) + '" class="following-card-avatar">' +
+            '<h4 class="following-card-name">' + escapeHtml(artist.artistName) + '</h4>' +
             '<p class="following-card-releases">' + releaseCount + ' release' + (releaseCount !== 1 ? 's' : '') + '</p>' +
             (latestRelease ?
               '<div class="following-card-latest">' +
                 '<div class="following-card-latest-label">Latest Release</div>' +
-                '<div class="following-card-latest-title" title="' + latestRelease.releaseName + '">' + latestRelease.releaseName + '</div>' +
+                '<div class="following-card-latest-title" title="' + escapeHtml(latestRelease.releaseName) + '">' + escapeHtml(latestRelease.releaseName) + '</div>' +
               '</div>' : '') +
             '<div class="following-card-actions">' +
-              (latestRelease ? '<a href="/item/' + latestRelease.id + '/" class="following-btn-view">View Latest</a>' : '<a href="/releases/" class="following-btn-view">Browse</a>') +
-              '<button class="following-btn-unfollow" data-artist-name="' + artist.artistName + '">Unfollow</button>' +
+              (latestRelease ? '<a href="/item/' + escapeHtml(latestRelease.id) + '/" class="following-btn-view">View Latest</a>' : '<a href="/releases/" class="following-btn-view">Browse</a>') +
+              '<button class="following-btn-unfollow" data-artist-name="' + escapeHtml(artist.artistName) + '">Unfollow</button>' +
             '</div>' +
           '</div>';
         }).join('');

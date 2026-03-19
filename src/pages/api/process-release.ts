@@ -591,12 +591,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);
     log.error('Inner error:', errMsg);
-    return errorResponse(`Processing failed: ${errMsg}`);
+    return errorResponse('Processing failed');
   }
 
   } catch (outerError: unknown) {
     const errMsg = outerError instanceof Error ? outerError.message : String(outerError);
     log.error('Outer error (uncaught):', errMsg);
-    return errorResponse(`An internal error occurred: ${errMsg}`);
+    return errorResponse('An internal error occurred');
   }
 };

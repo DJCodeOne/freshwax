@@ -607,7 +607,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           
           <div id="scheduledTimeSection">
             <div class="form-group">
-              <label>Select Date <span class="required">*</span></label>
+              <label for="bookingDate">Select Date <span class="required">*</span></label>
               <div class="calendar-picker" id="bookingCalendar">
                 <div class="calendar-header">
                   <button type="button" class="cal-nav-btn" id="calPrevMonth">&lt;</button>
@@ -623,7 +623,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             </div>
             
             <div class="form-group">
-              <label>Select Start Time (24hr) <span class="required">*</span></label>
+              <label for="bookingHour">Select Start Time (24hr) <span class="required">*</span></label>
               <div class="time-dropdown-row">
                 <div class="time-dropdown-group">
                   <label class="time-dropdown-label" for="bookingHour">Hour</label>
@@ -711,17 +711,17 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           <p class="go-live-info">Start streaming immediately! Your session will end at the top of the next hour.</p>
           
           <div class="form-group">
-            <label>DJ Name <span class="required">*</span></label>
+            <label for="goLiveNowDjName">DJ Name <span class="required">*</span></label>
             <input type="text" id="goLiveNowDjName" placeholder="Your DJ name" maxlength="30" required aria-required="true" />
           </div>
           
           <div class="form-group">
-            <label>Crew / Label / Sound System / Representing</label>
+            <label for="goLiveNowCrew">Crew / Label / Sound System / Representing</label>
             <input type="text" id="goLiveNowCrew" placeholder="e.g. Ruffneck Ting, London UK" maxlength="30" />
           </div>
           
           <div class="form-group">
-            <label>Description</label>
+            <label for="goLiveNowDescription">Description</label>
             <textarea id="goLiveNowDescription" placeholder="What will you be playing? (optional)" maxlength="150" rows="2"></textarea>
             <span class="char-count"><span id="goLiveNowDescCount">0</span>/150</span>
           </div>

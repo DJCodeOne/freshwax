@@ -19,6 +19,19 @@ const BACKUP_TABLES = [
   'pending_orders',
   'email_logs',
   'error_logs',
+  'releases_v2',
+  'dj_mixes',
+  'merch',
+  'comments',
+  'ratings',
+  'user_ratings',
+  'livestream_slots',
+  'user_playlists',
+  'vinyl_sellers',
+  'activity_feed',
+  'dj_support',
+  'follower_counts',
+  'royalty_ledger',
 ];
 
 const PAGE_SIZE = 10000;

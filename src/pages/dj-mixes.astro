@@ -254,6 +254,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           </div>
         </div>
 
+        <h2 class="sr-only">Browse Mixes</h2>
+
       {mixes.length === 0 ? (
         <div class="empty-state">
           <div class="empty-icon">🎧</div>
@@ -608,7 +610,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <svg class="w-12 h-12" id="dlError" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </div>
         <h3 id="dlTitle" class="text-white font-bold text-lg mb-1">Preparing Download</h3>
-        <p id="dlFilename" class="text-gray-400 text-xs mb-3 break-all" style="max-height:2.4em;overflow:hidden;"></p>
+        <p id="dlFilename" class="text-gray-300 text-xs mb-3 break-all" style="max-height:2.4em;overflow:hidden;"></p>
         <div id="dlBarWrap" class="h-2 bg-gray-700 rounded-full overflow-hidden mb-3" style="display:none;">
           <div id="dlBarFill" class="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-300" style="width:0%"></div>
         </div>
@@ -866,18 +868,21 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   (function() {
     var toggleBtn = document.getElementById('toggle-chart');
     var floatingChart = document.getElementById('floating-chart');
-    
+
     if (toggleBtn && floatingChart) {
       toggleBtn.addEventListener('click', function() {
         floatingChart.classList.toggle('open');
       });
-      
-      // Close when clicking outside
-      document.addEventListener('click', function(e) {
+
+      // Close when clicking outside — named ref for cleanup
+      function handleChartOutsideClick(e) {
         if (!floatingChart.contains(e.target) && floatingChart.classList.contains('open')) {
           floatingChart.classList.remove('open');
         }
-      });
+      }
+      document.addEventListener('click', handleChartOutsideClick);
+      // Expose for cleanup
+      window._djMixesChartOutsideClick = handleChartOutsideClick;
     }
   })();
   
@@ -1200,19 +1205,26 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       };
     });
 
-    // Sync buttons with global audio state
+    // Sync buttons with global audio state — named ref for cleanup
     if (window.globalAudio) {
+      // Remove any previous listeners from prior navigations
+      if (window._djMixesSyncButtons && window._djMixesSyncAudio) {
+        window._djMixesSyncAudio.removeEventListener('play', window._djMixesSyncButtons);
+        window._djMixesSyncAudio.removeEventListener('pause', window._djMixesSyncButtons);
+        window._djMixesSyncAudio.removeEventListener('ended', window._djMixesSyncButtons);
+      }
+
       var syncButtons = function() {
         var currentMixId = window.FreshWaxPlayer && window.FreshWaxPlayer.currentMix ? window.FreshWaxPlayer.currentMix.id : null;
         var isPlaying = window.globalAudio && !window.globalAudio.paused;
-        
+
         document.querySelectorAll('.play-btn-action').forEach(function(btn) {
           var card = btn.closest('.mix-card');
           var mixId = card.getAttribute('data-mix-id');
           var playIcon = btn.querySelector('.play-icon-btn');
           var pauseIcon = btn.querySelector('.pause-icon-btn');
           var playText = btn.querySelector('.play-text-btn');
-          
+
           if (mixId === currentMixId && isPlaying) {
             playIcon.classList.add('hidden');
             pauseIcon.classList.remove('hidden');
@@ -1224,10 +1236,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           }
         });
       };
-      
+
       window.globalAudio.addEventListener('play', syncButtons);
       window.globalAudio.addEventListener('pause', syncButtons);
       window.globalAudio.addEventListener('ended', syncButtons);
+      // Store refs for cleanup
+      window._djMixesSyncButtons = syncButtons;
+      window._djMixesSyncAudio = window.globalAudio;
     }
 
     // Download modal helpers
@@ -1575,18 +1590,50 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       }
     });
 
-    document.addEventListener('keydown', function(e) {
+    function handleDjMixesEscapeKey(e) {
       if (e.key === 'Escape') {
         var modal = document.getElementById('shareModal');
         if (modal && !modal.classList.contains('hidden')) {
           closeShareModal();
         }
       }
-    });
+    }
+    document.addEventListener('keydown', handleDjMixesEscapeKey);
+    // Expose for cleanup
+    window._djMixesEscapeKey = handleDjMixesEscapeKey;
   }
 
   // Initialize — astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', function() {
     setTimeout(initMixCards, 50);
   });
+
+  // ============================================
+  // CLEANUP on View Transition navigation
+  // Prevents event listener accumulation across navigations
+  // ============================================
+  document.addEventListener('astro:before-swap', function cleanupDjMixes() {
+    // Remove globalAudio play/pause/ended listeners
+    if (window._djMixesSyncButtons && window._djMixesSyncAudio) {
+      window._djMixesSyncAudio.removeEventListener('play', window._djMixesSyncButtons);
+      window._djMixesSyncAudio.removeEventListener('pause', window._djMixesSyncButtons);
+      window._djMixesSyncAudio.removeEventListener('ended', window._djMixesSyncButtons);
+      window._djMixesSyncButtons = null;
+      window._djMixesSyncAudio = null;
+    }
+    // Remove floating chart outside-click listener
+    if (window._djMixesChartOutsideClick) {
+      document.removeEventListener('click', window._djMixesChartOutsideClick);
+      window._djMixesChartOutsideClick = null;
+    }
+    // Remove Escape keydown listener
+    if (window._djMixesEscapeKey) {
+      document.removeEventListener('keydown', window._djMixesEscapeKey);
+      window._djMixesEscapeKey = null;
+    }
+    // Allow share modal to re-initialize on next navigation
+    window.shareModalInitialized = false;
+    // Self-remove
+    document.removeEventListener('astro:before-swap', cleanupDjMixes);
+  }, { once: true });
 </script>

@@ -101,17 +101,17 @@ const csrfToken = Astro.locals.csrfToken || '';
       <section class="form-section">
         <form id="bookingForm">
           <div class="form-group">
-            <label>DJ Name *</label>
+            <label for="djName">DJ Name *</label>
             <input type="text" id="djName" required maxlength="25" placeholder="Your DJ name">
           </div>
 
           <div class="form-group">
-            <label>Stream Title *</label>
+            <label for="streamTitle">Stream Title *</label>
             <input type="text" id="streamTitle" required maxlength="50" placeholder="e.g. Sunday Vibes">
           </div>
 
           <div class="form-group">
-            <label>Genre/Style</label>
+            <label for="genre">Genre/Style</label>
             <input type="text" id="genre" maxlength="30" placeholder="e.g. House, Techno, Garage">
           </div>
 
@@ -141,15 +141,15 @@ const csrfToken = Astro.locals.csrfToken || '';
       <div class="edit-modal-content">
         <h3>Edit Slot</h3>
         <div class="form-group">
-          <label>DJ Name *</label>
+          <label for="editDjName">DJ Name *</label>
           <input type="text" id="editDjName" required maxlength="25" placeholder="Current DJ name">
         </div>
         <div class="form-group">
-          <label>Stream Title</label>
+          <label for="editTitle">Stream Title</label>
           <input type="text" id="editTitle" maxlength="50" placeholder="Stream title">
         </div>
         <div class="form-group">
-          <label>Genre/Style</label>
+          <label for="editGenre">Genre/Style</label>
           <input type="text" id="editGenre" maxlength="30" placeholder="e.g. House, Techno">
         </div>
         <div class="edit-modal-actions">

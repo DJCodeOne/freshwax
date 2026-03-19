@@ -2,6 +2,11 @@
 // Handles Plus subscription, badge selector, referral codes,
 // promo codes, Stripe/PayPal payment flows, Go Plus modal
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 var ctx = null;
 
 export function init(context) {
