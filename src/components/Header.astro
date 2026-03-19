@@ -1777,7 +1777,7 @@ const firebaseConfig = {
 
     // Ensure auth state is available for new page components
     // Re-create authReady promise for components that might be waiting
-    if (auth.currentUser !== undefined) {
+    if (auth && auth.currentUser !== undefined) {
       // Auth is already initialized, update window.authUser and re-apply UI
       window.authUser = auth.currentUser;
 
