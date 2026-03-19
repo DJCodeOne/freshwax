@@ -17,6 +17,10 @@ export default defineConfig({
     checkOrigin: true
   },
 
+  build: {
+    inlineStylesheets: 'always',
+  },
+
   adapter: cloudflare({
     imageService: 'compile',
   }),
