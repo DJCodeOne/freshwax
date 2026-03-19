@@ -18,7 +18,9 @@ export default defineConfig({
   },
 
   build: {
-    inlineStylesheets: 'always',
+    // External CSS files: smaller HTML (73KB→~20KB) = faster parse + lower render delay
+    // Trade-off: 5 render-blocking CSS files add ~500ms but saves 2s+ render delay
+    inlineStylesheets: 'never',
   },
 
   adapter: cloudflare({
