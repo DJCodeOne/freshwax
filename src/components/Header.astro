@@ -26,7 +26,7 @@ const firebaseConfig = {
       <div class="fwx-mobile-top">
         <div class="fwx-mobile-left">
           <a href="/" class="fwx-logo-link" id="logoMobile">
-            <img src="/logo.webp" alt="Fresh Wax" class="fwx-logo-mobile" width="200" height="50" translate="no" fetchpriority="high" decoding="async" />
+            <img src="/logo.webp" alt="Fresh Wax" class="fwx-logo-mobile" width="63" height="50" translate="no" fetchpriority="high" decoding="async" />
           </a>
         </div>
 
@@ -188,7 +188,7 @@ const firebaseConfig = {
     <div class="fwx-desktop">
       <!-- Logo -->
       <a href="/" class="fwx-logo-link" id="logoDesktop">
-        <img src="/logo.webp" alt="Fresh Wax" class="fwx-logo-desktop" width="280" height="70" translate="no" fetchpriority="high" decoding="async" />
+        <img src="/logo.webp" alt="Fresh Wax" class="fwx-logo-desktop" width="89" height="70" translate="no" fetchpriority="high" decoding="async" />
       </a>
       
       <!-- Search Bar (centered between logo and nav) -->
@@ -925,13 +925,12 @@ const firebaseConfig = {
     var newBtn = langBtn.cloneNode(true);
     langBtn.parentNode.replaceChild(newBtn, langBtn);
 
-    // Ensure GT is loaded so language switching is instant
-    if (!window._gtState.ready && !window._gtState.loading) {
-      loadGoogleTranslate();
-    }
-
     newBtn.addEventListener('click', function(e) {
       e.stopPropagation();
+      // Load GT on first interaction instead of proactively (saves ~119KB)
+      if (!window._gtState.ready && !window._gtState.loading) {
+        loadGoogleTranslate();
+      }
       toggleLangPanel();
     });
 
@@ -996,7 +995,7 @@ const firebaseConfig = {
     }, true);
   }
 
-  // On page load, if there's a saved language, set cookie and load GT
+  // On page load, if there's a saved language, set cookie and defer GT load
   var savedLang = null;
   try { savedLang = localStorage.getItem('fw_translate_lang'); } catch (e){}
   if (savedLang) {
@@ -1005,7 +1004,12 @@ const firebaseConfig = {
     if (location.hostname.indexOf('.') !== -1) {
       document.cookie = 'googtrans=/en/' + savedLang + ';path=/;domain=.' + location.hostname;
     }
-    loadGoogleTranslate();
+    // Defer GT loading so it doesn't block initial performance metrics
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(function() { loadGoogleTranslate(); }, { timeout: 4000 });
+    } else {
+      setTimeout(function() { loadGoogleTranslate(); }, 3000);
+    }
   }
 </script>
 
@@ -1015,36 +1019,44 @@ const firebaseConfig = {
     if (typeof str !== 'string') return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
-  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
-  const { getAuth, onAuthStateChanged, signOut } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-
-  // Initialize Firebase only once
-  let app;
-  let auth;
-  
-  // Create auth ready promise that other scripts can wait on
+  // Auth state — module-scope vars populated conditionally
+  let auth = null;
+  let signOutFn = null;
+  let onAuthStateChangedFn = null;
   let authReadyResolve;
   window.authReady = new Promise(resolve => { authReadyResolve = resolve; });
-  window.authUser = null; // Will be set when auth state is known
-  
-  try {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
+  window.authUser = null;
+  window.firebaseAuth = null;
+
+  // Only load Firebase Auth SDK (118KB) if user has a session cookie
+  const _hasSession = document.cookie.includes('userId=');
+
+  if (_hasSession) {
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+    const _fb = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+    signOutFn = _fb.signOut;
+    onAuthStateChangedFn = _fb.onAuthStateChanged;
+
+    let app;
+    try {
+      app = initializeApp(firebaseConfig);
+      auth = _fb.getAuth(app);
+    } catch (e) {
+      const { getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+      app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+      auth = _fb.getAuth(app);
+    }
     window.firebaseAuth = auth;
-  } catch (e){
-    // App already initialized, get existing instance
-    const { getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
-    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    window.firebaseAuth = auth;
+
+    const unsubscribeInitial = _fb.onAuthStateChanged(auth, (user) => {
+      window.authUser = user;
+      authReadyResolve(user);
+      unsubscribeInitial();
+    });
+  } else {
+    // Anonymous visitor — skip Firebase Auth import entirely (saves 118KB)
+    authReadyResolve(null);
   }
-  
-  // Set up one-time auth state listener to resolve authReady
-  const unsubscribeInitial = onAuthStateChanged(auth, (user) => {
-    window.authUser = user;
-    authReadyResolve(user);
-    unsubscribeInitial(); // Only need this once for initial state
-  });
 
   // Cache helpers
   const USER_CACHE_KEY = 'freshwax_user_type_cache';
@@ -1519,6 +1531,14 @@ const firebaseConfig = {
   let _authUIUpdating = false;
   function updateAuthUI() {
     if (_authUIUpdating) return;
+    if (!auth) {
+      // Firebase Auth not loaded (anonymous) — show logged-out UI
+      document.querySelectorAll('.logged-out').forEach(el => { el.classList.remove('fwx-hidden'); el.style.display = 'block'; });
+      document.querySelectorAll('.logged-in').forEach(el => { el.classList.add('fwx-hidden'); el.style.display = 'none'; });
+      document.querySelectorAll('.account-name').forEach(el => { el.textContent = 'Login'; });
+      document.querySelectorAll('.fwx-logo-link').forEach(logo => { logo.classList.remove('admin-mode'); logo.href = '/'; });
+      return;
+    }
     _authUIUpdating = true;
     setTimeout(() => { _authUIUpdating = false; }, 100);
     const user = auth.currentUser;
@@ -1587,7 +1607,7 @@ const firebaseConfig = {
             document.cookie = 'partnerId=; path=/; max-age=0; Secure';
             // Clear auth cache for live page
             sessionStorage.removeItem('fw_auth_cache');
-            await signOut(auth);
+            if (signOutFn && auth) await signOutFn(auth);
             window.location.href = '/';
           } catch (e){
             console.error('Logout error:', e);
@@ -1605,8 +1625,8 @@ const firebaseConfig = {
     }
   }
 
-  // Auth state change listener (only set once)
-  onAuthStateChanged(auth, async (user) => {
+  // Auth state change listener (only set once, skip if Firebase not loaded)
+  if (auth && onAuthStateChangedFn) onAuthStateChangedFn(auth, async (user) => {
     if (user) {
       // Always ensure userId and customerId cookies are set for authenticated users
       // This enables wishlist and other features that check cookies

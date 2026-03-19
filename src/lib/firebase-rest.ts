@@ -217,7 +217,7 @@ const cache = new Map<string, CacheEntry>();
 // Cache TTL configuration (in milliseconds)
 const CACHE_TTL = {
   // Static/rarely changing data - 10 minutes
-  RELEASES_LIST: 10 * 60 * 1000,
+  RELEASES_LIST: 30 * 60 * 1000,
   RELEASE_DETAIL: 3 * 60 * 1000,  // 3 minutes for individual releases (balance freshness vs quota)
   DJ_MIXES_LIST: 2 * 60 * 1000, // 2 minutes (reduced for faster updates)
   MERCH_LIST: 10 * 60 * 1000,

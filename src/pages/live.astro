@@ -45,6 +45,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     embedUrl: `${SITE_URL}/live/embed`
   }}
 >
+  <link rel="preconnect" href="https://js.pusher.com" crossorigin slot="head" />
+  <link rel="preconnect" href="https://ws-eu.pusher.com" crossorigin slot="head" />
+  <link rel="preconnect" href="https://sockjs-eu.pusher.com" crossorigin slot="head" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin slot="head" />
   <Header />
   
   <!-- Sticky Mini Player for Mobile -->

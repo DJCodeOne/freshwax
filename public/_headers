@@ -7,17 +7,7 @@
   X-Content-Type-Options: nosniff
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 
-# Cache static assets
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
-
-# Hashed Astro bundles are safe to cache forever
-/_astro/*
-  Cache-Control: public, max-age=31536000, immutable
-
-/sw.js
-  Cache-Control: no-cache, must-revalidate, max-age=0
-
+# Generic fallbacks (MUST come before specific rules — last match wins in CF Pages)
 /*.js
   Cache-Control: public, max-age=86400
 
@@ -32,6 +22,27 @@
 
 /*.png
   Cache-Control: public, max-age=31536000, immutable
+
+# Cache static assets (overrides generic rules above)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Hashed Astro bundles — safe to cache forever (overrides /*.js and /*.css)
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/sw.js
+  Cache-Control: no-cache, must-revalidate, max-age=0
+
+# Versioned public JS (7-day cache, filename-based busting)
+/freshwax-cart.js
+  Cache-Control: public, max-age=604800
+/newsletter-form.js
+  Cache-Control: public, max-age=604800
+/item-page.js
+  Cache-Control: public, max-age=604800
+/audio-player-init.js
+  Cache-Control: public, max-age=604800
 
 # Don't cache HTML or API responses
 /*.html

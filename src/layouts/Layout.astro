@@ -171,22 +171,17 @@ const csrfToken = Astro.locals.csrfToken || '';
     <meta name="msapplication-TileColor" content="#8b5cf6" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
 
-    <!-- Preconnect for performance (critical third-party origins) -->
+    <!-- Preconnect for performance (critical origins used on every page) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.freshwax.co.uk" crossorigin />
-    <link rel="preconnect" href="https://firestore.googleapis.com" />
-    <link rel="preconnect" href="https://js.pusher.com" crossorigin />
-    <link rel="preconnect" href="https://ws-eu.pusher.com" crossorigin />
-    <link rel="preconnect" href="https://sockjs-eu.pusher.com" crossorigin />
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <!-- DNS prefetch for origins used on some pages -->
     <link rel="dns-prefetch" href="https://cdn.freshwax.co.uk" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
-    <link rel="dns-prefetch" href="https://www.google.com" />
-    <link rel="dns-prefetch" href="https://www.gstatic.com" />
-    <!-- GIPHY requests now proxied through /api/giphy/search/ - no direct client calls -->
+    <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
+    <link rel="dns-prefetch" href="https://js.pusher.com" />
+    <!-- Page-specific preconnects added via <link slot="head"> on pages that need them -->
 
     <!-- Google Fonts — async load to avoid render-blocking (display=swap prevents FOIT) -->
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Bebas+Neue&display=swap" />
@@ -436,7 +431,7 @@ const csrfToken = Astro.locals.csrfToken || '';
     </script>
 
     <!-- Cart functionality -->
-    <script is:inline src="/freshwax-cart.js?v=6" defer nonce={nonce}></script>
+    <script is:inline src="/freshwax-cart.js" defer nonce={nonce}></script>
 
     <!-- ARIA live region for toast notifications (screen reader announcements) -->
     <div id="fw-toast-live" aria-live="polite" aria-atomic="true" class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;"></div>
