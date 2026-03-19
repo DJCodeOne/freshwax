@@ -293,6 +293,9 @@ const formatNumber = (num) => {
   return new Intl.NumberFormat('en-GB').format(num);
 };
 
+// Type aliases for use in Astro template expressions (generic syntax breaks the template parser)
+type AnyRecord = Record<string, unknown>;
+
 // Alerts
 const alerts = [];
 if (pendingPartners.length > 0) {
@@ -367,7 +370,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       <div class="stat-detail">Need attention</div>
     </div>
     
-    <div class="stat-card" title={pendingReleases.length > 0 ? `Pending: ${pendingReleases.map((r: any) => r.title).join(', ')}` : ''}>
+    <div class="stat-card" title={pendingReleases.length > 0 ? `Pending: ${pendingReleases.map((r) => r.title).join(', ')}` : ''}>
       <div class="stat-label">Live Releases</div>
       <div class="stat-value">{liveReleases.length}</div>
       <div class="stat-detail">{pendingReleases.length} pending</div>
@@ -541,7 +544,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
                   : order.customer?.email?.split('@')[0] || '-';
                 const items = order.items || [];
                 const purchasedSummary = items.length > 0
-                  ? items.map((i: any) => i.title || i.name).slice(0, 2).join(', ') + (items.length > 2 ? ` +${items.length - 2}` : '')
+                  ? items.map((i: AnyRecord) => String(i.title || i.name || '')).slice(0, 2).join(', ') + (items.length > 2 ? ` +${items.length - 2}` : '')
                   : '-';
                 return (
                   <tr>

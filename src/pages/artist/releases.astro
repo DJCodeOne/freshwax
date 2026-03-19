@@ -389,7 +389,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   <!-- Track Details Section -->
                   <div class="edit-section-title">Track Details</div>
                   <div class="track-details-list" data-release-id={release.id}>
-                    {(release.tracks || []).map((track: any, index: number) => (
+                    {(release.tracks || []).map((track: { trackName?: string; featured?: string; remixer?: string; bpm?: number; key?: string; [key: string]: unknown }, index: number) => (
                       <div class="track-detail-row" data-track-index={index}>
                         <span class="track-number">{index + 1}.</span>
                         <span class="track-name" title={track.trackName || `Track ${index + 1}`}>

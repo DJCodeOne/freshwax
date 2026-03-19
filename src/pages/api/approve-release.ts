@@ -1,6 +1,7 @@
 // src/pages/api/approve-release.ts
 // Approves or rejects pending releases in Firebase
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, invalidateReleasesCache } from '../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../lib/d1-catalog';
 import { requireAdminAuth } from '../../lib/admin';
@@ -8,6 +9,11 @@ import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import { createLogger, errorResponse, successResponse } from '../../lib/api-utils';
 import { logActivity } from '../../lib/activity-feed';
 import { broadcastActivity } from '../../lib/pusher';
+
+const ApproveReleaseSchema = z.object({
+  releaseId: z.string().min(1),
+  action: z.enum(['approve', 'reject']),
+});
 
 export const prerender = false;
 
@@ -24,16 +30,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { releaseId, action } = body as { releaseId?: string; action?: string };
-
-    // Validate input
-    if (!releaseId || !action) {
-      return errorResponse('releaseId and action are required', 400);
+    const parsed = ApproveReleaseSchema.safeParse(body);
+    if (!parsed.success) {
+      return errorResponse('releaseId (string) and action ("approve" or "reject") are required', 400);
     }
 
-    if (!['approve', 'reject'].includes(action)) {
-      return errorResponse('action must be "approve" or "reject"', 400);
-    }
+    const { releaseId, action } = parsed.data;
 
     log.info(`[approve-release] ${action} release ${releaseId}`);
 

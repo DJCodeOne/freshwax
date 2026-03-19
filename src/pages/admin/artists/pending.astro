@@ -58,7 +58,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   ) : (
     <div class="card"><div class="card-header"><h2>Pending Applications ({counts.all})</h2></div>
       <div class="table-wrapper"><table class="data-table" aria-label="Pending partner applications"><thead><tr><th scope="col">Applicant</th><th scope="col">Bio</th><th scope="col">Type</th><th scope="col">Date</th><th scope="col">Actions</th></tr></thead>
-        <tbody id="tbl">{pendingPartners.map((p: any) => (
+        <tbody id="tbl">{pendingPartners.map((p: { id: string; email: string; artistName: string; bio: string; isArtist: boolean; isMerchSupplier: boolean; registeredAt: Date }) => (
           <tr data-id={p.id} data-email={p.email} data-name={p.artistName} data-roles={JSON.stringify({artist:p.isArtist,merch:p.isMerchSupplier})}>
             <td><h4>{p.artistName}</h4><small>{p.email}</small></td>
             <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{p.bio || 'No bio'}</td>

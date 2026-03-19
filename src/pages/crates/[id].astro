@@ -92,7 +92,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <!-- LEFT: Images + Buy Button (like ReleasePlate) -->
           <div class="images-section">
             <div class="main-image" id="mainImage">
-              <img src="/place-holder.webp" alt="Vinyl" id="mainImageImg" width="350" height="350" />
+              <img src="/place-holder.webp" alt={pageBreadcrumbName} id="mainImageImg" width="350" height="350" />
               <div class="sale-badge" id="saleBadge" style="display: none;">SALE</div>
             </div>
             <div class="image-thumbnails" id="imageThumbnails"></div>
@@ -1343,7 +1343,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         const thumbnailsEl = document.getElementById('imageThumbnails');
         thumbnailsEl.innerHTML = listing.images.map((img, i) => `
           <div class="thumbnail ${i === 0 ? 'active' : ''}" data-index="${i}">
-            <img src="${img}" alt="Image ${i + 1}" width="80" height="80" loading="lazy" decoding="async" />
+            <img src="${img}" alt="${escapeHtml(listing.title)} image ${i + 1}" width="80" height="80" loading="lazy" decoding="async" />
           </div>
         `).join('');
 

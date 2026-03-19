@@ -5,7 +5,6 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import { getDocument } from '../../lib/firebase-rest';
-import { SITE_URL } from '../../lib/constants';
 
 const { id } = Astro.params;
 
@@ -64,33 +63,6 @@ try {
   console.error('[MERCH PAGE] Error:', err);
   error = 'Failed to load product';
 }
-
-// Build Product JSON-LD structured data (server-side, safe for SEO crawlers)
-const productJsonLd = product ? JSON.stringify({
-  "@context": "https://schema.org",
-  "@type": "Product",
-  "name": product.name,
-  "description": product.description || `${product.name} - Official Fresh Wax merchandise`,
-  "image": product.images.length > 0 ? product.images : (product.imageUrl ? [product.imageUrl] : undefined),
-  "url": `${SITE_URL}/merch/${id}/`,
-  "sku": product.sku,
-  "brand": {
-    "@type": "Brand",
-    "name": "Fresh Wax"
-  },
-  "offers": {
-    "@type": "Offer",
-    "url": `${SITE_URL}/merch/${id}/`,
-    "price": product.price,
-    "priceCurrency": "GBP",
-    "availability": product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-    "itemCondition": "https://schema.org/NewCondition",
-    "seller": {
-      "@type": "Organization",
-      "name": "Fresh Wax"
-    }
-  }
-}) : null;
 
 const pageDescription = product
   ? (product.description || `${product.name} - Official Fresh Wax merchandise. Shop jungle and drum & bass merch.`)
@@ -197,9 +169,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     © 2025 Fresh<span class="red">Wax</span>
   </footer>
 
-  {productJsonLd && (
-    <script type="application/ld+json" set:html={productJsonLd} />
-  )}
 </Layout>
 
 <style>

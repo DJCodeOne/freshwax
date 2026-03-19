@@ -135,7 +135,6 @@ export class EmbedPlayerManager {
     // Reset ready flag before creating new player
     this.youtubePlayerReady = false;
 
-    // @ts-ignore - YouTube API global
     this.youtubePlayer = new YT.Player('youtube-player', {
       height: '100%',
       width: '100%',
@@ -169,15 +168,12 @@ export class EmbedPlayerManager {
           }
         },
         onStateChange: (event: { data: number }) => {
-          // @ts-ignore
           if (event.data === YT.PlayerState.ENDED) {
             this.callbacks.onEnded?.();
           }
-          // @ts-ignore
           if (event.data === YT.PlayerState.PAUSED) {
             this.callbacks.onStateChange?.('paused');
           }
-          // @ts-ignore
           if (event.data === YT.PlayerState.PLAYING) {
             // Execute pending seek when video first starts playing
             if (this.pendingSeekPosition && !this.hasInitialSeekExecuted) {
@@ -245,7 +241,6 @@ export class EmbedPlayerManager {
 
     const iframe = document.getElementById('vimeo-player') as HTMLIFrameElement;
 
-    // @ts-ignore - Vimeo Player global
     this.vimeoPlayer = new Vimeo.Player(iframe);
 
     this.vimeoPlayer.on('ended', () => {
@@ -300,7 +295,6 @@ export class EmbedPlayerManager {
 
     const iframe = document.getElementById('soundcloud-player') as HTMLIFrameElement;
 
-    // @ts-ignore - SoundCloud Widget API global
     this.soundcloudWidget = SC.Widget(iframe);
 
     if (this.soundcloudWidget) {
@@ -360,9 +354,7 @@ export class EmbedPlayerManager {
       const video = document.getElementById('direct-video') as HTMLVideoElement;
       this.directVideo = video;
 
-      // @ts-ignore - HLS.js will be loaded via script tag in page
       if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-        // @ts-ignore
         const hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
@@ -749,7 +741,6 @@ export class EmbedPlayerManager {
 
     if (this.soundcloudWidget) {
       try {
-        // @ts-ignore - SC global check
         if (typeof SC !== 'undefined' && SC.Widget?.Events) {
           this.soundcloudWidget.unbind(SC.Widget.Events.READY);
           this.soundcloudWidget.unbind(SC.Widget.Events.FINISH);
@@ -784,14 +775,12 @@ export class EmbedPlayerManager {
         return;
       }
 
-      // @ts-ignore
       if (typeof YT !== 'undefined' && YT.Player) {
         this.isSDKLoaded.youtube = true;
         resolve();
         return;
       }
 
-      // @ts-ignore
       window.onYouTubeIframeAPIReady = () => {
         this.isSDKLoaded.youtube = true;
         resolve();
@@ -814,7 +803,6 @@ export class EmbedPlayerManager {
         return;
       }
 
-      // @ts-ignore
       if (typeof Vimeo !== 'undefined' && Vimeo.Player) {
         this.isSDKLoaded.vimeo = true;
         resolve();
@@ -842,7 +830,6 @@ export class EmbedPlayerManager {
         return;
       }
 
-      // @ts-ignore
       if (typeof SC !== 'undefined' && SC.Widget) {
         this.isSDKLoaded.soundcloud = true;
         resolve();

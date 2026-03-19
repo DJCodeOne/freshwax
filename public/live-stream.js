@@ -3416,8 +3416,8 @@ function setupGiphyPicker() {
 
       if (data.gifs?.length > 0 && giphyGrid) {
         giphyGrid.innerHTML = data.gifs.map(gif => `
-          <div class="giphy-item" data-url="${gif.url}" data-id="${gif.id}">
-            <img src="${gif.preview}" alt="${gif.title}" loading="lazy" />
+          <div class="giphy-item" data-url="${escapeHtml(gif.url)}" data-id="${escapeHtml(gif.id)}">
+            <img src="${escapeHtml(gif.preview)}" alt="${escapeHtml(gif.title)}" loading="lazy" />
           </div>
         `).join('');
 

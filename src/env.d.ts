@@ -300,6 +300,97 @@ interface JSZipInstance {
 }
 
 // ---------------------------------------------------------------------------
+// Third-party CDN global APIs — eliminates @ts-ignore in embed-player.ts
+// ---------------------------------------------------------------------------
+
+/** YouTube IFrame Player API (loaded via https://www.youtube.com/iframe_api) */
+declare const YT: {
+  Player: new (
+    elementId: string,
+    config: {
+      height?: string;
+      width?: string;
+      videoId?: string;
+      playerVars?: Record<string, unknown>;
+      events?: Record<string, (event: { data: number }) => void>;
+    }
+  ) => {
+    destroy: () => void;
+    playVideo: () => void;
+    pauseVideo: () => void;
+    seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+    setVolume: (volume: number) => void;
+    getCurrentTime: () => number;
+    getDuration: () => number;
+    getPlayerState: () => number;
+    getVideoData: () => { title?: string } | undefined;
+  };
+  PlayerState: {
+    ENDED: number;
+    PLAYING: number;
+    PAUSED: number;
+    BUFFERING: number;
+    CUED: number;
+    UNSTARTED: number;
+  };
+};
+
+/** Vimeo Player SDK (loaded via https://player.vimeo.com/api/player.js) */
+declare const Vimeo: {
+  Player: new (
+    element: HTMLIFrameElement
+  ) => {
+    destroy: () => Promise<void>;
+    play: () => Promise<void>;
+    pause: () => Promise<void>;
+    setCurrentTime: (seconds: number) => Promise<void>;
+    setVolume: (volume: number) => Promise<void>;
+    getCurrentTime: () => Promise<number>;
+    getDuration: () => Promise<number>;
+    on: (event: string, callback: (...args: unknown[]) => void) => void;
+  };
+};
+
+/** SoundCloud Widget API (loaded via https://w.soundcloud.com/player/api.js) */
+declare const SC: {
+  Widget: {
+    (iframe: HTMLIFrameElement): {
+      play: () => void;
+      pause: () => void;
+      seekTo: (ms: number) => void;
+      setVolume: (volume: number) => void;
+      getPosition: (callback: (position: number) => void) => void;
+      getDuration: (callback: (duration: number) => void) => void;
+      bind: (event: unknown, callback: (...args: unknown[]) => void) => void;
+      unbind: (event: unknown) => void;
+    };
+    Events: {
+      READY: string;
+      FINISH: string;
+      ERROR: string;
+      PLAY: string;
+      PAUSE: string;
+    };
+  };
+};
+
+/** HLS.js (loaded via CDN or bundled) */
+declare const Hls: {
+  isSupported: () => boolean;
+  Events: {
+    MANIFEST_PARSED: string;
+    ERROR: string;
+    [key: string]: string;
+  };
+  new (config?: Record<string, unknown>): {
+    loadSource: (url: string) => void;
+    attachMedia: (media: HTMLMediaElement) => void;
+    on: (event: string, callback: (...args: unknown[]) => void) => void;
+    destroy: () => void;
+  };
+};
+
+// ---------------------------------------------------------------------------
 // Window augmentation — eliminates `(window as any)` casts across the codebase
 // ---------------------------------------------------------------------------
 
@@ -354,5 +445,8 @@ declare global {
     // ---- Firebase auth (legacy) ----
     firebaseAuth?: { currentUser?: { getIdToken: () => Promise<string> } };
     firebase?: { auth?: () => { currentUser?: { getIdToken: () => Promise<string> } } };
+
+    // ---- YouTube IFrame API callback ----
+    onYouTubeIframeAPIReady?: () => void;
   }
 }

@@ -380,7 +380,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     </tr>
                   </thead>
                   <tbody>
-                    {ledgerEntries.map((entry: any) => {
+                    {ledgerEntries.map((entry: { grossTotal?: number; paypalFee?: number; stripeFee?: number; freshwaxFee?: number; freshWaxFee?: number; artistPayoutFee?: number; artistPayout?: number; artistPayoutStatus?: string; timestamp?: string; orderNumber?: string; [key: string]: unknown }) => {
                       const gross = entry.grossTotal || 0;
                       const processingFee = entry.paypalFee || entry.stripeFee || 0;
                       const platformFee = entry.freshwaxFee || entry.freshWaxFee || 0;

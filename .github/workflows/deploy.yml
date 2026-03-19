@@ -40,8 +40,18 @@ jobs:
       - name: Security audit
         run: npm audit --omit=dev --audit-level=high || true
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Build
         run: npm run build
 
       - name: Test
         run: npm run test
+
+      # Post-deploy health check — uncomment and configure once deployment step is added
+      # - name: Post-deploy health check
+      #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      #   run: |
+      #     sleep 30
+      #     curl -sf https://freshwax.co.uk/api/health/public/ || exit 1

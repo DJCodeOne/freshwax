@@ -458,7 +458,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                       </td>
                       <td>
                         <div class="order-items">
-                          {order.items.slice(0, 3).map((item: any) => (
+                          {order.items.slice(0, 3).map((item: { name?: string; productName?: string; quantity?: number; [key: string]: unknown }) => (
                             <div class="order-item">
                               {item.name || item.productName || 'Product'} <span class="order-item-qty">×{item.quantity || 1}</span>
                             </div>

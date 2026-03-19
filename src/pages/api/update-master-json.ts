@@ -1,9 +1,25 @@
 // src/pages/api/update-master-json.ts
 // FIXED: Sets status to 'pending' by default, admin must approve before going live
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument } from '../../lib/firebase-rest';
 import { requireAdminAuth } from '../../lib/admin';
 import { createLogger, errorResponse, jsonResponse, successResponse } from '../../lib/api-utils';
+
+// passthrough() needed because the full release object (tracks, prices, etc.) is spread into Firestore
+const UpdateMasterJsonSchema = z.object({
+  release: z.object({
+    id: z.string().min(1),
+    title: z.string().optional(),
+    artist: z.string().optional(),
+    coverUrl: z.string().optional(),
+    releaseDate: z.string().optional(),
+    createdAt: z.string().optional(),
+    status: z.string().optional(),
+    published: z.boolean().optional(),
+    approved: z.boolean().optional(),
+  }).passthrough(),
+});
 
 export const prerender = false;
 
@@ -17,13 +33,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { release } = body as { release?: Record<string, unknown> };
-
-    if (!release || !release.id) {
+    const parsed = UpdateMasterJsonSchema.safeParse(body);
+    if (!parsed.success) {
       return jsonResponse({
         error: 'Missing release data or release ID'
       }, 400);
     }
+
+    const { release } = parsed.data;
 
     log.info(`[Master JSON] Updating release: ${release.id}`);
 

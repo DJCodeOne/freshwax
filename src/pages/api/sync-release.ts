@@ -1,16 +1,26 @@
-import { R2FirebaseSync } from '../../lib/r2-firebase-sync';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument } from '../../lib/firebase-rest';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { requireAdminAuth } from '../../lib/admin';
 import AdmZip from 'adm-zip';
-import * as fs from 'fs';
-import * as path from 'path';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
 const log = createLogger('sync-release');
+
+// Cloudflare Workers-compatible replacements for getExtname and getBasename
+function getExtname(filePath: string): string {
+  const name = filePath.includes('/') ? filePath.slice(filePath.lastIndexOf('/') + 1) : filePath;
+  const dotIndex = name.lastIndexOf('.');
+  return dotIndex > 0 ? name.slice(dotIndex) : '';
+}
+
+function getBasename(filePath: string): string {
+  const trimmed = filePath.endsWith('/') ? filePath.slice(0, -1) : filePath;
+  const slashIndex = trimmed.lastIndexOf('/');
+  return slashIndex >= 0 ? trimmed.slice(slashIndex + 1) : trimmed;
+}
 
 // Audio file extensions
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.aiff', '.aif', '.m4a'];
@@ -69,24 +79,9 @@ export const POST = async ({ request, locals }: { request: Request; locals: App.
     let releaseId: string;
 
     if (hasReleasesFolder && hasMetadata) {
-      // Pre-processed package - use existing R2FirebaseSync
-      log.info('[sync-release] Detected pre-processed package, using R2FirebaseSync');
-      
-      const tempDir = path.join(process.cwd(), 'temp');
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
-      const tempZipPath = path.join(tempDir, 'upload-' + Date.now() + '.zip');
-      fs.writeFileSync(tempZipPath, buffer);
-      
-      const sync = new R2FirebaseSync({
-        ...config,
-        collections: { releases: 'releases', tracks: 'tracks' },
-      });
-      releaseId = await sync.processPackageAndSync(tempZipPath);
-      
-      try { fs.unlinkSync(tempZipPath); } catch (_e: unknown) { /* non-critical: temp file cleanup */ }
-      
+      // Pre-processed packages require filesystem access (R2FirebaseSync uses fs/path)
+      // which is not available in Cloudflare Workers. Use raw ZIP upload instead.
+      return ApiErrors.badRequest('Pre-processed packages are not supported in this environment. Please upload a raw ZIP file with audio tracks and cover art.');
     } else {
       // Raw ZIP - process directly
       log.info('[sync-release] Detected raw ZIP, processing directly');
@@ -162,7 +157,7 @@ async function processRawZip(
   for (const entry of zipEntries) {
     if (entry.isDirectory) continue;
     const name = entry.entryName.toLowerCase();
-    const ext = path.extname(name);
+    const ext = getExtname(name);
     
     if (IMAGE_EXTENSIONS.includes(ext)) {
       // Prefer files named "cover" or "artwork"
@@ -182,8 +177,8 @@ async function processRawZip(
   
   for (const entry of zipEntries) {
     if (entry.isDirectory) continue;
-    const name = path.basename(entry.entryName);
-    const ext = path.extname(name).toLowerCase();
+    const name = getBasename(entry.entryName);
+    const ext = getExtname(name).toLowerCase();
     
     if (AUDIO_EXTENSIONS.includes(ext)) {
       // Try to parse track number from filename
@@ -226,7 +221,7 @@ async function processRawZip(
   let originalArtworkUrl = '';
   if (coverEntry) {
     const coverBuffer = coverEntry.getData();
-    const ext = path.extname(coverEntry.entryName).toLowerCase();
+    const ext = getExtname(coverEntry.entryName).toLowerCase();
     const contentType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
 
     // Always upload original full-res for buyer downloads
@@ -279,7 +274,7 @@ async function processRawZip(
   const tracks: Record<string, unknown>[] = [];
   
   for (const { entry, trackNumber, title } of audioEntries) {
-    const ext = path.extname(entry.entryName).toLowerCase();
+    const ext = getExtname(entry.entryName).toLowerCase();
     const contentType = ext === '.mp3' ? 'audio/mpeg' : 
                         ext === '.wav' ? 'audio/wav' :
                         ext === '.flac' ? 'audio/flac' :

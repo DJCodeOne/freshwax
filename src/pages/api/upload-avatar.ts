@@ -6,7 +6,8 @@ import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { setDocument } from '../../lib/firebase-rest';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../lib/s3-client';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
@@ -19,22 +20,6 @@ const DeleteAvatarSchema = z.object({
 
 // Avatar size - small for icon use
 const AVATAR_SIZE = 128;
-
-
-
-// Get R2 configuration from Cloudflare runtime env
-
-// Create S3 client with runtime env
-function createR2Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 // Max request size for avatar upload: 10MB (2MB file limit + form overhead)
 const MAX_AVATAR_REQUEST_SIZE = 10 * 1024 * 1024;
@@ -56,7 +41,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
 
   const r2Config = getR2Config(env);
-  const r2 = createR2Client(r2Config);
+  const r2 = createS3Client(r2Config);
 
   // Get idToken from Authorization header
   const authHeader = request.headers.get('Authorization');
@@ -173,7 +158,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
 
   const r2Config = getR2Config(env);
-  const r2 = createR2Client(r2Config);
+  const r2 = createS3Client(r2Config);
 
   // Get idToken from Authorization header
   const authHeader = request.headers.get('Authorization');

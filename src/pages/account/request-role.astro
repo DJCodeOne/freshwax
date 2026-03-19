@@ -52,7 +52,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </div>
             <div class="form-group">
               <label for="artistBio">Tell us about yourself *</label>
-              <textarea id="artistBio" required rows="3" placeholder="Brief description of your music, releases, previous work, etc."></textarea>
+              <textarea id="artistBio" required rows="3" placeholder="Brief description of your music, releases, previous work, etc." aria-label="DJ experience"></textarea>
             </div>
             <div class="form-group">
               <label for="artistLinks">Links (SoundCloud, Bandcamp, etc.)</label>
@@ -81,7 +81,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </div>
             <div class="form-group">
               <label for="merchDescription">What do you sell? *</label>
-              <textarea id="merchDescription" required rows="3" placeholder="Describe the merchandise you want to sell"></textarea>
+              <textarea id="merchDescription" required rows="3" placeholder="Describe the merchandise you want to sell" aria-label="Merchandise description"></textarea>
             </div>
             <div class="form-group">
               <label for="merchWebsite">Website (optional)</label>
@@ -110,7 +110,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </div>
             <div class="form-group">
               <label for="vinylDescription">Tell us about your collection *</label>
-              <textarea id="vinylDescription" required rows="3" placeholder="What kind of vinyl do you sell? Genres, era, condition, quantity..."></textarea>
+              <textarea id="vinylDescription" required rows="3" placeholder="What kind of vinyl do you sell? Genres, era, condition, quantity..." aria-label="Vinyl collection description"></textarea>
             </div>
             <div class="form-group">
               <label for="vinylLocation">Location (City/Region)</label>
@@ -150,7 +150,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <form id="djBypassForm" class="request-form" style="display: none;">
             <div class="form-group">
               <label for="bypassReason">Why should we grant you early access?</label>
-              <textarea id="bypassReason" rows="3" placeholder="Tell us about your DJ experience, upcoming events, etc."></textarea>
+              <textarea id="bypassReason" rows="3" placeholder="Tell us about your DJ experience, upcoming events, etc." aria-label="DJ lobby bypass reason"></textarea>
             </div>
             <button type="submit" class="btn btn-secondary">Request Bypass</button>
           </form>

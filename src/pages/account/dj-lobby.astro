@@ -276,7 +276,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="mobile-offline-brand"><span class="fresh">FRESH</span><span class="wax">WAX</span></div>
           <p class="mobile-offline-text">Offline</p>
         </div>
-        <video id="mobilePreviewVideo" class="mobile-preview-video" autoplay muted playsinline></video>
+        <video id="mobilePreviewVideo" class="mobile-preview-video" autoplay muted playsinline aria-hidden="true"></video>
         <div id="mobileLiveOverlay" class="mobile-live-overlay" style="display:none">
           <div class="mobile-live-top">
             <div class="mobile-live-badge">
@@ -1201,7 +1201,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <!-- Post Text -->
             <div class="share-post-section">
               <label for="sharePostText">Your message</label>
-              <textarea id="sharePostText" class="share-post-input" placeholder="🎧 I'm live on Fresh Wax! Tune in now..." maxlength="280" rows="3"></textarea>
+              <textarea id="sharePostText" class="share-post-input" placeholder="🎧 I'm live on Fresh Wax! Tune in now..." maxlength="280" rows="3" aria-label="Share a post"></textarea>
               <span class="share-char-count"><span id="shareCharCount">0</span>/280</span>
             </div>
 

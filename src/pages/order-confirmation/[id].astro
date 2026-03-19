@@ -314,7 +314,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     
                     {item.downloads?.tracks?.length > 0 ? (
                       <div class="track-list">
-                        {item.downloads.tracks.map((track: any, idx: number) => (
+                        {item.downloads.tracks.map((track: { name: string; mp3Url?: string; wavUrl?: string }, idx: number) => (
                           <div class="track-row">
                             <span class="track-name">
                               <span class="num">{String(idx + 1).padStart(2, '0')}</span>
