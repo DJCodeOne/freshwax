@@ -680,13 +680,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 </style>
 
 <script define:vars={{ mixId: mix.id }} nonce={nonce}>
-  const form = document.getElementById('editForm');
-  const saveBtn = document.getElementById('saveBtn');
-  const descriptionField = document.getElementById('descriptionField');
-  const artworkFile = document.getElementById('artworkFile');
-  const artworkUrlInput = document.getElementById('artworkUrlInput');
-  const artworkPreview = document.getElementById('artworkPreview');
-  const clearArtworkBtn = document.getElementById('clearArtwork');
+  // Escape HTML to prevent XSS
+  function escapeHtml(s) {
+    if (typeof s !== 'string') return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  var form = document.getElementById('editForm');
+  var saveBtn = document.getElementById('saveBtn');
+  var descriptionField = document.getElementById('descriptionField');
+  var artworkFile = document.getElementById('artworkFile');
+  var artworkUrlInput = document.getElementById('artworkUrlInput');
+  var artworkPreview = document.getElementById('artworkPreview');
+  var clearArtworkBtn = document.getElementById('clearArtwork');
 
   // Emoji buttons
   document.querySelectorAll('.emoji-btn').forEach(btn => {
@@ -708,7 +714,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        artworkPreview.innerHTML = `<img src="${e.target.result}" alt="Preview" id="previewImg" width="200" height="200" loading="lazy" />`;
+        artworkPreview.innerHTML = `<img src="${escapeHtml(e.target.result)}" alt="Preview" id="previewImg" width="200" height="200" loading="lazy" />`;
         // Store base64 for upload (in a real implementation, you'd upload to R2)
         artworkUrlInput.dataset.pendingUpload = e.target.result;
       };
@@ -717,10 +723,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   });
 
   // Artwork URL input preview
-  artworkUrlInput.addEventListener('change', () => {
-    const url = artworkUrlInput.value.trim();
+  artworkUrlInput.addEventListener('change', function() {
+    var url = artworkUrlInput.value.trim();
     if (url) {
-      artworkPreview.innerHTML = `<img src="${url}" alt="Preview" id="previewImg" width="200" height="200" loading="lazy" data-fallback="html" data-fallback-html="<div class=artwork-placeholder>Invalid URL</div>" />`;
+      artworkPreview.innerHTML = `<img src="${escapeHtml(url)}" alt="Preview" id="previewImg" width="200" height="200" loading="lazy" data-fallback="html" data-fallback-html="<div class=artwork-placeholder>Invalid URL</div>" />`;
     }
   });
 

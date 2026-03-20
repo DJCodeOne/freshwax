@@ -1797,7 +1797,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         // Avatar HTML - use image if available, fallback to initial
         let avatarHtml;
         if (currentUserAvatar) {
-          avatarHtml = '<img src="' + escapeHtml(currentUserAvatar) + '" alt="" class="w-full h-full object-cover" data-fallback="show-next" /><span class="text-white font-bold text-base hidden items-center justify-center w-full h-full">' + initial + '</span>';
+          avatarHtml = '<img src="' + escapeHtml(currentUserAvatar) + '" alt="User avatar" class="w-full h-full object-cover" data-fallback="show-next" /><span class="text-white font-bold text-base hidden items-center justify-center w-full h-full">' + initial + '</span>';
         } else {
           avatarHtml = '<span class="text-white font-bold text-base">' + initial + '</span>';
         }
@@ -1998,7 +1998,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         // Avatar HTML - use image if available, fallback to initial
         let avatarHtml;
         if (currentUserAvatar) {
-          avatarHtml = '<img src="' + escapeHtml(currentUserAvatar) + '" alt="" class="w-full h-full object-cover" data-fallback="show-next" /><span class="text-white font-bold text-base hidden items-center justify-center w-full h-full">' + initial + '</span>';
+          avatarHtml = '<img src="' + escapeHtml(currentUserAvatar) + '" alt="User avatar" class="w-full h-full object-cover" data-fallback="show-next" /><span class="text-white font-bold text-base hidden items-center justify-center w-full h-full">' + initial + '</span>';
         } else {
           avatarHtml = '<span class="text-white font-bold text-base">' + initial + '</span>';
         }

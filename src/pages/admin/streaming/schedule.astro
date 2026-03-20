@@ -426,6 +426,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 </style>
 
 <script>
+  function escapeHtml(s: unknown): string {
+    if (typeof s !== 'string') return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
   let allSlots = [];
   let currentWeekStart = getWeekStart(new Date());
   let allowances = [];
@@ -627,7 +632,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         slotEl.style.top = `${topOffset}px`;
         slotEl.innerHTML = `
           <div class="slot-time">${startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
-          <div class="slot-dj">${slot.djName}</div>
+          <div class="slot-dj">${escapeHtml(slot.djName)}</div>
         `;
         slotEl.addEventListener('click', () => showSlotDetails(slot));
         cell.appendChild(slotEl);
@@ -670,15 +675,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="cell-secondary">${startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${endTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
           </td>
           <td>
-            <div class="cell-primary">${slot.djName}</div>
-            <div class="cell-mono">${slot.djId?.slice(0, 8) || '-'}</div>
+            <div class="cell-primary">${escapeHtml(slot.djName)}</div>
+            <div class="cell-mono">${escapeHtml(slot.djId?.slice(0, 8) || '-')}</div>
           </td>
-          <td>${slot.title || '-'}</td>
+          <td>${escapeHtml(slot.title || '-')}</td>
           <td class="text-center">${slot.duration || 60} min</td>
-          <td class="text-center"><span class="badge ${statusClass}">${slot.status}</span></td>
+          <td class="text-center"><span class="badge ${statusClass}">${escapeHtml(slot.status)}</span></td>
           <td class="text-center">
-            <button class="btn btn-sm btn-outline" data-action="viewSlot" data-slot-id="${slot.id}">View</button>
-            ${slot.status === 'scheduled' ? `<button class="btn btn-sm btn-danger" data-action="cancelSlot" data-slot-id="${slot.id}">Cancel</button>` : ''}
+            <button class="btn btn-sm btn-outline" data-action="viewSlot" data-slot-id="${escapeHtml(slot.id)}">View</button>
+            ${slot.status === 'scheduled' ? `<button class="btn btn-sm btn-danger" data-action="cancelSlot" data-slot-id="${escapeHtml(slot.id)}">Cancel</button>` : ''}
           </td>
         </tr>
       `;
@@ -695,11 +700,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     body.innerHTML = `
       <div class="slot-detail">
         <div class="slot-detail-label">DJ</div>
-        <div class="slot-detail-value">${slot.djName}</div>
+        <div class="slot-detail-value">${escapeHtml(slot.djName)}</div>
       </div>
       <div class="slot-detail">
         <div class="slot-detail-label">Title</div>
-        <div class="slot-detail-value">${slot.title || 'Untitled'}</div>
+        <div class="slot-detail-value">${escapeHtml(slot.title || 'Untitled')}</div>
       </div>
       <div class="slot-detail">
         <div class="slot-detail-label">Date & Time</div>
@@ -712,25 +717,25 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       </div>
       <div class="slot-detail">
         <div class="slot-detail-label">Status</div>
-        <div class="slot-detail-value">${slot.status}</div>
+        <div class="slot-detail-value">${escapeHtml(slot.status)}</div>
       </div>
       <div class="slot-detail">
         <div class="slot-detail-label">Genre</div>
-        <div class="slot-detail-value">${slot.genre || 'Jungle / D&B'}</div>
+        <div class="slot-detail-value">${escapeHtml(slot.genre || 'Jungle / D&B')}</div>
       </div>
       ${slot.description ? `
       <div class="slot-detail">
         <div class="slot-detail-label">Description</div>
-        <div class="slot-detail-value">${slot.description}</div>
+        <div class="slot-detail-value">${escapeHtml(slot.description)}</div>
       </div>` : ''}
       ${slot.representing ? `
       <div class="slot-detail">
         <div class="slot-detail-label">Representing</div>
-        <div class="slot-detail-value">${slot.representing}</div>
+        <div class="slot-detail-value">${escapeHtml(slot.representing)}</div>
       </div>` : ''}
       <div class="slot-detail">
         <div class="slot-detail-label">DJ ID</div>
-        <div class="slot-detail-value" style="font-family: monospace; font-size: 0.85rem;">${slot.djId}</div>
+        <div class="slot-detail-value" style="font-family: monospace; font-size: 0.85rem;">${escapeHtml(slot.djId)}</div>
       </div>
       ${slot.viewerPeak ? `
       <div class="slot-detail">
@@ -793,12 +798,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     container.innerHTML = allowances.map(a => `
       <div class="allowance-card">
         <div class="allowance-info">
-          <h4>${a.djName || a.djId}</h4>
-          <p>${a.weeklySlots} slots/week • ${a.maxHoursPerDay}h/day max${a.reason ? ` • ${a.reason}` : ''}</p>
+          <h4>${escapeHtml(a.djName || a.djId)}</h4>
+          <p>${a.weeklySlots} slots/week • ${a.maxHoursPerDay}h/day max${a.reason ? ` • ${escapeHtml(a.reason)}` : ''}</p>
         </div>
         <div>
           <span class="allowance-badge">${a.weeklySlots}x</span>
-          <button class="btn btn-sm btn-danger" data-action="removeAllowance" data-dj-id="${a.djId}" style="margin-left: 0.5rem;">Remove</button>
+          <button class="btn btn-sm btn-danger" data-action="removeAllowance" data-dj-id="${escapeHtml(a.djId)}" style="margin-left: 0.5rem;">Remove</button>
         </div>
       </div>
     `).join('');

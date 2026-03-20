@@ -543,12 +543,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     }
 
     listEl.innerHTML = reports.map(r => `
-      <div class="report-card priority-${r.priority} ${r.status === 'resolved' || r.status === 'dismissed' ? 'status-resolved' : ''}">
+      <div class="report-card priority-${escapeHtml(r.priority)} ${r.status === 'resolved' || r.status === 'dismissed' ? 'status-resolved' : ''}">
         <div class="report-header">
           <div class="report-meta">
-            <span class="report-type">${TYPES[r.type] || r.type}</span>
-            <span class="report-category">${CATEGORIES[r.category] || r.category}</span>
-            <span class="priority-badge ${r.priority}">${r.priority}</span>
+            <span class="report-type">${escapeHtml(TYPES[r.type] || r.type)}</span>
+            <span class="report-category">${escapeHtml(CATEGORIES[r.category] || r.category)}</span>
+            <span class="priority-badge ${escapeHtml(r.priority)}">${escapeHtml(r.priority)}</span>
           </div>
           <span class="report-time">${formatTime(r.createdAt)}</span>
         </div>
@@ -557,10 +557,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <div class="report-footer">
           <span class="report-reporter">Reported by: ${escapeHtml(r.reporterName)}</span>
           <div class="report-actions">
-            <button class="btn-view" data-action="viewReport" data-id="${r.id}">View</button>
+            <button class="btn-view" data-action="viewReport" data-id="${escapeHtml(r.id)}">View</button>
             ${r.status === 'pending' || r.status === 'reviewing' ? `
-              <button class="btn-resolve" data-action="updateStatus" data-id="${r.id}" data-status="resolved">Resolve</button>
-              <button class="btn-dismiss" data-action="updateStatus" data-id="${r.id}" data-status="dismissed">Dismiss</button>
+              <button class="btn-resolve" data-action="updateStatus" data-id="${escapeHtml(r.id)}" data-status="resolved">Resolve</button>
+              <button class="btn-dismiss" data-action="updateStatus" data-id="${escapeHtml(r.id)}" data-status="dismissed">Dismiss</button>
             ` : ''}
           </div>
         </div>
@@ -580,15 +580,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     body.innerHTML = `
       <div class="detail-row">
         <div class="detail-label">Type / Category</div>
-        <div class="detail-value">${TYPES[report.type] || report.type} → ${CATEGORIES[report.category] || report.category}</div>
+        <div class="detail-value">${escapeHtml(TYPES[report.type] || report.type)} → ${escapeHtml(CATEGORIES[report.category] || report.category)}</div>
       </div>
       <div class="detail-row">
         <div class="detail-label">Priority</div>
-        <div class="detail-value"><span class="priority-badge ${report.priority}">${report.priority}</span></div>
+        <div class="detail-value"><span class="priority-badge ${escapeHtml(report.priority)}">${escapeHtml(report.priority)}</span></div>
       </div>
       <div class="detail-row">
         <div class="detail-label">Target</div>
-        <div class="detail-value">${escapeHtml(report.targetName)}${report.targetUrl ? ` <a href="${report.targetUrl}" target="_blank" rel="noopener noreferrer">View →</a>` : ''}</div>
+        <div class="detail-value">${escapeHtml(report.targetName)}${report.targetUrl ? ` <a href="${escapeHtml(report.targetUrl)}" target="_blank" rel="noopener noreferrer">View →</a>` : ''}</div>
       </div>
       <div class="detail-row">
         <div class="detail-label">Description</div>
@@ -596,7 +596,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       </div>
       <div class="detail-row">
         <div class="detail-label">Reported By</div>
-        <div class="detail-value">${escapeHtml(report.reporterName)}${report.reporterEmail ? ` (${report.reporterEmail})` : ''}</div>
+        <div class="detail-value">${escapeHtml(report.reporterName)}${report.reporterEmail ? ` (${escapeHtml(report.reporterEmail)})` : ''}</div>
       </div>
       <div class="detail-row">
         <div class="detail-label">Reported At</div>
@@ -604,20 +604,20 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       </div>
       <div class="detail-row">
         <div class="detail-label">Status</div>
-        <div class="detail-value">${report.status}${report.resolvedAt ? ` (${formatTime(report.resolvedAt)})` : ''}</div>
+        <div class="detail-value">${escapeHtml(report.status)}${report.resolvedAt ? ` (${formatTime(report.resolvedAt)})` : ''}</div>
       </div>
       <div class="detail-row">
         <div class="detail-label">Admin Notes</div>
-        <textarea class="admin-notes-input" id="admin-notes" placeholder="Add notes...">${report.adminNotes || ''}</textarea>
+        <textarea class="admin-notes-input" id="admin-notes" placeholder="Add notes...">${escapeHtml(report.adminNotes || '')}</textarea>
       </div>
     `;
 
     footer.innerHTML = `
       <button style="background: rgba(255,255,255,0.1); color: #fff;" data-action="closeModal">Close</button>
       <button style="background: rgba(255,255,255,0.15); color: #4ecdc4;" data-action="saveNotes">Save Notes</button>
-      ${report.status === 'pending' ? `<button style="background: rgba(78,205,196,0.2); color: #4ecdc4;" data-action="updateAndClose" data-id="${id}" data-status="reviewing">Mark Reviewing</button>` : ''}
-      ${report.status !== 'resolved' ? `<button style="background: rgba(78,205,196,0.3); color: #fff;" data-action="updateAndClose" data-id="${id}" data-status="resolved">Resolve</button>` : ''}
-      ${report.status !== 'dismissed' ? `<button style="background: rgba(255,82,82,0.2); color: #ff5252;" data-action="updateAndClose" data-id="${id}" data-status="dismissed">Dismiss</button>` : ''}
+      ${report.status === 'pending' ? `<button style="background: rgba(78,205,196,0.2); color: #4ecdc4;" data-action="updateAndClose" data-id="${escapeHtml(id)}" data-status="reviewing">Mark Reviewing</button>` : ''}
+      ${report.status !== 'resolved' ? `<button style="background: rgba(78,205,196,0.3); color: #fff;" data-action="updateAndClose" data-id="${escapeHtml(id)}" data-status="resolved">Resolve</button>` : ''}
+      ${report.status !== 'dismissed' ? `<button style="background: rgba(255,82,82,0.2); color: #ff5252;" data-action="updateAndClose" data-id="${escapeHtml(id)}" data-status="dismissed">Dismiss</button>` : ''}
     `;
 
     modal.classList.add('active');

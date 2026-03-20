@@ -548,6 +548,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 </style>
 
 <script>
+  function escapeHtml(s: unknown): string {
+    if (typeof s !== 'string') return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
   // Refresh page button
   document.getElementById('refreshPageBtn')?.addEventListener('click', () => window.location.reload());
 
@@ -607,35 +612,35 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               <div class="user-details">
                 <div class="detail-row">
                   <span class="detail-label">User ID</span>
-                  <code class="detail-value">${u.id}</code>
+                  <code class="detail-value">${escapeHtml(u.id)}</code>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Email</span>
-                  <span class="detail-value">${u.email || '-'}</span>
+                  <span class="detail-value">${escapeHtml(u.email || '-')}</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Display Name</span>
-                  <span class="detail-value">${u.displayName || '-'}</span>
+                  <span class="detail-value">${escapeHtml(u.displayName || '-')}</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Subscription Tier</span>
-                  <span class="detail-value">${u.subscription?.tier || 'free'}</span>
+                  <span class="detail-value">${escapeHtml(u.subscription?.tier || 'free')}</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Subscribed At</span>
-                  <span class="detail-value">${u.subscription?.subscribedAt ? new Date(u.subscription.subscribedAt).toLocaleString() : '-'}</span>
+                  <span class="detail-value">${u.subscription?.subscribedAt ? escapeHtml(new Date(u.subscription.subscribedAt).toLocaleString()) : '-'}</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Expires At</span>
-                  <span class="detail-value">${u.subscription?.expiresAt ? new Date(u.subscription.expiresAt).toLocaleString() : '-'}</span>
+                  <span class="detail-value">${u.subscription?.expiresAt ? escapeHtml(new Date(u.subscription.expiresAt).toLocaleString()) : '-'}</span>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Subscription ID</span>
-                  <code class="detail-value">${u.subscription?.subscriptionId || '-'}</code>
+                  <code class="detail-value">${escapeHtml(u.subscription?.subscriptionId || '-')}</code>
                 </div>
                 <div class="detail-row">
                   <span class="detail-label">Account Created</span>
-                  <span class="detail-value">${u.createdAt ? new Date(u.createdAt).toLocaleString() : '-'}</span>
+                  <span class="detail-value">${u.createdAt ? escapeHtml(new Date(u.createdAt).toLocaleString()) : '-'}</span>
                 </div>
               </div>
             `;

@@ -306,14 +306,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           const date = b.lastUpdated ? new Date(b.lastUpdated).toLocaleDateString('en-GB') : '-';
           return `
             <tr>
-              <td>${b.name || 'Unknown'}</td>
-              <td>${b.email || 'Unknown'}</td>
+              <td>${escapeHtml(b.name || 'Unknown')}</td>
+              <td>${escapeHtml(b.email || 'Unknown')}</td>
               <td class="balance-amount">£${b.balance.toFixed(2)}</td>
               <td>${b.transactionCount}</td>
               <td>${date}</td>
               <td>
-                <button class="action-btn" data-action="viewUserHistory" data-user-id="${b.userId}">View</button>
-                <button class="action-btn" data-action="quickAdjust" data-user-id="${b.userId}">Adjust</button>
+                <button class="action-btn" data-action="viewUserHistory" data-user-id="${escapeHtml(b.userId)}">View</button>
+                <button class="action-btn" data-action="quickAdjust" data-user-id="${escapeHtml(b.userId)}">Adjust</button>
               </td>
             </tr>
           `;
@@ -382,7 +382,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       const created = new Date(card.createdAt).toLocaleDateString('en-GB');
       let status = 'active';
       let statusText = 'Active';
-      
+
       if (card.redeemedBy) {
         status = 'redeemed';
         statusText = 'Redeemed';
@@ -390,26 +390,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         status = 'inactive';
         statusText = 'Cancelled';
       }
-      
+
       const recipientEmail = card.recipientEmail || '-';
       const redeemedByShort = card.redeemedBy ? card.redeemedBy.substring(0, 8) + '...' : '-';
-      
+
       return `
         <tr>
-          <td style="font-family: monospace; font-size: 0.8125rem;">${card.code}</td>
-          <td>${card.type || 'Gift'}</td>
+          <td style="font-family: monospace; font-size: 0.8125rem;">${escapeHtml(card.code)}</td>
+          <td>${escapeHtml(card.type || 'Gift')}</td>
           <td>£${(card.originalValue || 0).toFixed(2)}</td>
           <td>£${(card.currentBalance || 0).toFixed(2)}</td>
           <td><span class="status-badge ${status}">${statusText}</span></td>
           <td>${created}</td>
-          <td style="font-size: 0.8125rem;">${recipientEmail !== '-' ? recipientEmail.substring(0, 20) + (recipientEmail.length > 20 ? '...' : '') : '-'}</td>
-          <td style="font-size: 0.8125rem;">${redeemedByShort}</td>
+          <td style="font-size: 0.8125rem;">${recipientEmail !== '-' ? escapeHtml(recipientEmail.substring(0, 20) + (recipientEmail.length > 20 ? '...' : '')) : '-'}</td>
+          <td style="font-size: 0.8125rem;">${escapeHtml(redeemedByShort)}</td>
           <td class="action-cell">
-            <button class="action-btn small" data-action="viewCardDetails" data-card-id="${card.id}">View</button>
-            <button class="action-btn small" data-action="copyCode" data-code="${card.code}">Copy</button>
-            ${card.isActive && !card.redeemedBy ? `<button class="action-btn small" data-action="resendCardEmail" data-card-id="${card.id}" data-code="${card.code}" data-email="${escapeHtml(card.recipientEmail || '')}">📧</button>` : ''}
-            ${card.isActive && !card.redeemedBy ? `<button class="action-btn danger small" data-action="cancelCard" data-card-id="${card.id}">Cancel</button>` : ''}
-            ${!card.isActive && !card.redeemedBy ? `<button class="action-btn success small" data-action="reactivateCard" data-card-id="${card.id}">Reactivate</button>` : ''}
+            <button class="action-btn small" data-action="viewCardDetails" data-card-id="${escapeHtml(card.id)}">View</button>
+            <button class="action-btn small" data-action="copyCode" data-code="${escapeHtml(card.code)}">Copy</button>
+            ${card.isActive && !card.redeemedBy ? `<button class="action-btn small" data-action="resendCardEmail" data-card-id="${escapeHtml(card.id)}" data-code="${escapeHtml(card.code)}" data-email="${escapeHtml(card.recipientEmail || '')}">📧</button>` : ''}
+            ${card.isActive && !card.redeemedBy ? `<button class="action-btn danger small" data-action="cancelCard" data-card-id="${escapeHtml(card.id)}">Cancel</button>` : ''}
+            ${!card.isActive && !card.redeemedBy ? `<button class="action-btn success small" data-action="reactivateCard" data-card-id="${escapeHtml(card.id)}">Reactivate</button>` : ''}
           </td>
         </tr>
       `;
@@ -654,8 +654,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     const redeemed = card.redeemedAt ? new Date(card.redeemedAt).toLocaleString('en-GB') : '-';
     
     body.innerHTML = `
-      <div class="card-code-display">${card.code}</div>
-      
+      <div class="card-code-display">${escapeHtml(card.code)}</div>
+
       <div class="card-detail-grid">
         <div class="card-detail-item">
           <label>Status</label>
@@ -663,7 +663,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         </div>
         <div class="card-detail-item">
           <label>Type</label>
-          <div class="value">${card.type || 'Gift'}</div>
+          <div class="value">${escapeHtml(card.type || 'Gift')}</div>
         </div>
         <div class="card-detail-item">
           <label>Original Value</label>
@@ -682,41 +682,41 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <div class="value">${redeemed}</div>
         </div>
       </div>
-      
-      ${card.description ? `<div class="card-detail-item" style="margin-bottom: 1rem;"><label>Description</label><div class="value">${card.description}</div></div>` : ''}
-      
+
+      ${card.description ? `<div class="card-detail-item" style="margin-bottom: 1rem;"><label>Description</label><div class="value">${escapeHtml(card.description)}</div></div>` : ''}
+
       <div class="card-detail-grid">
         <div class="card-detail-item">
           <label>Purchased By</label>
-          <div class="value">${card.purchasedByEmail || card.purchasedBy || 'Admin'}</div>
+          <div class="value">${escapeHtml(card.purchasedByEmail || card.purchasedBy || 'Admin')}</div>
         </div>
         <div class="card-detail-item">
           <label>Recipient Email</label>
-          <div class="value">${card.recipientEmail || '-'}</div>
+          <div class="value">${escapeHtml(card.recipientEmail || '-')}</div>
         </div>
         <div class="card-detail-item">
           <label>Recipient Name</label>
-          <div class="value">${card.recipientName || '-'}</div>
+          <div class="value">${escapeHtml(card.recipientName || '-')}</div>
         </div>
         <div class="card-detail-item">
           <label>Redeemed By</label>
-          <div class="value">${card.redeemedBy || '-'}</div>
+          <div class="value">${escapeHtml(card.redeemedBy || '-')}</div>
         </div>
       </div>
-      
-      ${card.giftMessage ? `<div class="card-detail-item"><label>Gift Message</label><div class="value" style="font-style: italic;">"${card.giftMessage}"</div></div>` : ''}
+
+      ${card.giftMessage ? `<div class="card-detail-item"><label>Gift Message</label><div class="value" style="font-style: italic;">"${escapeHtml(card.giftMessage)}"</div></div>` : ''}
     `;
     
     // Action buttons
-    let actionsHtml = `<button class="action-btn" data-action="copyCode" data-code="${card.code}">📋 Copy Code</button>`;
+    let actionsHtml = `<button class="action-btn" data-action="copyCode" data-code="${escapeHtml(card.code)}">📋 Copy Code</button>`;
 
     if (card.isActive && !card.redeemedBy) {
-      actionsHtml += `<button class="action-btn" data-action="resendCardEmail" data-card-id="${card.id}" data-code="${card.code}" data-email="${escapeHtml(card.recipientEmail || '')}">📧 Resend Email</button>`;
-      actionsHtml += `<button class="action-btn danger" data-action="cancelCardAndClose" data-card-id="${card.id}">❌ Cancel Card</button>`;
+      actionsHtml += `<button class="action-btn" data-action="resendCardEmail" data-card-id="${escapeHtml(card.id)}" data-code="${escapeHtml(card.code)}" data-email="${escapeHtml(card.recipientEmail || '')}">📧 Resend Email</button>`;
+      actionsHtml += `<button class="action-btn danger" data-action="cancelCardAndClose" data-card-id="${escapeHtml(card.id)}">❌ Cancel Card</button>`;
     }
 
     if (!card.isActive && !card.redeemedBy) {
-      actionsHtml += `<button class="action-btn success" data-action="reactivateCardAndClose" data-card-id="${card.id}">✅ Reactivate</button>`;
+      actionsHtml += `<button class="action-btn success" data-action="reactivateCardAndClose" data-card-id="${escapeHtml(card.id)}">✅ Reactivate</button>`;
     }
 
     actions.innerHTML = actionsHtml;
@@ -814,7 +814,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           ${transactions && transactions.length > 0 ? transactions.map(txn => `
             <div class="transaction-item">
               <div>
-                <div>${txn.description || txn.type}</div>
+                <div>${escapeHtml(txn.description || txn.type)}</div>
                 <small style="color: #888;">${new Date(txn.createdAt).toLocaleString('en-GB')}</small>
               </div>
               <div class="${txn.amount >= 0 ? 'txn-positive' : 'txn-negative'}">

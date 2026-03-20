@@ -196,7 +196,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                 <td>
                   <div class="item-cell">
                     {product.primaryImage ? (
-                      <img src={product.primaryImage} alt="" loading="lazy" style="width: 48px; height: 48px; object-fit: cover; border: 2px solid #000;">
+                      <img src={product.primaryImage} alt={product.name || 'Product image'} loading="lazy" style="width: 48px; height: 48px; object-fit: cover; border: 2px solid #000;">
                     ) : (
                       <div style="width: 48px; height: 48px; background: #e5e5e5; display: flex; align-items: center; justify-content: center; border: 2px solid #000;">👕</div>
                     )}
