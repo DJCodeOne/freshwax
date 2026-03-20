@@ -6156,11 +6156,6 @@
     animation: pulse-live 2s ease-in-out infinite;
   }
 
-  @keyframes pulse-live {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
-    50% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
-  }
-
   .close-success-btn {
     background: #374151;
     color: white;
@@ -8796,11 +8791,6 @@
   .butt-audio-preview .audio-waveform .audio-bar:nth-child(14) { height: 65%; animation-delay: 0.65s; }
   .butt-audio-preview .audio-waveform .audio-bar:nth-child(15) { height: 45%; animation-delay: 0.7s; }
   .butt-audio-preview .audio-waveform .audio-bar:nth-child(16) { height: 25%; animation-delay: 0.75s; }
-
-  @keyframes barPulse {
-    0%, 100% { transform: scaleY(1); }
-    50% { transform: scaleY(0.4); }
-  }
 
   /* Live Stream Panel Audio-Only Placeholder (same as BUTT preview) */
   #audioPreview .audio-only-placeholder {

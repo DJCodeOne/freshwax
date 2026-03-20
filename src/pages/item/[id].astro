@@ -937,7 +937,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                       <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">
                           {comment.avatarUrl ? (
-                            <img src={comment.avatarUrl} alt="" class="w-full h-full object-cover" width="40" height="40" loading="lazy" decoding="async" data-fallback="show-next" data-fallback-display="block" />
+                            <img src={comment.avatarUrl} alt={`${comment.userName || comment.username || 'User'} avatar`} class="w-full h-full object-cover" width="40" height="40" loading="lazy" decoding="async" data-fallback="show-next" data-fallback-display="block" />
                             <span class="text-white font-bold text-base" style="display:none;">
                               {(comment.userName || comment.username || 'A').charAt(0).toUpperCase()}
                             </span>

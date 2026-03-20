@@ -86,6 +86,7 @@ const RATE_LIMIT_SKIP = new Set([
   '/api/cron/backup-d1/',
   '/api/health/index/',
   '/api/health/payments/',
+  '/api/cron/weekly-digest/',
 ]);
 
 // Tight limit: search & external proxies (30 req/min)

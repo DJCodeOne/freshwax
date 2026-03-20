@@ -122,7 +122,7 @@ const firebaseConfig = {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
             <span class="account-avatar-initial fwx-hidden"></span>
-            <img class="account-avatar-img fwx-hidden" src="" alt="" width="40" height="40" loading="lazy" decoding="async" />
+            <img class="account-avatar-img fwx-hidden" src="" alt="Account avatar" width="40" height="40" loading="lazy" decoding="async" />
           </div>
           <span class="fwx-menu-account-name account-name">Login</span>
         </div>
@@ -264,7 +264,7 @@ const firebaseConfig = {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
             <span class="account-avatar-initial fwx-hidden"></span>
-            <img class="account-avatar-img fwx-hidden" src="" alt="" width="40" height="40" loading="lazy" decoding="async" />
+            <img class="account-avatar-img fwx-hidden" src="" alt="Account avatar" width="40" height="40" loading="lazy" decoding="async" />
           </div>
           <span class="account-name">Login</span>
           <svg class="fwx-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -799,12 +799,12 @@ const firebaseConfig = {
 
     if (langCode && langCode !== 'en') {
       try { localStorage.setItem('fw_translate_lang', langCode); } catch (e){}
-      document.cookie = 'googtrans=/en/' + langCode + ';path=/';
-      if (domainCookie) document.cookie = 'googtrans=/en/' + langCode + ';path=/' + domainCookie;
+      document.cookie = 'googtrans=/en/' + langCode + ';path=/;Secure;SameSite=Lax';
+      if (domainCookie) document.cookie = 'googtrans=/en/' + langCode + ';path=/' + domainCookie + ';Secure;SameSite=Lax';
     } else {
       try { localStorage.removeItem('fw_translate_lang'); } catch (e){}
-      document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      if (domainCookie) document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT' + domainCookie;
+      document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT;Secure;SameSite=Lax';
+      if (domainCookie) document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT' + domainCookie + ';Secure;SameSite=Lax';
     }
 
     // Drive the hidden Google Translate select
@@ -1000,9 +1000,9 @@ const firebaseConfig = {
   try { savedLang = localStorage.getItem('fw_translate_lang'); } catch (e){}
   if (savedLang) {
     // Set cookie on both path and domain for maximum compatibility
-    document.cookie = 'googtrans=/en/' + savedLang + ';path=/';
+    document.cookie = 'googtrans=/en/' + savedLang + ';path=/;Secure;SameSite=Lax';
     if (location.hostname.indexOf('.') !== -1) {
-      document.cookie = 'googtrans=/en/' + savedLang + ';path=/;domain=.' + location.hostname;
+      document.cookie = 'googtrans=/en/' + savedLang + ';path=/;domain=.' + location.hostname + ';Secure;SameSite=Lax';
     }
     // Defer GT loading so it doesn't block initial performance metrics
     if (typeof requestIdleCallback === 'function') {

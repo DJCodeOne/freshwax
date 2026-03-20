@@ -80,15 +80,21 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const data = await response.json();
 
     // Transform response to only include necessary data
-    const gifs = data.data.map((gif: Record<string, unknown>) => ({
-      id: gif.id,
-      title: gif.title,
-      url: gif.images.fixed_height.url,
-      width: gif.images.fixed_height.width,
-      height: gif.images.fixed_height.height,
-      preview: gif.images.fixed_height_small.url,
-      webp: gif.images.fixed_height.webp,
-    }));
+    const gifsArray = Array.isArray(data?.data) ? data.data : [];
+    const gifs = gifsArray.map((gif: Record<string, unknown>) => {
+      const images = gif.images as Record<string, Record<string, unknown>> | undefined;
+      const fixedHeight = images?.fixed_height;
+      const fixedHeightSmall = images?.fixed_height_small;
+      return {
+        id: gif.id,
+        title: gif.title,
+        url: fixedHeight?.url || '',
+        width: fixedHeight?.width || '',
+        height: fixedHeight?.height || '',
+        preview: fixedHeightSmall?.url || '',
+        webp: fixedHeight?.webp || '',
+      };
+    });
 
     const result = {
       gifs,

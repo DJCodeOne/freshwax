@@ -215,7 +215,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       <div class="header-left">
         <div class="user-info">
           <div class="header-avatar-container">
-            <img id="headerAvatar" src="/place-holder.webp" alt="" class="header-avatar" />
+            <img id="headerAvatar" src="/place-holder.webp" alt="Your DJ avatar" class="header-avatar" />
             <div id="headerAvatarLetter" class="header-avatar-letter hidden">?</div>
           </div>
           <span id="headerName" class="header-name">Loading...</span>
@@ -376,7 +376,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div id="incomingTakeover" class="incoming-takeover hidden">
             <div class="incoming-badge">⚡ TAKEOVER REQUEST</div>
             <div class="incoming-dj">
-              <img id="incomingDjAvatar" src="/place-holder.webp" alt="" />
+              <img id="incomingDjAvatar" src="/place-holder.webp" alt="Incoming DJ avatar" />
               <div>
                 <strong id="incomingDjName">DJ Name</strong>
                 <span>wants to take over</span>
@@ -3199,7 +3199,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       return `
         <div class="dj-item ${isLive ? 'is-live' : ''} ${isReady && !isLive ? 'is-ready' : ''}">
           ${hasAvatar
-            ? `<img src="${escapeHtml(dj.avatar)}" alt="" data-fallback="show-next" /><span class="dj-avatar-letter" style="display:none;">${escapeHtml(avatarLetter)}</span>`
+            ? `<img src="${escapeHtml(dj.avatar)}" alt="${escapeHtml(dj.name || 'DJ')} avatar" data-fallback="show-next" /><span class="dj-avatar-letter" style="display:none;">${escapeHtml(avatarLetter)}</span>`
             : `<span class="dj-avatar-letter">${escapeHtml(avatarLetter)}</span>`
           }
           <span>${escapeHtml(dj.name)}${isMe ? ' (you)' : ''}</span>

@@ -93,7 +93,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <div class="form-group">
           <label for="displayName">Display Name</label>
           <div class="input-with-status">
-            <input type="text" id="displayName" name="displayName" required aria-required="true" placeholder="Enter the name you want use across the site" minlength="2" maxlength="30" aria-describedby="displayNameHint">
+            <input type="text" id="displayName" name="displayName" required aria-required="true" placeholder="Enter the name you want use across the site" minlength="2" maxlength="30" aria-describedby="displayNameHint" autocomplete="name">
             <span class="input-status" id="displayNameStatus"></span>
           </div>
           <small class="input-hint" id="displayNameHint" role="alert"></small>
@@ -101,14 +101,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         <div class="form-group">
           <label for="email">Email</label>
-          <input type="email" id="email" name="email" required aria-required="true" placeholder="your@email.com" aria-describedby="emailError">
+          <input type="email" id="email" name="email" required aria-required="true" placeholder="your@email.com" aria-describedby="emailError" autocomplete="email">
           <p class="field-error" id="emailError" role="alert"></p>
         </div>
 
         <div class="form-group password-field">
           <label for="password">Password</label>
           <div class="input-wrapper">
-            <input type="password" id="password" name="password" required aria-required="true" minlength="8" aria-describedby="passwordRequirements">
+            <input type="password" id="password" name="password" required aria-required="true" minlength="8" aria-describedby="passwordRequirements" autocomplete="new-password">
             <button type="button" class="password-toggle" data-target="password" aria-label="Show password" aria-pressed="false">
               <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -137,7 +137,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <div class="form-group password-field">
           <label for="confirmPassword">Confirm Password</label>
           <div class="input-wrapper">
-            <input type="password" id="confirmPassword" name="confirmPassword" required aria-required="true" aria-describedby="confirmPasswordError">
+            <input type="password" id="confirmPassword" name="confirmPassword" required aria-required="true" aria-describedby="confirmPasswordError" autocomplete="new-password">
             <button type="button" class="password-toggle" data-target="confirmPassword" aria-label="Show password" aria-pressed="false">
               <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>

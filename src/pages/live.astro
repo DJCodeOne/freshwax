@@ -1970,7 +1970,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       if (listeners.length > 0) {
         listenersList.innerHTML = listeners.map(listener => `
           <div class="listener-item">
-            <img class="listener-avatar" src="${escapeHtml(listener.avatar || '/place-holder.webp')}" alt="${escapeHtml(listener.name)} avatar" />
+            <img class="listener-avatar" src="${escapeHtml(listener.avatar || '/place-holder.webp')}" alt="${escapeHtml(listener.name)} avatar" width="32" height="32" loading="lazy" decoding="async" />
             <span class="listener-name">${escapeHtml(listener.name)}</span>
           </div>
         `).join('');
