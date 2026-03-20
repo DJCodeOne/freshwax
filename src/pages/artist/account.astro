@@ -647,19 +647,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </fieldset>
 
             <!-- Payout Method Tabs -->
-            <div class="payout-tabs">
-              <button class="payout-tab active" data-tab="stripe">
+            <div class="payout-tabs" role="tablist" aria-label="Payout methods">
+              <button class="payout-tab active" data-tab="stripe" role="tab" aria-selected="true" aria-controls="stripe-tab" id="tab-stripe">
                 <span class="tab-icon">💳</span> Stripe <span class="tab-recommended">Recommended</span>
                 {partner.stripeConnectStatus === 'active' && <span class="tab-check">✓</span>}
               </button>
-              <button class="payout-tab" data-tab="paypal">
+              <button class="payout-tab" data-tab="paypal" role="tab" aria-selected="false" aria-controls="paypal-tab" id="tab-paypal" tabindex="-1">
                 <span class="tab-icon">🅿️</span> PayPal <span class="tab-fee">+2% fee</span>
                 {partner.paypalEmail && <span class="tab-check">✓</span>}
               </button>
             </div>
 
             <!-- Stripe Tab Content -->
-            <div class="payout-tab-content active" id="stripe-tab">
+            <div class="payout-tab-content active" id="stripe-tab" role="tabpanel" aria-labelledby="tab-stripe" tabindex="0">
               {partner.stripeConnectStatus === 'active' ? (
                 <div class="stripe-status connected">
                   <div class="status-icon">✓</div>
@@ -718,7 +718,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </div>
 
             <!-- PayPal Tab Content -->
-            <div class="payout-tab-content" id="paypal-tab">
+            <div class="payout-tab-content" id="paypal-tab" role="tabpanel" aria-labelledby="tab-paypal" tabindex="-1">
               {partner.paypalEmail ? (
                 <div class="stripe-status connected">
                   <div class="status-icon">✓</div>
@@ -2966,21 +2966,56 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   // Payout Method Tabs
   const payoutTabs = document.querySelectorAll('.payout-tab');
-  payoutTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const tabName = tab.dataset.tab;
+  const payoutTabArr = Array.from(payoutTabs);
+  const payoutPanels = document.querySelectorAll('.payout-tab-content');
 
-      // Update tab active states
-      payoutTabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
+  function activatePayoutTab(tabName, moveFocus) {
+    payoutTabs.forEach(function(t) {
+      const isActive = t.dataset.tab === tabName;
+      t.classList.toggle('active', isActive);
+      t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      t.setAttribute('tabindex', isActive ? '0' : '-1');
+      if (moveFocus && isActive) t.focus();
+    });
+    payoutPanels.forEach(function(content) {
+      content.classList.remove('active');
+      content.setAttribute('tabindex', '-1');
+    });
+    const activePanel = document.getElementById(tabName + '-tab');
+    if (activePanel) {
+      activePanel.classList.add('active');
+      activePanel.setAttribute('tabindex', '0');
+    }
+  }
 
-      // Update content visibility
-      document.querySelectorAll('.payout-tab-content').forEach(content => {
-        content.classList.remove('active');
-      });
-      document.getElementById(`${tabName}-tab`)?.classList.add('active');
+  payoutTabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      activatePayoutTab(tab.dataset.tab, false);
     });
   });
+
+  // Arrow key navigation within payout tablist
+  const payoutTablist = document.querySelector('.payout-tabs[role="tablist"]');
+  if (payoutTablist) {
+    payoutTablist.addEventListener('keydown', function(e) {
+      const idx = payoutTabArr.indexOf(document.activeElement);
+      if (idx === -1) return;
+      let newIdx = idx;
+      if (e.key === 'ArrowRight') {
+        newIdx = (idx + 1) % payoutTabArr.length;
+      } else if (e.key === 'ArrowLeft') {
+        newIdx = (idx - 1 + payoutTabArr.length) % payoutTabArr.length;
+      } else if (e.key === 'Home') {
+        newIdx = 0;
+      } else if (e.key === 'End') {
+        newIdx = payoutTabArr.length - 1;
+      } else {
+        return;
+      }
+      e.preventDefault();
+      activatePayoutTab(payoutTabArr[newIdx].dataset.tab, true);
+    });
+  }
 
   // PayPal Link
   const paypalLinkBtn = document.getElementById('paypal-link-btn');

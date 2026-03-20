@@ -162,24 +162,24 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   </div>
   
   <!-- Mobile Tab Navigation -->
-  <nav class="mobile-tabs" id="mobileTabs" aria-label="Live stream tabs">
-    <button class="mobile-tab active" data-tab="player">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M8 5v14l11-7z"/></svg>
+  <nav class="mobile-tabs" id="mobileTabs" role="tablist" aria-label="Live stream tabs">
+    <button class="mobile-tab active" data-tab="player" role="tab" aria-selected="true" aria-controls="tabpanel-player" id="tab-player">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
       <span>Player</span>
     </button>
-    <button class="mobile-tab" data-tab="chat">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>
+    <button class="mobile-tab" data-tab="chat" role="tab" aria-selected="false" aria-controls="tabpanel-chat" id="tab-chat" tabindex="-1">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/></svg>
       <span>Chat</span>
     </button>
-    <button class="mobile-tab" data-tab="schedule">
-      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
+    <button class="mobile-tab" data-tab="schedule" role="tab" aria-selected="false" aria-controls="tabpanel-schedule" id="tab-schedule" tabindex="-1">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>
       <span>Schedule</span>
     </button>
   </nav>
   
   <div class="live-main">
     <div class="live-layout">
-      <aside class="schedule-column">
+      <aside class="schedule-column" id="tabpanel-schedule" role="tabpanel" aria-labelledby="tab-schedule" tabindex="-1">
         <div class="schedule-header">
           <h1>LIVE <span class="red">STREAM</span></h1>
           <p>Watch live DJ sets</p>
@@ -234,7 +234,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         </div>
       </aside>
       
-      <div class="player-column">
+      <div class="player-column" id="tabpanel-player" role="tabpanel" aria-labelledby="tab-player" tabindex="0">
         <div class="stream-info-bar" id="streamInfoBar">
           <div class="stream-info-left">
             <a href="/account/dj-lobby/" id="djLobbyBtn" class="dj-lobby-btn" title="Open DJ Lobby">
@@ -499,7 +499,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         </div>
       </div>
       
-      <aside class="chat-column">
+      <aside class="chat-column" id="tabpanel-chat" role="tabpanel" aria-labelledby="tab-chat" tabindex="-1">
         <LiveChat />
       </aside>
 

@@ -58,26 +58,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="payout-method-indicator" id="payout-method-indicator"></div>
 
           <!-- Payout Method Tabs -->
-          <div class="payout-tabs">
-            <button class="payout-tab active" data-tab="stripe">
+          <div class="payout-tabs" role="tablist" aria-label="Payout methods">
+            <button class="payout-tab active" data-tab="stripe" role="tab" aria-selected="true" aria-controls="stripe-tab" id="tab-stripe">
               <span>💳</span> Stripe
               <span class="tab-check" id="stripe-check" style="display:none">✓</span>
             </button>
-            <button class="payout-tab" data-tab="paypal">
+            <button class="payout-tab" data-tab="paypal" role="tab" aria-selected="false" aria-controls="paypal-tab" id="tab-paypal" tabindex="-1">
               <span>🅿️</span> PayPal
               <span class="tab-check" id="paypal-check" style="display:none">✓</span>
             </button>
           </div>
 
           <!-- Stripe Tab -->
-          <div class="payout-tab-content active" id="stripe-tab">
+          <div class="payout-tab-content active" id="stripe-tab" role="tabpanel" aria-labelledby="tab-stripe" tabindex="0">
             <div id="connect-status" class="connect-status">
               <div class="status-loading">Checking payment status...</div>
             </div>
           </div>
 
           <!-- PayPal Tab -->
-          <div class="payout-tab-content" id="paypal-tab">
+          <div class="payout-tab-content" id="paypal-tab" role="tabpanel" aria-labelledby="tab-paypal" tabindex="-1">
             <div id="paypal-status" class="connect-status">
               <div class="status-loading">Checking PayPal status...</div>
             </div>
@@ -304,14 +304,56 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }
 
   // Tab switching
-  document.querySelectorAll('.payout-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.payout-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.payout-tab-content').forEach(c => c.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById(`${tab.dataset.tab}-tab`)?.classList.add('active');
+  var payoutTabs = Array.from(document.querySelectorAll('.payout-tab'));
+  var payoutPanels = document.querySelectorAll('.payout-tab-content');
+
+  function activatePayoutTab(tabName, moveFocus) {
+    payoutTabs.forEach(function(t) {
+      var isActive = t.dataset.tab === tabName;
+      t.classList.toggle('active', isActive);
+      t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      t.setAttribute('tabindex', isActive ? '0' : '-1');
+      if (moveFocus && isActive) t.focus();
+    });
+    payoutPanels.forEach(function(c) {
+      c.classList.remove('active');
+      c.setAttribute('tabindex', '-1');
+    });
+    var activePanel = document.getElementById(tabName + '-tab');
+    if (activePanel) {
+      activePanel.classList.add('active');
+      activePanel.setAttribute('tabindex', '0');
+    }
+  }
+
+  payoutTabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      activatePayoutTab(tab.dataset.tab, false);
     });
   });
+
+  // Arrow key navigation within payout tablist
+  var payoutTablist = document.querySelector('.payout-tabs[role="tablist"]');
+  if (payoutTablist) {
+    payoutTablist.addEventListener('keydown', function(e) {
+      var idx = payoutTabs.indexOf(document.activeElement);
+      if (idx === -1) return;
+      var newIdx = idx;
+      if (e.key === 'ArrowRight') {
+        newIdx = (idx + 1) % payoutTabs.length;
+      } else if (e.key === 'ArrowLeft') {
+        newIdx = (idx - 1 + payoutTabs.length) % payoutTabs.length;
+      } else if (e.key === 'Home') {
+        newIdx = 0;
+      } else if (e.key === 'End') {
+        newIdx = payoutTabs.length - 1;
+      } else {
+        return;
+      }
+      e.preventDefault();
+      activatePayoutTab(payoutTabs[newIdx].dataset.tab, true);
+    });
+  }
 
   function updateConnectStatus(data) {
     const statusEl = document.getElementById('connect-status');

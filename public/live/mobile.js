@@ -11,18 +11,33 @@ export function initMobile() {
 
 function setupMobileTabs() {
   var mobileTabs = document.querySelectorAll('.mobile-tab');
+  var mobileTabArr = Array.prototype.slice.call(mobileTabs);
   var scheduleColumn = document.querySelector('.schedule-column');
   var playerColumn = document.querySelector('.player-column');
   var chatColumn = document.querySelector('.chat-column');
+  var tabNames = ['player', 'chat', 'schedule'];
 
-  function switchMobileTab(tabName) {
+  function switchMobileTab(tabName, moveFocus) {
     mobileTabs.forEach(function(tab) {
-      tab.classList.toggle('active', tab.dataset.tab === tabName);
+      var isActive = tab.dataset.tab === tabName;
+      tab.classList.toggle('active', isActive);
+      tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      tab.setAttribute('tabindex', isActive ? '0' : '-1');
+      if (moveFocus && isActive) tab.focus();
     });
 
-    if (scheduleColumn) scheduleColumn.classList.toggle('mobile-active', tabName === 'schedule');
-    if (playerColumn) playerColumn.classList.toggle('mobile-active', tabName === 'player');
-    if (chatColumn) chatColumn.classList.toggle('mobile-active', tabName === 'chat');
+    if (scheduleColumn) {
+      scheduleColumn.classList.toggle('mobile-active', tabName === 'schedule');
+      scheduleColumn.setAttribute('tabindex', tabName === 'schedule' ? '0' : '-1');
+    }
+    if (playerColumn) {
+      playerColumn.classList.toggle('mobile-active', tabName === 'player');
+      playerColumn.setAttribute('tabindex', tabName === 'player' ? '0' : '-1');
+    }
+    if (chatColumn) {
+      chatColumn.classList.toggle('mobile-active', tabName === 'chat');
+      chatColumn.setAttribute('tabindex', tabName === 'chat' ? '0' : '-1');
+    }
 
     if (tabName === 'chat') {
       var chatBadge = document.querySelector('.mobile-tab[data-tab="chat"] .tab-badge');
@@ -34,9 +49,32 @@ function setupMobileTabs() {
 
   mobileTabs.forEach(function(tab) {
     tab.addEventListener('click', function() {
-      switchMobileTab(tab.dataset.tab);
+      switchMobileTab(tab.dataset.tab, false);
     });
   });
+
+  // Arrow key navigation within tablist
+  var tablist = document.getElementById('mobileTabs');
+  if (tablist) {
+    tablist.addEventListener('keydown', function(e) {
+      var idx = mobileTabArr.indexOf(document.activeElement);
+      if (idx === -1) return;
+      var newIdx = idx;
+      if (e.key === 'ArrowRight') {
+        newIdx = (idx + 1) % mobileTabArr.length;
+      } else if (e.key === 'ArrowLeft') {
+        newIdx = (idx - 1 + mobileTabArr.length) % mobileTabArr.length;
+      } else if (e.key === 'Home') {
+        newIdx = 0;
+      } else if (e.key === 'End') {
+        newIdx = mobileTabArr.length - 1;
+      } else {
+        return;
+      }
+      e.preventDefault();
+      switchMobileTab(mobileTabArr[newIdx].dataset.tab, true);
+    });
+  }
 
   // Set initial state — player active by default on mobile
   if (window.innerWidth <= 900 && playerColumn) {

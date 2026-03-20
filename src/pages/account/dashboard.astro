@@ -61,22 +61,22 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       </div>
 
       <!-- Tab Navigation -->
-      <div class="tab-nav">
-        <button class="tab-btn active" data-tab="overview">Overview</button>
-        <button class="tab-btn" data-tab="orders">Orders <span class="badge" id="ordersBadge" style="display: none;">0</span></button>
-        <button class="tab-btn" data-tab="downloads">Downloads</button>
-        <button class="tab-btn" data-tab="credit">Credit <span class="credit-badge" id="creditBadge" style="display: none;">£0</span></button>
-        <button class="tab-btn" data-tab="wishlist">Wishlist <span class="badge" id="wishlistBadge" style="display: none;">0</span></button>
-        <button class="tab-btn" data-tab="following">Following <span class="badge" id="followingBadge" style="display: none;">0</span></button>
-        <button class="tab-btn" data-tab="mixes">DJ Mixes</button>
-        <button class="tab-btn" data-tab="profile">Profile</button>
+      <div class="tab-nav" role="tablist" aria-label="Dashboard sections">
+        <button class="tab-btn active" data-tab="overview" role="tab" aria-selected="true" aria-controls="panel-overview" id="tab-overview">Overview</button>
+        <button class="tab-btn" data-tab="orders" role="tab" aria-selected="false" aria-controls="panel-orders" id="tab-orders" tabindex="-1">Orders <span class="badge" id="ordersBadge" style="display: none;">0</span></button>
+        <button class="tab-btn" data-tab="downloads" role="tab" aria-selected="false" aria-controls="panel-downloads" id="tab-downloads" tabindex="-1">Downloads</button>
+        <button class="tab-btn" data-tab="credit" role="tab" aria-selected="false" aria-controls="panel-credit" id="tab-credit" tabindex="-1">Credit <span class="credit-badge" id="creditBadge" style="display: none;">£0</span></button>
+        <button class="tab-btn" data-tab="wishlist" role="tab" aria-selected="false" aria-controls="panel-wishlist" id="tab-wishlist" tabindex="-1">Wishlist <span class="badge" id="wishlistBadge" style="display: none;">0</span></button>
+        <button class="tab-btn" data-tab="following" role="tab" aria-selected="false" aria-controls="panel-following" id="tab-following" tabindex="-1">Following <span class="badge" id="followingBadge" style="display: none;">0</span></button>
+        <button class="tab-btn" data-tab="mixes" role="tab" aria-selected="false" aria-controls="panel-mixes" id="tab-mixes" tabindex="-1">DJ Mixes</button>
+        <button class="tab-btn" data-tab="profile" role="tab" aria-selected="false" aria-controls="panel-profile" id="tab-profile" tabindex="-1">Profile</button>
       </div>
 
       <!-- Tab Content -->
       <div class="tab-panels">
         
         <!-- Overview Tab -->
-        <div class="tab-panel active" id="panel-overview">
+        <div class="tab-panel active" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" tabindex="0">
           <div class="stats-grid-full">
             <div class="stat-card">
               <div class="stat-value" id="statOrders">0</div>
@@ -164,7 +164,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
 
         <!-- Orders Tab -->
-        <div class="tab-panel" id="panel-orders">
+        <div class="tab-panel" id="panel-orders" role="tabpanel" aria-labelledby="tab-orders" tabindex="-1">
           <h2>My Orders</h2>
           <div id="ordersContainer" class="orders-list">
             <div class="empty-state">
@@ -174,7 +174,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
 
         <!-- Downloads Tab -->
-        <div class="tab-panel" id="panel-downloads">
+        <div class="tab-panel" id="panel-downloads" role="tabpanel" aria-labelledby="tab-downloads" tabindex="-1">
           <h2>My Downloads</h2>
           <div id="downloadsContainer" class="downloads-list">
             <div class="empty-state">
@@ -184,7 +184,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
 
         <!-- Credit Tab -->
-        <div class="tab-panel" id="panel-credit">
+        <div class="tab-panel" id="panel-credit" role="tabpanel" aria-labelledby="tab-credit" tabindex="-1">
           <h2>Store Credit</h2>
           
           <!-- Balance Display -->
@@ -244,7 +244,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
 
         <!-- Wishlist Tab -->
-        <div class="tab-panel" id="panel-wishlist">
+        <div class="tab-panel" id="panel-wishlist" role="tabpanel" aria-labelledby="tab-wishlist" tabindex="-1">
           <div class="section-header-flex">
             <h2>My Wishlist</h2>
             <a href="/releases/" class="btn-secondary-sm">Browse Releases →</a>
@@ -261,7 +261,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
 
         <!-- Following Tab -->
-        <div class="tab-panel" id="panel-following">
+        <div class="tab-panel" id="panel-following" role="tabpanel" aria-labelledby="tab-following" tabindex="-1">
           <div class="section-header-flex">
             <h2>Artists I Follow</h2>
             <a href="/releases/" class="btn-secondary-sm">Discover Artists →</a>
@@ -278,7 +278,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
 
         <!-- DJ Mixes Tab -->
-        <div class="tab-panel" id="panel-mixes">
+        <div class="tab-panel" id="panel-mixes" role="tabpanel" aria-labelledby="tab-mixes" tabindex="-1">
           <div class="section-header-flex">
             <h2>My DJ Mixes</h2>
             <a href="/upload-mix/" class="btn-primary-sm">+ Upload Mix</a>
@@ -292,7 +292,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
 
         <!-- Profile Tab -->
-        <div class="tab-panel" id="panel-profile">
+        <div class="tab-panel" id="panel-profile" role="tabpanel" aria-labelledby="tab-profile" tabindex="-1">
           <h2>My Profile</h2>
           
           <!-- Avatar Upload Section -->
@@ -1252,38 +1252,82 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   // Tab switching
   function initTabs() {
-    const tabBtns = document.querySelectorAll('.tab-btn, .view-all-btn');
-    const tabPanels = document.querySelectorAll('.tab-panel');
-    
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tabId = btn.dataset.tab;
-        if (!tabId) return;
-        
-        // Update buttons
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector(`.tab-btn[data-tab="${tabId}"]`)?.classList.add('active');
-        
-        // Update panels
-        tabPanels.forEach(p => p.classList.remove('active'));
-        document.getElementById('panel-' + tabId)?.classList.add('active');
-        
-        // Load mixes on demand when mixes tab is clicked
-        if (tabId === 'mixes' && currentUser) {
-          mixesModule.fetchMixes(currentUser.uid);
-        }
-        
-        // Load wishlist on demand when wishlist tab is clicked
-        if (tabId === 'wishlist' && currentUser) {
-          socialModule.loadWishlist(currentUser.uid);
-        }
-        
-        // Load following on demand when following tab is clicked
-        if (tabId === 'following' && currentUser) {
-          socialModule.loadFollowing(currentUser.uid);
-        }
+    var tabBtns = document.querySelectorAll('.tab-btn, .view-all-btn');
+    var tabPanels = document.querySelectorAll('.tab-panel');
+    var tabListBtns = Array.from(document.querySelectorAll('.tab-nav[role="tablist"] .tab-btn'));
+
+    function activateTab(tabId, moveFocus) {
+      if (!tabId) return;
+
+      // Update buttons — ARIA selected + active class
+      document.querySelectorAll('.tab-btn').forEach(function(b) {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+        b.setAttribute('tabindex', '-1');
+      });
+      var activeBtn = document.querySelector('.tab-btn[data-tab="' + tabId + '"]');
+      if (activeBtn) {
+        activeBtn.classList.add('active');
+        activeBtn.setAttribute('aria-selected', 'true');
+        activeBtn.removeAttribute('tabindex');
+        if (moveFocus) activeBtn.focus();
+      }
+
+      // Update panels — active class + tabindex
+      tabPanels.forEach(function(p) {
+        p.classList.remove('active');
+        p.setAttribute('tabindex', '-1');
+      });
+      var activePanel = document.getElementById('panel-' + tabId);
+      if (activePanel) {
+        activePanel.classList.add('active');
+        activePanel.setAttribute('tabindex', '0');
+      }
+
+      // Load mixes on demand when mixes tab is clicked
+      if (tabId === 'mixes' && currentUser) {
+        mixesModule.fetchMixes(currentUser.uid);
+      }
+
+      // Load wishlist on demand when wishlist tab is clicked
+      if (tabId === 'wishlist' && currentUser) {
+        socialModule.loadWishlist(currentUser.uid);
+      }
+
+      // Load following on demand when following tab is clicked
+      if (tabId === 'following' && currentUser) {
+        socialModule.loadFollowing(currentUser.uid);
+      }
+    }
+
+    tabBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        activateTab(btn.dataset.tab, false);
       });
     });
+
+    // Arrow key navigation within tablist
+    var tabNav = document.querySelector('.tab-nav[role="tablist"]');
+    if (tabNav) {
+      tabNav.addEventListener('keydown', function(e) {
+        var idx = tabListBtns.indexOf(document.activeElement);
+        if (idx === -1) return;
+        var newIdx = idx;
+        if (e.key === 'ArrowRight') {
+          newIdx = (idx + 1) % tabListBtns.length;
+        } else if (e.key === 'ArrowLeft') {
+          newIdx = (idx - 1 + tabListBtns.length) % tabListBtns.length;
+        } else if (e.key === 'Home') {
+          newIdx = 0;
+        } else if (e.key === 'End') {
+          newIdx = tabListBtns.length - 1;
+        } else {
+          return;
+        }
+        e.preventDefault();
+        activateTab(tabListBtns[newIdx].dataset.tab, true);
+      });
+    }
   }
 
   function initLogout() {

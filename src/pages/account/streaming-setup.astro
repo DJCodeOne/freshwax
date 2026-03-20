@@ -105,14 +105,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       </div>
       
       <!-- Instructions Tabs -->
-      <div class="instructions-tabs">
-        <button class="tab-btn active" data-tab="obs">OBS Studio</button>
-        <button class="tab-btn butt-tab" data-tab="butt">BUTT</button>
-        <button class="tab-btn pro-tab" data-tab="pro">Pro Multi-Stream</button>
+      <div class="instructions-tabs" role="tablist" aria-label="Streaming software instructions">
+        <button class="tab-btn active" data-tab="obs" role="tab" aria-selected="true" aria-controls="obsContent" id="tab-obs">OBS Studio</button>
+        <button class="tab-btn butt-tab" data-tab="butt" role="tab" aria-selected="false" aria-controls="buttContent" id="tab-butt" tabindex="-1">BUTT</button>
+        <button class="tab-btn pro-tab" data-tab="pro" role="tab" aria-selected="false" aria-controls="proContent" id="tab-pro" tabindex="-1">Pro Multi-Stream</button>
       </div>
       
       <!-- OBS Instructions -->
-      <div id="obsContent" class="instructions-panel">
+      <div id="obsContent" class="instructions-panel" role="tabpanel" aria-labelledby="tab-obs" tabindex="0">
         <div class="panel-header">
           <img src="https://obsproject.com/assets/images/new_icon_small-r.png" alt="OBS" class="software-icon" width="48" height="48" loading="lazy" decoding="async" data-fallback="hide" />
           <div>
@@ -211,7 +211,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       </div>
       
       <!-- BUTT Instructions -->
-      <div id="buttContent" class="instructions-panel hidden">
+      <div id="buttContent" class="instructions-panel hidden" role="tabpanel" aria-labelledby="tab-butt" tabindex="-1">
         <div class="panel-header">
           <div class="butt-icon">🎵</div>
           <div>
@@ -307,7 +307,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       </div>
 
       <!-- Pro Multi-Stream Panel -->
-      <div id="proContent" class="instructions-panel hidden">
+      <div id="proContent" class="instructions-panel hidden" role="tabpanel" aria-labelledby="tab-pro" tabindex="-1">
         <div class="panel-header">
           <div class="pro-icon-wrap">
             <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32" class="pro-icon">
@@ -1413,27 +1413,59 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const urlParams = new URLSearchParams(window.location.search);
     const initialTab = urlParams.get('tab');
 
+    var tabBtns = Array.from(document.querySelectorAll('.instructions-tabs[role="tablist"] .tab-btn'));
+    var panelIds = { obs: 'obsContent', butt: 'buttContent', pro: 'proContent' };
+
+    function activateStreamTab(tabId, moveFocus) {
+      tabBtns.forEach(function(b) {
+        var isActive = b.dataset.tab === tabId;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        b.setAttribute('tabindex', isActive ? '0' : '-1');
+        if (moveFocus && isActive) b.focus();
+      });
+      ['obs', 'butt', 'pro'].forEach(function(key) {
+        var panel = document.getElementById(panelIds[key]);
+        if (panel) {
+          panel.classList.toggle('hidden', key !== tabId);
+          panel.setAttribute('tabindex', key === tabId ? '0' : '-1');
+        }
+      });
+    }
+
     if (initialTab && ['obs', 'butt', 'pro'].includes(initialTab)) {
-      // Switch to the specified tab
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelector(`.tab-btn[data-tab="${initialTab}"]`)?.classList.add('active');
-      document.getElementById('obsContent').classList.toggle('hidden', initialTab !== 'obs');
-      document.getElementById('buttContent').classList.toggle('hidden', initialTab !== 'butt');
-      document.getElementById('proContent').classList.toggle('hidden', initialTab !== 'pro');
+      activateStreamTab(initialTab, false);
     }
 
     // Tab switching
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        const tab = btn.dataset.tab;
-        document.getElementById('obsContent').classList.toggle('hidden', tab !== 'obs');
-        document.getElementById('buttContent').classList.toggle('hidden', tab !== 'butt');
-        document.getElementById('proContent').classList.toggle('hidden', tab !== 'pro');
+    tabBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        activateStreamTab(btn.dataset.tab, false);
       });
     });
+
+    // Arrow key navigation within tablist
+    var tablist = document.querySelector('.instructions-tabs[role="tablist"]');
+    if (tablist) {
+      tablist.addEventListener('keydown', function(e) {
+        var idx = tabBtns.indexOf(document.activeElement);
+        if (idx === -1) return;
+        var newIdx = idx;
+        if (e.key === 'ArrowRight') {
+          newIdx = (idx + 1) % tabBtns.length;
+        } else if (e.key === 'ArrowLeft') {
+          newIdx = (idx - 1 + tabBtns.length) % tabBtns.length;
+        } else if (e.key === 'Home') {
+          newIdx = 0;
+        } else if (e.key === 'End') {
+          newIdx = tabBtns.length - 1;
+        } else {
+          return;
+        }
+        e.preventDefault();
+        activateStreamTab(tabBtns[newIdx].dataset.tab, true);
+      });
+    }
 
     // Copy buttons
     document.querySelectorAll('.copy-small-btn').forEach(btn => {
