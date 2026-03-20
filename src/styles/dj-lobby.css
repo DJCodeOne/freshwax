@@ -5032,17 +5032,6 @@
     box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
   }
 
-  @keyframes goLiveGlow {
-    0%, 100% {
-      box-shadow: 0 0 15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.2);
-      transform: scale(1);
-    }
-    50% {
-      box-shadow: 0 0 25px rgba(16, 185, 129, 0.7), 0 0 50px rgba(16, 185, 129, 0.4), 0 0 80px rgba(16, 185, 129, 0.2);
-      transform: scale(1.02);
-    }
-  }
-
   .go-live-btn.glow:hover {
     animation: none;
     box-shadow: 0 0 35px rgba(16, 185, 129, 0.8), 0 0 70px rgba(16, 185, 129, 0.5);
@@ -5333,11 +5322,6 @@
     font-weight: 700;
     font-size: 0.9rem;
     animation: pulse-badge 1s infinite;
-  }
-  
-  @keyframes pulse-badge {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.02); }
   }
   
   .live-stats {
@@ -9426,12 +9410,6 @@
     box-shadow: 0 0 8px rgba(220, 38, 38, 0.8);
   }
 
-  @keyframes livePulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.9); }
-  }
-
-
   .butt-corner-bl {
     position: absolute;
     bottom: 6px;
@@ -9812,11 +9790,6 @@
 .init-check-item.checking .init-check-indicator {
   background: #f97316;
   animation: blink 0.5s ease infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
 }
 
 .init-check-item.connected .init-check-indicator {

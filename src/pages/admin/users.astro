@@ -99,7 +99,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="modal modal-lg">
         <div class="modal-header">
           <h2>Edit User</h2>
-          <button class="modal-close" data-close-modal="editModal">×</button>
+          <button class="modal-close" data-close-modal="editModal" aria-label="Close modal">×</button>
         </div>
         <div class="modal-body">
           <form id="editForm">
@@ -298,7 +298,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="modal">
         <div class="modal-header">
           <h2>Approve User</h2>
-          <button class="modal-close" data-close-modal="approveModal">×</button>
+          <button class="modal-close" data-close-modal="approveModal" aria-label="Close modal">×</button>
         </div>
         <div class="modal-body">
           <p>Are you sure you want to approve <strong id="approveUserName"></strong>?</p>
@@ -316,7 +316,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="modal">
         <div class="modal-header">
           <h2>Suspend User</h2>
-          <button class="modal-close" data-close-modal="deleteModal">×</button>
+          <button class="modal-close" data-close-modal="deleteModal" aria-label="Close modal">×</button>
         </div>
         <div class="modal-body">
           <p>Suspend <strong id="deleteUserName"></strong>?</p>

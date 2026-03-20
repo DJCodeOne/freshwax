@@ -9,7 +9,7 @@ import { getLiveReleases } from '../lib/firebase-rest';
 
 // Fetch all live releases from Firebase (authoritative source)
 // KV-cached for 10 minutes so Firebase is only hit infrequently
-let allReleases: any[] = [];
+let allReleases: Record<string, unknown>[] = [];
 try {
   allReleases = await getLiveReleases();
 } catch (e: unknown) {
@@ -17,7 +17,7 @@ try {
 }
 
 // Group releases by label locally
-const releasesByLabel: Record<string, any[]> = {};
+const releasesByLabel: Record<string, Record<string, unknown>[]> = {};
 for (const release of allReleases) {
   const label = release.labelName || release.recordLabel || release.copyrightHolder || 'Unknown Label';
   if (!releasesByLabel[label]) {

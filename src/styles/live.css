@@ -6097,11 +6097,6 @@
     animation: pulse-badge 1s infinite;
   }
   
-  @keyframes pulse-badge {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.03); }
-  }
-  
   .incoming-takeover-dj {
     display: flex;
     align-items: center;

@@ -11,7 +11,7 @@ import { getLiveReleases } from '../lib/firebase-rest';
 
 // Get the 10 most recent published releases from Firebase (authoritative source)
 // KV-cached for 30 minutes so Firebase is only hit infrequently
-let featuredReleases: any[] = [];
+let featuredReleases: Record<string, unknown>[] = [];
 try {
   featuredReleases = await getLiveReleases(10);
 } catch (e: unknown) {

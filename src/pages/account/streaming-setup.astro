@@ -52,7 +52,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       <div id="speedResultsCard" class="speed-results-card hidden">
         <div class="results-header">
           <h3>📊 Speed Test Results</h3>
-          <button id="closeResultsBtn" class="close-results-btn">✕</button>
+          <button id="closeResultsBtn" class="close-results-btn" aria-label="Close results">✕</button>
         </div>
         <div class="speed-results-grid">
           <div class="speed-result-box download">
@@ -149,7 +149,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <div class="setting-row">
                   <span class="setting-label">Server:</span>
                   <code class="setting-code">rtmp://rtmp.freshwax.co.uk/live</code>
-                  <button class="copy-small-btn" data-copy="rtmp://rtmp.freshwax.co.uk/live">Copy</button>
+                  <button class="copy-small-btn" data-copy="rtmp://rtmp.freshwax.co.uk/live" aria-label="Copy to clipboard">Copy</button>
                 </div>
                 <div class="setting-row">
                   <span class="setting-label">Stream Key:</span>
@@ -252,7 +252,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <div class="setting-row">
                   <span class="setting-label">Address:</span>
                   <code class="setting-code">stream.freshwax.co.uk</code>
-                  <button class="copy-small-btn" data-copy="stream.freshwax.co.uk">Copy</button>
+                  <button class="copy-small-btn" data-copy="stream.freshwax.co.uk" aria-label="Copy to clipboard">Copy</button>
                 </div>
                 <div class="setting-row">
                   <span class="setting-label">Port:</span>
@@ -360,7 +360,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <label for="relayUrl">Relay Source URL</label>
                 <div class="input-with-btn">
                   <input type="text" id="relayUrl" placeholder="HLS or stream URL to relay" autocomplete="off" />
-                  <button type="button" class="select-btn" id="openRelayModal" title="Select from radio stations">
+                  <button type="button" class="select-btn" id="openRelayModal" title="Select from radio stations" aria-label="Select source">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
                       <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z"/>
                     </svg>
@@ -383,7 +383,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
             <div class="output-url-box">
               <code id="outputUrl">https://rtmp.freshwax.co.uk/live/freshwax-main/index.m3u8</code>
-              <button class="copy-btn" id="copyOutputUrl">Copy URL</button>
+              <button class="copy-btn" id="copyOutputUrl" aria-label="Copy URL">Copy URL</button>
             </div>
           </div>
         </div>
@@ -394,7 +394,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <div class="modal-content">
           <div class="modal-header">
             <h3>Select Radio Station</h3>
-            <button class="modal-close-btn" id="closeRelayModal">&times;</button>
+            <button class="modal-close-btn" id="closeRelayModal" aria-label="Close modal">&times;</button>
           </div>
           <div class="modal-body">
             <p class="modal-hint">Select a station you're currently streaming on to relay through Fresh Wax</p>

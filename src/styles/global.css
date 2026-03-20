@@ -487,6 +487,11 @@ h1, h2, h3, h4, h5, h6 {
   50% { transform: scaleY(0.4); }
 }
 
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
 @keyframes kittScanner {
   0% { left: -100%; opacity: 0; }
   5% { opacity: 1; }
