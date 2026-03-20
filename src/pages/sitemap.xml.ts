@@ -28,7 +28,6 @@ const staticPages = [
 
   // Medium priority - informational/conversion (fixed lastmod dates)
   { url: '/giftcards/', priority: '0.7', changefreq: 'monthly', lastmod: 'dynamic:today' },
-  { url: '/upload-mix/', priority: '0.6', changefreq: 'monthly', lastmod: 'dynamic:today' },
   { url: '/newsletter/', priority: '0.6', changefreq: 'monthly', lastmod: 'dynamic:today' },
   { url: '/about/', priority: '0.6', changefreq: 'monthly', lastmod: 'dynamic:today' },
   { url: '/contact/', priority: '0.6', changefreq: 'monthly', lastmod: 'dynamic:today' },

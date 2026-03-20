@@ -44,13 +44,18 @@ const RETENTION_DAYS = 30;
  * to avoid Worker memory limits on large tables.
  */
 async function fetchAllRows(db: D1Database, table: string): Promise<Record<string, unknown>[]> {
+  // Validate table name against whitelist to prevent SQL injection
+  if (!BACKUP_TABLES.includes(table)) {
+    throw new Error(`Table "${table}" is not in the BACKUP_TABLES whitelist`);
+  }
+
   const allRows: Record<string, unknown>[] = [];
   let offset = 0;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const { results: rows } = await db
-      .prepare(`SELECT * FROM ${table} LIMIT ${PAGE_SIZE} OFFSET ?`)
+      .prepare(`SELECT * FROM \`${table}\` LIMIT ${PAGE_SIZE} OFFSET ?`)
       .bind(offset)
       .all();
 

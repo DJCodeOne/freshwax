@@ -139,7 +139,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!stripeResponse.ok) {
       const errorData = await stripeResponse.json();
       log.error('[GiftCard Stripe] Create session error:', errorData);
-      return ApiErrors.serverError(errorData.error?.message || 'Failed to create checkout session');
+      return ApiErrors.serverError('Failed to create checkout session');
     }
 
     const session = await stripeResponse.json();

@@ -26,7 +26,6 @@ import { timingSafeCompare } from './api-utils';
 const CSRF_SKIP = new Set([
   '/api/stripe/webhook/',
   '/api/stripe/connect/webhook/',
-  '/api/paypal/webhook/',
   '/api/livestream/red5-webhook/',
   '/api/icecast-auth/',
   '/api/cron/cleanup-reservations/',

@@ -164,10 +164,17 @@ export class R2FirebaseSync {
       log.info(`💿 Queued ${trackFiles.length} track files`);
     }
 
-    // Wait for all uploads
-    await Promise.all(uploads);
-    log.info(`✅ All files uploaded to R2`);
-    
+    // Wait for all uploads — use allSettled so partial failure doesn't lose all
+    const uploadResults = await Promise.allSettled(uploads);
+    const failed = uploadResults.filter(r => r.status === 'rejected');
+    if (failed.length > 0) {
+      for (const f of failed) {
+        log.error('Upload failed:', (f as PromiseRejectedResult).reason);
+      }
+      log.warn(`⚠️ ${failed.length}/${uploadResults.length} uploads failed`);
+    }
+    log.info(`✅ ${uploadResults.length - failed.length}/${uploadResults.length} files uploaded to R2`);
+
     return { coverFilename };
   }
 

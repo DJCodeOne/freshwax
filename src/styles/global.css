@@ -95,7 +95,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .badge-date {
-  @apply text-xs text-gray-500;
+  @apply text-xs text-gray-300;
 }
 
 /* Track Previews */
@@ -132,7 +132,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .track-preview-title {
-  @apply text-sm text-gray-500 flex-1;
+  @apply text-sm text-gray-300 flex-1;
 }
 
 /* Extra Notes */
@@ -449,6 +449,11 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
 }
 
 @keyframes fadeIn {

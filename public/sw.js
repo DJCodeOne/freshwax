@@ -183,13 +183,6 @@ async function trimCache(cacheName, maxItems) {
   }
 }
 
-// --- Background sync (placeholder for future offline actions) ---
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-playlist') {
-    // Future: sync playlist changes made while offline
-  }
-});
-
 // --- Push notifications ---
 self.addEventListener('push', (event) => {
   if (!event.data) return;

@@ -145,18 +145,31 @@ interface CloudflareEnv {
   FIREBASE_SERVICE_ACCOUNT: string;
   FIREBASE_SERVICE_ACCOUNT_KEY: string;
 
+  // ---- Firebase (client-side, PUBLIC_) ----
+  PUBLIC_FIREBASE_PROJECT_ID: string;
+  PUBLIC_FIREBASE_API_KEY: string;
+  PUBLIC_FIREBASE_AUTH_DOMAIN: string;
+  PUBLIC_FIREBASE_STORAGE_BUCKET: string;
+  PUBLIC_FIREBASE_MESSAGING_SENDER_ID: string;
+  PUBLIC_FIREBASE_APP_ID: string;
+
   // ---- R2 API credentials (S3-compatible) ----
   R2_ACCOUNT_ID: string;
   R2_ACCESS_KEY_ID: string;
   R2_SECRET_ACCESS_KEY: string;
   R2_PUBLIC_DOMAIN: string;
   R2_PUBLIC_URL: string;
+  R2_BUCKET: string;
   R2_BUCKET_NAME: string;
   R2_UPLOADS_BUCKET: string;
   R2_RELEASES_BUCKET: string;
 
+  // ---- Cloudflare ----
+  CLOUDFLARE_ACCOUNT_ID: string;
+
   // ---- Stripe ----
   STRIPE_SECRET_KEY: string;
+  STRIPE_PUBLISHABLE_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
   STRIPE_CONNECT_WEBHOOK_SECRET: string;
   STRIPE_PLUS_ANNUAL_PRICE_ID: string;
@@ -168,6 +181,7 @@ interface CloudflareEnv {
   PAYPAL_SECRET: string;
   PAYPAL_MODE: string;
   PAYPAL_SANDBOX: string;
+  PUBLIC_PAYPAL_CLIENT_ID: string;
 
   // ---- Pusher ----
   PUSHER_APP_ID: string;
@@ -184,6 +198,7 @@ interface CloudflareEnv {
 
   // ---- GIF / Media APIs ----
   PUBLIC_GIPHY_API_KEY: string;
+  PUBLIC_TENOR_API_KEY: string;
   YOUTUBE_API_KEY: string;
 
   // ---- reCAPTCHA ----
@@ -205,6 +220,15 @@ interface CloudflareEnv {
 
   // ---- Playlist Server ----
   PLAYLIST_ACCESS_TOKEN: string;
+
+  // ---- Audio Processing ----
+  AUDIO_PROCESSOR_URL: string;
+
+  // ---- Vinyl API ----
+  PUBLIC_VINYL_API_URL: string;
+
+  // ---- Google Analytics ----
+  PUBLIC_GA4_MEASUREMENT_ID: string;
 }
 
 // ---------------------------------------------------------------------------

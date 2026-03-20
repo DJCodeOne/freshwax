@@ -272,8 +272,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       })()
     : Promise.resolve({ name: 'D1 Database', status: 'error' as const, message: 'D1 binding not available', lastChecked: new Date().toISOString() });
 
-  // Run all health checks in parallel
-  const [firebase, r2, stripe, streaming, playlist, icecast, d1, livestream, stats] = await Promise.all([
+  // Run all health checks in parallel — use allSettled so one timeout doesn't kill all
+  const settled = await Promise.allSettled([
     checkFirebase(),
     checkR2(),
     checkStripe(),
@@ -284,6 +284,23 @@ export const GET: APIRoute = async ({ request, locals }) => {
     getLivestreamInfo(),
     getQuickStats()
   ]);
+
+  const fallbackService = (name: string): ServiceStatus => ({
+    name,
+    status: 'error' as const,
+    message: 'Health check timed out or threw',
+    lastChecked: new Date().toISOString()
+  });
+
+  const firebase = settled[0].status === 'fulfilled' ? settled[0].value : fallbackService('Firebase');
+  const r2 = settled[1].status === 'fulfilled' ? settled[1].value : fallbackService('R2 Storage');
+  const stripe = settled[2].status === 'fulfilled' ? settled[2].value : fallbackService('Stripe');
+  const streaming = settled[3].status === 'fulfilled' ? settled[3].value : fallbackService('Streaming');
+  const playlist = settled[4].status === 'fulfilled' ? settled[4].value : fallbackService('Playlist');
+  const icecast = settled[5].status === 'fulfilled' ? settled[5].value : fallbackService('Icecast');
+  const d1 = settled[6].status === 'fulfilled' ? settled[6].value : fallbackService('D1 Database');
+  const livestream = settled[7].status === 'fulfilled' ? settled[7].value : null;
+  const stats = settled[8].status === 'fulfilled' ? settled[8].value : null;
 
   const services = [firebase, r2, stripe, d1, streaming, playlist, icecast];
 

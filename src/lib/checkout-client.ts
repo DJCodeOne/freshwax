@@ -833,7 +833,8 @@ export function init() {
       paypalOption.style.background = '#f9fafb';
       stripeSection.style.display = 'block';
       paypalSection.style.display = 'none';
-      document.querySelector('input[name="paymentMethod"][value="stripe"]').checked = true;
+      const stripeRadio = document.querySelector<HTMLInputElement>('input[name="paymentMethod"][value="stripe"]');
+      if (stripeRadio) stripeRadio.checked = true;
     } else {
       paypalOption.style.borderColor = '#dc2626';
       paypalOption.style.background = '#fef2f2';
@@ -841,7 +842,8 @@ export function init() {
       stripeOption.style.background = '#f9fafb';
       stripeSection.style.display = 'none';
       paypalSection.style.display = 'block';
-      document.querySelector('input[name="paymentMethod"][value="paypal"]').checked = true;
+      const paypalRadio = document.querySelector<HTMLInputElement>('input[name="paymentMethod"][value="paypal"]');
+      if (paypalRadio) paypalRadio.checked = true;
 
       // Load PayPal SDK and render buttons
       loadPayPalSDK();

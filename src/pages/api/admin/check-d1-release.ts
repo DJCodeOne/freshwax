@@ -37,7 +37,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
         return ApiErrors.notFound('Release not found in D1');
       }
 
-      const data = JSON.parse(result.data);
+      let data: Record<string, unknown>;
+      try {
+        data = JSON.parse(result.data as string);
+      } catch {
+        return ApiErrors.serverError('Failed to parse release data');
+      }
       return jsonResponse({
         d1Row: {
           id: result.id,

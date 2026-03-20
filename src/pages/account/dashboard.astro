@@ -663,7 +663,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </ul>
               <div class="confirm-delete">
                 <label for="confirmDelete">Type <strong>delete</strong> to confirm:</label>
-                <input type="text" id="confirmDeleteInput" placeholder="delete" autocomplete="off">
+                <input type="text" id="confirmDeleteInput" placeholder="delete" autocomplete="off" aria-label="Type delete to confirm">
               </div>
             </div>
             <div class="modal-footer">
@@ -704,7 +704,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="goplus-promo-section">
             <label for="goPlusPromoCode" class="promo-label">Have a promo code?</label>
             <div class="promo-input-wrapper">
-              <input type="text" id="goPlusPromoCode" placeholder="Enter code" maxlength="20" autocomplete="off" />
+              <input type="text" id="goPlusPromoCode" placeholder="Enter code" maxlength="20" autocomplete="off" aria-label="Promo code" />
               <button type="button" id="goPlusApplyPromo" class="promo-apply-btn">Apply</button>
             </div>
             <p id="goPlusPromoMessage" class="promo-message"></p>

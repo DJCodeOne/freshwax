@@ -10,7 +10,12 @@ export const prerender = false;
 
 // Get service account token
 async function getToken(serviceAccountKey: string): Promise<string> {
-  const key = JSON.parse(serviceAccountKey);
+  let key: Record<string, unknown>;
+  try {
+    key = JSON.parse(serviceAccountKey);
+  } catch {
+    throw new Error('Invalid service account key format');
+  }
   const now = Math.floor(Date.now() / 1000);
 
   const header = { alg: 'RS256', typ: 'JWT' };

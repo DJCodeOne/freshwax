@@ -136,33 +136,40 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
       const batch = subscribers.slice(i, i + BATCH_SIZE);
 
-      await Promise.all(batch.map(async (subscriber) => {
+      const batchResults = await Promise.allSettled(batch.map(async (subscriber) => {
+        await resend.emails.send({
+          from: 'Fresh Wax <noreply@freshwax.co.uk>',
+          to: subscriber.email,
+          subject: subject,
+          html: generateNewsletterHTML(subject, content, subscriber.email)
+        });
+
+        // Update subscriber stats atomically
         try {
-          await resend.emails.send({
-            from: 'Fresh Wax <noreply@freshwax.co.uk>',
-            to: subscriber.email,
-            subject: subject,
-            html: generateNewsletterHTML(subject, content, subscriber.email)
+          await atomicIncrement('subscribers', subscriber.id, { emailsSent: 1 });
+          await updateDocument('subscribers', subscriber.id, {
+            lastEmailSentAt: new Date()
           });
-
-          // Update subscriber stats atomically
-          try {
-            await atomicIncrement('subscribers', subscriber.id, { emailsSent: 1 });
-            await updateDocument('subscribers', subscriber.id, {
-              lastEmailSentAt: new Date()
-            });
-          } catch (updateError: unknown) {
-            log.error(`Failed to update stats for ${subscriber.email}:`, updateError);
-            // Don't fail the send if stats update fails
-          }
-
-          results.sent++;
-        } catch (err: unknown) {
-          results.failed++;
-          results.errors.push(`${subscriber.email}: ${err instanceof Error ? err.message : String(err)}`);
-          log.error(`Failed to send to ${subscriber.email}:`, err);
+        } catch (updateError: unknown) {
+          log.error(`Failed to update stats for ${subscriber.email}:`, updateError);
+          // Don't fail the send if stats update fails
         }
+
+        return subscriber.email;
       }));
+
+      for (let j = 0; j < batchResults.length; j++) {
+        const result = batchResults[j];
+        if (result.status === 'fulfilled') {
+          results.sent++;
+        } else {
+          results.failed++;
+          const email = batch[j].email;
+          const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+          results.errors.push(`${email}: ${reason}`);
+          log.error(`Failed to send to ${email}:`, result.reason);
+        }
+      }
 
       // Delay between batches
       if (i + BATCH_SIZE < subscribers.length) {

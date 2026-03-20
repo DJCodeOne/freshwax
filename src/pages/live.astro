@@ -3447,7 +3447,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   }
   
   // Pause polling when tab is hidden, resume when visible
-  document.addEventListener('visibilitychange', () => {
+  function handleVisibilityChange() {
     if (document.hidden) {
       // Tab hidden - stop polling to save reads
       if (refreshInterval) {
@@ -3460,13 +3460,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       loadSchedule(true);
       startRefreshInterval();
     }
-  });
-  
+  }
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
   // Listen for schedule updates from booking modal
-  window.addEventListener('schedule-updated', () => {
+  function handleScheduleUpdated() {
     scheduleCache = null;
     loadSchedule(true);
-  });
+  }
+  window.addEventListener('schedule-updated', handleScheduleUpdated);
   
   // Initialize mobile tabs, mini player, keyboard shortcuts, touch gestures, playlist save
   initMobile();
@@ -3504,6 +3506,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       clearTimeout(playlistFallbackTimer);
       playlistFallbackTimer = null;
     }
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('schedule-updated', handleScheduleUpdated);
     stopListenerHeartbeat();
   }, { once: true });
 </script>

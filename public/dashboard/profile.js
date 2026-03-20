@@ -610,7 +610,7 @@ function initDownloadData() {
             '<strong>' + escapeHtml(item.title) + '</strong>' +
             '<span>' + escapeHtml(item.artist) + trackText + '</span>' +
             '<div class="option-badges">' +
-              item.formats.map(function(f) { return '<span class="option-badge audio">' + f + '</span>'; }).join(' ') +
+              item.formats.map(function(f) { return '<span class="option-badge audio">' + escapeHtml(f) + '</span>'; }).join(' ') +
               (item.hasArtwork ? ' <span class="option-badge artwork">Artwork</span>' : '') +
             '</div>' +
           '</div>' +

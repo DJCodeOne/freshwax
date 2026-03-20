@@ -21,7 +21,7 @@
         "largest-contentful-paint": ["warn", { "maxNumericValue": 3000, "aggregationMethod": "median-run" }],
         "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1, "aggregationMethod": "median-run" }],
         "interactive": ["warn", { "maxNumericValue": 3500, "aggregationMethod": "median-run" }],
-        "experimental-interaction-to-next-paint": ["warn", { "maxNumericValue": 200, "aggregationMethod": "median-run" }]
+        "interaction-to-next-paint": ["warn", { "maxNumericValue": 200, "aggregationMethod": "median-run" }]
       }
     },
     "upload": {
