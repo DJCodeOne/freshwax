@@ -433,7 +433,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <tr>
               <td>
                 <div class="item-cell">
-                  <div class="avatar">${p.avatarUrl ? `<img src="${p.avatarUrl}" alt="" data-fallback="show-next" /><span style="display:none;">${p.name.charAt(0).toUpperCase()}</span>` : p.name.charAt(0).toUpperCase()}</div>
+                  <div class="avatar">${p.avatarUrl ? `<img src="${p.avatarUrl}" alt="${escapeHtml(p.name || 'Partner')} avatar" data-fallback="show-next" /><span style="display:none;">${p.name.charAt(0).toUpperCase()}</span>` : p.name.charAt(0).toUpperCase()}</div>
                   <div class="item-info">
                     <h4>${p.name}</h4>
                     ${p.fullName && p.fullName !== p.name ? `<p>${p.fullName}</p>` : ''}

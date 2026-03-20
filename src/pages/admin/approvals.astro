@@ -309,10 +309,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       container.innerHTML = requests.map(req => `
         <div class="request-card" data-id="${req.id}">
           <div class="request-info">
-            <div class="request-name">${req.userName || 'Unknown User'}</div>
-            <div class="request-email">${req.userEmail || ''}</div>
-            <span class="request-type">${req.requestType || 'go-live'}</span>
-            ${req.reason ? `<div class="request-reason">"${req.reason}"</div>` : ''}
+            <div class="request-name">${escapeHtml(req.userName || 'Unknown User')}</div>
+            <div class="request-email">${escapeHtml(req.userEmail || '')}</div>
+            <span class="request-type">${escapeHtml(req.requestType || 'go-live')}</span>
+            ${req.reason ? `<div class="request-reason">"${escapeHtml(req.reason)}"</div>` : ''}
             <div class="request-date">${new Date(req.createdAt).toLocaleString()}</div>
           </div>
           <div class="request-actions">
@@ -381,9 +381,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       container.innerHTML = applications.map(app => `
         <div class="request-card" data-app-id="${app.id}">
           <div class="request-info">
-            <div class="request-name">${app.name || app.artistName || 'Unknown'}</div>
-            <div class="request-email">${app.email || ''}</div>
-            <span class="request-type">${app.type || app.partnerType || 'partner'}</span>
+            <div class="request-name">${escapeHtml(app.name || app.artistName || 'Unknown')}</div>
+            <div class="request-email">${escapeHtml(app.email || '')}</div>
+            <span class="request-type">${escapeHtml(app.type || app.partnerType || 'partner')}</span>
             <div class="request-date">${new Date(app.createdAt).toLocaleString()}</div>
           </div>
           <div class="request-actions">
@@ -452,18 +452,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <div class="request-card vinyl-card" data-vinyl-id="${listing.id}">
           <div class="vinyl-preview">
             ${listing.images && listing.images.length > 0
-              ? `<img src="${listing.images[0]}" alt="${listing.title}" class="vinyl-thumb" />`
+              ? `<img src="${listing.images[0]}" alt="${escapeHtml(listing.title || '')}" class="vinyl-thumb" />`
               : '<div class="vinyl-thumb-placeholder">📀</div>'}
           </div>
           <div class="request-info">
-            <div class="request-name">${listing.title || 'Untitled'}</div>
-            <div class="vinyl-artist">${listing.artist || 'Unknown Artist'}</div>
+            <div class="request-name">${escapeHtml(listing.title || 'Untitled')}</div>
+            <div class="vinyl-artist">${escapeHtml(listing.artist || 'Unknown Artist')}</div>
             <div class="vinyl-meta">
-              <span class="request-type">${listing.format || 'LP'}</span>
-              <span class="vinyl-condition">${listing.mediaCondition || 'VG+'} / ${listing.sleeveCondition || 'VG+'}</span>
+              <span class="request-type">${escapeHtml(listing.format || 'LP')}</span>
+              <span class="vinyl-condition">${escapeHtml(listing.mediaCondition || 'VG+')} / ${escapeHtml(listing.sleeveCondition || 'VG+')}</span>
               <span class="vinyl-price">£${(listing.price || 0).toFixed(2)}</span>
             </div>
-            <div class="request-email">Seller: ${listing.sellerName || listing.sellerId || 'Unknown'}</div>
+            <div class="request-email">Seller: ${escapeHtml(listing.sellerName || listing.sellerId || 'Unknown')}</div>
             <div class="request-date">${listing.submittedAt ? new Date(listing.submittedAt).toLocaleString() : 'Unknown date'}</div>
           </div>
           <div class="request-actions">

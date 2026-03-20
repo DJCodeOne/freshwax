@@ -1767,6 +1767,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
 
 <script>
+  function escapeHtml(str) { if (!str) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+
   const STREAM_SERVER = 'https://stream.freshwax.co.uk';
   let serverCheckInterval = null;
 
@@ -2161,19 +2163,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         container.innerHTML = activePaths.map(path => `
           <div class="stream-item">
             <div class="stream-info">
-              <span class="stream-path">${path.name}</span>
+              <span class="stream-path">${escapeHtml(path.name)}</span>
               <span class="stream-meta">
-                ${path.source?.type || 'Unknown'} source •
+                ${escapeHtml(path.source?.type || 'Unknown')} source •
                 ${path.readers?.length || 0} viewer${(path.readers?.length || 0) !== 1 ? 's' : ''}
               </span>
             </div>
-            <button class="kick-stream-btn" data-action="kickStream" data-path="${path.name}">Kick</button>
+            <button class="kick-stream-btn" data-action="kickStream" data-path="${escapeHtml(path.name)}">Kick</button>
           </div>
         `).join('');
       } catch {
         // Stream server online but can't get paths (CORS or config issue)
         const msg = streamSvc.message || 'Online';
-        container.innerHTML = `<div class="empty-state">${msg}</div>`;
+        container.innerHTML = `<div class="empty-state">${escapeHtml(msg)}</div>`;
       }
     } catch (error) {
       container.innerHTML = '<div class="empty-state">Server offline</div>';
@@ -2363,10 +2365,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="live-stream-info">
               <h4>
                 <span class="live-badge">LIVE</span>
-                ${stream.title}
+                ${escapeHtml(stream.title)}
               </h4>
               <div class="live-stream-meta">
-                ${stream.djName} • ${stream.genre || 'Drum & Bass'}
+                ${escapeHtml(stream.djName)} • ${escapeHtml(stream.genre || 'Drum & Bass')}
               </div>
             </div>
             <div class="live-stream-stats">
@@ -2374,7 +2376,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               <span>❤️ ${stream.likeCount || 0}</span>
             </div>
             <div class="live-stream-actions">
-              <button class="kick-btn" data-action="kickDJ" data-user-id="${stream.djId}" data-dj-name="${stream.djName}">Kick</button>
+              <button class="kick-btn" data-action="kickDJ" data-user-id="${stream.djId}" data-dj-name="${escapeHtml(stream.djName)}">Kick</button>
               <button class="end-stream-btn" data-action="endStream" data-stream-id="${stream.id}" data-dj-id="${stream.djId}">End Stream</button>
             </div>
           </div>
@@ -2399,15 +2401,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         container.innerHTML = result.djs.map(dj => `
           <div class="dj-card">
             <div class="dj-info">
-              <h4>${dj.djName || dj.email || 'Unknown DJ'}</h4>
+              <h4>${escapeHtml(dj.djName || dj.email || 'Unknown DJ')}</h4>
               <div class="dj-meta">
-                ${dj.email ? `<span>📧 ${dj.email}</span>` : ''}
+                ${dj.email ? `<span>📧 ${escapeHtml(dj.email)}</span>` : ''}
                 ${dj.grantedAt ? `<span>✓ Approved ${new Date(dj.grantedAt).toLocaleDateString()}</span>` : ''}
                 ${dj.lastStreamAt ? `<span>🎙 Last stream: ${new Date(dj.lastStreamAt).toLocaleDateString()}</span>` : ''}
               </div>
             </div>
             <div class="dj-actions">
-              <button class="action-btn revoke" data-action="revokeDJ" data-user-id="${dj.userId}" data-email="${dj.email || ''}">Revoke</button>
+              <button class="action-btn revoke" data-action="revokeDJ" data-user-id="${dj.userId}" data-email="${escapeHtml(dj.email || '')}">Revoke</button>
             </div>
           </div>
         `).join('');
@@ -2437,8 +2439,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           return `
             <div class="stream-item">
               <div class="stream-item-info">
-                <h5>${stream.title}</h5>
-                <div class="stream-item-meta">${stream.djName} • ${date} • ${duration}</div>
+                <h5>${escapeHtml(stream.title)}</h5>
+                <div class="stream-item-meta">${escapeHtml(stream.djName)} • ${date} • ${duration}</div>
               </div>
               <div class="stream-item-stats">
                 <span>👁 ${stream.peakViewers || 0} peak</span>

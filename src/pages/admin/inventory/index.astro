@@ -462,7 +462,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     }
                     return `
                       <div style="${itemStyle}">
-                        <div style="${labelStyle}">${label || key}</div>
+                        <div style="${labelStyle}">${escapeHtml(label || key)}</div>
                         <div style="${stockStyle}">${stock}</div>
                         <div style="${actionsStyle}">
                           <button style="${btnBaseStyle} color: #dc2626; border-color: #dc2626;" data-action="quick-adjust" data-product="${product.productId}" data-variant="${key}" data-delta="-1">−</button>
@@ -486,12 +486,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div style="display: flex; align-items: center; gap: 1rem;">
                 <img src="${product.images?.[0]?.url || product.primaryImage || '/place-holder.webp'}" alt="${escapeHtml(product.name || 'Product')}" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #ddd;">
                 <div>
-                  <div style="font-weight: 600;">${product.name || 'Unknown'}</div>
-                  <div style="font-size: 0.75rem; color: #666;">${product.sku || '-'}</div>
+                  <div style="font-weight: 600;">${escapeHtml(product.name || 'Unknown')}</div>
+                  <div style="font-size: 0.75rem; color: #666;">${escapeHtml(product.sku || '-')}</div>
                 </div>
               </div>
             </td>
-            <td style="text-align: center;">${product.categoryName || product.category || '-'}</td>
+            <td style="text-align: center;">${escapeHtml(product.categoryName || product.category || '-')}</td>
             <td style="text-align: center;"><strong>${product.totalStock || 0}</strong></td>
             <td style="text-align: center;">${product.reservedStock || 0}</td>
             <td style="text-align: center;">${product.soldStock || 0}</td>
@@ -595,9 +595,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div style="${itemStyle}">
             <div style="${iconStyle} background: ${bgColor};">${icons[m.type] || '📦'}</div>
             <div style="flex: 1;">
-              <div style="${titleStyle}">${m.productName || 'Unknown Product'}</div>
-              <div style="${metaStyle}">${m.type.toUpperCase()} • ${m.variantKey || 'default'} • ${date}</div>
-              ${m.notes ? `<div style="${metaStyle}">${m.notes}</div>` : ''}
+              <div style="${titleStyle}">${escapeHtml(m.productName || 'Unknown Product')}</div>
+              <div style="${metaStyle}">${escapeHtml(m.type).toUpperCase()} • ${escapeHtml(m.variantKey || 'default')} • ${date}</div>
+              ${m.notes ? `<div style="${metaStyle}">${escapeHtml(m.notes)}</div>` : ''}
             </div>
             <div style="font-weight: 700; font-size: 1.125rem; color: ${qtyColor};">
               ${isPositive ? '+' : ''}${m.stockDelta}
@@ -639,8 +639,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <div style="${resultStyle}" data-product-id="${p.productId}" class="search-result-item inv-search-hover">
               <img src="${p.images?.[0]?.url || p.primaryImage || '/place-holder.webp'}" alt="${escapeHtml(p.name || 'Product')}" style="${imgStyle}">
               <div style="flex: 1;">
-                <div style="${nameStyle}">${p.name}</div>
-                <div style="${skuStyle}">${p.sku || '-'}</div>
+                <div style="${nameStyle}">${escapeHtml(p.name)}</div>
+                <div style="${skuStyle}">${escapeHtml(p.sku || '-')}</div>
               </div>
               <div style="${stockStyle}">${p.totalStock || 0} units</div>
             </div>
@@ -714,7 +714,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           }
           return `
             <div style="${optionStyle}" class="variant-option" data-variant-key="${key}">
-              <div style="${labelStyle}">${label || key}</div>
+              <div style="${labelStyle}">${escapeHtml(label || key)}</div>
               <div style="${stockLabelStyle}">${stock} in stock</div>
             </div>
           `;
@@ -843,8 +843,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (!modalProduct) return;
       
       document.getElementById('modalProductInfo').innerHTML = `
-        <strong>${modalProduct.name}</strong><br>
-        <span style="color: #666; font-size: 0.875rem;">${modalProduct.sku || '-'}</span>
+        <strong>${escapeHtml(modalProduct.name)}</strong><br>
+        <span style="color: #666; font-size: 0.875rem;">${escapeHtml(modalProduct.sku || '-')}</span>
       `;
       
       const variantStock = modalProduct.variantStock || {};
@@ -856,7 +856,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <select class="form-select" id="modalVariantSelect">
             ${variantKeys.map(k => {
               const v = variantStock[k];
-              return `<option value="${k}">${v.size || ''} ${v.color || ''} (${v.stock || 0})</option>`;
+              return `<option value="${escapeHtml(k)}">${escapeHtml(v.size || '')} ${escapeHtml(v.color || '')} (${v.stock || 0})</option>`;
             }).join('')}
           </select>
         `;
@@ -973,7 +973,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         
         html += `
           <div style="${sectionStyle}">
-            <div style="${supplierHeaderStyle}">📦 ${supplier} (${products.length} products)</div>
+            <div style="${supplierHeaderStyle}">📦 ${escapeHtml(supplier)} (${products.length} products)</div>
             <table style="${tableStyle}">
               <thead style="${theadStyle}">
                 <tr style="${trStyle}">
@@ -996,8 +996,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // Product header row
           html += `
             <tr style="${trStyle} ${productRowBg}">
-              <td style="${tdStyle} font-weight: 700;">${product.name || 'Unknown'}</td>
-              <td style="${tdStyle} ${skuStyle}">${product.sku || '-'}</td>
+              <td style="${tdStyle} font-weight: 700;">${escapeHtml(product.name || 'Unknown')}</td>
+              <td style="${tdStyle} ${skuStyle}">${escapeHtml(product.sku || '-')}</td>
               <td style="${tdStyle} text-align: center; font-weight: 700;">${product.totalStock || 0}</td>
               <td style="${tdStyle}"></td>
               <td style="${tdStyle}"></td>
@@ -1021,7 +1021,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             html += `
               <tr style="${trStyle}">
                 <td style="${tdStyle} ${sizeIndent}">Default</td>
-                <td style="${tdStyle} ${skuStyle}">${product.sku || '-'}</td>
+                <td style="${tdStyle} ${skuStyle}">${escapeHtml(product.sku || '-')}</td>
                 <td style="${tdStyle} text-align: center;">${stock}</td>
                 <td style="${tdStyle} text-align: center;">
                   <input type="number" style="${inputStyle}" 
@@ -1074,8 +1074,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               const variantSku = typeof v === 'object' ? (v.sku || '-') : '-';
               html += `
                 <tr style="${trStyle}">
-                  <td style="${tdStyle} ${sizeIndent}">${label}</td>
-                  <td style="${tdStyle} ${skuStyle}">${variantSku}</td>
+                  <td style="${tdStyle} ${sizeIndent}">${escapeHtml(label)}</td>
+                  <td style="${tdStyle} ${skuStyle}">${escapeHtml(variantSku)}</td>
                   <td style="${tdStyle} text-align: center;">${stock}</td>
                   <td style="${tdStyle} text-align: center;">
                     <input type="number" style="${inputStyle}" 
@@ -1231,7 +1231,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       });
 
       select.innerHTML = '<option value="all">All Suppliers</option>' +
-        Array.from(allSuppliers).sort().map(s => `<option value="${s}">${s}</option>`).join('');
+        Array.from(allSuppliers).sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
     }
     
     // Supplier filter change

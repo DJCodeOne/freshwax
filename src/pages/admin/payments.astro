@@ -898,6 +898,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
   <Fragment slot="scripts">
     <script is:inline nonce={nonce}>
+      function escapeHtml(str) { if (!str) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+
       const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
       };
@@ -958,14 +960,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
         const transfersHtml = (dispute.transfersReversed || []).map(t => `
           <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: #f5f5f5; margin-bottom: 0.25rem;">
-            <span>${t.artistName || 'Unknown'}</span>
+            <span>${escapeHtml(t.artistName || 'Unknown')}</span>
             <span style="font-weight: 600;">${formatCurrency(t.amount)}</span>
           </div>
         `).join('') || '<div style="color: #888;">No transfers reversed</div>';
 
         const retransfersHtml = (dispute.retransfersCreated || []).map(t => `
           <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: #e8f5e9; margin-bottom: 0.25rem;">
-            <span>${t.artistName || 'Unknown'}</span>
+            <span>${escapeHtml(t.artistName || 'Unknown')}</span>
             <span style="font-weight: 600; color: #16a34a;">+${formatCurrency(t.amount)}</span>
           </div>
         `).join('') || '';
@@ -974,11 +976,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
             <div>
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Dispute ID</div>
-              <div style="font-family: monospace; font-size: 0.875rem;">${dispute.stripeDisputeId || dispute.id}</div>
+              <div style="font-family: monospace; font-size: 0.875rem;">${escapeHtml(dispute.stripeDisputeId || dispute.id)}</div>
             </div>
             <div>
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Status</div>
-              <div style="font-weight: 600;">${dispute.outcome || dispute.status || 'Open'}</div>
+              <div style="font-weight: 600;">${escapeHtml(dispute.outcome || dispute.status || 'Open')}</div>
             </div>
             <div>
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Amount</div>
@@ -986,7 +988,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             </div>
             <div>
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Reason</div>
-              <div>${dispute.reason || 'Unknown'}</div>
+              <div>${escapeHtml(dispute.reason || 'Unknown')}</div>
             </div>
             <div>
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Created</div>
@@ -1043,14 +1045,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         const transfersHtml = (refund.transfersReversed || []).map(t => `
           <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: ${t.failed ? '#fee2e2' : '#f5f5f5'}; margin-bottom: 0.25rem;">
             <span>
-              ${t.artistName || 'Unknown'}
+              ${escapeHtml(t.artistName || 'Unknown')}
               ${t.failed ? '<span style="color: #dc2626; font-size: 0.75rem;"> (Failed)</span>' : ''}
             </span>
             <span style="font-weight: 600; color: ${t.failed ? '#dc2626' : '#000'};">
               ${t.failed ? 'Error' : formatCurrency(t.amount)}
             </span>
           </div>
-          ${t.error ? `<div style="font-size: 0.75rem; color: #dc2626; padding: 0 0.5rem 0.5rem;">${t.error}</div>` : ''}
+          ${t.error ? `<div style="font-size: 0.75rem; color: #dc2626; padding: 0 0.5rem 0.5rem;">${escapeHtml(t.error)}</div>` : ''}
         `).join('') || '<div style="color: #888;">No transfers reversed</div>';
 
         content.innerHTML = `
@@ -1117,12 +1119,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
             <div>
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Artist</div>
-              <div style="font-weight: 600;">${payout.artistName || 'Unknown'}</div>
-              <div style="font-size: 0.875rem; color: #666;">${payout.artistEmail || ''}</div>
+              <div style="font-weight: 600;">${escapeHtml(payout.artistName || 'Unknown')}</div>
+              <div style="font-size: 0.875rem; color: #666;">${escapeHtml(payout.artistEmail || '')}</div>
             </div>
             <div>
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Status</div>
-              <div style="font-weight: 600;">${payout.status}</div>
+              <div style="font-weight: 600;">${escapeHtml(payout.status)}</div>
             </div>
             <div>
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase;">Order</div>
@@ -1145,7 +1147,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           ${payout.failureReason ? `
             <div style="background: #fee2e2; border: 1px solid #fca5a5; padding: 1rem; margin-bottom: 1.5rem;">
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.25rem;">Failure Reason</div>
-              <div style="color: #dc2626;">${payout.failureReason}</div>
+              <div style="color: #dc2626;">${escapeHtml(payout.failureReason)}</div>
             </div>
           ` : ''}
 
@@ -1169,7 +1171,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           ${payout.reason ? `
             <div style="margin-bottom: 1.5rem;">
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.25rem;">Reason/Source</div>
-              <div>${payout.reason}</div>
+              <div>${escapeHtml(payout.reason)}</div>
             </div>
           ` : ''}
 

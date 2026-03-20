@@ -676,15 +676,6 @@
     animation: statusPulse 1s ease-in-out infinite;
   }
 
-  @keyframes statusPulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
-  }
-
   .end-stream-status.ending strong {
     color: #ef4444;
     font-size: 1.1em;
