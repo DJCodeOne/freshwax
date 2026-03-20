@@ -24,7 +24,7 @@ var FWCache = {
         return null;
       }
       return data.v;
-    } catch (e){ return null; }
+    } catch (e: unknown){ return null; }
   },
 
   set: function(key, value, ttl) {
@@ -34,7 +34,7 @@ var FWCache = {
         ts: Date.now(),
         ttl: ttl || this.TTL.RATINGS
       }));
-    } catch (e){
+    } catch (e: unknown){
       this.cleanup();
     }
   },
@@ -47,7 +47,7 @@ var FWCache = {
   },
 
   remove: function(key) {
-    try { localStorage.removeItem(this.PREFIX + key); } catch (e){}
+    try { localStorage.removeItem(this.PREFIX + key); } catch (e: unknown){}
   },
 
   cleanup: function() {
@@ -66,7 +66,7 @@ var FWCache = {
         }
       }
       keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
-    } catch (e){}
+    } catch (e: unknown){}
   }
 };
 
@@ -87,7 +87,7 @@ async function getAuthUser() {
         }
       }
     }
-  } catch (e){ /* ignore cache errors */ }
+  } catch (e: unknown){ /* ignore cache errors */ }
 
   // If authReady promise exists (from Header), wait for it with timeout
   if (window.authReady) {
@@ -96,7 +96,7 @@ async function getAuthUser() {
         window.authReady,
         new Promise((_, reject) => setTimeout(() => reject('timeout'), 3000))
       ]);
-    } catch (e){
+    } catch (e: unknown){
       // Timeout - check cache again or Firebase directly
     }
   }
@@ -203,7 +203,7 @@ function initRatingSystem() {
     }
     return {};
   })
-  .catch(function(error) {
+  .catch(function(error: unknown) {
     pendingRatingsRequest = null;
     return {};
   });
@@ -262,7 +262,7 @@ function setupRatingClickHandlers() {
         if (window.firebaseAuth && window.firebaseAuth.currentUser) {
           idToken = await window.firebaseAuth.currentUser.getIdToken();
         }
-      } catch (e){ /* Ignore token errors, API will use userId fallback */ }
+      } catch (e: unknown){ /* Ignore token errors, API will use userId fallback */ }
 
       var card = document.querySelector('[data-release="' + releaseId + '"]');
 
@@ -303,7 +303,7 @@ function setupRatingClickHandlers() {
           }
         }
       })
-      .catch(function(error) { console.error('[ReleasePlate] Rating submission error:', error); });
+      .catch(function(error: unknown) { console.error('[ReleasePlate] Rating submission error:', error); });
     };
   });
 }
@@ -335,7 +335,7 @@ async function fetchUserRatings() {
     if (window.firebaseAuth && window.firebaseAuth.currentUser) {
       idToken = await window.firebaseAuth.currentUser.getIdToken();
     }
-  } catch (e){ /* Ignore */ }
+  } catch (e: unknown){ /* Ignore */ }
 
   if (!idToken) return;
 
@@ -368,7 +368,7 @@ async function fetchUserRatings() {
         }
       });
     }
-  } catch (e){
+  } catch (e: unknown){
     console.error('[Ratings] Failed to fetch user ratings:', e);
   }
 }
@@ -525,7 +525,7 @@ function initShareSystem() {
         text: 'Check out this release on Fresh Wax',
         url: d.url
       });
-    } catch (err) {
+    } catch (err: unknown) {
       // Share cancelled or failed
     }
   });
@@ -762,7 +762,7 @@ function initReleasePlayer() {
           if (pauseIcon) pauseIcon.classList.remove('hidden');
           if (nowPlayingText) nowPlayingText.textContent = trackTitle;
           showToast('Playing 90 second preview');
-        }).catch(function(err) {
+        }).catch(function(err: unknown) {
           audio.volume = currentVolume; // Reset volume on error
           alert('Could not play preview. The file may be unavailable.');
           if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
@@ -830,7 +830,7 @@ if (!window.cartListenersAttached) {
           return;
         }
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn('[ReleasePlate] Ownership check failed:', err);
     }
 
@@ -975,7 +975,7 @@ if (!window.cartListenersAttached) {
           return;
         }
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn('[ReleasePlate] Track ownership check failed:', err);
     }
 
@@ -1047,10 +1047,10 @@ function initWishlistSystem() {
               });
             }
           })
-          .catch(function(err) {
+          .catch(function(err: unknown) {
             console.error('Failed to load wishlist state:', err);
           });
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Failed to get auth token for wishlist:', err);
       }
     }
@@ -1120,13 +1120,13 @@ function initWishlistSystem() {
           showToast('Failed to update wishlist');
         }
       })
-      .catch(function(err) {
+      .catch(function(err: unknown) {
         btn.style.opacity = '1';
         btn.style.pointerEvents = 'auto';
         console.error('Wishlist error:', err);
         showToast('Failed to update wishlist');
       });
-    } catch (err) {
+    } catch (err: unknown) {
       btn.style.opacity = '1';
       btn.style.pointerEvents = 'auto';
       console.error('Auth error:', err);

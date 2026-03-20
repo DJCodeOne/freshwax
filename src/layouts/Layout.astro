@@ -138,7 +138,7 @@ const {
 // =============================================
 // GOOGLE ANALYTICS CONFIGURATION
 // =============================================
-const GA4_ID = 'G-MHKVCNPYBQ';
+const GA4_ID = import.meta.env.PUBLIC_GA4_ID || 'G-MHKVCNPYBQ';
 const GTM_ID = ''; // Optional: Google Tag Manager ID
 const nonce = Astro.locals.nonce || '';
 const csrfToken = Astro.locals.csrfToken || '';
@@ -393,7 +393,7 @@ const csrfToken = Astro.locals.csrfToken || '';
       <div style="background: #1a1a1a; color: #fff; padding: 2rem; text-align: center; font-family: system-ui, sans-serif;">
         <p style="color: #dc2626; font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">JavaScript Required</p>
         <p style="margin-bottom: 1rem;">Fresh Wax requires JavaScript to browse releases, play audio, and make purchases.</p>
-        <p style="color: #999;">Please enable JavaScript in your browser settings to continue.</p>
+        <p style="color: #ccc;">Please enable JavaScript in your browser settings to continue.</p>
       </div>
     </noscript>
 
@@ -536,6 +536,8 @@ const csrfToken = Astro.locals.csrfToken || '';
             // Force reflow then add visible class for animation
             d.offsetHeight;
             d.classList.add('cc-visible');
+            var firstBtn = document.getElementById('cc-accept');
+            if (firstBtn) firstBtn.focus();
             document.getElementById('cc-accept').addEventListener('click', function() { saveConsent(true, true, 'accept_all'); });
             document.getElementById('cc-reject').addEventListener('click', function() { saveConsent(false, false, 'reject_all'); });
             document.getElementById('cc-save').addEventListener('click', function() {
@@ -842,6 +844,7 @@ const csrfToken = Astro.locals.csrfToken || '';
 
           // Focus the install button for keyboard users
           var installBtn = document.getElementById('pwa-install-btn');
+          if (installBtn) installBtn.focus();
           var dismissBtn = document.getElementById('pwa-dismiss-btn');
 
           installBtn.addEventListener('click', function() {

@@ -44,7 +44,7 @@ var ShufflePlayer = {
     try {
       var tracksData = container.getAttribute('data-tracks');
       this.tracks = JSON.parse(tracksData || '[]');
-    } catch (e){
+    } catch (e: unknown){
       console.error('[ShufflePlayer] Failed to parse tracks:', e);
       this.tracks = [];
     }
@@ -265,7 +265,7 @@ var ShufflePlayer = {
       this.loadTrack(track);
     }
 
-    this.audio.play().catch(function(err) {
+    this.audio.play().catch(function(err: unknown) {
       console.error('[ShufflePlayer] Play failed:', err);
     });
   },
@@ -418,7 +418,7 @@ var ShufflePlayer = {
         if (miniPlayIcon) miniPlayIcon.classList.remove('hidden');
         if (miniPauseIcon) miniPauseIcon.classList.add('hidden');
       }
-    } catch (e){/* Best-effort — pausing global player is non-critical; UI state may be slightly stale */}
+    } catch (e: unknown){/* Best-effort — pausing global player is non-critical; UI state may be slightly stale */}
   },
 
   stopReleasePlateAudio: function() {

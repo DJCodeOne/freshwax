@@ -1152,7 +1152,7 @@ const firebaseConfig = {
     let resultIndex = 0;
 
     if (releases.length > 0) {
-      html += '<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee;">Releases</div>';
+      html += '<div role="presentation" style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee;">Releases</div>';
       releases.forEach(r => {
         html += `<a href="/item/${encodeURIComponent(r.id)}/" id="search-result-${resultIndex}" role="option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" class="search-result-hover">
           <img src="${escapeHtml(r.artwork_url) || '/place-holder.webp'}" alt="${escapeHtml(r.title)} by ${escapeHtml(r.artist_name)}" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
@@ -1166,7 +1166,7 @@ const firebaseConfig = {
     }
 
     if (mixes.length > 0) {
-      html += '<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">DJ Mixes</div>';
+      html += '<div role="presentation" style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">DJ Mixes</div>';
       mixes.forEach(m => {
         html += `<a href="/dj-mix/${encodeURIComponent(m.id)}/" id="search-result-${resultIndex}" role="option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" class="search-result-hover">
           <img src="${escapeHtml(m.artwork_url) || '/place-holder.webp'}" alt="${escapeHtml(m.title)}" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
@@ -1181,7 +1181,7 @@ const firebaseConfig = {
 
     if (merch.length > 0) {
       const hasPreviousSections = releases.length > 0 || mixes.length > 0;
-      html += `<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; ${hasPreviousSections ? 'border-top: 1px solid #eee;' : ''} border-bottom: 1px solid #eee;">Merch</div>`;
+      html += `<div role="presentation" style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; ${hasPreviousSections ? 'border-top: 1px solid #eee;' : ''} border-bottom: 1px solid #eee;">Merch</div>`;
       merch.forEach(item => {
         const priceStr = item.price ? `£${item.price.toFixed(2)}` : '';
         const stockStr = item.stock === 0 ? '<span style="color: #dc2626;">Out of Stock</span>' : (item.stock <= 5 ? `<span style="color: #f59e0b;">Low Stock</span>` : '');
@@ -2130,7 +2130,7 @@ const firebaseConfig = {
   #freshwax-header .fwx-search-icon {
     width: 1.25rem;
     height: 1.25rem;
-    color: #888;
+    color: #aaa;
   }
 
   #freshwax-header .fwx-search-input {
@@ -2144,7 +2144,7 @@ const firebaseConfig = {
   }
 
   #freshwax-header .fwx-search-input::placeholder {
-    color: #888;
+    color: #aaa;
   }
 
   #freshwax-header .fwx-search-input:focus {

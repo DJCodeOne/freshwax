@@ -170,12 +170,12 @@ const merchItemList = {
         <div class="filter-item category-filter">
           <label>Category</label>
           <div class="category-dropdown" id="categoryDropdown">
-            <button type="button" class="category-dropdown-btn" id="categoryBtn">
+            <button type="button" class="category-dropdown-btn" id="categoryBtn" aria-haspopup="true" aria-expanded="false" aria-controls="dropdown-category-menu">
               <span id="categoryLabel">All</span>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
             </button>
-            <div class="category-menu">
-              <div class="category-menu-item" data-category="" data-name="">
+            <div class="category-menu" id="dropdown-category-menu" role="menu" aria-label="Category filter">
+              <div class="category-menu-item" data-category="" data-name="" role="menuitem">
                 <span>All</span>
               </div>
               {categoryGroupsArray.map(group => {
@@ -183,19 +183,19 @@ const merchItemList = {
                 const singleSupplier = group.names.length === 1 && group.names[0] === group.label;
 
                 return singleSupplier ? (
-                  <div class="category-menu-item" data-category={group.slug} data-name={group.names[0]}>
+                  <div class="category-menu-item" data-category={group.slug} data-name={group.names[0]} role="menuitem">
                     <span>{group.label}</span>
                   </div>
                 ) : (
-                  <div class="category-menu-item has-submenu" data-category={group.slug}>
+                  <div class="category-menu-item has-submenu" data-category={group.slug} role="menuitem">
                     <span>{group.label}</span>
                     <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 0l4 4-4 4"/></svg>
                     <div class="category-submenu">
-                      <div class="category-submenu-item" data-category={group.slug} data-name="">
+                      <div class="category-submenu-item" data-category={group.slug} data-name="" role="menuitem">
                         <span>All {group.label}</span>
                       </div>
                       {group.names.map(name => (
-                        <div class="category-submenu-item" data-category={group.slug} data-name={name}>
+                        <div class="category-submenu-item" data-category={group.slug} data-name={name} role="menuitem">
                           <span>{name}</span>
                         </div>
                       ))}
@@ -212,14 +212,14 @@ const merchItemList = {
         <div class="filter-item">
           <label>Type</label>
           <div class="custom-dropdown" id="typeDropdown">
-            <button type="button" class="dropdown-btn">
+            <button type="button" class="dropdown-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="dropdown-type-menu">
               <span id="typeLabel">All</span>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
             </button>
-            <div class="dropdown-menu">
-              <div class="dropdown-item" data-value="">All</div>
+            <div class="dropdown-menu" role="listbox" id="dropdown-type-menu" aria-label="Type filter">
+              <div class="dropdown-item" data-value="" role="option" aria-selected="true">All</div>
               {Object.entries(productTypes).map(([key, name]) => (
-                <div class="dropdown-item" data-value={key}>{name}</div>
+                <div class="dropdown-item" data-value={key} role="option" aria-selected="false">{name}</div>
               ))}
             </div>
           </div>
@@ -229,14 +229,14 @@ const merchItemList = {
         <div class="filter-item">
           <label>Availability</label>
           <div class="custom-dropdown" id="stockDropdown">
-            <button type="button" class="dropdown-btn">
+            <button type="button" class="dropdown-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="dropdown-stock-menu">
               <span id="stockLabel">All</span>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
             </button>
-            <div class="dropdown-menu">
-              <div class="dropdown-item" data-value="">All</div>
-              <div class="dropdown-item" data-value="in-stock">In Stock</div>
-              {onSaleCount > 0 && <div class="dropdown-item" data-value="on-sale">On Sale</div>}
+            <div class="dropdown-menu" role="listbox" id="dropdown-stock-menu" aria-label="Availability filter">
+              <div class="dropdown-item" data-value="" role="option" aria-selected="true">All</div>
+              <div class="dropdown-item" data-value="in-stock" role="option" aria-selected="false">In Stock</div>
+              {onSaleCount > 0 && <div class="dropdown-item" data-value="on-sale" role="option" aria-selected="false">On Sale</div>}
             </div>
           </div>
           <input type="hidden" id="stockFilter" value="" />
@@ -245,16 +245,16 @@ const merchItemList = {
         <div class="filter-item">
           <label>Sort By</label>
           <div class="custom-dropdown" id="sortDropdown">
-            <button type="button" class="dropdown-btn">
+            <button type="button" class="dropdown-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="dropdown-sort-menu">
               <span id="sortLabel">Featured</span>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
             </button>
-            <div class="dropdown-menu">
-              <div class="dropdown-item" data-value="featured">Featured</div>
-              <div class="dropdown-item" data-value="newest">Newest</div>
-              <div class="dropdown-item" data-value="price-low">Price ↑</div>
-              <div class="dropdown-item" data-value="price-high">Price ↓</div>
-              <div class="dropdown-item" data-value="name">A-Z</div>
+            <div class="dropdown-menu" role="listbox" id="dropdown-sort-menu" aria-label="Sort filter">
+              <div class="dropdown-item" data-value="featured" role="option" aria-selected="true">Featured</div>
+              <div class="dropdown-item" data-value="newest" role="option" aria-selected="false">Newest</div>
+              <div class="dropdown-item" data-value="price-low" role="option" aria-selected="false">Price ↑</div>
+              <div class="dropdown-item" data-value="price-high" role="option" aria-selected="false">Price ↓</div>
+              <div class="dropdown-item" data-value="name" role="option" aria-selected="false">A-Z</div>
             </div>
           </div>
           <input type="hidden" id="sortSelect" value="featured" />
@@ -490,6 +490,8 @@ const merchItemList = {
         e.stopPropagation();
         closeAllDropdownsExcept(categoryDropdown);
         categoryDropdown.classList.toggle('open');
+        var isOpen = categoryDropdown.classList.contains('open');
+        categoryBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       });
     }
 
@@ -503,6 +505,8 @@ const merchItemList = {
           e.stopPropagation();
           closeAllDropdownsExcept(dropdown);
           dropdown.classList.toggle('open');
+          var isOpen = dropdown.classList.contains('open');
+          btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         });
       }
     }
@@ -513,7 +517,11 @@ const merchItemList = {
 
     function closeAllDropdownsExcept(except) {
       allDropdowns.forEach(function(dd) {
-        if (dd && dd !== except) dd.classList.remove('open');
+        if (dd && dd !== except) {
+          dd.classList.remove('open');
+          var ddBtn = dd.querySelector('.dropdown-btn, .category-dropdown-btn');
+          if (ddBtn) ddBtn.setAttribute('aria-expanded', 'false');
+        }
       });
     }
 
@@ -522,6 +530,8 @@ const merchItemList = {
       allDropdowns.forEach(function(dd) {
         if (dd && !dd.contains(e.target)) {
           dd.classList.remove('open');
+          var ddBtn = dd.querySelector('.dropdown-btn, .category-dropdown-btn');
+          if (ddBtn) ddBtn.setAttribute('aria-expanded', 'false');
         }
       });
     });
@@ -534,7 +544,11 @@ const merchItemList = {
           var value = this.dataset.value || '';
           if (typeFilter) typeFilter.value = value;
           if (typeLabel) typeLabel.textContent = this.textContent;
+          typeDropdown.querySelectorAll('[role="option"]').forEach(function(o) { o.setAttribute('aria-selected', 'false'); });
+          this.setAttribute('aria-selected', 'true');
           typeDropdown.classList.remove('open');
+          var ddBtn = typeDropdown.querySelector('.dropdown-btn');
+          if (ddBtn) ddBtn.setAttribute('aria-expanded', 'false');
           applyFilters();
         });
       });
@@ -548,7 +562,11 @@ const merchItemList = {
           var value = this.dataset.value || '';
           if (stockFilter) stockFilter.value = value;
           if (stockLabel) stockLabel.textContent = this.textContent;
+          stockDropdown.querySelectorAll('[role="option"]').forEach(function(o) { o.setAttribute('aria-selected', 'false'); });
+          this.setAttribute('aria-selected', 'true');
           stockDropdown.classList.remove('open');
+          var ddBtn = stockDropdown.querySelector('.dropdown-btn');
+          if (ddBtn) ddBtn.setAttribute('aria-expanded', 'false');
           applyFilters();
         });
       });
@@ -562,7 +580,11 @@ const merchItemList = {
           var value = this.dataset.value || 'featured';
           if (sortSelect) sortSelect.value = value;
           if (sortLabel) sortLabel.textContent = this.textContent;
+          sortDropdown.querySelectorAll('[role="option"]').forEach(function(o) { o.setAttribute('aria-selected', 'false'); });
+          this.setAttribute('aria-selected', 'true');
           sortDropdown.classList.remove('open');
+          var ddBtn = sortDropdown.querySelector('.dropdown-btn');
+          if (ddBtn) ddBtn.setAttribute('aria-expanded', 'false');
           applyFilters();
         });
       });
@@ -593,10 +615,90 @@ const merchItemList = {
           }
 
           categoryDropdown.classList.remove('open');
+          if (categoryBtn) categoryBtn.setAttribute('aria-expanded', 'false');
           applyFilters();
         });
       });
     }
+
+    // Keyboard navigation for dropdowns
+    function addDropdownKeyboard(dropdown, itemSelector) {
+      if (!dropdown) return;
+      var btn = dropdown.querySelector('.dropdown-btn, .category-dropdown-btn');
+      if (!btn) return;
+
+      btn.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowDown' || e.key === 'Down') {
+          e.preventDefault();
+          if (!dropdown.classList.contains('open')) {
+            btn.click();
+          }
+          var items = dropdown.querySelectorAll(itemSelector);
+          if (items.length > 0) items[0].focus();
+        } else if (e.key === 'Escape' || e.key === 'Esc') {
+          dropdown.classList.remove('open');
+          btn.setAttribute('aria-expanded', 'false');
+          btn.focus();
+        }
+      });
+
+      dropdown.addEventListener('keydown', function(e) {
+        var items = Array.from(dropdown.querySelectorAll(itemSelector));
+        var current = document.activeElement;
+        var idx = items.indexOf(current);
+
+        if (e.key === 'ArrowDown' || e.key === 'Down') {
+          e.preventDefault();
+          var next = idx < items.length - 1 ? idx + 1 : 0;
+          items[next].focus();
+        } else if (e.key === 'ArrowUp' || e.key === 'Up') {
+          e.preventDefault();
+          var prev = idx > 0 ? idx - 1 : items.length - 1;
+          items[prev].focus();
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          items[0].focus();
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          items[items.length - 1].focus();
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (current && items.indexOf(current) !== -1) current.click();
+        } else if (e.key === 'Escape' || e.key === 'Esc') {
+          e.preventDefault();
+          dropdown.classList.remove('open');
+          btn.setAttribute('aria-expanded', 'false');
+          btn.focus();
+        } else if (e.key.length === 1) {
+          // Type-ahead: jump to first item starting with typed letter
+          var letter = e.key.toLowerCase();
+          for (var i = 0; i < items.length; i++) {
+            if ((items[i].textContent || '').trim().toLowerCase().startsWith(letter)) {
+              items[i].focus();
+              break;
+            }
+          }
+        }
+      });
+    }
+
+    // Add tabindex to items for focus
+    function makeItemsFocusable(dropdown, itemSelector) {
+      if (!dropdown) return;
+      dropdown.querySelectorAll(itemSelector).forEach(function(item) {
+        item.setAttribute('tabindex', '-1');
+      });
+    }
+
+    makeItemsFocusable(typeDropdown, '.dropdown-item');
+    makeItemsFocusable(stockDropdown, '.dropdown-item');
+    makeItemsFocusable(sortDropdown, '.dropdown-item');
+    makeItemsFocusable(categoryDropdown, '.category-menu-item:not(.has-submenu), .category-submenu-item');
+
+    addDropdownKeyboard(typeDropdown, '.dropdown-item');
+    addDropdownKeyboard(stockDropdown, '.dropdown-item');
+    addDropdownKeyboard(sortDropdown, '.dropdown-item');
+    addDropdownKeyboard(categoryDropdown, '.category-menu-item:not(.has-submenu), .category-submenu-item');
 
     function applyFilters() {
       var category = categoryFilter?.value || '';
@@ -657,6 +759,13 @@ const merchItemList = {
         if (stockLabel) stockLabel.textContent = 'All';
         if (sortSelect) sortSelect.value = 'featured';
         if (sortLabel) sortLabel.textContent = 'Featured';
+        // Reset aria-selected on all dropdowns
+        [typeDropdown, stockDropdown, sortDropdown].forEach(function(dd) {
+          if (!dd) return;
+          dd.querySelectorAll('[role="option"]').forEach(function(o, i) {
+            o.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+          });
+        });
         applyFilters();
       });
     }

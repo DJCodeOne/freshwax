@@ -244,7 +244,7 @@ const organizationSchema = {
     "@type": "Country",
     "name": "United Kingdom"
   },
-  "priceRange": "£"
+  "priceRange": "£-£££"
 };
 
 // WebSite Schema - enables sitelinks search box
@@ -279,8 +279,8 @@ const webpageSchema = {
   "isPartOf": { "@id": `${SITE.url}/#website` },
   "about": { "@id": `${SITE.url}/#organization` },
   "inLanguage": "en-GB",
-  "datePublished": article?.publishedTime || new Date().toISOString(),
-  "dateModified": article?.modifiedTime || article?.publishedTime || new Date().toISOString()
+  ...(article?.publishedTime ? { "datePublished": article.publishedTime } : {}),
+  ...(article?.modifiedTime || article?.publishedTime ? { "dateModified": article.modifiedTime || article.publishedTime } : {})
 };
 
 // Breadcrumb Schema

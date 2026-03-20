@@ -105,6 +105,9 @@ interface ImportMetaEnv {
 
   // ---- Vinyl API ----
   readonly PUBLIC_VINYL_API_URL: string;
+
+  // ---- Analytics (GA4) ----
+  readonly PUBLIC_GA4_ID: string;
 }
 
 interface ImportMeta {
@@ -229,6 +232,7 @@ interface CloudflareEnv {
 
   // ---- Google Analytics ----
   PUBLIC_GA4_MEASUREMENT_ID: string;
+  PUBLIC_GA4_ID: string;
 }
 
 // ---------------------------------------------------------------------------

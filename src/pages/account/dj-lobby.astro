@@ -2336,28 +2336,32 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       };
     });
 
-    // Check live status for each station via proxy (avoids CORS/CSP issues)
-    for (const source of relaySources) {
-      try {
-        const response = await fetch(`/api/relay-status/?station=${source.id}`, {
-          signal: AbortSignal.timeout(8000)
-        });
-        if (response.ok) {
-          const result = await response.json();
-          source.isCurrentlyLive = result.isLive || false;
-          // Clean up "Unknown - " prefix from now playing
-          let nowPlaying = result.nowPlaying || '';
-          if (nowPlaying.toLowerCase().startsWith('unknown - ')) {
-            nowPlaying = nowPlaying.substring(10).trim();
-          }
-          source.nowPlaying = nowPlaying;
-          source.listeners = result.listeners || 0;
-        }
-      } catch (err) {
+    // Check live status for all stations in parallel (avoids N+1)
+    var relayResults = await Promise.all(relaySources.map(function(source) {
+      return fetch('/api/relay-status/?station=' + source.id, {
+        signal: AbortSignal.timeout(8000)
+      }).then(function(response) {
+        return response.ok ? response.json() : null;
+      }).catch(function(err) {
         console.warn('[Relay] Check failed for', source.name, err instanceof Error ? err.message : String(err));
+        return null;
+      });
+    }));
+
+    relaySources.forEach(function(source, i) {
+      var result = relayResults[i];
+      if (result) {
+        source.isCurrentlyLive = result.isLive || false;
+        var nowPlaying = result.nowPlaying || '';
+        if (nowPlaying.toLowerCase().startsWith('unknown - ')) {
+          nowPlaying = nowPlaying.substring(10).trim();
+        }
+        source.nowPlaying = nowPlaying;
+        source.listeners = result.listeners || 0;
+      } else {
         source.isCurrentlyLive = false;
       }
-    }
+    });
 
     renderRelaySources();
   }

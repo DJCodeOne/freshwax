@@ -105,7 +105,7 @@ export function init() {
       } else {
         cart = [];
       }
-    } catch (e){
+    } catch (e: unknown){
       console.error('[Checkout] Cart parse error:', e);
       cart = [];
     }
@@ -153,8 +153,8 @@ export function init() {
           }
         }
       }
-    } catch (e){
-      if (e.name === 'AbortError') {
+    } catch (e: unknown){
+      if (e instanceof Error && e.name === 'AbortError') {
         console.error('[Checkout] Credit balance request timed out');
       } else {
         console.error('[Checkout] Failed to load credit balance:', e);
@@ -239,7 +239,7 @@ export function init() {
         try {
           const token = await currentUser.getIdToken();
           if (token) headers['Authorization'] = `Bearer ${token}`;
-        } catch (e){
+        } catch (e: unknown){
           // Token retrieval failed — continue without auth
         }
       }
@@ -259,8 +259,8 @@ export function init() {
 
       const data = await response.json();
       return data;
-    } catch (e){
-      if (e.name === 'AbortError') {
+    } catch (e: unknown){
+      if (e instanceof Error && e.name === 'AbortError') {
         console.error('[Checkout] Duplicate check timed out');
       } else {
         console.error('[Checkout] Error checking duplicate purchases:', e);
@@ -293,7 +293,7 @@ export function init() {
     try {
       const cartKey = 'freshwax_cart_' + customerId;
       localStorage.setItem(cartKey, JSON.stringify({ items: cart, updatedAt: Date.now() }));
-    } catch (e){
+    } catch (e: unknown){
       // localStorage may throw in Safari private browsing
     }
 
@@ -340,7 +340,7 @@ export function init() {
       try {
         const idToken = await currentUser?.getIdToken();
         if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
-      } catch (e){ /* token fetch failed, API will use cookie fallback */ }
+      } catch (e: unknown){ /* token fetch failed, API will use cookie fallback */ }
 
       // Add timeout protection
       const controller = new AbortController();
@@ -359,8 +359,8 @@ export function init() {
           return data.customer;
         }
       }
-    } catch (e){
-      if (e.name === 'AbortError') {
+    } catch (e: unknown){
+      if (e instanceof Error && e.name === 'AbortError') {
         console.error('[Checkout] Customer data request timed out');
       } else {
         console.error('[Checkout] Error loading customer data:', e);
@@ -419,7 +419,7 @@ export function init() {
         document.getElementById('address1')?.focus();
       }, 100);
 
-    } catch (error) {
+    } catch (error: unknown) {
       lookupError.textContent = (error instanceof Error ? error.message : null) || 'Failed to lookup postcode';
       lookupError.style.color = '#ff6b6b';
       lookupError.style.display = 'block';
@@ -960,9 +960,9 @@ export function init() {
           signal: controller.signal
         });
         clearTimeout(timeoutId);
-      } catch (fetchErr) {
+      } catch (fetchErr: unknown) {
         clearTimeout(timeoutId);
-        if (fetchErr.name === 'AbortError') {
+        if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
           throw new Error('Request timed out. Please check your connection and try again.');
         }
         throw new Error('Network error. Please check your connection and try again.');
@@ -985,7 +985,7 @@ export function init() {
       }
 
       // Store order data for capture
-      try { localStorage.setItem('pendingPayPalOrder', JSON.stringify(orderData)); } catch (e){}
+      try { localStorage.setItem('pendingPayPalOrder', JSON.stringify(orderData)); } catch (e: unknown){}
 
       // Redirect to PayPal approval URL
       if (result.approvalUrl) {
@@ -994,7 +994,7 @@ export function init() {
         throw new Error('No PayPal approval URL returned');
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('PayPal error:', error);
       errorMsg.textContent = (error instanceof Error ? error.message : null) || 'PayPal error. Please try again.';
       errorMsg.style.display = 'block';
@@ -1104,7 +1104,7 @@ export function init() {
           if (currentUser) {
             try {
               idToken = await currentUser.getIdToken();
-            } catch (e){
+            } catch (e: unknown){
               // Token retrieval failed — continue without auth
             }
           }
@@ -1130,7 +1130,7 @@ export function init() {
                 localStorage.removeItem('freshwax_cart_' + customerId);
               }
               localStorage.removeItem('cart');
-            } catch (e){}
+            } catch (e: unknown){}
             window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
 
             // Redirect to confirmation
@@ -1138,14 +1138,14 @@ export function init() {
           } else {
             throw new Error(result.error || 'Payment failed');
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('PayPal capture error:', error);
           errorMsg.textContent = (error instanceof Error ? error.message : null) || 'Payment failed. Please try again.';
           errorMsg.style.display = 'block';
         }
       },
 
-      onError: function(err) {
+      onError: function(err: unknown) {
         console.error('PayPal error:', err);
         const errorMsg = document.getElementById('error-message');
         errorMsg.textContent = 'PayPal error. Please try again or use card payment.';
@@ -1172,7 +1172,7 @@ export function init() {
           });
         }
       }, 100);
-    }).catch(err => {
+    }).catch((err: unknown) => {
       console.error('PayPal render error:', err);
       // Reset flag on error so user can retry
       paypalButtonsRendered = false;
@@ -1236,7 +1236,7 @@ export function init() {
             country: form.country?.value || 'United Kingdom'
           })
         });
-      } catch (e){
+      } catch (e: unknown){
         console.error('Error saving customer details:', e);
       }
     }
@@ -1292,7 +1292,7 @@ export function init() {
           );
           orderData.idToken = await Promise.race([tokenPromise, timeoutPromise]);
           // Got ID token successfully
-        } catch (tokenErr) {
+        } catch (tokenErr: unknown) {
           // Token retrieval failed — API will handle unauthenticated request
         }
       }
@@ -1319,9 +1319,9 @@ export function init() {
             signal: controller.signal
           });
           clearTimeout(timeoutId);
-        } catch (fetchErr) {
+        } catch (fetchErr: unknown) {
           clearTimeout(timeoutId);
-          if (fetchErr.name === 'AbortError') {
+          if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
             throw new Error('Request timed out. Please check your connection and try again.');
           }
           throw new Error('Network error. Please check your connection and try again.');
@@ -1343,7 +1343,7 @@ export function init() {
             if (customerId) {
               localStorage.removeItem('freshwax_cart_' + customerId);
             }
-          } catch (e){}
+          } catch (e: unknown){}
 
           // Redirect to success page
           window.location.href = '/checkout/success/?orderId=' + result.orderId;
@@ -1370,9 +1370,9 @@ export function init() {
             signal: controller.signal
           });
           clearTimeout(timeoutId);
-        } catch (fetchErr) {
+        } catch (fetchErr: unknown) {
           clearTimeout(timeoutId);
-          if (fetchErr.name === 'AbortError') {
+          if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
             throw new Error('Request timed out. Please check your connection and try again.');
           }
           throw new Error('Network error. Please check your connection and try again.');
@@ -1397,7 +1397,7 @@ export function init() {
           throw new Error(result.error || 'Failed to create checkout session');
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Checkout error:', error);
       errorMsg.textContent = (error instanceof Error ? error.message : null) || 'Something went wrong. Please try again.';
       errorMsg.style.display = 'block';
@@ -1423,7 +1423,7 @@ export function init() {
       });
       const data = await response.json();
       return data;
-    } catch (e){
+    } catch (e: unknown){
       console.error('Error checking user type:', e);
       return { isCustomer: false, isArtist: false };
     }
