@@ -34,7 +34,6 @@ const staticPages = [
 
   // Lower priority - policy pages (fixed lastmod - updated during GDPR work Feb 2026)
   { url: '/shipping/', priority: '0.5', changefreq: 'monthly', lastmod: 'dynamic:today' },
-  { url: '/returns/', priority: '0.5', changefreq: 'monthly', lastmod: 'dynamic:today' },
   { url: '/privacy/', priority: '0.3', changefreq: 'yearly', lastmod: '2026-02-15' },
   { url: '/terms/', priority: '0.3', changefreq: 'yearly', lastmod: '2026-02-15' },
   { url: '/cookies/', priority: '0.3', changefreq: 'yearly', lastmod: '2026-02-15' },

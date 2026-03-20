@@ -168,6 +168,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 <Layout
   title={mix ? `${title} - ${dj_name}` : 'Mix Not Found'}
   description={mix ? `${title} by ${dj_name}${genre ? ` - ${genre}` : ''}${formattedDuration ? ` (${formattedDuration})` : ''}. Listen now on Fresh Wax.` : 'Mix not found'}
+  noindex={!mix}
   image={artwork_url !== '/place-holder.webp' ? artwork_url : undefined}
   type="music.album"
   audio={mix ? {

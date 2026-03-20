@@ -1580,40 +1580,57 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
   }
   
+  var _speedTestInterval = null;
+
+  // Clean up speed test interval on page navigation (View Transitions)
+  document.addEventListener('astro:before-swap', function() {
+    if (_speedTestInterval) {
+      clearInterval(_speedTestInterval);
+      _speedTestInterval = null;
+    }
+  }, { once: true });
+
   async function runSpeedTest() {
-    const overlay = document.getElementById('testingOverlay');
-    const resultsCard = document.getElementById('speedResultsCard');
-    const countdownEl = document.getElementById('testCountdown');
-    
+    // Clear any previous test interval
+    if (_speedTestInterval) {
+      clearInterval(_speedTestInterval);
+      _speedTestInterval = null;
+    }
+
+    var overlay = document.getElementById('testingOverlay');
+    var resultsCard = document.getElementById('speedResultsCard');
+    var countdownEl = document.getElementById('testCountdown');
+
     overlay.classList.remove('hidden');
     resultsCard.classList.add('hidden');
-    
-    let secondsLeft = 10;
+
+    var secondsLeft = 10;
     countdownEl.textContent = secondsLeft;
-    
-    const downloadSpeeds = [];
-    const uploadSpeeds = [];
-    
-    const testInterval = setInterval(async () => {
+
+    var downloadSpeeds = [];
+    var uploadSpeeds = [];
+
+    _speedTestInterval = setInterval(async function() {
       try {
-        const downloadStart = performance.now();
-        const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace?' + Date.now(), { cache: 'no-store' });
+        var downloadStart = performance.now();
+        var response = await fetch('https://www.cloudflare.com/cdn-cgi/trace?' + Date.now(), { cache: 'no-store' });
         await response.text();
-        const downloadEnd = performance.now();
-        const latency = downloadEnd - downloadStart;
-        const estimatedBandwidth = Math.max(1, 100 - (latency / 5));
-        
+        var downloadEnd = performance.now();
+        var latency = downloadEnd - downloadStart;
+        var estimatedBandwidth = Math.max(1, 100 - (latency / 5));
+
         downloadSpeeds.push(estimatedBandwidth);
         uploadSpeeds.push(estimatedBandwidth * 0.3);
       } catch (e) {
         console.error('Speed test error:', e);
       }
-      
+
       secondsLeft--;
       countdownEl.textContent = secondsLeft;
-      
+
       if (secondsLeft <= 0) {
-        clearInterval(testInterval);
+        clearInterval(_speedTestInterval);
+        _speedTestInterval = null;
         processResults(downloadSpeeds, uploadSpeeds);
         overlay.classList.add('hidden');
       }

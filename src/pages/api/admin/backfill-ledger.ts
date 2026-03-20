@@ -72,7 +72,70 @@ export const GET: APIRoute = async ({ request, locals }) => {
     let totalCreated = 0;
     let totalSkipped = 0;
 
-    // Process each order
+    // --- Batch-fetch: collect all unique document IDs first ---
+    const releaseIdsToFetch = new Set<string>();
+    const merchIdsToFetch = new Set<string>();
+
+    for (const order of ordersData) {
+      if (ordersWithLedger.has(order.id)) continue;
+      if (order.paymentMethod === 'test_mode' || order.status === 'cancelled') continue;
+      const items = order.items || [];
+      for (const item of items) {
+        const hasSubmitter = item.artistId || item.submitterId;
+        const releaseId = item.releaseId || item.productId || item.id;
+        if (!hasSubmitter && releaseId && (item.type === 'digital' || item.type === 'release' || item.type === 'track' || !item.type)) {
+          releaseIdsToFetch.add(releaseId);
+        }
+        if (!hasSubmitter && item.productId && item.type === 'merch') {
+          merchIdsToFetch.add(item.productId);
+        }
+      }
+    }
+
+    // Batch fetch releases and merch in parallel
+    const releaseMap = new Map<string, Record<string, unknown>>();
+    const merchMap = new Map<string, Record<string, unknown>>();
+
+    const fetchPromises: Promise<void>[] = [];
+
+    for (const id of releaseIdsToFetch) {
+      fetchPromises.push(
+        saGetDocument(serviceAccountKey, projectId, 'releases', id)
+          .then((doc) => { if (doc) releaseMap.set(id, doc); })
+          .catch(() => { /* Ignore lookup errors */ })
+      );
+    }
+    for (const id of merchIdsToFetch) {
+      fetchPromises.push(
+        saGetDocument(serviceAccountKey, projectId, 'merch', id)
+          .then((doc) => { if (doc) merchMap.set(id, doc); })
+          .catch(() => { /* Ignore lookup errors */ })
+      );
+    }
+
+    await Promise.all(fetchPromises);
+
+    // Now batch-fetch artist docs for all submitterIds found in releases
+    const artistIdsToFetch = new Set<string>();
+    for (const release of releaseMap.values()) {
+      const sid = release.submitterId || release.uploadedBy || release.userId;
+      if (sid && typeof sid === 'string') artistIdsToFetch.add(sid);
+    }
+
+    const artistMap = new Map<string, Record<string, unknown>>();
+    const artistFetchPromises: Promise<void>[] = [];
+    for (const id of artistIdsToFetch) {
+      artistFetchPromises.push(
+        saGetDocument(serviceAccountKey, projectId, 'artists', id)
+          .then((doc) => { if (doc) artistMap.set(id, doc); })
+          .catch(() => { /* Ignore lookup errors */ })
+      );
+    }
+    await Promise.all(artistFetchPromises);
+
+    log.info(`[backfill] Pre-fetched ${releaseMap.size} releases, ${merchMap.size} merch, ${artistMap.size} artists`);
+
+    // --- Process each order using pre-fetched maps ---
     for (const order of ordersData) {
       // Skip if already has ledger entry
       if (ordersWithLedger.has(order.id)) {
@@ -96,7 +159,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         continue;
       }
 
-      // Process each item and look up seller info
+      // Process each item using pre-fetched data
       for (const item of items) {
         let submitterId = item.artistId || item.submitterId || null;
         let submitterEmail = item.artistEmail || item.submitterEmail || null;
@@ -105,42 +168,29 @@ export const GET: APIRoute = async ({ request, locals }) => {
         // Try to look up release for digital items
         const releaseId = item.releaseId || item.productId || item.id;
         if (!submitterId && releaseId && (item.type === 'digital' || item.type === 'release' || item.type === 'track' || !item.type)) {
-          try {
-            const release = await saGetDocument(serviceAccountKey, projectId, 'releases', releaseId);
-            if (release) {
-              submitterId = release.submitterId || release.uploadedBy || release.userId || null;
-              submitterEmail = release.email || release.submitterEmail || null;
-              // Use submittedBy name if available, otherwise look up artist
-              artistName = release.submittedBy || release.artistName || release.artist || artistName;
+          const release = releaseMap.get(releaseId);
+          if (release) {
+            submitterId = release.submitterId || release.uploadedBy || release.userId || null;
+            submitterEmail = release.email || release.submitterEmail || null;
+            artistName = release.submittedBy || release.artistName || release.artist || artistName;
 
-              // Look up the artist/user document to get proper display name
-              if (submitterId) {
-                try {
-                  const artist = await saGetDocument(serviceAccountKey, projectId, 'artists', submitterId);
-                  if (artist?.name || artist?.displayName) {
-                    artistName = artist.displayName || artist.name;
-                  }
-                } catch (e: unknown) {
-                  // Ignore - use release name
-                }
+            // Look up the artist/user document from pre-fetched map
+            if (submitterId) {
+              const artist = artistMap.get(submitterId as string);
+              if (artist?.name || artist?.displayName) {
+                artistName = artist.displayName || artist.name;
               }
             }
-          } catch (e: unknown) {
-            // Ignore lookup errors
           }
         }
 
-        // Try to look up merch
+        // Try to look up merch from pre-fetched map
         if (!submitterId && item.productId && item.type === 'merch') {
-          try {
-            const merch = await saGetDocument(serviceAccountKey, projectId, 'merch', item.productId);
-            if (merch) {
-              submitterId = merch.supplierId || merch.sellerId || merch.userId || null;
-              submitterEmail = merch.email || merch.sellerEmail || null;
-              artistName = merch.sellerName || merch.supplierName || artistName;
-            }
-          } catch (e: unknown) {
-            // Ignore lookup errors
+          const merch = merchMap.get(item.productId);
+          if (merch) {
+            submitterId = merch.supplierId || merch.sellerId || merch.userId || null;
+            submitterEmail = merch.email || merch.sellerEmail || null;
+            artistName = merch.sellerName || merch.supplierName || artistName;
           }
         }
 

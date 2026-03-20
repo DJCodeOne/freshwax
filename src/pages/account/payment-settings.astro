@@ -173,6 +173,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 <script is:inline type="module" nonce={nonce}>
   // Uses window.authReady / window.authUser from Header (no Firebase SDK needed)
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   let currentUserId = null;
   let userData = {};
   let vendorRoles = [];
@@ -387,7 +392,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <span class="status-icon">&#10003;</span>
           <div>
             <strong style="color: #3b82f6;">PayPal Connected</strong>
-            <p>Payouts will be sent to: <strong>${data.paypalEmail}</strong></p>
+            <p>Payouts will be sent to: <strong>${escapeHtml(data.paypalEmail)}</strong></p>
           </div>
           <div class="status-actions-col">
             <button id="paypal-change-btn" class="btn btn-secondary" style="color: #22c55e;">Change Email</button>

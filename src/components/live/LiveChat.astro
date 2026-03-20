@@ -74,11 +74,11 @@
       <input type="text" id="gifSearchInput" placeholder="Search GIFs..." aria-label="Search GIFs" />
     </div>
     <div class="gif-modal-cats">
-      <button class="gif-modal-cat active" data-category="trending">Trending</button>
-      <button class="gif-modal-cat" data-category="reactions">Reactions</button>
-      <button class="gif-modal-cat" data-category="music">Music</button>
-      <button class="gif-modal-cat" data-category="dance">Dance</button>
-      <button class="gif-modal-cat" data-category="party">Party</button>
+      <button class="gif-modal-cat active" data-category="trending" aria-label="GIF category: Trending">Trending</button>
+      <button class="gif-modal-cat" data-category="reactions" aria-label="GIF category: Reactions">Reactions</button>
+      <button class="gif-modal-cat" data-category="music" aria-label="GIF category: Music">Music</button>
+      <button class="gif-modal-cat" data-category="dance" aria-label="GIF category: Dance">Dance</button>
+      <button class="gif-modal-cat" data-category="party" aria-label="GIF category: Party">Party</button>
     </div>
     <div class="gif-modal-results" id="gifResults">
       <p class="gif-modal-loading">Loading GIFs...</p>
@@ -250,7 +250,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
     function renderEmojis(cat) {
       const emojis = EMOJIS[cat] || EMOJIS.music;
       emojiGrid.innerHTML = emojis.map(e =>
-        `<button type="button" class="emoji-grid-btn">${e}</button>`
+        `<button type="button" class="emoji-grid-btn" aria-label="${e} emoji">${e}</button>`
       ).join('');
 
       emojiGrid.querySelectorAll('.emoji-grid-btn').forEach(btn => {

@@ -65,9 +65,12 @@ try {
   error = 'Failed to load product';
 }
 
-const pageDescription = product
+const rawDescription = product
   ? (product.description || `${product.name} - Official Fresh Wax merchandise. Shop jungle and drum & bass merch.`)
   : 'Product not found';
+const pageDescription = product && rawDescription.length > 155
+  ? rawDescription.slice(0, 155) + '...'
+  : rawDescription;
 
 export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
@@ -76,6 +79,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 <Layout
   title={product ? product.name : 'Product Not Found'}
   description={pageDescription}
+  noindex={!product}
   image={product?.imageUrl || undefined}
   type={product ? 'product' : 'website'}
   product={product ? {

@@ -43,13 +43,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let totalScanned = 0;
     let totalMatched = 0;
 
+    // Pre-parse all mixes to extract tracklist data, filtering out invalid ones
+    const parsedMixes: Array<{ mixId: string; djUserId: string | null; djName: string; tracklistLines: string[] }> = [];
     for (const mix of mixes) {
       const mixId = mix.id as string;
       const djUserId = (mix.user_id as string) || null;
       const djName = (mix.dj_name as string) || 'Unknown DJ';
       const dataRaw = mix.data as string;
 
-      // Extract tracklistArray from the data JSON field
       let tracklistLines: string[] = [];
       try {
         const parsed = JSON.parse(dataRaw);
@@ -60,16 +61,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
             .filter((l: string) => l.length > 0);
         }
       } catch {
-        // data not valid JSON — skip this mix
         log.warn(`Mix ${mixId}: could not parse data JSON`);
         continue;
       }
 
       if (tracklistLines.length === 0) continue;
+      parsedMixes.push({ mixId, djUserId, djName, tracklistLines });
+    }
 
-      const result = await scanTracklistForSupport(db, mixId, djUserId, djName, tracklistLines);
-      totalScanned++;
-      totalMatched += result.matched;
+    // Process in batches of 10 to avoid overwhelming the DB
+    const batchSize = 10;
+    for (let i = 0; i < parsedMixes.length; i += batchSize) {
+      const batch = parsedMixes.slice(i, i + batchSize);
+      const results = await Promise.allSettled(
+        batch.map(({ mixId, djUserId, djName, tracklistLines }) =>
+          scanTracklistForSupport(db, mixId, djUserId, djName, tracklistLines)
+        )
+      );
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          totalScanned++;
+          totalMatched += result.value.matched;
+        } else {
+          log.warn('Mix scan failed:', result.reason);
+          totalScanned++;
+        }
+      }
     }
 
     const duration = Date.now() - start;

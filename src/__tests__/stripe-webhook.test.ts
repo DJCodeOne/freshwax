@@ -33,6 +33,14 @@ vi.mock('../lib/firebase-rest', () => ({
   updateDocument: (...args: unknown[]) => mockUpdateDocument(...args),
   atomicIncrement: (...args: unknown[]) => mockAtomicIncrement(...args),
   arrayUnion: (...args: unknown[]) => mockArrayUnion(...args),
+  invalidateReleasesCache: vi.fn(),
+  clearAllMerchCache: vi.fn(),
+}));
+
+// Mock kv-cache (used for cache invalidation after order creation)
+vi.mock('../lib/kv-cache', () => ({
+  kvDelete: vi.fn().mockResolvedValue(undefined),
+  CACHE_CONFIG: { RELEASES: {}, MERCH: {} },
 }));
 
 // Mock order-utils

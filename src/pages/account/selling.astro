@@ -180,6 +180,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 <script is:inline type="module" nonce={nonce}>
   // Uses window.authReady / window.authUser from Header (no Firebase SDK needed)
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   let currentUserId = null;
   let userData = {};
 
@@ -356,7 +361,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <span class="status-icon">&#9888;</span>
           <div>
             <strong style="color: #ef4444;">Action Required</strong>
-            <p>Stripe requires additional information: ${data.disabledReason || 'Please update your account'}</p>
+            <p>Stripe requires additional information: ${escapeHtml(data.disabledReason) || 'Please update your account'}</p>
           </div>
           <button id="update-btn" class="btn btn-warning" style="color: #3b82f6;">Update Account</button>
         </div>
@@ -376,7 +381,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <span class="status-icon">&#10003;</span>
           <div>
             <strong>PayPal Connected</strong>
-            <p>Payouts will be sent to: <strong>${data.paypalEmail}</strong></p>
+            <p>Payouts will be sent to: <strong>${escapeHtml(data.paypalEmail)}</strong></p>
           </div>
           <div class="status-actions-col">
             <button id="paypal-change-btn" class="btn btn-secondary">Change Email</button>

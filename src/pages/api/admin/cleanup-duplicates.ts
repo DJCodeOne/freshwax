@@ -59,10 +59,50 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const results: Array<{ id: string; success: boolean; error?: string }> = [];
 
+    // --- Batch-fetch: get all release documents and tracks in parallel ---
+    const releaseDocMap = new Map<string, Record<string, unknown>>();
+    const tracksByRelease = new Map<string, Record<string, unknown>[]>();
+
+    const fetchPromises: Promise<void>[] = [];
+
+    // Fetch all release documents in parallel
+    for (const releaseId of releaseIds) {
+      fetchPromises.push(
+        getDocument('releases', releaseId)
+          .then((doc) => { if (doc) releaseDocMap.set(releaseId, doc); })
+          .catch(() => { /* Lookup error — will be treated as not found */ })
+      );
+    }
+
+    // Fetch tracks for all releases in parallel
+    for (const releaseId of releaseIds) {
+      fetchPromises.push(
+        queryCollection('tracks', {
+          filters: [{ field: 'releaseId', op: 'EQUAL', value: releaseId }],
+          skipCache: true
+        })
+          .then((tracks) => { tracksByRelease.set(releaseId, tracks); })
+          .catch(() => { /* Ignore track lookup errors */ })
+      );
+    }
+
+    // Fetch master list once (shared across all deletions)
+    let masterListDoc: Record<string, unknown> | null = null;
+    fetchPromises.push(
+      getDocument('system', 'releases-master')
+        .then((doc) => { masterListDoc = doc; })
+        .catch(() => { /* Ignore master list lookup error */ })
+    );
+
+    await Promise.all(fetchPromises);
+
+    log.info(`[cleanup] Pre-fetched ${releaseDocMap.size} releases, ${tracksByRelease.size} track sets`);
+
+    // --- Process deletions sequentially (safer for Firestore consistency) ---
     for (const releaseId of releaseIds) {
       try {
-        // 1. Verify release exists and get data
-        const releaseDoc = await getDocument('releases', releaseId);
+        // 1. Check pre-fetched release doc
+        const releaseDoc = releaseDocMap.get(releaseId);
         if (!releaseDoc) {
           results.push({ id: releaseId, success: false, error: 'Not found' });
           continue;
@@ -71,12 +111,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // 2. Delete Firestore release document
         await saDeleteDocument(serviceAccountKey, projectId, 'releases', releaseId);
 
-        // 3. Delete associated tracks
+        // 3. Delete associated tracks (from pre-fetched data)
         try {
-          const tracks = await queryCollection('tracks', {
-            filters: [{ field: 'releaseId', op: 'EQUAL', value: releaseId }],
-            skipCache: true
-          });
+          const tracks = tracksByRelease.get(releaseId) || [];
           for (const track of tracks) {
             await saDeleteDocument(serviceAccountKey, projectId, 'tracks', track.id);
           }
@@ -84,18 +121,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
           log.warn(`Could not delete tracks for ${releaseId}:`, error);
         }
 
-        // 4. Remove from master list
+        // 4. Remove from master list (use pre-fetched master list)
         try {
-          const masterListDoc = await getDocument('system', 'releases-master');
           if (masterListDoc) {
             const releasesList = masterListDoc.releases || [];
-            const updatedReleases = releasesList.filter((r: Record<string, unknown>) => r.id !== releaseId);
-            if (updatedReleases.length !== releasesList.length) {
+            const updatedReleases = (releasesList as Record<string, unknown>[]).filter((r: Record<string, unknown>) => r.id !== releaseId);
+            if (updatedReleases.length !== (releasesList as Record<string, unknown>[]).length) {
               await saUpdateDocument(serviceAccountKey, projectId, 'system', 'releases-master', {
                 releases: updatedReleases,
                 totalReleases: updatedReleases.length,
                 lastUpdated: new Date().toISOString()
               });
+              // Update local copy so subsequent iterations see the removal
+              masterListDoc.releases = updatedReleases;
             }
           }
         } catch (error: unknown) {

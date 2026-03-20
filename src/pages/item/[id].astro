@@ -314,6 +314,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 <Layout
   title={release ? `${releaseName} - ${artistName}` : 'Release Not Found'}
   description={release ? `${releaseName} by ${artistName}${genre ? ` - ${genre}` : ''}${labelName ? ` on ${labelName}` : ''}. Stream, buy and download on Fresh Wax.` : 'Release not found'}
+  noindex={!release}
   image={coverArtUrl && coverArtUrl !== '/place-holder.webp' ? coverArtUrl : undefined}
   imageAlt={release ? `${releaseName} by ${artistName} - Album Artwork` : undefined}
   type="music.album"
