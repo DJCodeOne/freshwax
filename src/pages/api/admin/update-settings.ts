@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument } from '../../../lib/firebase-rest';
-import { successResponse, errorResponse, ApiErrors, parseJsonBody, createLogger } from '../../../lib/api-utils';
+import { successResponse, ApiErrors, parseJsonBody, createLogger } from '../../../lib/api-utils';
 
 const log = createLogger('admin/update-settings');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';

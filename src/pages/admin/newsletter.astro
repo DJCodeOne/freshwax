@@ -244,7 +244,7 @@ Stay fresh! 🎵
 
         <!-- Test Send -->
         <div class="test-send-section">
-          <label class="form-label">Send Test Email (Optional)</label>
+          <label class="form-label" for="testEmail">Send Test Email (Optional)</label>
           <div class="input-group">
             <input type="email" id="testEmail" class="form-input" placeholder="your@email.com">
             <button type="button" class="btn btn-outline" id="testEmailBtn">
@@ -284,15 +284,15 @@ Stay fresh! 🎵
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label class="form-label">Email Address <span class="required">*</span></label>
+        <label class="form-label" for="newSubscriberEmail">Email Address <span class="required">*</span></label>
         <input type="email" id="newSubscriberEmail" class="form-input" placeholder="subscriber@example.com">
       </div>
       <div class="form-group">
-        <label class="form-label">Name (Optional)</label>
+        <label class="form-label" for="newSubscriberName">Name (Optional)</label>
         <input type="text" id="newSubscriberName" class="form-input" placeholder="John Doe">
       </div>
       <div class="form-group">
-        <label class="form-label">Source</label>
+        <label class="form-label" for="newSubscriberSource">Source</label>
         <select id="newSubscriberSource" class="form-select">
           <option value="manual">Manual Entry</option>
           <option value="import">Import</option>
@@ -317,15 +317,15 @@ Stay fresh! 🎵
     <div class="modal-body">
       <input type="hidden" id="editSubscriberId">
       <div class="form-group">
-        <label class="form-label">Email Address</label>
+        <label class="form-label" for="editSubscriberEmail">Email Address</label>
         <input type="email" id="editSubscriberEmail" class="form-input" readonly style="background:#f5f5f5;">
       </div>
       <div class="form-group">
-        <label class="form-label">Name</label>
+        <label class="form-label" for="editSubscriberName">Name</label>
         <input type="text" id="editSubscriberName" class="form-input" placeholder="John Doe">
       </div>
       <div class="form-group">
-        <label class="form-label">Status</label>
+        <label class="form-label" for="editSubscriberStatus">Status</label>
         <select id="editSubscriberStatus" class="form-select">
           <option value="active">Active</option>
           <option value="unsubscribed">Unsubscribed</option>

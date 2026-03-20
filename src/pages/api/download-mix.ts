@@ -1,7 +1,7 @@
 // src/pages/api/download-mix.ts
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../lib/firebase-rest';
-import { errorResponse, ApiErrors, createLogger, fetchWithTimeout } from '../../lib/api-utils';
+import { ApiErrors, createLogger, fetchWithTimeout } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const log = createLogger('download-mix');

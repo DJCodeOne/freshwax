@@ -5,7 +5,7 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
-import { ApiErrors, createLogger, errorResponse, successResponse, jsonResponse } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('livestream/dj-twitch-key');
 

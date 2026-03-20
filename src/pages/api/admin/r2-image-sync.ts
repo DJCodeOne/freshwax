@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { initFirebaseEnv, getDocument, updateDocument, invalidateReleasesCache, invalidateMixesCache, clearAllMerchCache } from '../../../lib/firebase-rest';
 import { d1UpsertRelease, d1UpsertMix, d1UpsertMerch } from '../../../lib/d1-catalog';
-import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
+import { createLogger, successResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;

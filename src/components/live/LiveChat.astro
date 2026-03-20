@@ -369,7 +369,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
         if (data.gifs?.length > 0) {
           gifResults.innerHTML = data.gifs.map(gif => `
             <div class="gif-result-item" data-url="${escapeHtml(gif.url)}" data-id="${escapeHtml(gif.id)}">
-              <img src="${escapeHtml(gif.preview)}" alt="${escapeHtml(gif.title)}" loading="lazy" />
+              <img src="${escapeHtml(gif.preview)}" alt="${escapeHtml(gif.title)}" width="150" height="150" loading="lazy" />
             </div>
           `).join('');
 
@@ -497,7 +497,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
       usersList.innerHTML = users.map(user => {
         const initial = (user.name || 'U').charAt(0).toUpperCase();
         const avatarContent = user.avatar
-          ? `<img src="${escapeHtml(user.avatar)}" alt="${escapeHtml(user.name)}" />`
+          ? `<img src="${escapeHtml(user.avatar)}" alt="${escapeHtml(user.name)}" width="32" height="32" loading="lazy" />`
           : escapeHtml(initial);
         return `
           <div class="online-user-item" data-action="openDm" data-user-id="${escapeHtml(user.id)}" data-user-name="${escapeHtml(user.name)}">

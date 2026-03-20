@@ -1059,7 +1059,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       // Image
       const imgContainer = document.getElementById('previewImage');
       if (uploadedImages.length > 0) {
-        imgContainer.innerHTML = `<img src="${uploadedImages[0].dataUrl}" alt="Preview" />`;
+        imgContainer.innerHTML = `<img src="${uploadedImages[0].dataUrl}" alt="Preview" width="200" height="200" loading="lazy" />`;
       } else {
         imgContainer.innerHTML = '📦';
       }

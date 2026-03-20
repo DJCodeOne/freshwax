@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('plus/validate-promo');
 

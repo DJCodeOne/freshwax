@@ -7,7 +7,7 @@ import { getDocument, updateDocument, setDocument, queryCollection, addDocument,
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { formatPrice } from '../../../lib/format-utils';
-import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/giftcards');
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';

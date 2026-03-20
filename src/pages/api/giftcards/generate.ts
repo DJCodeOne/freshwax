@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { createWelcomeGiftCard, createPromotionalGiftCard } from '../../../lib/giftcard';
 import { createLogger, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 const log = createLogger('[giftcards/generate]');
 
@@ -37,6 +38,13 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
+
+  // Rate limit: 10 per minute for gift card generation
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`giftcard-generate:${clientId}`, { maxRequests: 10, windowMs: 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter);
+  }
 
   try {
     const rawBody = await request.json();

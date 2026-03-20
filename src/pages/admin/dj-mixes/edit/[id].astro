@@ -708,7 +708,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        artworkPreview.innerHTML = `<img src="${e.target.result}" alt="Preview" id="previewImg" />`;
+        artworkPreview.innerHTML = `<img src="${e.target.result}" alt="Preview" id="previewImg" width="200" height="200" loading="lazy" />`;
         // Store base64 for upload (in a real implementation, you'd upload to R2)
         artworkUrlInput.dataset.pendingUpload = e.target.result;
       };
@@ -720,7 +720,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   artworkUrlInput.addEventListener('change', () => {
     const url = artworkUrlInput.value.trim();
     if (url) {
-      artworkPreview.innerHTML = `<img src="${url}" alt="Preview" id="previewImg" data-fallback="html" data-fallback-html="<div class=artwork-placeholder>Invalid URL</div>" />`;
+      artworkPreview.innerHTML = `<img src="${url}" alt="Preview" id="previewImg" width="200" height="200" loading="lazy" data-fallback="html" data-fallback-html="<div class=artwork-placeholder>Invalid URL</div>" />`;
     }
   });
 

@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 const log = createLogger('[link-account]');
 
@@ -28,6 +29,13 @@ const LinkAccountGetSchema = z.object({
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: 10 per minute for PayPal account linking
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`paypal-link:${clientId}`, { maxRequests: 10, windowMs: 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter);
+  }
+
   const env = locals.runtime.env;
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;

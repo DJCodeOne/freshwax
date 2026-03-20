@@ -9,6 +9,7 @@ import { saUpdateDocument, saSetDocument, getServiceAccountKeyWithProject } from
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse } from '../../lib/rate-limit';
 
 const updateStockSchema = z.object({
   productId: z.string().min(1),
@@ -37,6 +38,13 @@ interface StockUpdate {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: 20 per minute for stock updates
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`update-stock:${clientId}`, { maxRequests: 20, windowMs: 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter);
+  }
+
   // Admin authentication required
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;

@@ -8,7 +8,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 const REQUIRED_LIKES = 10;

@@ -18,7 +18,7 @@ import {
 } from '../../lib/subscription';
 import { createReferralGiftCard } from '../../lib/giftcard';
 import { isAdmin, initAdminEnv } from '../../lib/admin';
-import { fetchWithTimeout, errorResponse, ApiErrors, createLogger, successResponse, jsonResponse} from '../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;

@@ -13,7 +13,7 @@ const pusherConfig = {
 
 // Firebase config for client-side
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
   authDomain: "freshwax-store.firebaseapp.com",
   projectId: "freshwax-store",
   storageBucket: "freshwax-store.firebasestorage.app",
@@ -695,12 +695,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <!-- Calibration Panel (hidden by default) -->
             <div id="calibrationPanel" class="calibration-panel hidden">
               <div class="cal-row">
-                <label>Gain Offset (dB):</label>
+                <label for="calGainOffset">Gain Offset (dB):</label>
                 <input type="range" id="calGainOffset" min="-12" max="12" value="0" step="0.5">
                 <span id="calGainValue">0 dB</span>
               </div>
               <div class="cal-row">
-                <label>Reference Level:</label>
+                <label for="calRefLevel">Reference Level:</label>
                 <select id="calRefLevel">
                   <option value="-14">-14 LUFS (YouTube/Spotify/Twitch)</option>
                   <option value="-16">-16 LUFS (Apple Music)</option>
@@ -1074,10 +1074,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </div>
               <div class="pro-card-body">
                 <div class="pro-input-row">
-                  <input type="text" id="twitchUsername" placeholder="Username" autocomplete="off" />
+                  <input type="text" id="twitchUsername" placeholder="Username" autocomplete="off" aria-label="Twitch username" />
                 </div>
                 <div class="pro-input-row">
-                  <input type="password" id="twitchStreamKey" placeholder="Stream Key" autocomplete="off" />
+                  <input type="password" id="twitchStreamKey" placeholder="Stream Key" autocomplete="off" aria-label="Twitch stream key" />
                 </div>
                 <button type="button" class="pro-save-btn" id="saveTwitchBtn">Save</button>
               </div>
@@ -1093,7 +1093,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </div>
               <div class="pro-card-body">
                 <div class="pro-input-row with-btn">
-                  <input type="text" id="relayUrl" placeholder="Stream URL to relay" autocomplete="off" />
+                  <input type="text" id="relayUrl" placeholder="Stream URL to relay" autocomplete="off" aria-label="Relay stream URL" />
                   <button type="button" class="pro-select-btn" id="openRelayModal" title="Browse stations">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
                       <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
@@ -1294,7 +1294,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </div>
           <div class="dm-input-section">
             <div class="dm-input-wrapper">
-              <input type="text" id="dmInput" placeholder="Type a message..." maxlength="500" autocomplete="off" />
+              <input type="text" id="dmInput" placeholder="Type a message..." maxlength="500" autocomplete="off" aria-label="Direct message" />
               <button id="dmSendBtn" type="button">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>

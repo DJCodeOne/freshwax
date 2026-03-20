@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 const log = createLogger('[credit-account]');
 
@@ -21,6 +22,13 @@ const CreditAccountSchema = z.object({
 }).passthrough();
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: 10 per minute for credit account operations
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`credit-account:${clientId}`, { maxRequests: 10, windowMs: 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = locals.runtime.env;
 

@@ -7,6 +7,7 @@ import { d1UpsertMerch, d1DeleteMerch } from '../../../lib/d1-catalog';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 
 const log = createLogger('[sync-merch-to-d1]');
 
@@ -75,6 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Clear caches
     clearCache('merch');
     clearCache('live-merch');
+    await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => {});
 
     return successResponse({ message: `Synced ${synced} of ${merchItems.length} items to D1, deleted ${toDelete.length} stale items`,
       synced,

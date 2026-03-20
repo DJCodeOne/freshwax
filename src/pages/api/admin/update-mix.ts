@@ -7,6 +7,7 @@ import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 
 const log = createLogger('admin/update-mix');
 
@@ -150,6 +151,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Clear mixes cache so changes appear immediately
     invalidateMixesCache();
+    await kvDelete('live-dj-mixes-v2:all', CACHE_CONFIG.DJ_MIXES).catch(() => {});
 
     return successResponse({ message: 'Mix updated successfully',
       updatedFields: Object.keys(updateData) });

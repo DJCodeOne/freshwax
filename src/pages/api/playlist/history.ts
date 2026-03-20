@@ -4,7 +4,7 @@
 
 import type { APIContext } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createLogger, ApiErrors, successResponse, jsonResponse, errorResponse } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse, errorResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[playlist-history]');
 

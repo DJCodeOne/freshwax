@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { updateDocument, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 
 const log = createLogger('admin/toggle-mix-publish');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -44,6 +45,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Clear mixes cache so changes appear immediately
     invalidateMixesCache();
+    await kvDelete('live-dj-mixes-v2:all', CACHE_CONFIG.DJ_MIXES).catch(() => {});
 
     return successResponse({ message: `Mix ${published ? 'published' : 'unpublished'} successfully` });
 

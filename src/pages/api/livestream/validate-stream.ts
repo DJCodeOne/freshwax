@@ -12,7 +12,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, validateStreamKeyTiming, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createLogger, jsonResponse, successResponse, errorResponse} from '../../../lib/api-utils';
+import { createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[validate-stream]');
 

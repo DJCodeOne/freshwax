@@ -32,6 +32,8 @@ const BACKUP_TABLES = [
   'dj_support',
   'follower_counts',
   'royalty_ledger',
+  'image_scan_results',
+  'cron_locks',
 ];
 
 const PAGE_SIZE = 10000;

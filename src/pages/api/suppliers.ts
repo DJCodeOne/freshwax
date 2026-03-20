@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../lib/admin';
-import { parseJsonBody, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 

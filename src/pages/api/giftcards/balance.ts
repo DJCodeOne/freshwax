@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, updateDocumentConditional, verifyRequestUser } from '../../../lib/firebase-rest';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 const log = createLogger('[giftcards/balance]');
 
@@ -56,6 +57,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST to apply credit to an order
 // SECURITY: Requires authentication - user can only use their own credit
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: 30 per minute for balance operations
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`giftcard-balance:${clientId}`, { maxRequests: 30, windowMs: 60 * 1000 });
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = locals.runtime.env;
 
