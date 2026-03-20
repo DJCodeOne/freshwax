@@ -691,15 +691,23 @@ export async function validateStock(items: CartItem[]): Promise<{ available: boo
   const releaseIds = [...new Set(items.filter(i => (i.type || 'digital') === 'vinyl' && !(i.sellerId && !i.releaseId) && (i.releaseId || i.productId || i.id)).map(i => i.releaseId || i.productId || i.id))];
   const listingIds = [...new Set(items.filter(i => (i.type || 'digital') === 'vinyl' && i.sellerId && !i.releaseId).map(i => i.id || i.productId).filter(Boolean))];
 
-  const [merchDocs, releaseDocs, listingDocs] = await Promise.all([
-    Promise.all(merchIds.map(id => getDocument('merch', id, undefined, true))),
-    Promise.all(releaseIds.map(id => getDocument('releases', id, undefined, true))),
-    Promise.all(listingIds.map(id => getDocument('vinylListings', id, undefined, true)))
+  // Use Promise.allSettled to handle partial failures gracefully —
+  // a single failed Firestore fetch should not crash stock validation
+  const [merchResults, releaseResults, listingResults] = await Promise.allSettled([
+    Promise.allSettled(merchIds.map(id => getDocument('merch', id, undefined, true))),
+    Promise.allSettled(releaseIds.map(id => getDocument('releases', id, undefined, true))),
+    Promise.allSettled(listingIds.map(id => getDocument('vinylListings', id, undefined, true)))
   ]);
 
-  const merchMap = new Map(merchIds.map((id, i) => [id, merchDocs[i]]));
-  const releaseMap = new Map(releaseIds.map((id, i) => [id, releaseDocs[i]]));
-  const listingMap = new Map(listingIds.map((id, i) => [id, listingDocs[i]]));
+  // If an entire category of fetches failed, treat all its docs as null (not found)
+  const merchSettled = merchResults.status === 'fulfilled' ? merchResults.value : merchIds.map(() => ({ status: 'rejected' as const, reason: 'batch failed' }));
+  const releaseSettled = releaseResults.status === 'fulfilled' ? releaseResults.value : releaseIds.map(() => ({ status: 'rejected' as const, reason: 'batch failed' }));
+  const listingSettled = listingResults.status === 'fulfilled' ? listingResults.value : listingIds.map(() => ({ status: 'rejected' as const, reason: 'batch failed' }));
+
+  // Build lookup maps — rejected fetches map to null, caught by stock checks below
+  const merchMap = new Map(merchIds.map((id, i) => [id, merchSettled[i].status === 'fulfilled' ? merchSettled[i].value : null]));
+  const releaseMap = new Map(releaseIds.map((id, i) => [id, releaseSettled[i].status === 'fulfilled' ? releaseSettled[i].value : null]));
+  const listingMap = new Map(listingIds.map((id, i) => [id, listingSettled[i].status === 'fulfilled' ? listingSettled[i].value : null]));
 
   for (const item of items) {
     const quantity = item.quantity || 1;

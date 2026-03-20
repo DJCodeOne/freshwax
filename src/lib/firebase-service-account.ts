@@ -146,7 +146,12 @@ export async function getServiceAccountToken(serviceAccountKey: string): Promise
     return cachedToken.token;
   }
 
-  const serviceAccount: ServiceAccount = JSON.parse(serviceAccountKey);
+  let serviceAccount: ServiceAccount;
+  try {
+    serviceAccount = JSON.parse(serviceAccountKey);
+  } catch (parseErr: unknown) {
+    throw new Error('Invalid service account key configuration — check SERVICE_ACCOUNT_KEY environment variable');
+  }
   const jwt = await createJWT(serviceAccount);
 
   const response = await fetchWithTimeout('https://oauth2.googleapis.com/token', {

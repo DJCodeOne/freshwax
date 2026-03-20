@@ -36,7 +36,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   </header>
 
   <div class="container">
-    <h1 class="page-title">Inventory Management</h1>
+    <h2 class="page-title">Inventory Management</h2>
     <p class="page-subtitle">Receive stock, adjust quantities, and track inventory movements</p>
     
     <div class="stats-row">
@@ -284,6 +284,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <div class="toast" id="toast"></div>
 
   <script>
+    import { escapeHtml } from '../../../lib/escape-html';
     let allProducts = [];
     let selectedProduct = null;
     let selectedVariant = null;
@@ -483,7 +484,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </td>
             <td>
               <div style="display: flex; align-items: center; gap: 1rem;">
-                <img src="${product.images?.[0]?.url || product.primaryImage || '/place-holder.webp'}" alt="" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #ddd;">
+                <img src="${product.images?.[0]?.url || product.primaryImage || '/place-holder.webp'}" alt="${escapeHtml(product.name || 'Product')}" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #ddd;">
                 <div>
                   <div style="font-weight: 600;">${product.name || 'Unknown'}</div>
                   <div style="font-size: 0.75rem; color: #666;">${product.sku || '-'}</div>
@@ -636,7 +637,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           container.innerHTML = results.map(p => `
             <div style="${resultStyle}" data-product-id="${p.productId}" class="search-result-item inv-search-hover">
-              <img src="${p.images?.[0]?.url || p.primaryImage || '/place-holder.webp'}" alt="" style="${imgStyle}">
+              <img src="${p.images?.[0]?.url || p.primaryImage || '/place-holder.webp'}" alt="${escapeHtml(p.name || 'Product')}" style="${imgStyle}">
               <div style="flex: 1;">
                 <div style="${nameStyle}">${p.name}</div>
                 <div style="${skuStyle}">${p.sku || '-'}</div>

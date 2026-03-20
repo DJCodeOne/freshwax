@@ -829,7 +829,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <div class="takeover-divider"></div>
         <div class="takeover-header">
           <span class="takeover-icon">🔄</span>
-          <h4>Request Takeover</h4>
+          <h3>Request Takeover</h3>
         </div>
         <div class="takeover-current-dj">
           <span class="lobby-label">Currently Live:</span>
@@ -850,7 +850,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <div id="takeoverApproved" class="takeover-approved hidden">
           <div class="approved-header">
             <span class="approved-icon">✓</span>
-            <h4>Takeover Approved!</h4>
+            <h3>Takeover Approved!</h3>
           </div>
           <p>You now have control of this stream. Use these credentials:</p>
           <div class="takeover-credentials">
@@ -2616,7 +2616,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         ${isLive ? '<span class="live-headphone-icon">🎧</span>' : ''}
         <div class="schedule-dj-info">
           <div class="schedule-dj-header">
-            <h4>${displayName}</h4>
+            <h3>${displayName}</h3>
           </div>
           ${showTitle ? `<span class="schedule-title">${slot.title}</span>` : ''}
           <div class="schedule-times">
