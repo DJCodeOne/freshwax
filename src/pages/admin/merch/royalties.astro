@@ -215,16 +215,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
 
         var html = '<table><thead><tr>' +
-          '<th class="check-col"><input type="checkbox" id="selectAll" aria-label="Select all" /></th>' +
-          '<th>Date</th>' +
-          '<th>Order</th>' +
-          '<th>Brand</th>' +
-          '<th>Item</th>' +
-          '<th>Qty</th>' +
-          '<th>Sale Total</th>' +
-          '<th>Royalty (10%)</th>' +
-          '<th>FW Share</th>' +
-          '<th>Status</th>' +
+          '<th scope="col" class="check-col"><input type="checkbox" id="selectAll" aria-label="Select all" /></th>' +
+          '<th scope="col">Date</th>' +
+          '<th scope="col">Order</th>' +
+          '<th scope="col">Brand</th>' +
+          '<th scope="col">Item</th>' +
+          '<th scope="col">Qty</th>' +
+          '<th scope="col">Sale Total</th>' +
+          '<th scope="col">Royalty (10%)</th>' +
+          '<th scope="col">FW Share</th>' +
+          '<th scope="col">Status</th>' +
           '</tr></thead><tbody>';
 
         for (var i = 0; i < entries.length; i++) {

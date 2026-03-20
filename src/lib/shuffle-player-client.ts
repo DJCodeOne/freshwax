@@ -110,108 +110,124 @@ var ShufflePlayer = {
 
   bindEvents: function() {
     var self = this;
+    var audio = this.audio;
+    if (!audio) return;
 
     // Play/Pause
-    this.els.playBtn!.onclick = function() {
-      if (self.isPlaying) {
-        self.pause();
-      } else {
-        self.play();
-      }
-    };
+    if (this.els.playBtn) {
+      this.els.playBtn.onclick = function() {
+        if (self.isPlaying) {
+          self.pause();
+        } else {
+          self.play();
+        }
+      };
+    }
 
     // Previous
-    this.els.prevBtn!.onclick = function() {
-      self.playPrevious();
-    };
+    if (this.els.prevBtn) {
+      this.els.prevBtn.onclick = function() {
+        self.playPrevious();
+      };
+    }
 
     // Next
-    this.els.nextBtn!.onclick = function() {
-      self.playNext();
-    };
+    if (this.els.nextBtn) {
+      this.els.nextBtn.onclick = function() {
+        self.playNext();
+      };
+    }
 
     // Shuffle toggle
-    this.els.shuffleToggle!.onclick = function() {
-      self.isShuffleEnabled = !self.isShuffleEnabled;
-      if (self.isShuffleEnabled) {
-        self.els.shuffleToggle!.classList.add('shuffle-active');
-        self.els.shuffleToggle!.title = 'Shuffle On';
-        self.shuffleTracks();
-      } else {
-        self.els.shuffleToggle!.classList.remove('shuffle-active');
-        self.els.shuffleToggle!.title = 'Shuffle Off';
-        self.shuffledTracks = self.tracks.slice();
-        self.currentIndex = 0;
-      }
-      self.updateQueueDisplay();
-    };
+    if (this.els.shuffleToggle) {
+      this.els.shuffleToggle.onclick = function() {
+        self.isShuffleEnabled = !self.isShuffleEnabled;
+        if (self.isShuffleEnabled) {
+          self.els.shuffleToggle?.classList.add('shuffle-active');
+          if (self.els.shuffleToggle) self.els.shuffleToggle.title = 'Shuffle On';
+          self.shuffleTracks();
+        } else {
+          self.els.shuffleToggle?.classList.remove('shuffle-active');
+          if (self.els.shuffleToggle) self.els.shuffleToggle.title = 'Shuffle Off';
+          self.shuffledTracks = self.tracks.slice();
+          self.currentIndex = 0;
+        }
+        self.updateQueueDisplay();
+      };
+    }
 
     // Volume
-    (this.els.volumeSlider as HTMLInputElement).oninput = function(this: HTMLInputElement) {
-      self.volume = Number(this.value) / 100;
-      self.audio!.volume = self.volume;
-      self.updateVolumeIcon();
-    };
+    if (this.els.volumeSlider) {
+      (this.els.volumeSlider as HTMLInputElement).oninput = function(this: HTMLInputElement) {
+        self.volume = Number(this.value) / 100;
+        if (audio) audio.volume = self.volume;
+        self.updateVolumeIcon();
+      };
+    }
 
     // Mute
-    this.els.muteBtn!.onclick = function() {
-      if (self.audio!.muted) {
-        self.audio!.muted = false;
-      } else {
-        self.audio!.muted = true;
-      }
-      self.updateVolumeIcon();
-    };
+    if (this.els.muteBtn) {
+      this.els.muteBtn.onclick = function() {
+        if (!audio) return;
+        audio.muted = !audio.muted;
+        self.updateVolumeIcon();
+      };
+    }
 
     // Progress bar click — seek within clip window
-    this.els.progressContainer!.onclick = function(e) {
-      if (!self.audio!.duration || !isFinite(self.audio!.duration)) return;
-      var rect = self.els.progressContainer!.querySelector('.shuffle-progress-bar')!.getBoundingClientRect();
-      var progress = (e.clientX - rect.left) / rect.width;
-      var dur = self.audio!.duration;
-      var clipStart = dur > self.CLIP_START ? self.CLIP_START : 0;
-      var clipLen = self.clipEndTime - clipStart;
-      self.audio!.currentTime = clipStart + (progress * clipLen);
-    };
+    if (this.els.progressContainer) {
+      this.els.progressContainer.onclick = function(e) {
+        if (!audio || !audio.duration || !isFinite(audio.duration)) return;
+        var bar = self.els.progressContainer?.querySelector('.shuffle-progress-bar');
+        if (!bar) return;
+        var rect = bar.getBoundingClientRect();
+        var progress = (e.clientX - rect.left) / rect.width;
+        var dur = audio.duration;
+        var clipStart = dur > self.CLIP_START ? self.CLIP_START : 0;
+        var clipLen = self.clipEndTime - clipStart;
+        audio.currentTime = clipStart + (progress * clipLen);
+      };
+    }
 
     // Audio events
-    this.audio!.ontimeupdate = function() {
+    audio.ontimeupdate = function() {
       self.updateProgress();
     };
 
-    this.audio!.onloadedmetadata = function() {
-      var dur = self.audio!.duration;
+    audio.onloadedmetadata = function() {
+      if (!audio) return;
+      var dur = audio.duration;
       // Calculate clip boundaries based on track length
       if (dur > self.CLIP_START + self.CLIP_DURATION) {
         // Track long enough: play 60s starting at 30s
         self.clipEndTime = self.CLIP_START + self.CLIP_DURATION;
-        self.els.duration!.textContent = self.formatTime(self.CLIP_DURATION);
+        if (self.els.duration) self.els.duration.textContent = self.formatTime(self.CLIP_DURATION);
       } else if (dur > self.CLIP_START) {
         // Track shorter but > 30s: start at 30s, play to end
         self.clipEndTime = dur;
-        self.els.duration!.textContent = self.formatTime(dur - self.CLIP_START);
+        if (self.els.duration) self.els.duration.textContent = self.formatTime(dur - self.CLIP_START);
       } else {
         // Track very short: play from start, full length
         self.clipEndTime = dur;
-        self.els.duration!.textContent = self.formatTime(dur);
+        if (self.els.duration) self.els.duration.textContent = self.formatTime(dur);
       }
     };
 
-    this.audio!.oncanplay = function() {
-      if (!self.seeked) {
+    audio.oncanplay = function() {
+      if (!self.seeked && audio) {
         self.seeked = true;
-        var dur = self.audio!.duration;
+        var dur = audio.duration;
         if (dur > self.CLIP_START) {
-          self.audio!.currentTime = self.CLIP_START;
+          audio.currentTime = self.CLIP_START;
         }
       }
     };
 
-    this.audio!.onended = function() {
+    audio.onended = function() {
       self.playNext();
     };
 
-    this.audio!.onplay = function() {
+    audio.onplay = function() {
       self.isPlaying = true;
       self.updatePlayButton();
       self.updateStatus('playing', 'Playing');
@@ -223,20 +239,20 @@ var ShufflePlayer = {
       self.stopReleasePlateAudio();
     };
 
-    this.audio!.onpause = function() {
+    audio.onpause = function() {
       self.isPlaying = false;
       self.updatePlayButton();
       self.updateStatus('paused', 'Paused');
     };
 
-    this.audio!.onerror = function() {
+    audio.onerror = function() {
       console.error('[ShufflePlayer] Audio error, skipping to next');
       self.playNext();
     };
   },
 
   play: function() {
-    if (this.shuffledTracks.length === 0) return;
+    if (this.shuffledTracks.length === 0 || !this.audio) return;
 
     var track = this.shuffledTracks[this.currentIndex];
     if (!track) {
@@ -245,36 +261,37 @@ var ShufflePlayer = {
     }
 
     // If audio source changed, load new track
-    if (this.audio!.src !== track.previewUrl) {
+    if (this.audio.src !== track.previewUrl) {
       this.loadTrack(track);
     }
 
-    this.audio!.play().catch(function(err) {
+    this.audio.play().catch(function(err) {
       console.error('[ShufflePlayer] Play failed:', err);
     });
   },
 
   pause: function() {
-    this.audio!.pause();
+    if (this.audio) this.audio.pause();
   },
 
   loadTrack: function(track: { previewUrl: string; artwork: string; title: string; artist: string; releaseTitle: string; releaseId: string }) {
+    if (!this.audio) return;
     this.seeked = false;
-    this.audio!.src = track.previewUrl;
-    this.audio!.load();
+    this.audio.src = track.previewUrl;
+    this.audio.load();
 
     // Update UI
-    this.els.nowPlaying!.classList.remove('hidden');
-    (this.els.artwork as HTMLImageElement).src = track.artwork || '/place-holder.webp';
-    this.els.trackTitle!.textContent = track.title;
-    this.els.trackArtist!.textContent = track.artist;
-    this.els.releaseTitle!.textContent = track.releaseTitle;
-    (this.els.releaseLink as HTMLAnchorElement).href = '/item/' + track.releaseId;
+    this.els.nowPlaying?.classList.remove('hidden');
+    if (this.els.artwork) (this.els.artwork as HTMLImageElement).src = track.artwork || '/place-holder.webp';
+    if (this.els.trackTitle) this.els.trackTitle.textContent = track.title;
+    if (this.els.trackArtist) this.els.trackArtist.textContent = track.artist;
+    if (this.els.releaseTitle) this.els.releaseTitle.textContent = track.releaseTitle;
+    if (this.els.releaseLink) (this.els.releaseLink as HTMLAnchorElement).href = '/item/' + track.releaseId;
 
     // Reset progress
-    (this.els.progress as HTMLElement).style.width = '0%';
-    this.els.currentTime!.textContent = '0:00';
-    this.els.duration!.textContent = '1:00';
+    if (this.els.progress) (this.els.progress as HTMLElement).style.width = '0%';
+    if (this.els.currentTime) this.els.currentTime.textContent = '0:00';
+    if (this.els.duration) this.els.duration.textContent = '1:00';
 
     // Update queue
     this.updateQueueDisplay();
@@ -296,8 +313,8 @@ var ShufflePlayer = {
 
   playPrevious: function() {
     // If more than 3 seconds in, restart current track
-    if (this.audio!.currentTime > 3) {
-      this.audio!.currentTime = 0;
+    if (this.audio && this.audio.currentTime > 3) {
+      this.audio.currentTime = 0;
       return;
     }
 
@@ -316,9 +333,9 @@ var ShufflePlayer = {
   },
 
   updateProgress: function() {
-    if (!this.audio!.duration || !isFinite(this.audio!.duration)) return;
-    var dur = this.audio!.duration;
-    var ct = this.audio!.currentTime;
+    if (!this.audio || !this.audio.duration || !isFinite(this.audio.duration)) return;
+    var dur = this.audio.duration;
+    var ct = this.audio.currentTime;
     var clipStart = dur > this.CLIP_START ? this.CLIP_START : 0;
     var clipLen = this.clipEndTime - clipStart;
 
@@ -332,45 +349,46 @@ var ShufflePlayer = {
     var elapsed = ct - clipStart;
     if (elapsed < 0) elapsed = 0;
     var progress = clipLen > 0 ? (elapsed / clipLen) * 100 : 0;
-    (this.els.progress as HTMLElement).style.width = progress + '%';
-    this.els.currentTime!.textContent = this.formatTime(elapsed);
+    if (this.els.progress) (this.els.progress as HTMLElement).style.width = progress + '%';
+    if (this.els.currentTime) this.els.currentTime.textContent = this.formatTime(elapsed);
   },
 
   updatePlayButton: function() {
     if (this.isPlaying) {
-      this.els.playIcon!.classList.add('hidden');
-      this.els.pauseIcon!.classList.remove('hidden');
+      this.els.playIcon?.classList.add('hidden');
+      this.els.pauseIcon?.classList.remove('hidden');
     } else {
-      this.els.playIcon!.classList.remove('hidden');
-      this.els.pauseIcon!.classList.add('hidden');
+      this.els.playIcon?.classList.remove('hidden');
+      this.els.pauseIcon?.classList.add('hidden');
     }
   },
 
   updateStatus: function(state: string, text: string) {
-    this.els.status!.className = 'shuffle-status ' + state;
-    this.els.statusText!.textContent = text;
+    if (this.els.status) this.els.status.className = 'shuffle-status ' + state;
+    if (this.els.statusText) this.els.statusText.textContent = text;
   },
 
   updateVolumeIcon: function() {
-    if (this.audio!.muted || this.volume === 0) {
-      this.els.volumeIcon!.classList.add('hidden');
-      this.els.volumeMutedIcon!.classList.remove('hidden');
+    if ((this.audio && this.audio.muted) || this.volume === 0) {
+      this.els.volumeIcon?.classList.add('hidden');
+      this.els.volumeMutedIcon?.classList.remove('hidden');
     } else {
-      this.els.volumeIcon!.classList.remove('hidden');
-      this.els.volumeMutedIcon!.classList.add('hidden');
+      this.els.volumeIcon?.classList.remove('hidden');
+      this.els.volumeMutedIcon?.classList.add('hidden');
     }
   },
 
   updateQueueDisplay: function() {
     var self = this;
+    if (!this.els.queueList) return;
     var upcoming = this.shuffledTracks.slice(this.currentIndex + 1, this.currentIndex + 6);
 
     if (upcoming.length === 0) {
-      this.els.queueList!.innerHTML = '<span class="queue-empty">End of queue</span>';
+      this.els.queueList.innerHTML = '<span class="queue-empty">End of queue</span>';
       return;
     }
 
-    this.els.queueList!.innerHTML = upcoming.map(function(track, i) {
+    this.els.queueList.innerHTML = upcoming.map(function(track, i) {
       var actualIndex = self.currentIndex + 1 + i;
       return '<div class="queue-item" data-index="' + actualIndex + '">' +
         '<img src="' + escapeHtml(track.artwork || '/place-holder.webp') + '" alt="' + escapeHtml(track.title) + ' artwork" loading="lazy">' +
@@ -382,7 +400,7 @@ var ShufflePlayer = {
     }).join('');
 
     // Add click handlers to queue items
-    this.els.queueList!.querySelectorAll('.queue-item').forEach(function(item) {
+    this.els.queueList.querySelectorAll('.queue-item').forEach(function(item) {
       (item as HTMLElement).onclick = function() {
         var index = parseInt(item.getAttribute('data-index') || '0');
         self.playFromQueue(index);

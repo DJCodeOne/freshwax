@@ -2710,11 +2710,11 @@ function setupTwitchPlayer(stream) {
   if (plo) plo.classList.add('hidden');
   
   const parent = window.location.hostname;
-  
+
   if (twitchEmbed) {
     twitchEmbed.innerHTML = `
       <iframe
-        src="https://player.twitch.tv/?channel=${stream.twitchChannel}&parent=${parent}&muted=false"
+        src="https://player.twitch.tv/?channel=${encodeURIComponent(stream.twitchChannel)}&parent=${encodeURIComponent(parent)}&muted=false"
         allowfullscreen
         frameborder="0"
         style="width: 100%; height: 100%;"

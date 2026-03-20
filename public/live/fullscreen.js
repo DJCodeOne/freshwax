@@ -217,7 +217,7 @@ function setupFsTwitchChat(twitchChannel) {
 
     // Set up iframe URL with parent domain
     var host = window.location.hostname;
-    var twitchChatUrl = 'https://www.twitch.tv/embed/' + fsTwitchChannel + '/chat?parent=' + host + '&darkpopout';
+    var twitchChatUrl = 'https://www.twitch.tv/embed/' + encodeURIComponent(fsTwitchChannel) + '/chat?parent=' + encodeURIComponent(host) + '&darkpopout';
 
     if (twitchFrame) {
       twitchFrame.src = twitchChatUrl;

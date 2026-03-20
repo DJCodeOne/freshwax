@@ -16,9 +16,7 @@ if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
 
-// Firebase API key fallback (same as in firebase-rest.ts)
 const runtimeEnv = Astro.locals.runtime.env;
-const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
 const { id } = Astro.params;
 const nonce = Astro.locals.nonce || '';

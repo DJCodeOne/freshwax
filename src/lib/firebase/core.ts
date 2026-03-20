@@ -2,6 +2,7 @@
 // Core state, constants, helpers, auth, caching, value conversion, types
 
 import { createLogger, fetchWithTimeout } from '../api-utils';
+import { FIREBASE_API_KEY } from '../constants';
 export const log = createLogger('[firebase-rest]');
 
 export const PROJECT_ID = 'freshwax-store';
@@ -200,7 +201,7 @@ export const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PR
 
 // Fallback API key for Cloudflare Workers where import.meta.env may not work at runtime
 // This is a client-side Firebase API key - safe to include in code
-export const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+export const FIREBASE_API_KEY_FALLBACK = FIREBASE_API_KEY;
 
 // ==========================================
 // ENHANCED CACHING SYSTEM

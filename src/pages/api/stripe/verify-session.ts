@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { createOrder } from '../../../lib/order-utils';
 import { createLogger, fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
+import { FIREBASE_API_KEY } from '../../../lib/constants';
 
 const log = createLogger('[verify-session]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -71,7 +72,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-    const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+    const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || FIREBASE_API_KEY;
 
     // Try to find order by payment intent ID
     const paymentIntentId = session.payment_intent;

@@ -9,13 +9,13 @@ import LiveReactions from '../components/live/LiveReactions.astro';
 import '../styles/live.css';
 import ScheduleModal from '../components/ScheduleModal.astro';
 import PlaylistModal from '../components/live/PlaylistModal.astro';
-import { SITE_URL } from '../lib/constants';
+import { SITE_URL, FIREBASE_API_KEY } from '../lib/constants';
 
 export const prerender = false;
 
 // Firebase config for client-side scripts (with fallback)
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || FIREBASE_API_KEY,
   authDomain: "freshwax-store.firebaseapp.com",
   projectId: "freshwax-store",
   storageBucket: "freshwax-store.firebasestorage.app",

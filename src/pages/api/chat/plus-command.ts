@@ -7,6 +7,7 @@ import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/fireb
 import { getEffectiveTier, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
 import { getAdminUids, initAdminEnv } from '../../../lib/admin';
 import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
+import { FIREBASE_API_KEY } from '../../../lib/constants';
 
 const log = createLogger('chat/plus-command');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -106,7 +107,7 @@ function initEnv(locals: App.Locals) {
   const env = locals.runtime.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || env?.PUBLIC_FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || env?.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || env?.PUBLIC_FIREBASE_API_KEY || FIREBASE_API_KEY,
   });
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 }

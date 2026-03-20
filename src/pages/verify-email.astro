@@ -1,10 +1,12 @@
 ---
 // src/pages/verify-email.astro
 // Email verification page - shown after registration and when unverified user tries to login
+import { FIREBASE_API_KEY } from '../lib/constants';
+
 export const prerender = false;
 
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || FIREBASE_API_KEY,
   authDomain: "freshwax-store.firebaseapp.com",
   projectId: "freshwax-store"
 };

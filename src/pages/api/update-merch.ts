@@ -17,10 +17,6 @@ const log = createLogger('update-merch');
 
 export const prerender = false;
 
-// Firebase API key fallback (same as in firebase-rest.ts)
-const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
-
-
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit
   const clientId = getClientId(request);

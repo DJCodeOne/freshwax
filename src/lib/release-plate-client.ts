@@ -831,6 +831,7 @@ if (!window.cartListenersAttached) {
         }
       }
     } catch (err) {
+      console.warn('[ReleasePlate] Ownership check failed:', err);
     }
 
     var cart = FreshWaxCart.get();
@@ -975,6 +976,7 @@ if (!window.cartListenersAttached) {
         }
       }
     } catch (err) {
+      console.warn('[ReleasePlate] Track ownership check failed:', err);
     }
 
     items.push({
