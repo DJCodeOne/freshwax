@@ -89,14 +89,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (missingIds.length > 0) {
       log.info('[get-user-ratings] Checking Firebase for', missingIds.length, 'releases');
 
-      for (const releaseId of missingIds) {
-        try {
-          const release = await getDocument('releases', releaseId);
-          if (release?.ratings?.userRatings?.[userId]) {
-            userRatings[releaseId] = release.ratings.userRatings[userId];
-          }
-        } catch (e: unknown) {
-          // Skip failed fetches
+      const results = await Promise.allSettled(
+        missingIds.map(releaseId =>
+          getDocument('releases', releaseId).then(release => ({ releaseId, release }))
+        )
+      );
+
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value.release?.ratings?.userRatings?.[userId]) {
+          userRatings[result.value.releaseId] = result.value.release.ratings.userRatings[userId];
         }
       }
     }

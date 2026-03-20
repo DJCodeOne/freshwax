@@ -4,9 +4,9 @@
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { getDocument, setDocument, updateDocument, deleteDocument, verifyRequestUser, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, verifyRequestUser, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('vinyl/listing');
 

@@ -3,10 +3,10 @@
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { generateStreamKey, buildRtmpUrl, buildHlsUrl, RED5_CONFIG } from '../../../lib/red5';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('livestream/manage');
 

@@ -2,7 +2,6 @@
 // Multi-platform embed player manager for YouTube, Vimeo, SoundCloud, and Direct URLs
 
 import type { PlaylistItem, MediaPlatform } from './types';
-import { getEmbedUrl } from './url-parser';
 import { escapeHtml } from './escape-html';
 
 export interface PlayerCallbacks {

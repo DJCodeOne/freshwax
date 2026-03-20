@@ -188,27 +188,6 @@ export function canSkipTrack(tier: SubscriptionTier, skipsUsedToday: number): { 
   return { allowed: true, limit, remaining };
 }
 
-// Check if user can add track to playlist
-export function canAddToPlaylist(tier: SubscriptionTier, currentTrackCount: number): { allowed: boolean; reason?: string; limit: number; remaining: number } {
-  const limits = TIER_LIMITS[tier];
-  const limit = limits.playlistTrackLimit;
-  const remaining = limit - currentTrackCount;
-
-  if (remaining <= 0) {
-    const upgradeMsg = tier === SUBSCRIPTION_TIERS.FREE
-      ? 'Go Plus for up to 1,000 tracks in your playlist.'
-      : '';
-    return {
-      allowed: false,
-      reason: `Your playlist is full (${limit} tracks). ${upgradeMsg}`,
-      limit,
-      remaining: 0
-    };
-  }
-
-  return { allowed: true, limit, remaining };
-}
-
 // Format tier benefits for display
 export function getTierBenefits(tier: SubscriptionTier): string[] {
   const limits = TIER_LIMITS[tier];

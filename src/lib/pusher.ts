@@ -6,7 +6,7 @@ import { fetchWithTimeout, createLogger } from './api-utils';
 const log = createLogger('[pusher]');
 
 // Simple MD5 implementation (for Pusher body signing)
-function simpleMd5(str: string): string {
+export function simpleMd5(str: string): string {
   // Convert string to UTF-8 bytes to handle unicode/emojis
   const encoder = new TextEncoder();
   const bytes = encoder.encode(str);

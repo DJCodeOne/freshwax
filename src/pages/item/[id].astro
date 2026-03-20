@@ -571,11 +571,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                 </div>
                 {(labelName || copyrightHolder) && <p class="text-base sm:text-lg md:text-xl font-bold text-gray-300" title={labelName || copyrightHolder}>{labelName || copyrightHolder}</p>}
                 {followerCount > 0 && (
-                  <p class="text-sm text-gray-400 mt-1 font-semibold">{followerCount} {followerCount === 1 ? 'follower' : 'followers'}</p>
+                  <p class="text-sm text-gray-300 mt-1 font-semibold">{followerCount} {followerCount === 1 ? 'follower' : 'followers'}</p>
                 )}
                 {djSupporters.length > 0 && (
                   <div class="flex flex-wrap items-center gap-2 mt-2">
-                    <span class="text-xs text-gray-400 uppercase font-bold tracking-wide">Supported by</span>
+                    <span class="text-xs text-gray-300 uppercase font-bold tracking-wide">Supported by</span>
                     {djSupporters.slice(0, 5).map(s => (
                       <a href={`/dj-mix/${s.mixId}/`} class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-700 text-white text-xs font-semibold rounded-full border border-gray-500 hover:border-red-500 transition-colors" title={`${s.djName} played this in their mix`}>
                         <svg class="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z"/></svg>
@@ -583,7 +583,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                       </a>
                     ))}
                     {djSupporters.length > 5 && (
-                      <span class="text-xs text-gray-400">+{djSupporters.length - 5} more</span>
+                      <span class="text-xs text-gray-300">+{djSupporters.length - 5} more</span>
                     )}
                   </div>
                 )}
@@ -740,10 +740,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                       )}
                     </p>
                     {(track.artist || track.featured) && (
-                      <p class="text-xs sm:text-xs md:text-base font-bold text-gray-400 truncate mt-0.5">
+                      <p class="text-xs sm:text-xs md:text-base font-bold text-gray-300 truncate mt-0.5">
                         {track.artist}
                         {track.featured && (
-                          <span class="text-gray-500"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>
+                          <span class="text-gray-300"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>
                         )}
                       </p>
                     )}
@@ -1002,10 +1002,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           </button>
         </div>
         <div class="p-4">
-          <input 
-            type="text" 
-            id="giphy-search-input" 
-            placeholder="Search for GIFs..." 
+          <input
+            type="text"
+            id="giphy-search-input"
+            placeholder="Search for GIFs..."
+            aria-label="Search for GIFs"
             class="w-full px-4 py-3 border-2 border-gray-600 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
@@ -1099,6 +1100,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               type="text"
               id="share-url-input"
               readonly
+              aria-label="Share URL"
               class="flex-1 px-4 py-3 bg-white/5 border border-white/20 text-sm font-mono text-white rounded-xl focus:outline-none focus:border-red-500 min-w-0"
             />
             <button

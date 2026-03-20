@@ -92,11 +92,6 @@ async function ensureInitializedAsync(): Promise<void> {
   }
 }
 
-// Synchronous check - only returns true if already initialized successfully
-export function isFirebaseInitialized(): boolean {
-  return _db !== null;
-}
-
 // Async initialization check
 export async function ensureFirebaseInitialized(): Promise<boolean> {
   await ensureInitializedAsync();

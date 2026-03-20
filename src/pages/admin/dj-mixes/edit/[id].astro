@@ -112,7 +112,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <button type="button" class="btn btn-outline btn-sm" id="clearArtwork">🗑️ Clear</button>
           </div>
           <div class="form-group">
-            <label class="form-label">Or enter URL</label>
+            <label class="form-label" for="artworkUrlInput">Or enter URL</label>
             <input type="text" name="artworkUrl" id="artworkUrlInput" class="form-input" value={mix.artworkUrl || mix.imageUrl || ''} placeholder="https://..." />
           </div>
         </div>
@@ -126,29 +126,29 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <div class="card-body">
           <div class="form-row-2">
             <div class="form-group">
-              <label class="form-label">Mix Title * <span class="char-limit">(max 22)</span></label>
-              <input type="text" name="title" class="form-input" value={mix.title || ''} required maxlength="22" />
+              <label class="form-label" for="mixTitle">Mix Title * <span class="char-limit">(max 22)</span></label>
+              <input type="text" name="title" id="mixTitle" class="form-input" value={mix.title || ''} required maxlength="22" />
             </div>
             <div class="form-group">
-              <label class="form-label">DJ Name * <span class="char-limit">(max 22)</span></label>
-              <input type="text" name="djName" class="form-input" value={mix.djName || mix.dj_name || mix.displayName || ''} required maxlength="22" />
+              <label class="form-label" for="mixDjName">DJ Name * <span class="char-limit">(max 22)</span></label>
+              <input type="text" name="djName" id="mixDjName" class="form-input" value={mix.djName || mix.dj_name || mix.displayName || ''} required maxlength="22" />
             </div>
           </div>
 
           <div class="form-row-2">
             <div class="form-group">
-              <label class="form-label">🎵 Genre</label>
-              <input type="text" name="genre" class="form-input" value={mix.genre || ''} maxlength="30" placeholder="e.g. Jungle, DnB" />
+              <label class="form-label" for="mixGenre">🎵 Genre</label>
+              <input type="text" name="genre" id="mixGenre" class="form-input" value={mix.genre || ''} maxlength="30" placeholder="e.g. Jungle, DnB" />
             </div>
             <div class="form-group">
-              <label class="form-label">⏱️ Duration</label>
-              <input type="text" class="form-input duration-display" value={formatDuration(mixDuration)} readonly />
+              <label class="form-label" for="mixDuration">⏱️ Duration</label>
+              <input type="text" id="mixDuration" class="form-input duration-display" value={formatDuration(mixDuration)} readonly />
               <input type="hidden" name="duration" value={mixDuration} />
             </div>
           </div>
 
           <div class="form-group">
-            <label class="form-label">📢 Description / Shout Outs</label>
+            <label class="form-label" for="descriptionField">📢 Description / Shout Outs</label>
             <div class="emoji-toolbar">
               <button type="button" class="emoji-btn" data-emoji="🔥">🔥</button>
               <button type="button" class="emoji-btn" data-emoji="🎧">🎧</button>

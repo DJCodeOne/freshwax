@@ -100,11 +100,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Product Name <span class="required">*</span></label>
+              <label class="form-label" for="productName">Product Name <span class="required">*</span></label>
               <input type="text" class="form-input" id="productName" placeholder="Classic Logo Tee" required maxlength="30" />
             </div>
             <div class="form-group">
-              <label class="form-label">SKU / Stock Code</label>
+              <label class="form-label" for="sku">SKU / Stock Code</label>
               <input type="text" class="form-input" id="sku" placeholder="Auto-generated if empty" maxlength="20" />
               <div class="form-hint">Leave blank to auto-generate</div>
             </div>
@@ -112,7 +112,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Category <span class="required">*</span></label>
+              <label class="form-label" for="category">Category <span class="required">*</span></label>
               <select class="form-select" id="category" required>
                 <option value="freshwax">Fresh Wax</option>
                 <option value="label">Label</option>
@@ -122,7 +122,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Brand <span class="required">*</span></label>
+              <label class="form-label" for="categoryName">Brand <span class="required">*</span></label>
               <select class="form-select" id="categoryName" required>
                 <option value="Fresh Wax">Fresh Wax (no royalty)</option>
               </select>
@@ -132,7 +132,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </div>
 
           <div class="form-group">
-            <label class="form-label">Description</label>
+            <label class="form-label" for="description">Description</label>
             <textarea class="form-textarea" id="description" placeholder="Product description, materials, care instructions..."></textarea>
           </div>
           </div>
@@ -146,16 +146,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="form-card-body">
           <div class="form-row-3">
             <div class="form-group">
-              <label class="form-label">Cost Price (£)</label>
+              <label class="form-label" for="costPrice">Cost Price (£)</label>
               <input type="number" class="form-input" id="costPrice" step="0.01" min="0" placeholder="10.00" />
               <div class="form-hint">Your cost per unit</div>
             </div>
             <div class="form-group">
-              <label class="form-label">Retail Price (£) <span class="required">*</span></label>
+              <label class="form-label" for="retailPrice">Retail Price (£) <span class="required">*</span></label>
               <input type="number" class="form-input" id="retailPrice" step="0.01" min="0" placeholder="25.00" required />
             </div>
             <div class="form-group">
-              <label class="form-label">Sale Price (£)</label>
+              <label class="form-label" for="salePrice">Sale Price (£)</label>
               <input type="number" class="form-input" id="salePrice" step="0.01" min="0" placeholder="20.00" />
               <div class="form-hint">Leave empty if not on sale</div>
             </div>
@@ -298,7 +298,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <button type="button" class="btn btn-secondary btn-sm" id="setAllVariantStockBtn">Apply</button>
             </div>
             <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 0;">
-              <label class="form-label">Low Stock Alert Threshold</label>
+              <label class="form-label" for="lowStockThreshold">Low Stock Alert Threshold</label>
               <input type="number" class="form-input" id="lowStockThreshold" value="5" min="1" style="max-width: 150px;" />
               <div class="form-hint">Alert when total stock falls to this level</div>
             </div>
@@ -328,14 +328,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="supplier-fields" id="supplierFields">
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Supplier</label>
+                <label class="form-label" for="supplierId">Supplier</label>
                 <select class="form-select" id="supplierId">
                   <option value="">Select supplier...</option>
                 </select>
                 <div class="form-hint">Or <a href="/admin/merch/suppliers/" target="_blank" rel="noopener noreferrer">add new supplier</a></div>
               </div>
               <div class="form-group">
-                <label class="form-label">Supplier Cut (%)</label>
+                <label class="form-label" for="supplierCut">Supplier Cut (%)</label>
                 <input type="number" class="form-input" id="supplierCut" value="50" min="0" max="100" />
                 <div class="form-hint">Percentage they receive per sale</div>
               </div>

@@ -7,11 +7,11 @@ import { broadcastLiveStatus } from '../../../lib/pusher';
 import { logActivity } from '../../../lib/activity-feed';
 import { APPROVED_RELAY_STATIONS } from '../../../lib/relay-stations';
 import { initKVCache, kvDelete } from '../../../lib/kv-cache';
-import { d1UpsertSlot, d1UpdateSlotStatus, d1DeleteSlot, d1GetLiveSlots, d1GetScheduledSlots } from '../../../lib/d1-catalog';
+import { d1UpsertSlot, d1UpdateSlotStatus, d1GetLiveSlots, d1GetScheduledSlots } from '../../../lib/d1-catalog';
 import { invalidateStatusCache } from './status';
 import { isAdmin } from '../../../lib/admin';
 import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
-import { createLogger, ApiErrors, fetchWithTimeout, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
+import { createLogger, ApiErrors, fetchWithTimeout, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[livestream-slots]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';

@@ -144,11 +144,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label">DJ Email or ID</label>
+          <label class="form-label" for="allowanceDjId">DJ Email or ID</label>
           <input type="text" id="allowanceDjId" class="form-input" placeholder="Enter DJ email or user ID">
         </div>
         <div class="form-group">
-          <label class="form-label">Weekly Slots Allowed</label>
+          <label class="form-label" for="allowanceSlots">Weekly Slots Allowed</label>
           <select id="allowanceSlots" class="form-select">
             <option value="2">2 slots/week (default)</option>
             <option value="1">1 slot/week</option>
@@ -159,7 +159,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Max Hours Per Day</label>
+          <label class="form-label" for="allowanceHours">Max Hours Per Day</label>
           <select id="allowanceHours" class="form-select">
             <option value="2">2 hours (default)</option>
             <option value="4">4 hours</option>
@@ -169,7 +169,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Reason (optional)</label>
+          <label class="form-label" for="allowanceReason">Reason (optional)</label>
           <input type="text" id="allowanceReason" class="form-input" placeholder="e.g., Special event, resident DJ">
         </div>
         <div class="form-actions">

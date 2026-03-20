@@ -183,18 +183,3 @@ export function imageContentType(format: string): string {
   return format === 'jpeg' ? 'image/jpeg' : 'image/webp';
 }
 
-/**
- * Get image dimensions without full processing
- */
-export function getImageDimensions(inputBuffer: ArrayBuffer | Uint8Array): { width: number; height: number } {
-  const input = inputBuffer instanceof Uint8Array
-    ? inputBuffer
-    : new Uint8Array(inputBuffer);
-
-  const img = PhotonImage.new_from_byteslice(input);
-  const width = img.get_width();
-  const height = img.get_height();
-  img.free();
-
-  return { width, height };
-}

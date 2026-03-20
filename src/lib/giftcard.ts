@@ -1,8 +1,7 @@
 // src/lib/giftcard.ts
 // Gift Card System - Generate, validate, and redeem gift cards
 
-import { escapeHtml, fetchWithTimeout, createLogger } from './api-utils';
-import { formatPrice } from './format-utils';
+import { fetchWithTimeout, createLogger } from './api-utils';
 
 const log = createLogger('[giftcard]');
 import { SITE_URL } from './constants';

@@ -69,7 +69,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       <div class="tab-content" id="tab-receive" style="display:none;">
         <div class="receive-form">
           <div class="form-group product-search">
-            <label class="form-label">Search Product</label>
+            <label class="form-label" for="productSearch">Search Product</label>
             <input type="text" class="form-input" id="productSearch" placeholder="Type product name or SKU...">
             <div class="product-search-results" id="searchResults"></div>
           </div>
@@ -90,11 +90,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Quantity to Receive</label>
+              <label class="form-label" for="receiveQty">Quantity to Receive</label>
               <input type="number" class="form-input" id="receiveQty" min="1" value="1">
             </div>
             <div class="form-group">
-              <label class="form-label">Operation</label>
+              <label class="form-label" for="operationType">Operation</label>
               <select class="form-select" id="operationType">
                 <option value="receive">Receive New Stock</option>
                 <option value="adjust">Adjust (+ or -)</option>
@@ -105,7 +105,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </div>
           
           <div class="form-group">
-            <label class="form-label">Notes (Optional)</label>
+            <label class="form-label" for="receiveNotes">Notes (Optional)</label>
             <input type="text" class="form-input" id="receiveNotes" placeholder="e.g., Supplier delivery #12345">
           </div>
           
@@ -257,11 +257,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <div class="form-group" id="modalVariants" style="margin-bottom: 1rem;"></div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Quantity</label>
+            <label class="form-label" for="modalQty">Quantity</label>
             <input type="number" class="form-input" id="modalQty" value="1" min="1">
           </div>
           <div class="form-group">
-            <label class="form-label">Operation</label>
+            <label class="form-label" for="modalOperation">Operation</label>
             <select class="form-select" id="modalOperation">
               <option value="receive">Receive</option>
               <option value="adjust">Adjust</option>
@@ -270,7 +270,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Notes</label>
+          <label class="form-label" for="modalNotes">Notes</label>
           <input type="text" class="form-input" id="modalNotes" placeholder="Optional notes...">
         </div>
       </div>

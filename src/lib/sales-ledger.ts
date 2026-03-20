@@ -6,7 +6,7 @@
 import { createLogger } from './api-utils';
 import { formatPrice } from './format-utils';
 import { addDocument, queryCollection } from './firebase-rest';
-import { d1InsertLedgerEntry, d1GetLedgerEntries, d1GetLedgerTotals } from './d1-catalog';
+import { d1InsertLedgerEntry, d1GetLedgerEntries } from './d1-catalog';
 
 const log = createLogger('[sales-ledger]');
 

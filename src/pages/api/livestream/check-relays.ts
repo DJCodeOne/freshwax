@@ -1,7 +1,7 @@
 // src/pages/api/livestream/check-relays.ts
 // API to check if external radio streams are live
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
+import { updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 import { ApiErrors, fetchWithTimeout, createLogger, successResponse } from '../../../lib/api-utils';
