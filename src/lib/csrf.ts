@@ -57,6 +57,7 @@ const CSRF_SKIP = new Set([
   '/api/admin/royalty-ledger/',
   // Cron — authenticated via CRON_SECRET / requireAdminAuth
   '/api/cron/weekly-digest/',
+  '/api/cron/backup-d1/',
 ]);
 
 /**

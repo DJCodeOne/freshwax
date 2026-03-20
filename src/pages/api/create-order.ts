@@ -145,16 +145,23 @@ async function validateOrderPrices(items: Record<string, unknown>[]): Promise<{ 
   const uniqueReleaseIds = [...new Set(releaseIds)];
   const uniqueListingIds = [...new Set(listingIds)];
 
-  const [merchDocs, releaseDocs, listingDocs] = await Promise.all([
-    Promise.all(uniqueMerchIds.map(id => getDocument('merch', id))),
-    Promise.all(uniqueReleaseIds.map(id => getDocument('releases', id))),
-    Promise.all(uniqueListingIds.map(id => getDocument('vinylListings', id)))
+  // Use Promise.allSettled to handle partial failures gracefully —
+  // a single failed Firestore fetch should not crash the entire order
+  const [merchResults, releaseResults, listingResults] = await Promise.allSettled([
+    Promise.allSettled(uniqueMerchIds.map(id => getDocument('merch', id))),
+    Promise.allSettled(uniqueReleaseIds.map(id => getDocument('releases', id))),
+    Promise.allSettled(uniqueListingIds.map(id => getDocument('vinylListings', id)))
   ]);
 
-  // Build lookup maps
-  const merchMap = new Map(uniqueMerchIds.map((id, i) => [id, merchDocs[i]]));
-  const releaseMap = new Map(uniqueReleaseIds.map((id, i) => [id, releaseDocs[i]]));
-  const listingMap = new Map(uniqueListingIds.map((id, i) => [id, listingDocs[i]]));
+  // If an entire category of fetches failed, treat all its docs as null (not found)
+  const merchSettled = merchResults.status === 'fulfilled' ? merchResults.value : uniqueMerchIds.map(() => ({ status: 'rejected' as const, reason: 'batch failed' }));
+  const releaseSettled = releaseResults.status === 'fulfilled' ? releaseResults.value : uniqueReleaseIds.map(() => ({ status: 'rejected' as const, reason: 'batch failed' }));
+  const listingSettled = listingResults.status === 'fulfilled' ? listingResults.value : uniqueListingIds.map(() => ({ status: 'rejected' as const, reason: 'batch failed' }));
+
+  // Build lookup maps — rejected fetches map to null, caught by "Product not found" checks below
+  const merchMap = new Map(uniqueMerchIds.map((id, i) => [id, merchSettled[i].status === 'fulfilled' ? merchSettled[i].value : null]));
+  const releaseMap = new Map(uniqueReleaseIds.map((id, i) => [id, releaseSettled[i].status === 'fulfilled' ? releaseSettled[i].value : null]));
+  const listingMap = new Map(uniqueListingIds.map((id, i) => [id, listingSettled[i].status === 'fulfilled' ? listingSettled[i].value : null]));
 
   // Pre-fetch artist docs for vinyl items that need shipping defaults
   const artistIdsNeeded: string[] = [];
@@ -170,8 +177,8 @@ async function validateOrderPrices(items: Record<string, unknown>[]): Promise<{ 
     }
   }
   const uniqueArtistIds = [...new Set(artistIdsNeeded)];
-  const artistDocs = await Promise.all(uniqueArtistIds.map(id => getDocument('artists', id)));
-  const artistMap = new Map(uniqueArtistIds.map((id, i) => [id, artistDocs[i]]));
+  const artistSettled = await Promise.allSettled(uniqueArtistIds.map(id => getDocument('artists', id)));
+  const artistMap = new Map(uniqueArtistIds.map((id, i) => [id, artistSettled[i].status === 'fulfilled' ? artistSettled[i].value : null]));
 
   for (const item of items) {
     let serverPrice = item.price;

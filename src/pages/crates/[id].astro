@@ -45,6 +45,12 @@ try {
   }
 } catch (_: unknown) {
   // Timeout or network error — fall back to generic meta tags
+  Astro.response.status = 404;
+}
+
+// If the fetch succeeded but no listing was found, set 404
+if (!productMeta) {
+  Astro.response.status = 404;
 }
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---

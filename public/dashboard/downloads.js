@@ -1,6 +1,11 @@
 // Dashboard — downloads module
 // Handles file downloads, ZIP creation, and download rendering
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 var ctx = null;
 
 export function init(context) {
@@ -170,8 +175,6 @@ export async function downloadZip(button) {
   } catch (e) {
     console.error('Failed to parse tracks:', e);
   }
-
-  var escapeHtml = ctx.escapeHtml;
 
   // Show progress modal
   var modal = document.getElementById('zipProgressModal');
@@ -443,8 +446,6 @@ export function renderDownloads(ordersList) {
   var container = document.getElementById('downloadsContainer');
   if (!container) return;
 
-  var escapeHtml = ctx.escapeHtml;
-
   // Extract all digital items from orders with orderId for secure downloads
   var allDownloads = [];
   (ordersList || []).forEach(function(order) {
@@ -525,16 +526,16 @@ export function renderDownloads(ordersList) {
       return '<div class="track-row">' +
         '<span class="track-name">' +
           '<span class="num">' + String(idx + 1).padStart(2, '0') + '</span>' +
-          track.name +
+          escapeHtml(track.name) +
         '</span>' +
         '<div class="dl-buttons">' +
           (track.mp3Url ?
-            '<button type="button" class="dl-btn mp3" data-order-id="' + orderId + '" data-release-id="' + releaseId + '" data-track-index="' + idx + '" data-file-type="mp3" data-filename="' + trackFilename + '.mp3">' +
+            '<button type="button" class="dl-btn mp3" data-order-id="' + escapeHtml(orderId) + '" data-release-id="' + escapeHtml(releaseId) + '" data-track-index="' + idx + '" data-file-type="mp3" data-filename="' + escapeHtml(trackFilename) + '.mp3">' +
               '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>' +
               'MP3' +
             '</button>' : '') +
           (track.wavUrl ?
-            '<button type="button" class="dl-btn wav" data-order-id="' + orderId + '" data-release-id="' + releaseId + '" data-track-index="' + idx + '" data-file-type="wav" data-filename="' + trackFilename + '.wav">' +
+            '<button type="button" class="dl-btn wav" data-order-id="' + escapeHtml(orderId) + '" data-release-id="' + escapeHtml(releaseId) + '" data-track-index="' + idx + '" data-file-type="wav" data-filename="' + escapeHtml(trackFilename) + '.wav">' +
               '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>' +
               'WAV' +
             '</button>' : '') +
@@ -547,19 +548,19 @@ export function renderDownloads(ordersList) {
 
     return '<div class="download-card">' +
       '<div class="download-header">' +
-        '<img src="' + (item.image || item.downloads?.artworkUrl || '/place-holder.webp') + '" alt="' + displayName + '" class="download-art">' +
+        '<img src="' + escapeHtml(item.image || item.downloads?.artworkUrl || '/place-holder.webp') + '" alt="' + escapeHtml(displayName) + '" class="download-art">' +
         '<div class="download-info">' +
-          '<h4>' + displayName + '</h4>' +
-          '<p>' + typeLabel + ' &middot; ' + orderDate + '</p>' +
+          '<h4>' + escapeHtml(displayName) + '</h4>' +
+          '<p>' + escapeHtml(typeLabel) + ' &middot; ' + escapeHtml(orderDate) + '</p>' +
         '</div>' +
       '</div>' +
       '<div class="release-dl-buttons">' +
         (item.downloads?.artworkUrl ?
-          '<button type="button" class="dl-btn art" data-order-id="' + orderId + '" data-release-id="' + releaseId + '" data-track-index="0" data-file-type="artwork" data-filename="' + artworkFilename + '">' +
+          '<button type="button" class="dl-btn art" data-order-id="' + escapeHtml(orderId) + '" data-release-id="' + escapeHtml(releaseId) + '" data-track-index="0" data-file-type="artwork" data-filename="' + escapeHtml(artworkFilename) + '">' +
             '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>' +
             'Artwork' +
           '</button>' : '') +
-        '<button type="button" class="dl-btn zip" data-order-id="' + orderId + '" data-release-id="' + releaseId + '" data-release-name="' + displayName.replace(/'/g, '&#39;') + '" data-tracks=\'' + JSON.stringify(item.downloads?.tracks || []).replace(/'/g, '&#39;') + '\' data-artwork-url="' + (item.downloads?.artworkUrl || '') + '" data-artist="' + artistName.replace(/'/g, '&#39;') + '">' +
+        '<button type="button" class="dl-btn zip" data-order-id="' + escapeHtml(orderId) + '" data-release-id="' + escapeHtml(releaseId) + '" data-release-name="' + escapeHtml(displayName) + '" data-tracks=\'' + JSON.stringify(item.downloads?.tracks || []).replace(/'/g, '&#39;') + '\' data-artwork-url="' + escapeHtml(item.downloads?.artworkUrl || '') + '" data-artist="' + escapeHtml(artistName) + '">' +
           '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>' +
           'Download ZIP' +
         '</button>' +

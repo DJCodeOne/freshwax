@@ -9,7 +9,12 @@ import { getLiveReleases } from '../lib/firebase-rest';
 
 // Fetch all live releases from Firebase (authoritative source)
 // KV-cached for 10 minutes so Firebase is only hit infrequently
-const allReleases = await getLiveReleases();
+let allReleases: any[] = [];
+try {
+  allReleases = await getLiveReleases();
+} catch (e: unknown) {
+  console.error('Failed to fetch releases:', e instanceof Error ? e.message : e);
+}
 
 // Group releases by label locally
 const releasesByLabel: Record<string, any[]> = {};

@@ -32,7 +32,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
     <div class="filters-bar">
       <div class="filter-group">
-        <label>Status:</label>
+        <label for="filter-status">Status:</label>
         <select id="filter-status">
           <option value="pending">Pending</option>
           <option value="reviewing">Reviewing</option>
@@ -42,7 +42,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         </select>
       </div>
       <div class="filter-group">
-        <label>Type:</label>
+        <label for="filter-type">Type:</label>
         <select id="filter-type">
           <option value="">All Types</option>
           <option value="stream">Stream</option>

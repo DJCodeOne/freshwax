@@ -147,7 +147,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <button class="filter-tab" data-filter="out">Out of Stock</button>
         </div>
         <div style="margin-left: auto; display: flex; gap: 1rem; align-items: center;">
-          <select id="filterCategory" class="form-select" style="min-width: 150px;">
+          <select id="filterCategory" class="form-select" style="min-width: 150px;" aria-label="Filter by category">
             <option value="">All Categories</option>
             <option value="clothing">Clothing</option>
             <option value="accessories">Accessories</option>
@@ -155,7 +155,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <option value="prints">Prints</option>
           </select>
           <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search products..." class="form-input" style="min-width: 200px;">
+            <input type="text" id="searchInput" placeholder="Search products..." class="form-input" style="min-width: 200px;" aria-label="Search products">
           </div>
         </div>
       </div>

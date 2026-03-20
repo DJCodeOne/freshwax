@@ -975,7 +975,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
             if (miniPlayIcon) miniPlayIcon.classList.remove('hidden');
             if (miniPauseIcon) miniPauseIcon.classList.add('hidden');
           }
-        } catch (e){}
+        } catch (e){/* Best-effort — pausing global player is non-critical; UI state may be slightly stale */}
       },
       
       stopReleasePlateAudio: function() {

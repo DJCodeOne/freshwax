@@ -11,7 +11,12 @@ import { getLiveReleases } from '../lib/firebase-rest';
 
 // Get the 10 most recent published releases from Firebase (authoritative source)
 // KV-cached for 30 minutes so Firebase is only hit infrequently
-const featuredReleases = await getLiveReleases(10);
+let featuredReleases: any[] = [];
+try {
+  featuredReleases = await getLiveReleases(10);
+} catch (e: unknown) {
+  console.error('Failed to fetch featured releases:', e instanceof Error ? e.message : e);
+}
 
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 

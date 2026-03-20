@@ -433,7 +433,7 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
           });
           // Safari fallback
           window.addEventListener('pagehide',reportAll);
-        }catch (e){}
+        }catch (e){/* Web Vitals observers are best-effort — silently degrade if PerformanceObserver throws */}
       })();
     </script>
   </>

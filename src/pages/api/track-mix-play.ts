@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, atomicIncrement, clearCache } from '../../lib/firebase-rest';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 
 const MixIdSchema = z.object({
   mixId: z.string().min(1, 'Invalid mixId').max(200),
@@ -51,6 +52,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     clearCache(`doc:dj-mixes:${mixId}`);
     clearCache('live-mixes:50');
     clearCache('live-mixes:all');
+
+    // Invalidate KV cache for dj-mixes
+    await kvDelete('live-dj-mixes-v2:all', CACHE_CONFIG.DJ_MIXES).catch(() => {});
 
     // Sync plays to D1 if available
     if (db) {

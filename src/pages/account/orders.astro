@@ -385,6 +385,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   var currentUser = null;
   var ordersInitialized = false;
   
+  function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
+
+  function isSafeUrl(url) {
+    if (typeof url !== 'string') return false;
+    var trimmed = url.trim().toLowerCase();
+    return trimmed.indexOf('https://') === 0 || trimmed.indexOf('http://') === 0;
+  }
+
   function formatPrice(amount) {
     return new Intl.NumberFormat('en-GB', { 
       style: 'currency', 
@@ -447,12 +455,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       var itemsHtml = '';
       for (var j = 0; j < items.length; j++) {
         var item = items[j];
-        itemsHtml += 
+        itemsHtml +=
           '<div class="order-item">' +
-            '<img src="' + (item.image || '/place-holder.webp') + '" alt="' + (item.name || item.title || 'Item') + '" class="order-item-image" />' +
+            '<img src="' + escapeHtml(item.image || '/place-holder.webp') + '" alt="' + escapeHtml(item.name || item.title || 'Item') + '" class="order-item-image" />' +
             '<div class="order-item-details">' +
-              '<div class="order-item-name">' + (item.name || item.title || 'Unknown Item') + '</div>' +
-              '<div class="order-item-meta">' + (item.type || 'Digital') + ' × ' + (item.quantity || 1) + '</div>' +
+              '<div class="order-item-name">' + escapeHtml(item.name || item.title || 'Unknown Item') + '</div>' +
+              '<div class="order-item-meta">' + escapeHtml(item.type || 'Digital') + ' × ' + (item.quantity || 1) + '</div>' +
             '</div>' +
             '<div class="order-item-price">' + formatPrice(item.price) + '</div>' +
           '</div>';
@@ -479,13 +487,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           '<div class="tracking-label">Shipment Tracking</div>' +
           '<div class="tracking-details">';
         if (tracking.courier) {
-          trackingHtml += '<span class="tracking-courier">' + tracking.courier + '</span>';
+          trackingHtml += '<span class="tracking-courier">' + escapeHtml(tracking.courier) + '</span>';
         }
         if (tracking.trackingNumber) {
-          trackingHtml += '<span class="tracking-number">' + tracking.trackingNumber + '</span>';
+          trackingHtml += '<span class="tracking-number">' + escapeHtml(tracking.trackingNumber) + '</span>';
         }
-        if (tracking.trackingUrl) {
-          trackingHtml += '<a href="' + tracking.trackingUrl + '" target="_blank" rel="noopener noreferrer" class="tracking-link">Track Your Package →</a>';
+        if (tracking.trackingUrl && isSafeUrl(tracking.trackingUrl)) {
+          trackingHtml += '<a href="' + escapeHtml(tracking.trackingUrl) + '" target="_blank" rel="noopener noreferrer" class="tracking-link">Track Your Package →</a>';
         }
         trackingHtml += '</div></div>';
       }
@@ -496,7 +504,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             '<div class="order-info">' +
               '<div class="order-info-item">' +
                 '<span class="order-info-label">Order</span>' +
-                '<span class="order-info-value">#' + (order.id || '').substring(0, 8).toUpperCase() + '</span>' +
+                '<span class="order-info-value">#' + escapeHtml((order.id || '').substring(0, 8).toUpperCase()) + '</span>' +
               '</div>' +
               '<div class="order-info-item">' +
                 '<span class="order-info-label">Date</span>' +
@@ -507,13 +515,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 '<span class="order-info-value">' + items.length + '</span>' +
               '</div>' +
             '</div>' +
-            '<span class="order-status ' + getStatusClass(orderStatus) + '">' + (orderStatus || 'Pending') + '</span>' +
+            '<span class="order-status ' + getStatusClass(orderStatus) + '">' + escapeHtml(orderStatus || 'Pending') + '</span>' +
           '</div>' +
           '<div class="order-items">' + itemsHtml + '</div>' +
           trackingHtml +
           '<div class="order-footer">' +
             '<div class="order-total">Total: <span>' + formatPrice(order.total) + '</span></div>' +
-            (canDownload ? '<button class="download-btn" data-order-id="' + order.id + '"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Downloads</button>' : '') +
+            (canDownload ? '<button class="download-btn" data-order-id="' + escapeHtml(order.id) + '"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Downloads</button>' : '') +
           '</div>' +
         '</div>';
     }

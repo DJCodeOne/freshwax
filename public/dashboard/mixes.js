@@ -1,6 +1,11 @@
 // Dashboard — mixes tab module
 // Handles DJ mix loading, rendering, and stats
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 var ctx = null;
 var mixesLoaded = false;
 
@@ -106,19 +111,17 @@ export async function fetchMixes(userId, forceRefresh) {
           var commentPreview = textOnly.length >= 3 ? commentText.substring(0, 80) : '';
           var commentAuthor = (commentPreview && latestComment) ? (latestComment.username || latestComment.author || 'Anonymous') : '';
 
-          var escapeHtml = ctx.escapeHtml;
-
           return '<div style="display: flex; flex-direction: row; align-items: stretch; background: linear-gradient(to bottom, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem;">' +
             '<div style="width: 240px; min-width: 240px; height: 240px; background: #000; overflow: hidden; flex-shrink: 0;">' +
               (artworkUrl ?
-                '<img src="' + artworkUrl + '" alt="' + escapeHtml(mixTitle) + '" style="width: 100%; height: 100%; object-fit: cover; display: block;" data-fallback="hide">' :
+                '<img src="' + escapeHtml(artworkUrl) + '" alt="' + escapeHtml(mixTitle) + '" style="width: 100%; height: 100%; object-fit: cover; display: block;" data-fallback="hide">' :
                 '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%); color: #fff; font-size: 4rem;">🎧</div>') +
             '</div>' +
             '<div style="flex: 1; padding: 1.75rem 2rem; display: flex; flex-direction: column; justify-content: center; gap: 1.25rem; min-width: 0;">' +
               '<div>' +
                 '<div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap;">' +
                   '<h4 style="font-family: \'Inter\', sans-serif; font-weight: 700; font-size: 2.5rem; color: #dc2626; margin: 0; line-height: 1.1; letter-spacing: 0.02em;">' + escapeHtml(mixTitle) + '</h4>' +
-                  (chartPosition !== '-' ? '<span style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.9rem; font-weight: 600;">#' + chartPosition + '</span>' : '') +
+                  (chartPosition !== '-' ? '<span style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.9rem; font-weight: 600;">#' + escapeHtml(String(chartPosition)) + '</span>' : '') +
                 '</div>' +
                 '<p style="font-size: 1.25rem; color: #d1d5db; margin: 0; font-weight: 500;">by ' + escapeHtml(djName) + '</p>' +
                 '<p style="font-size: 1.125rem; color: #6b7280; margin: 0.5rem 0 0 0;">' + escapeHtml(genre) + (durationDisplay ? ' &bull; ' + durationDisplay : '') + '</p>' +
@@ -145,7 +148,7 @@ export async function fetchMixes(userId, forceRefresh) {
                   '<div style="font-size: 0.625rem; color: #d1d5db; text-transform: uppercase;">Score</div>' +
                 '</div>' +
                 '<div style="display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0;">' +
-                  '<a href="/dj-mix/' + mix.id + '/" style="display: inline-block; padding: 0.4rem 0.875rem; background: #000; color: #fff; font-size: 0.8rem; font-weight: 600; border-radius: 5px; text-decoration: none; white-space: nowrap;">View Mix →</a>' +
+                  '<a href="/dj-mix/' + escapeHtml(mix.id) + '/" style="display: inline-block; padding: 0.4rem 0.875rem; background: #000; color: #fff; font-size: 0.8rem; font-weight: 600; border-radius: 5px; text-decoration: none; white-space: nowrap;">View Mix →</a>' +
                   '<a href="/account/mixes/" style="display: inline-block; padding: 0.4rem 0.875rem; background: linear-gradient(to bottom, #1f2937, #111827); color: #fff; font-size: 0.8rem; font-weight: 600; border-radius: 5px; text-decoration: none; border: 2px solid #4b5563; white-space: nowrap;">Manage</a>' +
                 '</div>' +
               '</div>' +

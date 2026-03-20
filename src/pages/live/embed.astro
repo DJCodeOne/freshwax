@@ -46,7 +46,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 
   <!-- Essential OG Tags for Facebook Video -->
   <meta property="og:type" content="video.other" />
-  <meta property="og:url" content={`${SITE_URL}/live`} />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta property="og:url" content={`${SITE_URL}/live/`} />
   <meta property="og:title" content={`${isLive ? '🔴 LIVE NOW: ' : ''}${streamTitle}`} />
   <meta property="og:description" content={isLive ? `${djName} is streaming live on Fresh Wax! Tune in now for jungle, drum & bass, and breakbeat.` : 'Watch live DJ streams on Fresh Wax. Jungle, drum & bass, and breakbeat.'} />
   <meta property="og:site_name" content="Fresh Wax" />
@@ -272,7 +273,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <>
           <div class="offline-message">No Live Stream</div>
           <p class="offline-sub">Check back later for live DJ sets</p>
-          <a href={`${SITE_URL}/live`} class="watch-btn" target="_blank" rel="noopener noreferrer">Visit Fresh Wax Live</a>
+          <a href={`${SITE_URL}/live/`} class="watch-btn" target="_blank" rel="noopener noreferrer">Visit Fresh Wax Live</a>
         </>
       )}
 

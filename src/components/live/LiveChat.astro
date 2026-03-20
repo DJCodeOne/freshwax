@@ -185,7 +185,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
 
     async function doSendGif(targetStreamId) {
       const chatHeaders = { 'Content-Type': 'application/json' };
-      try { const t = await user.getIdToken(); if (t) chatHeaders['Authorization'] = `Bearer ${t}`; } catch (e) {}
+      try { const t = await user.getIdToken(); if (t) chatHeaders['Authorization'] = `Bearer ${t}`; } catch (e) {/* Auth token refresh failed — request proceeds without token; server allows unauthenticated chat */}
       return fetch('/api/livestream/chat/', {
         method: 'POST',
         headers: chatHeaders,
@@ -445,7 +445,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
 
       try {
         const dmHeaders = { 'Content-Type': 'application/json' };
-        try { const t = await user.getIdToken(); if (t) dmHeaders['Authorization'] = `Bearer ${t}`; } catch (e) {}
+        try { const t = await user.getIdToken(); if (t) dmHeaders['Authorization'] = `Bearer ${t}`; } catch (e) {/* Auth token refresh failed — DM proceeds without token; server allows unauthenticated chat */}
         const response = await fetch('/api/livestream/chat/', {
           method: 'POST',
           headers: dmHeaders,

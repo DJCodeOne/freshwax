@@ -162,7 +162,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   <!-- Filters -->
   <div class="toolbar">
     <div class="filter-group">
-      <label class="filter-label">Status</label>
+      <label class="filter-label" for="statusFilter">Status</label>
       <select id="statusFilter" class="form-select" style="width: auto; padding: 0.5rem 1rem;">
         <option value="">All</option>
         <option value="pending">Pending</option>
@@ -175,7 +175,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     </div>
     
     <div class="filter-group">
-      <label class="filter-label">Type</label>
+      <label class="filter-label" for="typeFilter">Type</label>
       <select id="typeFilter" class="form-select" style="width: auto; padding: 0.5rem 1rem;">
         <option value="">All</option>
         <option value="digital">Digital Only</option>
@@ -187,10 +187,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     <div class="search-wrapper" style="flex: 1; max-width: 300px;">
       <span class="search-icon">🔍</span>
       <input 
-        type="text" 
-        id="searchInput" 
-        class="form-input" 
+        type="text"
+        id="searchInput"
+        class="form-input"
         placeholder="Search orders..."
+        aria-label="Search orders"
       >
     </div>
   </div>

@@ -105,8 +105,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="section-header">
         <h2>All Gift Cards</h2>
         <div class="header-actions">
-          <input type="text" id="cardSearch" placeholder="Search by code..." class="search-input" />
-          <select id="cardStatusFilter" class="status-filter">
+          <input type="text" id="cardSearch" placeholder="Search by code..." class="search-input" aria-label="Search gift cards" />
+          <select id="cardStatusFilter" class="status-filter" aria-label="Filter by status">
             <option value="all">All Status</option>
             <option value="active">Active (Unredeemed)</option>
             <option value="redeemed">Redeemed</option>
