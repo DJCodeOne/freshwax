@@ -2,6 +2,7 @@
 // Upload new artwork for a DJ mix to R2
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createS3Client } from '../../lib/s3-client';
 import { getDocument, updateDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
@@ -12,6 +13,10 @@ import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib
 const log = createLogger('update-mix-artwork');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
+// Zod schema for text fields from FormData (artwork File validated separately)
+const UpdateMixArtworkSchema = z.object({
+  mixId: z.string().min(1, 'Mix ID is required').max(300, 'Mix ID too long'),
+});
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -34,11 +39,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const formData = await request.formData();
-    const mixId = formData.get('mixId') as string;
+
+    // Validate text fields via Zod (artwork File validated separately below)
+    const parsed = UpdateMixArtworkSchema.safeParse({
+      mixId: (formData.get('mixId') as string || '').trim(),
+    });
+    if (!parsed.success) {
+      const firstError = parsed.error.errors[0];
+      return ApiErrors.badRequest(`Invalid field "${firstError.path.join('.')}": ${firstError.message}`);
+    }
+
+    const mixId = parsed.data.mixId;
     const artworkFile = formData.get('artwork') as File;
 
-    if (!mixId || !artworkFile) {
-      return ApiErrors.badRequest(`Missing ${!mixId ? 'mixId' : 'artwork file'}`);
+    if (!artworkFile) {
+      return ApiErrors.badRequest('Missing artwork file');
     }
 
     // Get the mix

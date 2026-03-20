@@ -2,11 +2,22 @@
 // Fix mp3Url/wavUrl for tracks in a release
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, invalidateReleasesCache } from '../../../lib/firebase-rest';
 import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
+
+const fixTrackUrlsSchema = z.object({
+  releaseId: z.string().min(1),
+  trackFixes: z.array(z.object({
+    trackIndex: z.number().int().min(0),
+    mp3Url: z.string().optional(),
+    wavUrl: z.string().optional(),
+    previewUrl: z.string().optional(),
+  })).min(1),
+});
 
 export const prerender = false;
 
@@ -71,12 +82,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
 
-  const { releaseId, trackFixes } = body;
-  // trackFixes: [{ trackIndex: 0, mp3Url: "...", wavUrl: "..." }, ...]
-
-  if (!releaseId || !trackFixes) {
-    return ApiErrors.badRequest('Missing releaseId or trackFixes');
+  const parsed = fixTrackUrlsSchema.safeParse(body);
+  if (!parsed.success) {
+    return ApiErrors.badRequest(`Invalid input: ${parsed.error.issues.map(i => i.message).join(', ')}`);
   }
+  const { releaseId, trackFixes } = parsed.data;
 
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;

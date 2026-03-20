@@ -2,9 +2,19 @@
 // Sends welcome/confirmation email when user subscribes to Plus
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
+
+const plusWelcomeEmailSchema = z.object({
+  email: z.string().email(),
+  name: z.string().optional(),
+  subscribedAt: z.string().optional(),
+  expiresAt: z.string().optional(),
+  plusId: z.string().optional(),
+  isRenewal: z.boolean().optional(),
+});
 
 const log = createLogger('[send-plus-welcome-email]');
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
@@ -33,11 +43,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { email, name, subscribedAt, expiresAt, plusId, isRenewal } = body;
-
-    if (!email) {
-      return ApiErrors.badRequest('Email address required');
+    const parsed = plusWelcomeEmailSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest(`Invalid input: ${parsed.error.issues.map(i => i.message).join(', ')}`);
     }
+    const { email, name, subscribedAt, expiresAt, plusId, isRenewal } = parsed.data;
 
     // Get Resend API key
     const runtime = locals.runtime.env || {};

@@ -1312,7 +1312,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       tracklistEl.innerHTML = listing.tracks.map((track, index) => `
         <div class="track-item" data-track-index="${index}">
           <span class="track-number">${index + 1}</span>
-          <button class="track-play-btn" data-track-index="${index}" data-audio-url="${track.audioSampleUrl || ''}" data-track-name="${track.name || 'Untitled'}" ${!track.audioSampleUrl ? 'disabled' : ''}>
+          <button class="track-play-btn" data-track-index="${index}" data-audio-url="${escapeHtml(track.audioSampleUrl || '')}" data-track-name="${escapeHtml(track.name || 'Untitled')}" ${!track.audioSampleUrl ? 'disabled' : ''}>
             <svg class="play-icon" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z"/>
             </svg>
@@ -1321,8 +1321,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             </svg>
           </button>
           <span class="track-text">
-            ${track.side || track.position ? `<span class="track-side">${track.side || ''}${track.position || ''}</span>` : ''}
-            <span class="track-name">${track.name || 'Untitled'}</span>
+            ${track.side || track.position ? `<span class="track-side">${escapeHtml(track.side || '')}${escapeHtml(track.position || '')}</span>` : ''}
+            <span class="track-name">${escapeHtml(track.name || 'Untitled')}</span>
           </span>
         </div>
       `).join('');

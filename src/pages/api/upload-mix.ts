@@ -2,6 +2,7 @@
 // Uploads DJ mixes to R2 and Firebase with production-ready logging
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { createS3Client } from '../../lib/s3-client';
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
@@ -48,6 +49,17 @@ function parseTracklist(tracklist: string): string[] {
 // Max total request size for direct upload: 120MB (100MB audio + artwork + form fields)
 const MAX_UPLOAD_MIX_REQUEST_SIZE = 120 * 1024 * 1024;
 
+// Zod schema for text fields from FormData (File objects validated separately)
+const UploadMixSchema = z.object({
+  djName: z.string().max(30, 'DJ name must be 30 characters or less').optional().default(''),
+  mixTitle: z.string().min(1, 'Mix title is required').max(50, 'Mix title must be 50 characters or less'),
+  mixDescription: z.string().max(300, 'Description must be 300 characters or less').optional().default(''),
+  genre: z.string().max(30, 'Genre must be 30 characters or less').optional().default('Jungle'),
+  tracklist: z.string().max(1500, 'Tracklist must be 1500 characters or less').optional().default(''),
+  durationSeconds: z.string().regex(/^\d+$/, 'Duration must be a number').optional().default('0'),
+  userId: z.string().optional().default(''),
+});
+
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: upload operations - 10 per hour
   const clientId = getClientId(request);
@@ -76,16 +88,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const formData = await request.formData();
 
-    // Get all form fields with character limits
+    // Validate text fields via Zod (File objects validated separately below)
+    const parsed = UploadMixSchema.safeParse({
+      djName: (formData.get('djName') as string || '').trim(),
+      mixTitle: (formData.get('mixTitle') as string || '').trim(),
+      mixDescription: (formData.get('mixDescription') as string || '').trim(),
+      genre: (formData.get('genre') as string || '').trim(),
+      tracklist: (formData.get('tracklist') as string || '').trim(),
+      durationSeconds: (formData.get('durationSeconds') as string || '0'),
+      userId: (formData.get('userId') as string || '').trim(),
+    });
+    if (!parsed.success) {
+      const firstError = parsed.error.errors[0];
+      return ApiErrors.badRequest(`Invalid field "${firstError.path.join('.')}": ${firstError.message}`);
+    }
+
+    // Extract validated text fields
     const audioFile = formData.get('audioFile') as File;
     const artworkFile = formData.get('artworkFile') as File | null;
-    const djNameFromForm = (formData.get('djName') as string || '').trim().slice(0, 30);
-    const mixTitle = (formData.get('mixTitle') as string || '').trim().slice(0, 50);
-    const mixDescription = (formData.get('mixDescription') as string || '').trim().slice(0, 300);
-    const genre = (formData.get('genre') as string || 'Jungle').trim().slice(0, 30);
-    const tracklistRaw = (formData.get('tracklist') as string || '').trim().slice(0, 1500);
-    const durationSeconds = parseInt(formData.get('durationSeconds') as string || '0', 10) || 0;
-    const userId = (formData.get('userId') as string || '').trim();
+    const djNameFromForm = parsed.data.djName;
+    const mixTitle = parsed.data.mixTitle;
+    const mixDescription = parsed.data.mixDescription;
+    const genre = parsed.data.genre || 'Jungle';
+    const tracklistRaw = parsed.data.tracklist;
+    const durationSeconds = parseInt(parsed.data.durationSeconds, 10) || 0;
+    const userId = parsed.data.userId;
 
     // Verify the authenticated user matches the claimed userId
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);

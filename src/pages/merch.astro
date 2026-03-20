@@ -832,7 +832,7 @@ const merchItemList = {
       var thumbs = document.getElementById('modalThumbs');
       if (thumbs && product.images?.length > 1) {
         thumbs.innerHTML = product.images.map(function(img, i) {
-          return '<button class="thumb ' + (i === 0 ? 'active' : '') + '" data-src="' + img + '"><img src="' + img + '" alt="' + product.name + ' thumbnail ' + (i + 1) + '" width="80" height="80" loading="lazy" decoding="async" /></button>';
+          return '<button class="thumb ' + (i === 0 ? 'active' : '') + '" data-src="' + escapeHtml(img) + '"><img src="' + escapeHtml(img) + '" alt="' + escapeHtml(product.name) + ' thumbnail ' + (i + 1) + '" width="80" height="80" loading="lazy" decoding="async" /></button>';
         }).join('');
         thumbs.querySelectorAll('.thumb').forEach(function(t) {
           t.addEventListener('click', function() {

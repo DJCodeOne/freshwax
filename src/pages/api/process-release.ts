@@ -3,6 +3,7 @@
 // Copies files from submissions/ to releases/ folder for organization
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { saSetDocument, saQueryCollection, getServiceAccountKey } from '../../lib/firebase-service-account';
 import { invalidateReleasesCache, clearCache } from '../../lib/firebase-rest';
 import { createLogger, errorResponse, successResponse, ApiErrors } from '../../lib/api-utils';
@@ -11,6 +12,11 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import type { Track } from '../../lib/types';
+
+const processReleaseSchema = z.object({
+  submissionId: z.string().min(1, 'submissionId is required'),
+  adminKey: z.string().optional(),
+}).passthrough();
 
 const log = createLogger('process-release');
 
@@ -25,15 +31,23 @@ function createReleaseFolderName(artistName: string, releaseName: string): strin
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Parse body first to get adminKey for auth
-    let bodyData: Record<string, unknown>;
+    let rawBody: unknown;
     try {
-      bodyData = await request.json();
+      rawBody = await request.json();
     } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
+    // Validate request body with Zod
+    const parsed = processReleaseSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      const message = parsed.error.errors.map(e => e.message).join(', ');
+      return ApiErrors.badRequest(message);
+    }
+    const bodyData = parsed.data;
+
     // Admin authentication required - pass body data for adminKey check
-    const authError = await requireAdminAuth(request, locals, bodyData);
+    const authError = await requireAdminAuth(request, locals, bodyData as Record<string, unknown>);
     if (authError) return authError;
 
   // Rate limit: write operations - 30 per minute
@@ -61,10 +75,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     let { submissionId } = bodyData;
-
-    if (!submissionId) {
-      return ApiErrors.badRequest('submissionId required');
-    }
 
     // Check if submission is from root level (prefixed with "root:")
     const isRootLevel = submissionId.startsWith('root:');
