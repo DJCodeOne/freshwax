@@ -1205,6 +1205,26 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     });
   });
 
+  // Close modals on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var bm = document.getElementById('bookingModal');
+      if (bm && !bm.classList.contains('hidden')) {
+        bm.classList.add('hidden');
+        var bookBtn = document.getElementById('bookSlotBtn');
+        if (bookBtn) bookBtn.focus();
+        return;
+      }
+      var gm = document.getElementById('goLiveNowModal');
+      if (gm && !gm.classList.contains('hidden')) {
+        gm.classList.add('hidden');
+        var goLiveBtn = document.getElementById('goLiveNowBtn');
+        if (goLiveBtn) goLiveBtn.focus();
+        return;
+      }
+    }
+  });
+
   // Go Live Now button
   var goLiveNowBtn = document.getElementById('goLiveNowBtn');
   if (goLiveNowBtn) goLiveNowBtn.addEventListener('click', async function() {

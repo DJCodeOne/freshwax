@@ -592,4 +592,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
   document.getElementById('save-draft-btn')?.addEventListener('click', () => savePost('draft'));
   document.getElementById('publish-btn')?.addEventListener('click', () => savePost('published'));
+
+  // Close modals on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var modals = document.querySelectorAll('[role="dialog"]:not(.hidden):not([style*="display: none"])');
+      modals.forEach(function(m) {
+        if (m.offsetParent !== null || m.style.display !== 'none') {
+          m.classList.add('hidden');
+          m.style.display = 'none';
+        }
+      });
+    }
+  });
 </script>

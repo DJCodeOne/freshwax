@@ -1289,6 +1289,15 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       allowancesModal?.querySelector('.modal-close')?.addEventListener('click', () => closeModal(allowancesModal), sig);
       allowancesModal?.querySelector('.modal-cancel')?.addEventListener('click', () => closeModal(allowancesModal), sig);
       allowancesModal?.querySelector('.save-allowance-btn')?.addEventListener('click', saveAllowance, sig);
+
+      // Close schedule modals on Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          if (addDjModal && !addDjModal.classList.contains('hidden')) { closeModal(addDjModal); return; }
+          if (editSlotModal && !editSlotModal.classList.contains('hidden')) { closeModal(editSlotModal); return; }
+          if (allowancesModal && !allowancesModal.classList.contains('hidden')) { closeModal(allowancesModal); return; }
+        }
+      }, sig);
     }
 
     function navigate(delta) {

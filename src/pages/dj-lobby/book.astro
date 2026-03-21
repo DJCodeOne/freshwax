@@ -984,6 +984,16 @@ const firebaseConfig = {
         }
       });
 
+      // Close edit modal on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          var modal = document.getElementById('editModal');
+          if (modal && !modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+          }
+        }
+      });
+
       document.getElementById('saveEditBtn').addEventListener('click', async () => {
         const slotId = document.getElementById('editSlotId').value;
         const djName = document.getElementById('editDjName').value.trim();

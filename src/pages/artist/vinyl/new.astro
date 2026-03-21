@@ -640,6 +640,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
   });
 
+  // Close waveform modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      var modal = document.getElementById('waveformModal');
+      if (modal && modal.style.display !== 'none') {
+        closeWaveformModal();
+      }
+    }
+  });
+
   // Initialize modal waveform with regions plugin
   function initModalWaveform() {
     if (modalWavesurfer) {

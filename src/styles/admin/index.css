@@ -574,7 +574,7 @@
     right: 0;
     bottom: 0;
     background-color: #ccc;
-    transition: 0.3s;
+    transition: background-color 0.3s;
     border-radius: 24px;
   }
 
@@ -586,7 +586,7 @@
     left: 3px;
     bottom: 3px;
     background-color: white;
-    transition: 0.3s;
+    transition: transform 0.3s;
     border-radius: 50%;
   }
 

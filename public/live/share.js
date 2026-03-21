@@ -41,6 +41,17 @@ export function initShare() {
     });
   }
 
+  // Close share modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var modal = document.getElementById('shareModal');
+      if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+        if (shareBtn) shareBtn.focus();
+      }
+    }
+  });
+
   // Copy share link
   var copyBtn = document.getElementById('copyShareLink');
   if (copyBtn) {

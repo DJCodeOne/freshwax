@@ -163,14 +163,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="global-sale-header">
             <span class="sale-icon">🏷️</span>
             <h3>Global Sale</h3>
-            <label class="toggle-switch">
-              <input type="checkbox" id="globalSaleToggle" />
+            <label class="toggle-switch" for="globalSaleToggle">
+              <input type="checkbox" id="globalSaleToggle" aria-label="Toggle global sale" />
               <span class="toggle-slider"></span>
             </label>
           </div>
           <div class="global-sale-options" id="globalSaleOptions">
             <div class="sale-field">
-              <label>Discount</label>
+              <label for="globalDiscountSelect">Discount</label>
               <select id="globalDiscountSelect" class="sale-select">
                 <option value="0">No discount</option>
                 <option value="10">10% off</option>
@@ -300,6 +300,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         placeholder="0.00"
                         min="0"
                         step="0.01"
+                        aria-label={`Track price for ${release.releaseName || 'release'}`}
                       />
                     </div>
                     <div class="edit-field">
@@ -312,11 +313,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         placeholder="0.00"
                         min="0"
                         step="0.01"
+                        aria-label={`Release price for ${release.releaseName || 'release'}`}
                       />
                     </div>
                     <div class="edit-field">
                       <label>Sale Discount</label>
-                      <select class="edit-input sale-discount-input" data-release-id={release.id}>
+                      <select class="edit-input sale-discount-input" data-release-id={release.id} aria-label={`Sale discount for ${release.releaseName || 'release'}`}>
                         <option value="0" selected={!release.saleDiscount || release.saleDiscount === 0}>No discount</option>
                         <option value="10" selected={release.saleDiscount === 10}>10% off</option>
                         <option value="20" selected={release.saleDiscount === 20}>20% off</option>
@@ -730,7 +732,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     right: 0;
     bottom: 0;
     background-color: #374151;
-    transition: 0.3s;
+    transition: background-color 0.3s;
     border-radius: 26px;
   }
 
@@ -742,7 +744,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     left: 3px;
     bottom: 3px;
     background-color: white;
-    transition: 0.3s;
+    transition: transform 0.3s;
     border-radius: 50%;
   }
 

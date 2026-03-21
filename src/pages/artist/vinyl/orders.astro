@@ -339,6 +339,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   document.getElementById('shipModalCancelBtn')?.addEventListener('click', closeShipModal);
   document.getElementById('shipModalConfirmBtn')?.addEventListener('click', confirmShip);
 
+  // Close ship modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      var modal = document.getElementById('shipModal');
+      if (modal && modal.style.display !== 'none') {
+        closeShipModal();
+      }
+    }
+  });
+
   // Event delegation for dynamically rendered "Mark as Shipped" buttons
   document.getElementById('ordersList')?.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action="openShipModal"]');

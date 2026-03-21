@@ -565,7 +565,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="profile-edit hidden" id="profile-edit">
                 <div class="edit-form">
                   <div class="form-field">
-                    <label>Bio</label>
+                    <label for="edit-bio">Bio</label>
                     <textarea id="edit-bio" rows="4" maxlength="200" placeholder="Tell people about yourself, your music, or your label...">{partner.bio || ''}</textarea>
                     <span class="char-count"><span id="bio-count">{(partner.bio || '').length}</span>/200</span>
                   </div>
@@ -742,7 +742,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     <p>Enter your PayPal email to receive payouts via PayPal.</p>
                     <p class="paypal-fee-note">Note: PayPal charges a 2% payout fee. We recommend Stripe for lower fees.</p>
                     <div class="paypal-form">
-                      <input type="email" id="paypal-email-input" placeholder="your@paypal-email.com" />
+                      <input type="email" id="paypal-email-input" placeholder="your@paypal-email.com" aria-label="PayPal email address" />
                       <button class="paypal-link-btn" id="paypal-link-btn">Link PayPal</button>
                     </div>
                   </div>

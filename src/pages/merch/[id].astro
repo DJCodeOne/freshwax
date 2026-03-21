@@ -159,11 +159,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   const colorValue = typeof color === 'string' ? color : color.hex || color.name;
                   const colorName = typeof color === 'string' ? color : color.name || color;
                   return (
-                    <button 
+                    <button
                       class={`color-btn ${i === 0 ? 'selected' : ''}`}
                       data-color={colorName}
                       style={`background-color: ${colorValue}`}
                       title={colorName}
+                      aria-label={`Select colour: ${colorName}`}
                     />
                   );
                 })}

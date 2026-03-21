@@ -49,6 +49,17 @@ export function initShoutout(deps) {
     });
   }
 
+  // Close shoutout modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && shoutoutModal && !shoutoutModal.classList.contains('hidden')) {
+      shoutoutModal.classList.add('hidden');
+      if (shoutoutInput) shoutoutInput.value = '';
+      if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
+      if (sendShoutoutBtn) sendShoutoutBtn.disabled = true;
+      if (shoutoutBtn) shoutoutBtn.focus();
+    }
+  });
+
   // Character count and enable/disable send button
   if (shoutoutInput) {
     shoutoutInput.addEventListener('input', function() {

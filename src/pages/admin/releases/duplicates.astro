@@ -372,6 +372,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         div.textContent = str;
         return div.innerHTML;
       }
+
+      // Close modals on Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          const modals = document.querySelectorAll('[role="dialog"]:not(.hidden):not([style*="display: none"])');
+          modals.forEach(function(m) {
+            if ((m as HTMLElement).offsetParent !== null || (m as HTMLElement).style.display !== 'none') {
+              m.classList.add('hidden');
+              (m as HTMLElement).style.display = 'none';
+            }
+          });
+        }
+      });
     </script>
   </Fragment>
 </AdminLayout>

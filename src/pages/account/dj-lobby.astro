@@ -4187,6 +4187,31 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       document.getElementById('dmNotification')?.classList.add('hidden');
     });
 
+    // Close modals on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        var relay = document.getElementById('relaySourcesModal');
+        if (relay && !relay.classList.contains('hidden')) {
+          relay.classList.add('hidden');
+          return;
+        }
+        var share = document.getElementById('shareStreamModal');
+        if (share && !share.classList.contains('hidden')) {
+          closeShareModal();
+          return;
+        }
+        var dm = document.getElementById('dmModal');
+        if (dm && !dm.classList.contains('hidden')) {
+          closeDmModal();
+          return;
+        }
+        var init = document.getElementById('initModal');
+        if (init && !init.classList.contains('hidden')) {
+          init.classList.add('hidden');
+          return;
+        }
+      }
+    });
 
     // Sign out
     document.getElementById('signOutBtn')?.addEventListener('click', async () => {

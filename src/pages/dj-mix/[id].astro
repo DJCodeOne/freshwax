@@ -1958,6 +1958,14 @@ Artist - Track Title
   editTracklistCancel?.addEventListener('click', closeEditModal);
   editTracklistBackdrop?.addEventListener('click', closeEditModal);
 
+  // Close edit tracklist modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && editTracklistModal && !editTracklistModal.classList.contains('hidden')) {
+      closeEditModal();
+      if (editTracklistBtn) editTracklistBtn.focus();
+    }
+  });
+
   // Save tracklist
   editTracklistSave?.addEventListener('click', async function() {
     const mixId = editTracklistBtn?.getAttribute('data-mix-id');
@@ -2095,7 +2103,15 @@ Artist - Track Title
   
   giphyModalClose?.addEventListener('click', closeGiphyModal);
   giphyModalBackdrop?.addEventListener('click', closeGiphyModal);
-  
+
+  // Close Giphy modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && giphyModal && !giphyModal.classList.contains('hidden')) {
+      closeGiphyModal();
+      if (gifPickerBtn) gifPickerBtn.focus();
+    }
+  });
+
   // Load trending GIFs via server-side proxy
   async function loadTrendingGifs() {
     if (!giphyResults) return;

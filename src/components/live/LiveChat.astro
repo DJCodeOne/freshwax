@@ -291,11 +291,28 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
       emojiPanel.style.display = 'none';
     });
 
-    // Close emoji panel on Escape key
+    // Close emoji panel, GIF modal, or DM modal on Escape key
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && emojiPanel && emojiPanel.style.display !== 'none') {
+      if (e.key !== 'Escape') return;
+      if (emojiPanel && emojiPanel.style.display !== 'none') {
         emojiPanel.style.display = 'none';
         emojiBtn?.focus();
+        return;
+      }
+      var gm = document.getElementById('gifModal');
+      if (gm && gm.style.display !== 'none') {
+        gm.style.display = 'none';
+        document.body.style.overflow = '';
+        restoreFocusFromModal(gm);
+        return;
+      }
+      var dm = document.getElementById('dmModal');
+      if (dm && dm.style.display !== 'none') {
+        dm.style.display = 'none';
+        var dmIn = document.getElementById('dmMessageInput');
+        if (dmIn) dmIn.value = '';
+        restoreFocusFromModal(dm);
+        return;
       }
     }, { signal: liveChatCleanupController.signal });
 

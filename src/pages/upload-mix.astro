@@ -323,6 +323,7 @@ Artist - Track Title
               <button type="button" id="audio-browse-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold">
                 Browse Files
               </button>
+              <label for="audio-file-input" class="sr-only">Select MP3 audio file</label>
               <input type="file" id="audio-file-input" accept=".mp3,audio/mpeg" class="hidden" />
             </div>
 
@@ -1369,6 +1370,17 @@ Artist - Track Title
     if (!quickDropCancel.disabled) {
       quickDropModal.classList.add('hidden');
       quickDropFile = null;
+    }
+  });
+
+  // Close quick drop modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && quickDropModal && !quickDropModal.classList.contains('hidden')) {
+      if (isConverting) return;
+      if (!quickDropCancel.disabled) {
+        quickDropModal.classList.add('hidden');
+        quickDropFile = null;
+      }
     }
   });
 

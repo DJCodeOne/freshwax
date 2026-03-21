@@ -96,6 +96,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <img id="artworkPreview" src="/place-holder.webp" alt="Current artwork" width="200" height="200">
               </div>
               <div class="artwork-controls">
+                <label for="artworkInput" class="sr-only">Upload cover artwork</label>
                 <input type="file" id="artworkInput" accept="image/*" hidden>
                 <button type="button" class="btn-change-artwork" id="changeArtworkBtn">📷 Change Cover</button>
                 <p class="artwork-hint">Will be resized to 1200×1200 WebP</p>
@@ -711,6 +712,20 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       editModal?.classList.add('hidden');
       deleteModal?.classList.add('hidden');
     });
+  });
+
+  // Close modals on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (editModal && !editModal.classList.contains('hidden')) {
+        editModal.classList.add('hidden');
+        return;
+      }
+      if (deleteModal && !deleteModal.classList.contains('hidden')) {
+        deleteModal.classList.add('hidden');
+        return;
+      }
+    }
   });
 </script>
 

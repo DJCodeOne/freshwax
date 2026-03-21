@@ -747,6 +747,13 @@ export function initPlaylistModal() {
       backBtn.addEventListener('click', closeModal);
     }
 
+    // Close playlist modal on Escape key
+    document.addEventListener('keydown', function(e: KeyboardEvent) {
+      if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+        closeModal();
+      }
+    });
+
     // Add to playlist
     const urlInput = document.getElementById('playlistUrlInput') as HTMLInputElement;
     const addBtn = document.getElementById('addToPlaylistBtn');
