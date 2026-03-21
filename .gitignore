@@ -44,3 +44,6 @@ nul
 freshwax-store-firebase-adminsdk.json
 backups/
 public/freshwax-cart.unmin.js
+
+# Debug scripts
+check-ok*.cjs

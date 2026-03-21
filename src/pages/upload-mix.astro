@@ -1128,7 +1128,7 @@ Artist - Track Title
         uploadSettings = { ...uploadSettings, ...result.settings.djMixes };
       }
     } catch (err) {
-      console.warn('Could not load upload settings, using defaults');
+      // Use default settings on error
     }
   }
 
@@ -1427,7 +1427,7 @@ Artist - Track Title
         return;
       }
     } catch (err) {
-      console.warn('Could not check upload limits:', err);
+      // Continue with upload if limit check fails
     }
 
     // Disable confirm button, but keep cancel enabled for abort
@@ -1644,7 +1644,7 @@ Artist - Track Title
             })
           });
         } catch (err) {
-          console.warn('Could not record usage:', err);
+          // Non-critical usage tracking failure
         }
 
         alert(`Mix uploaded successfully!\n\n"${quickDropTitle}" is now LIVE on the DJ Mixes page!`);
@@ -1708,7 +1708,6 @@ Artist - Track Title
         return;
       }
     } catch (err) {
-      console.warn('Could not check upload limits:', err);
       // Continue with upload if limit check fails
     }
 
@@ -1991,7 +1990,7 @@ Artist - Track Title
             });
           }
         } catch (err) {
-          console.warn('Could not record upload usage:', err);
+          // Non-critical usage tracking failure
         }
 
         alert(`✅ Mix uploaded and published successfully!

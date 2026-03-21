@@ -286,7 +286,7 @@ const merchItemList = {
             <p>Check back soon!</p>
           </div>
         ) : (
-          <div id="productsGrid" class="products-grid">
+          <div id="productsGrid" class="products-grid" aria-live="polite">
             {products.map((product, pIdx) => (
               <div
                 class="product-card"

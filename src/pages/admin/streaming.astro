@@ -2766,16 +2766,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         container.innerHTML = result.bypasses.map(bypass => {
           const grantedDate = bypass.grantedAt ? new Date(bypass.grantedAt).toLocaleDateString('en-GB') : 'Unknown';
           return `
-            <div class="bypass-card" data-user-id="${bypass.userId}">
+            <div class="bypass-card" data-user-id="${escapeHtml(bypass.userId)}">
               <div class="bypass-info">
-                <h4>${bypass.email || bypass.name || 'Unknown'} <span class="bypass-badge">BYPASS</span></h4>
+                <h4>${escapeHtml(bypass.email || bypass.name || 'Unknown')} <span class="bypass-badge">BYPASS</span></h4>
                 <div class="bypass-meta">
                   Granted: ${grantedDate}
-                  ${bypass.reason ? ` • Reason: ${bypass.reason}` : ''}
-                  ${bypass.grantedBy ? ` • By: ${bypass.grantedBy}` : ''}
+                  ${bypass.reason ? ` • Reason: ${escapeHtml(bypass.reason)}` : ''}
+                  ${bypass.grantedBy ? ` • By: ${escapeHtml(bypass.grantedBy)}` : ''}
                 </div>
               </div>
-              <button class="revoke-bypass-btn" data-action="revokeBypass" data-user-id="${bypass.userId}" data-email="${bypass.email || ''}">Revoke</button>
+              <button class="revoke-bypass-btn" data-action="revokeBypass" data-user-id="${escapeHtml(bypass.userId)}" data-email="${escapeHtml(bypass.email || '')}">Revoke</button>
             </div>
           `;
         }).join('');
@@ -2813,8 +2813,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         container.innerHTML = `
           <div class="key-card ${!key.active || isExpired ? 'inactive' : ''}">
             <div class="key-code-display">
-              <span class="key-code">${key.code}</span>
-              <button class="copy-key-btn" data-action="copyAccessKey" data-code="${key.code}">📋 Copy</button>
+              <span class="key-code">${escapeHtml(key.code)}</span>
+              <button class="copy-key-btn" data-action="copyAccessKey" data-code="${escapeHtml(key.code)}">📋 Copy</button>
             </div>
             <div class="key-meta">
               <span class="key-status ${key.active && !isExpired ? 'active' : 'inactive'}">
@@ -2835,7 +2835,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           usersList.classList.remove('hidden');
           usersContainer.innerHTML = key.usedBy.map(user => `
             <div class="key-user-item">
-              <span class="user-email">${user.email || user.name || user.userId}</span>
+              <span class="user-email">${escapeHtml(user.email || user.name || user.userId)}</span>
               <span class="user-date">${user.redeemedAt ? new Date(user.redeemedAt).toLocaleDateString('en-GB') : ''}</span>
             </div>
           `).join('');
@@ -3233,7 +3233,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           card.innerHTML = `
             <div style="padding: 1rem; text-align: center; color: #22c55e; width: 100%;">
               <span style="font-size: 2rem;">✅</span>
-              <p style="margin: 0.5rem 0 0 0;">Approved! ${djName || 'DJ'} can now go live.</p>
+              <p style="margin: 0.5rem 0 0 0;">Approved! ${escapeHtml(djName || 'DJ')} can now go live.</p>
             </div>
           `;
           setTimeout(() => {
@@ -3384,7 +3384,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           card.innerHTML = `
             <div style="padding: 1rem; text-align: center; color: #22c55e; width: 100%;">
               <span style="font-size: 2rem;">✅</span>
-              <p style="margin: 0.5rem 0 0 0;">Approved! ${djName || 'DJ'} can now book up to ${hours} extra hours.</p>
+              <p style="margin: 0.5rem 0 0 0;">Approved! ${escapeHtml(djName || 'DJ')} can now book up to ${hours} extra hours.</p>
             </div>
           `;
           setTimeout(() => loadEventRequests(), 2000);

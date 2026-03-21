@@ -1649,7 +1649,7 @@ try {
               window.userBadge = badgeData.badge;
             }
           } catch (e) {
-            console.warn('[Live] Failed to fetch user badge:', e);
+            // Non-critical badge fetch failure
           }
         }
 
@@ -1726,7 +1726,6 @@ try {
     await waitForPusher();
 
     if (!window.Pusher) {
-      console.warn('[Takeover] Pusher not available, falling back to polling');
       // Fallback: poll API every 10 seconds
       takeoverFallbackInterval = setInterval(async () => {
         try {
@@ -1738,7 +1737,7 @@ try {
           } else {
             hideTakeoverNotification();
           }
-        } catch (e) { console.warn('[Takeover] Poll error:', e); }
+        } catch (e) { /* Silent polling failure */ }
       }, 10000);
       return;
     }
@@ -1749,7 +1748,6 @@ try {
 
     const djAuthToken = await currentUser.getIdToken().catch(() => null);
     if (!djAuthToken) {
-      console.warn('[Takeover] No auth token, skipping Pusher subscription');
       return;
     }
 

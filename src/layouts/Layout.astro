@@ -700,7 +700,7 @@ const csrfToken = Astro.locals.csrfToken || '';
       if (!window._swRegistered && 'serviceWorker' in navigator) {
         window._swRegistered = true;
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('/sw.js').catch(function() {});
+          navigator.serviceWorker.register('/sw.js').catch(function() {}); // SW registration is optional
         }, { once: true });
       }
     </script>
@@ -728,7 +728,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           v.load();
           v.addEventListener('loadedmetadata', function() {
             v.currentTime = seekTo;
-            v.play().catch(function() {});
+            v.play().catch(function() {}); // Autoplay failure is expected
           }, { once: true });
         }
 

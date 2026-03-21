@@ -2343,7 +2343,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }).then(function(response) {
         return response.ok ? response.json() : null;
       }).catch(function(err) {
-        console.warn('[Relay] Check failed for', source.name, err instanceof Error ? err.message : String(err));
         return null;
       });
     }));
@@ -3161,7 +3160,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         log('Chat cleanup complete via API:', result.messagesDeleted, 'messages deleted');
       }
     } catch (e) {
-      console.warn('Chat cleanup skipped:', e instanceof Error ? e.message : String(e));
+      // Silent failure - non-critical operation
     }
   }
 
@@ -3552,7 +3551,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   initBroadcastMeters();
                 }
               }).catch(e => {
-                console.warn('[Stream] Could not restart relay audio:', e.message);
+                // Silent failure - non-critical audio restart
               });
             }
           }
@@ -4231,7 +4230,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             });
           }
         } catch (presenceErr) {
-          console.warn('Presence leave error (non-fatal):', presenceErr);
+          // Silent failure - non-fatal presence error
         }
         await signOut(auth);
         window.location.href = '/live/';
@@ -5439,7 +5438,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 })
               });
             } catch (cancelErr) {
-              console.warn('Takeover cancel cleanup error:', cancelErr);
+              // Silent failure - non-critical cleanup
             }
           }
         }, 1000);
@@ -5665,7 +5664,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         console.debug('[Relay] Live check:', selectedRelaySource.name, isRelayLive ? 'LIVE' : 'offline');
       }
     } catch (err) {
-      console.warn('[Relay] Live check failed:', err instanceof Error ? err.message : String(err));
       // If check fails, assume it might be live (let user try)
       isRelayLive = true;
     }
