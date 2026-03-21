@@ -565,7 +565,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   )}
 
   <!-- Download Progress Modal -->
-  <div id="dlModal" class="fixed inset-0 z-[200]" style="display:none;">
+  <div id="dlModal" class="fixed inset-0 z-[200]" style="display:none;" role="dialog" aria-modal="true" aria-label="Download progress">
     <div class="fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4">
       <div class="relative bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center">
@@ -586,7 +586,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   </div>
 
   <!-- Enhanced Share Modal -->
-  <div id="share-modal" class="fixed inset-0 z-[100] hidden">
+  <div id="share-modal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-label="Share this mix">
     <div class="fixed inset-0 bg-black/90 backdrop-blur-sm transition-opacity" id="share-modal-backdrop"></div>
     <div class="fixed inset-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div class="bg-gradient-to-br from-gray-900 via-black to-gray-900 max-w-lg w-full transform transition-[transform,opacity] border-2 border-red-500/50 rounded-2xl mx-2 my-4 shadow-2xl shadow-red-500/20">
@@ -734,7 +734,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   </div>
 
   <!-- Edit Tracklist Modal -->
-  <div id="edit-tracklist-modal" class="fixed inset-0 z-[100] hidden">
+  <div id="edit-tracklist-modal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-label="Edit tracklist">
     <div class="fixed inset-0 bg-black/80 transition-opacity" id="edit-tracklist-backdrop"></div>
     <div class="fixed inset-0 flex items-center justify-center p-3 sm:p-4">
       <div class="bg-white max-w-2xl w-full transform transition-[transform,opacity] border-4 border-black rounded-lg mx-2 max-h-[90vh] overflow-hidden flex flex-col">
@@ -772,7 +772,7 @@ Artist - Track Title
   </div>
 
   <!-- Giphy Picker Modal -->
-  <div id="giphy-modal" class="fixed inset-0 z-[100] hidden">
+  <div id="giphy-modal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-label="Search GIFs">
     <div class="fixed inset-0 bg-black/80 transition-opacity" id="giphy-modal-backdrop"></div>
     <div class="fixed inset-0 flex items-center justify-center p-3 sm:p-4">
       <div class="bg-gray-900 max-w-lg w-full transform transition-[transform,opacity] border-2 border-blue-500 rounded-lg mx-2 max-h-[80vh] overflow-hidden flex flex-col">
@@ -1747,8 +1747,8 @@ Artist - Track Title
     }).then(function(data) {
       if (data.success) {
         // Build new comment HTML - escape any special characters
-        const safeUserName = userName.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const safeComment = comment ? comment.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+        const safeUserName = escapeHtml(userName);
+        const safeComment = comment ? escapeHtml(comment) : '';
         const initial = safeUserName.charAt(0).toUpperCase();
         
         let commentContent = '';
@@ -2198,9 +2198,9 @@ Artist - Track Title
       return response.json();
     }).then(function(data) {
       if (data.success) {
-        const safeUserName = userName.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeUserName = escapeHtml(userName);
         const initial = safeUserName.charAt(0).toUpperCase();
-        
+
         // Avatar HTML - use image if available, fallback to initial
         let avatarHtml;
         if (currentUserAvatar) {

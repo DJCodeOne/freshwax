@@ -6,6 +6,7 @@ import { fetchWithTimeout } from './api-utils';
 // Environment bindings needed by chatbot commands
 interface ChatbotEnv {
   FIREBASE_API_KEY?: string;
+  FIREBASE_PROJECT_ID?: string;
 }
 
 // Livestream slot shape from Firestore
@@ -159,7 +160,7 @@ export const BOT_COMMANDS: Record<string, {
 async function getCurrentStream(streamId: string, env: ChatbotEnv): Promise<LivestreamSlotInfo | null> {
   try {
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-    const projectId = 'freshwax-store';
+    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     const response = await fetchWithTimeout(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/livestreamSlots/${streamId}?key=${apiKey}`,
@@ -185,7 +186,7 @@ async function getCurrentStream(streamId: string, env: ChatbotEnv): Promise<Live
 async function getTodaySchedule(env: ChatbotEnv): Promise<LivestreamSlotInfo[]> {
   try {
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-    const projectId = 'freshwax-store';
+    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -253,7 +254,7 @@ async function getTodaySchedule(env: ChatbotEnv): Promise<LivestreamSlotInfo[]> 
 async function getNextSlot(env: ChatbotEnv): Promise<LivestreamSlotInfo | null> {
   try {
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-    const projectId = 'freshwax-store';
+    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     const now = new Date().toISOString();
 

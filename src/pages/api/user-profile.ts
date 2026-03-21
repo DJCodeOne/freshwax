@@ -25,7 +25,7 @@ const UserProfileUpdateSchema = z.object({
   county: z.string().max(200).optional(),
   postcode: z.string().max(200).optional(),
   country: z.string().max(200).optional(),
-}).catchall(z.unknown());
+}).strict();
 
 export const prerender = false;
 

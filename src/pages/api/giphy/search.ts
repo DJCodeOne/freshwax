@@ -50,9 +50,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Query parameter required for search');
   }
 
-  // Get API key from environment (free public beta key)
+  // Get API key from environment (set via wrangler secret)
   const env = locals.runtime.env;
-  const apiKey = env?.PUBLIC_GIPHY_API_KEY || import.meta.env.PUBLIC_GIPHY_API_KEY;
+  const apiKey = env?.GIPHY_API_KEY || import.meta.env.GIPHY_API_KEY;
 
   if (!apiKey) {
     return ApiErrors.serverError('GIPHY API not configured');

@@ -31,22 +31,10 @@ export const prerender = false;
 // GET: Load customer data for checkout form pre-fill
 export const GET: APIRoute = async ({ request }) => {
   try {
-    // Prefer Firebase auth, fall back to customerId cookie (checkout loads before auth init)
-    let userId: string | null = null;
-    let email: string | undefined;
-    try {
-      const result = await verifyRequestUser(request);
-      if (result.userId) { userId = result.userId; email = result.email; }
-    } catch (e: unknown) { /* no auth token */ }
+    const { userId, email, error: authError } = await verifyRequestUser(request);
 
-    if (!userId) {
-      const cookieHeader = request.headers.get('cookie') || '';
-      const match = cookieHeader.match(/(?:^|;\s*)customerId=([^;]+)/);
-      if (match?.[1]) userId = match[1];
-    }
-
-    if (!userId) {
-      return ApiErrors.unauthorized('Authentication required');
+    if (authError || !userId) {
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const userDoc = await getDocument('users', userId);

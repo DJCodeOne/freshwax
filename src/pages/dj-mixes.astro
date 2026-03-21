@@ -482,7 +482,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   </div>
 
   <!-- Share Modal (Enhanced) -->
-  <div id="shareModal" class="fixed inset-0 z-[100] hidden">
+  <div id="shareModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-label="Share this mix">
     <div class="fixed inset-0 bg-black/90 backdrop-blur-sm transition-opacity" id="shareModalBackdrop"></div>
     <div class="fixed inset-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div class="bg-gradient-to-br from-gray-900 via-black to-gray-900 max-w-lg w-full transform transition-transform transition-opacity border-2 border-red-500/50 rounded-2xl mx-2 my-4 shadow-2xl shadow-red-500/20">
@@ -601,7 +601,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   </div>
 
   <!-- Download Progress Modal -->
-  <div id="dlModal" class="fixed inset-0 z-[200]" style="display:none;">
+  <div id="dlModal" class="fixed inset-0 z-[200]" style="display:none;" role="dialog" aria-modal="true" aria-label="Download progress">
     <div class="fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4">
       <div class="relative bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-xs w-full shadow-2xl text-center">

@@ -74,7 +74,7 @@ interface ImportMetaEnv {
   readonly VINYL_STOCKIST_EMAIL: string;
 
   // ---- GIF / Media APIs ----
-  readonly PUBLIC_GIPHY_API_KEY: string;
+  readonly GIPHY_API_KEY: string;
   readonly PUBLIC_TENOR_API_KEY: string;
   readonly YOUTUBE_API_KEY: string;
 
@@ -201,7 +201,7 @@ interface CloudflareEnv {
   VINYL_STOCKIST_EMAIL: string;
 
   // ---- GIF / Media APIs ----
-  PUBLIC_GIPHY_API_KEY: string;
+  GIPHY_API_KEY: string;
   PUBLIC_TENOR_API_KEY: string;
   YOUTUBE_API_KEY: string;
 

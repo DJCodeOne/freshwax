@@ -745,7 +745,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     </div>
 
     <!-- Download Status Modal -->
-    <div id="downloadStatusModal" class="dl-status-modal hidden">
+    <div id="downloadStatusModal" class="dl-status-modal hidden" role="dialog" aria-modal="true" aria-label="Download status">
       <div class="dl-status-backdrop"></div>
       <div class="dl-status-content">
         <div id="dlStatusIcon" class="dl-status-icon">
@@ -761,7 +761,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     </div>
 
     <!-- ZIP Progress Modal -->
-    <div id="zipProgressModal" class="zip-modal hidden">
+    <div id="zipProgressModal" class="zip-modal hidden" role="dialog" aria-modal="true" aria-label="ZIP download progress">
       <div class="zip-modal-backdrop"></div>
       <div class="zip-modal-content">
         <h3 class="zip-modal-title">Creating ZIP Download</h3>

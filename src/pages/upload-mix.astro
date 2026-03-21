@@ -75,7 +75,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     </section>
 
     <!-- Quick Drop Confirmation Modal -->
-    <div id="quick-drop-modal" class="fixed inset-0 z-[100] hidden">
+    <div id="quick-drop-modal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-label="Quick drop upload">
       <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="quick-drop-modal-backdrop"></div>
       <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full relative z-10 overflow-hidden">

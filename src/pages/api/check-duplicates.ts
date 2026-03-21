@@ -89,22 +89,11 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    // Verify the authenticated user — prefer Firebase auth, fall back to customerId cookie
-    let userId: string | null = null;
-    try {
-      const { userId: verifiedUserId } = await verifyRequestUser(request);
-      if (verifiedUserId) userId = verifiedUserId;
-    } catch (e: unknown) { /* no auth token */ }
+    // Verify the authenticated user — require Firebase auth
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    // Cookie fallback (checkout page may call before Firebase auth initializes)
-    if (!userId) {
-      const cookieHeader = request.headers.get('cookie') || '';
-      const match = cookieHeader.match(/(?:^|;\s*)customerId=([^;]+)/);
-      if (match?.[1]) userId = match[1];
-    }
-
-    if (!userId) {
-      return ApiErrors.unauthorized('Authentication required');
+    if (authError || !userId) {
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     let rawBody: unknown;

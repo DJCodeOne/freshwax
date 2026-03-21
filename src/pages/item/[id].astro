@@ -989,7 +989,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   )}
 
   <!-- Giphy Picker Modal -->
-  <div id="giphy-modal" class="fixed inset-0 z-50 hidden">
+  <div id="giphy-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="Search GIFs">
     <div class="fixed inset-0 bg-black/80 transition-opacity" id="giphy-modal-backdrop"></div>
     <div class="fixed inset-0 flex items-center justify-center p-3 sm:p-4">
       <div class="bg-gray-900 max-w-lg w-full transform transition-transform transition-opacity border-2 border-blue-500 rounded-lg mx-2 max-h-[80vh] overflow-hidden flex flex-col">
@@ -1025,7 +1025,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   <Footer />
 </Layout>
 
-<div id="share-modal" class="fixed inset-0 z-[100] hidden">
+<div id="share-modal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-label="Share this release">
   <div class="fixed inset-0 bg-black/90 backdrop-blur-sm transition-opacity" id="share-modal-backdrop"></div>
   <div class="fixed inset-0 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-gradient-to-br from-gray-900 via-black to-gray-900 max-w-lg w-full transform transition-transform transition-opacity border-2 border-red-600/50 rounded-2xl mx-2 my-4 shadow-2xl shadow-red-600/20">
@@ -1144,7 +1144,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 </div>
 
 <!-- Bio Modal -->
-<div id="bio-modal" class="fixed inset-0 z-50 hidden">
+<div id="bio-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="Artist biography">
   <div class="fixed inset-0 bg-black/80 transition-opacity" id="bio-modal-backdrop"></div>
   <div class="fixed inset-0 flex items-center justify-center p-4">
     <div class="bg-white max-w-md w-full transform transition-transform transition-opacity border-4 border-black rounded-lg">
@@ -1788,8 +1788,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     }).then(function(data) {
       if (data.success) {
         // Build new comment HTML - escape any special characters
-        const safeUserName = userName.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const safeComment = comment ? comment.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+        const safeUserName = escapeHtml(userName);
+        const safeComment = comment ? escapeHtml(comment) : '';
         const initial = safeUserName.charAt(0).toUpperCase();
         
         let commentContent = '';
@@ -1998,9 +1998,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       return response.json();
     }).then(function(data) {
       if (data.success) {
-        const safeUserName = userName.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeUserName = escapeHtml(userName);
         const initial = safeUserName.charAt(0).toUpperCase();
-        
+
         // Avatar HTML - use image if available, fallback to initial
         let avatarHtml;
         if (currentUserAvatar) {
@@ -2330,7 +2330,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 </script>
 
 <!-- NYOP Price Selection Modal -->
-<div id="nyop-modal-item" class="nyop-modal-item hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+<div id="nyop-modal-item" class="nyop-modal-item hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Name your own price">
   <div class="nyop-modal-backdrop-item absolute inset-0 bg-black/80" data-close-modal></div>
   <div class="nyop-modal-content-item relative bg-gray-900 rounded-xl p-6 max-w-sm w-full border border-gray-700 shadow-2xl max-h-[90vh] overflow-y-auto">
     <button type="button" class="nyop-modal-close-item absolute top-3 right-3 text-gray-300 hover:text-white transition-colors" data-close-modal>
