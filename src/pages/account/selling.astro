@@ -309,7 +309,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (stripeActive || paypalLinked) {
       const preferredMethod = method === 'paypal' ? 'PayPal' : 'Stripe';
       if (indicator) {
-        indicator.innerHTML = `Preferred: <strong>${preferredMethod}</strong>`;
+        indicator.innerHTML = `Preferred: <strong>${escapeHtml(preferredMethod)}</strong>`;
         indicator.style.display = 'block';
       }
     }

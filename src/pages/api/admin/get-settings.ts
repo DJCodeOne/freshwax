@@ -24,7 +24,16 @@ export const GET: APIRoute = async ({ request }) => {
         } });
     }
 
-    return successResponse({ settings: settingsData });
+    // Only expose public feature flags — never internal thresholds or config
+    const PUBLIC_KEYS = ['showMixCharts', 'autoApprove', 'mixApprovalRequired', 'blogEnabled', 'scheduleEnabled', 'streamEnabled'];
+    const publicSettings: Record<string, unknown> = {};
+    for (const key of PUBLIC_KEYS) {
+      if (key in settingsData) {
+        publicSettings[key] = settingsData[key];
+      }
+    }
+
+    return successResponse({ settings: publicSettings });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

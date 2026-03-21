@@ -226,7 +226,7 @@ function streamR2Object(r2Object: R2ObjectBody, filename: string, objectKey: str
       'Content-Type': contentType,
       'Content-Disposition': `attachment; filename="${safeFilename}"`,
       'Content-Length': String(r2Object.size),
-      'Cache-Control': 'private, no-cache',
+      'Cache-Control': 'private, max-age=3600',
     },
   });
 }

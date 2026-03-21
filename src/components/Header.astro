@@ -1638,9 +1638,9 @@ const firebaseConfig = {
           try {
             sessionStorage.removeItem(USER_CACHE_KEY);
             // Clear auth cookies
-            document.cookie = 'userId=; path=/; max-age=0; Secure';
-            document.cookie = 'customerId=; path=/; max-age=0; Secure';
-            document.cookie = 'partnerId=; path=/; max-age=0; Secure';
+            document.cookie = 'userId=; path=/; max-age=0; SameSite=Lax; Secure';
+            document.cookie = 'customerId=; path=/; max-age=0; SameSite=Lax; Secure';
+            document.cookie = 'partnerId=; path=/; max-age=0; SameSite=Lax; Secure';
             // Clear auth cache for live page
             sessionStorage.removeItem('fw_auth_cache');
             if (signOutFn && auth) await signOutFn(auth);

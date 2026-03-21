@@ -158,7 +158,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const data = await fetchAllRows(db, table);
           const key = `backups/d1/${table}/${timestamp}.json`;
           await r2.put(key, JSON.stringify(data, null, 2), {
-            httpMetadata: { contentType: 'application/json' },
+            httpMetadata: {
+              contentType: 'application/json',
+              cacheControl: 'private, max-age=86400',
+            },
           });
           log.info(`[Backup D1] ${table}: backed up ${data.length} rows to ${key}`);
           results[table] = { rows: data.length };

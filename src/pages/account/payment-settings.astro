@@ -297,7 +297,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     };
 
     const badges = vendorRoles.map(role =>
-      `<span class="role-badge ${role}">${roleLabels[role] || role}</span>`
+      `<span class="role-badge ${escapeHtml(role)}">${escapeHtml(roleLabels[role] || role)}</span>`
     ).join('');
 
     rolesEl.innerHTML = `<span class="roles-label">Your vendor roles:</span> ${badges}`;
@@ -307,7 +307,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const indicator = document.getElementById('payout-method-indicator');
     if (stripeActive || paypalLinked) {
       const preferredMethod = method === 'paypal' ? 'PayPal' : 'Stripe';
-      indicator.innerHTML = `Preferred: <strong>${preferredMethod}</strong>`;
+      indicator.innerHTML = `Preferred: <strong>${escapeHtml(preferredMethod)}</strong>`;
       indicator.style.display = 'block';
     }
   }
