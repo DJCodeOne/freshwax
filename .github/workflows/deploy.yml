@@ -63,6 +63,9 @@ jobs:
           path: dist/
           retention-days: 1
 
+  # No staging environment — test changes locally with `npm run dev` before pushing.
+  # Cloudflare Pages provides instant rollback via API if health checks fail post-deploy.
+  # See rollback steps below for automatic recovery on deployment failures.
   deploy:
     needs: validate
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
