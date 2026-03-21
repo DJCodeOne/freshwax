@@ -898,7 +898,7 @@ export function init() {
         const firstInvalid = form.querySelector(':invalid');
         if (firstInvalid) {
           firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          setTimeout(() => { try { firstInvalid.focus(); } catch(_e: unknown){} }, 300);
+          setTimeout(() => { try { firstInvalid.focus(); } catch(_e: unknown){ /* intentional: focus may fail if element is not focusable — non-critical */ } }, 300);
         }
         errorMsg.textContent = 'Please fill in all required fields before paying';
         errorMsg.style.display = 'block';
@@ -985,7 +985,7 @@ export function init() {
       }
 
       // Store order data for capture
-      try { localStorage.setItem('pendingPayPalOrder', JSON.stringify(orderData)); } catch (e: unknown){}
+      try { localStorage.setItem('pendingPayPalOrder', JSON.stringify(orderData)); } catch (e: unknown){ /* intentional: localStorage may be full or unavailable in Safari private browsing */ }
 
       // Redirect to PayPal approval URL
       if (result.approvalUrl) {
@@ -1136,7 +1136,7 @@ export function init() {
                 localStorage.removeItem('freshwax_cart_' + customerId);
               }
               localStorage.removeItem('cart');
-            } catch (e: unknown){}
+            } catch (e: unknown){ /* intentional: localStorage may throw in private browsing — cart clear is best-effort */ }
             window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
 
             // Redirect to confirmation
@@ -1349,7 +1349,7 @@ export function init() {
             if (customerId) {
               localStorage.removeItem('freshwax_cart_' + customerId);
             }
-          } catch (e: unknown){}
+          } catch (e: unknown){ /* intentional: localStorage may throw in private browsing — cart clear is best-effort */ }
 
           // Redirect to success page
           window.location.href = '/checkout/success/?orderId=' + result.orderId;

@@ -650,6 +650,14 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   .loading-text {
     /* Styles not needed — sidebar is hidden */
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
 
 <style is:global>

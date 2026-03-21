@@ -33,7 +33,7 @@ export async function handleCheckoutExpired(
   if (customerEmail && itemsMeta) {
     try {
       let items: Record<string, unknown>[] = [];
-      try { items = JSON.parse(itemsMeta); } catch (e: unknown) { /* invalid JSON */ }
+      try { items = JSON.parse(itemsMeta); } catch (e: unknown) { /* intentional: items_json metadata may be malformed — proceed with empty items */ }
 
       if (items.length > 0) {
         // Check email opt-out (forward-compatible)

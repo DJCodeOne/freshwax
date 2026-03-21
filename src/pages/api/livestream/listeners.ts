@@ -177,7 +177,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       body = await request.json();
     } else {
       const text = await request.text();
-      body = JSON.parse(text);
+      try {
+        body = JSON.parse(text);
+      } catch {
+        return ApiErrors.badRequest('Invalid JSON body');
+      }
     }
 
     const { action, streamId, userId: bodyUserId, userName, avatarUrl } = body;

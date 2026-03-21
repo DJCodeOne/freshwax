@@ -1424,6 +1424,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       padding: 1rem 1.125rem;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
 
 <script>

@@ -2810,4 +2810,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     50% { margin-left: 70%; }
     100% { margin-left: 0%; }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
+
+<script is:inline>
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var modals = document.querySelectorAll('[role="dialog"]:not(.hidden):not([style*="display: none"])');
+    modals.forEach(function(m) {
+      if (m.offsetParent !== null || m.style.display !== 'none') {
+        m.classList.add('hidden');
+        m.style.display = 'none';
+      }
+    });
+  }
+});
+</script>

@@ -1345,6 +1345,9 @@ export function initPlaylistModal() {
 
       // Fetch from server API (global history)
       const response = await fetch('/api/playlist/history/');
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
 
       if (result.success && result.items) {

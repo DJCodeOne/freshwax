@@ -65,7 +65,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } else {
       // Only in local dev - allow without verification
       log.warn('⚠️ DEV MODE: Skipping signature verification');
-      event = JSON.parse(body);
+      try {
+        event = JSON.parse(body);
+      } catch {
+        log.error('Invalid JSON payload in dev mode');
+        return new Response('Invalid JSON payload', { status: 400 });
+      }
     }
 
     log.info('Received event:', event.type);

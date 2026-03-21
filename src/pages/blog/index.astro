@@ -461,4 +461,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
       padding: 2rem 1rem;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>

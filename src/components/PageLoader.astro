@@ -94,6 +94,13 @@ const { nonce = '' } = Astro.props;
     animation: pulse 1.5s ease-in-out infinite;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
 
 <script is:inline nonce={nonce}>

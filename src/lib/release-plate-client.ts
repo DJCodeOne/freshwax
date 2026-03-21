@@ -50,7 +50,7 @@ var FWCache = {
   },
 
   remove: function(key) {
-    try { localStorage.removeItem(this.PREFIX + key); } catch (e: unknown){}
+    try { localStorage.removeItem(this.PREFIX + key); } catch (e: unknown){ /* intentional: localStorage may throw in Safari private browsing */ }
   },
 
   cleanup: function() {
@@ -69,7 +69,7 @@ var FWCache = {
         }
       }
       keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
-    } catch (e: unknown){}
+    } catch (e: unknown){ /* intentional: localStorage cleanup is best-effort — may fail in private browsing */ }
   }
 };
 

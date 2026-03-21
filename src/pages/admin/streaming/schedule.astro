@@ -873,3 +873,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
   // Functions are now called via event delegation, no global exposure needed
 </script>
+
+<script is:inline>
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var modals = document.querySelectorAll('[role="dialog"]:not(.hidden):not([style*="display: none"])');
+    modals.forEach(function(m) {
+      if (m.offsetParent !== null || m.style.display !== 'none') {
+        m.classList.add('hidden');
+        m.style.display = 'none';
+      }
+    });
+  }
+});
+</script>

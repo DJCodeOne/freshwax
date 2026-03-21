@@ -470,6 +470,9 @@ export class PlaylistManager {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
 
       if (!result.success) {
@@ -531,6 +534,9 @@ export class PlaylistManager {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
 
       if (!result.success) {
@@ -598,6 +604,9 @@ export class PlaylistManager {
     // Fetch latest playlist state to get current trackStartedAt
     try {
       const response = await fetch('/api/playlist/global/');
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
       if (result.success && result.playlist) {
         this.playlist = result.playlist;
@@ -675,6 +684,9 @@ export class PlaylistManager {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
 
       if (result.success && result.playlist) {
@@ -708,6 +720,9 @@ export class PlaylistManager {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
 
       if (result.success && result.playlist) {
@@ -1376,6 +1391,9 @@ export class PlaylistManager {
     // Fallback to server-side YouTube history if local server is unavailable
     try {
       const response = await fetch('/api/playlist/history/');
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
       if (result.success && result.items && result.items.length > 0) {
         const serverHistory = result.items as ServerHistoryItem[];
@@ -1597,6 +1615,9 @@ export class PlaylistManager {
 
     try {
       const response = await fetch(`/api/playlist/personal/?userId=${encodeURIComponent(this.userId)}`);
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
 
       // Check if user has Plus for cloud sync
@@ -1680,6 +1701,9 @@ export class PlaylistManager {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
 
       if (result.isPlus === false) {
@@ -1928,6 +1952,9 @@ export class PlaylistManager {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
       if (result.success && result.playlist) {
         // Update local state with server response (server is source of truth)
@@ -2029,6 +2056,9 @@ export class PlaylistManager {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
       if (result.success) {
       } else {
@@ -2093,6 +2123,9 @@ export class PlaylistManager {
   private async loadFromServer(): Promise<void> {
     try {
       const response = await fetch('/api/playlist/global/');
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
       const result = await response.json();
 
       if (result.success && result.playlist) {

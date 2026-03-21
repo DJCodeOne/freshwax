@@ -629,6 +629,13 @@ const firebaseConfig = {
     font-weight: 600;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
 
 <style is:global>
@@ -2719,6 +2726,14 @@ const firebaseConfig = {
     .fwx-mobile-menu,
     .fwx-menu-overlay {
       display: none !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
     }
   }
 </style>

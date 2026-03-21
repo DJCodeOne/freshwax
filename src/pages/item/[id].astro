@@ -1412,6 +1412,14 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       min-width: 44px;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
 
 <script is:inline nonce={nonce}>
@@ -2398,6 +2406,14 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   #nyop-modal-price-item::-webkit-outer-spin-button,
   #nyop-modal-price-item::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   #nyop-modal-price-item:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
 
 <!-- NYOP (Name Your Own Price) Script -->

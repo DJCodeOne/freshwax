@@ -80,7 +80,12 @@ export class R2FirebaseSync {
       throw new Error('firebase-metadata.json not found in package');
     }
 
-    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+    let metadata: Record<string, unknown>;
+    try {
+      metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+    } catch {
+      throw new Error('Invalid JSON in firebase-metadata.json');
+    }
     log.info(`📄 Loaded metadata for: ${metadata.artistName} - ${metadata.releaseName}`);
 
     // Upload files to R2
