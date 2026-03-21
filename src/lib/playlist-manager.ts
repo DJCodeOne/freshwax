@@ -1972,8 +1972,8 @@ export class PlaylistManager {
     let errorInfo: { type?: string; code?: number; message?: string } = {};
     try {
       errorInfo = JSON.parse(error);
-    } catch {
-      // Legacy error format - just a string
+    } catch (_e: unknown) {
+      /* intentional: legacy error format is a plain string, not JSON */
       errorInfo = { type: 'error', message: error };
     }
 
@@ -2207,16 +2207,28 @@ export class PlaylistManager {
   private async fetchMetadata(url: string): Promise<{ title?: string; thumbnail?: string; duration?: number }> {
     try {
       // Try noembed first
-      const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.title) {
-          return {
-            title: data.title,
-            thumbnail: data.thumbnail_url || undefined,
-            duration: data.duration || undefined
-          };
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, { signal: controller.signal });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.title) {
+            return {
+              title: data.title,
+              thumbnail: data.thumbnail_url || undefined,
+              duration: data.duration || undefined
+            };
+          }
         }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.warn('[PlaylistManager] noembed timed out');
+        } else {
+          throw err;
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
     } catch (error: unknown) {
       console.warn('[PlaylistManager] noembed failed:', error);
@@ -2224,8 +2236,10 @@ export class PlaylistManager {
 
     // Fallback: Try YouTube oEmbed directly for YouTube URLs
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       try {
-        const ytResponse = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+        const ytResponse = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, { signal: controller.signal });
         if (ytResponse.ok) {
           const ytData = await ytResponse.json();
           return {
@@ -2235,14 +2249,22 @@ export class PlaylistManager {
           };
         }
       } catch (error: unknown) {
-        console.warn('[PlaylistManager] YouTube oEmbed failed:', error);
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.warn('[PlaylistManager] YouTube oEmbed timed out');
+        } else {
+          console.warn('[PlaylistManager] YouTube oEmbed failed:', error);
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
     // Fallback: Try SoundCloud oEmbed for SoundCloud URLs
     if (url.includes('soundcloud.com')) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       try {
-        const scResponse = await fetch(`https://soundcloud.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+        const scResponse = await fetch(`https://soundcloud.com/oembed?url=${encodeURIComponent(url)}&format=json`, { signal: controller.signal });
         if (scResponse.ok) {
           const scData = await scResponse.json();
           return {
@@ -2252,7 +2274,13 @@ export class PlaylistManager {
           };
         }
       } catch (error: unknown) {
-        console.warn('[PlaylistManager] SoundCloud oEmbed failed:', error);
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.warn('[PlaylistManager] SoundCloud oEmbed timed out');
+        } else {
+          console.warn('[PlaylistManager] SoundCloud oEmbed failed:', error);
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
@@ -2297,14 +2325,22 @@ export class PlaylistManager {
    * Fetch actual YouTube title via oEmbed
    */
   private async fetchYouTubeTitle(videoId: string): Promise<string | null> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
-      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, { signal: controller.signal });
       if (response.ok) {
         const data = await response.json();
         return data.title || null;
       }
     } catch (error: unknown) {
-      console.warn('[PlaylistManager] Could not fetch YouTube title:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn('[PlaylistManager] YouTube title fetch timed out');
+      } else {
+        console.warn('[PlaylistManager] Could not fetch YouTube title:', error);
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
     return null;
   }
@@ -2320,7 +2356,8 @@ export class PlaylistManager {
     try {
       const currentUser = window.firebaseAuth?.currentUser;
       return currentUser ? await currentUser.getIdToken() : null;
-    } catch {
+    } catch (_e: unknown) {
+      /* intentional: auth token retrieval failure returns null — unauthenticated fallback */
       return null;
     }
   }

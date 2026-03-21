@@ -4932,10 +4932,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       // Resume audio contexts if suspended (browser policy)
       if (icecastAudioContext?.state === 'suspended') {
-        icecastAudioContext.resume().catch(() => {});
+        icecastAudioContext.resume().catch(() => { /* non-critical: AudioContext resume may fail if not user-gesture */ });
       }
       if (liveAudioContext?.state === 'suspended') {
-        liveAudioContext.resume().catch(() => {});
+        liveAudioContext.resume().catch(() => { /* non-critical: AudioContext resume may fail if not user-gesture */ });
       }
 
       // For relay/BUTT preview mode, ensure relay audio is playing and meters running
@@ -4943,7 +4943,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         const relayAudio = document.getElementById('relayAudio');
         if (relayAudio && relayAudio.paused && relayAudio.src) {
           console.debug('[Audio Toggle] Starting relay audio playback');
-          relayAudio.play().catch(() => {});
+          relayAudio.play().catch(() => { /* non-critical: autoplay may be blocked by browser policy */ });
         }
         // Set up icecast analysers if not already done (handles race conditions)
         if (relayAudio && !relayAudio.paused && !icecastAudioContext) {
@@ -4966,7 +4966,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         const liveAudio = document.getElementById('audioElement');
         if (liveAudio && liveAudio.paused && liveAudio.src) {
           console.debug('[Audio Toggle] Starting live audio playback');
-          liveAudio.play().catch(() => {});
+          liveAudio.play().catch(() => { /* non-critical: autoplay may be blocked by browser policy */ });
         }
         // Set up live analysers if not already done (handles race conditions)
         if (liveAudio && !liveAudio.paused && !liveAudioContext) {

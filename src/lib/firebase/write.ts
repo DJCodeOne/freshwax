@@ -282,8 +282,8 @@ export async function atomicIncrement(
       const tr = transformResults[i];
       newValues[fields[i]] = Number(tr.integerValue ?? tr.doubleValue ?? 0);
     }
-  } catch {
-    // If parsing fails, return empty newValues - callers should handle gracefully
+  } catch (_e: unknown) {
+    /* intentional: JSON parse failure returns empty newValues — callers handle gracefully */
   }
 
   // Invalidate cache for this document

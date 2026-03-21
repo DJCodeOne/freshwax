@@ -89,7 +89,7 @@ if (Astro.request.method === 'POST') {
     // Clear all caches so merch page shows fresh data
     clearCache();
     clearAllMerchCache();
-    await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => {});
+    await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => { /* non-critical: KV cache invalidation */ });
 
     // Dual-write to D1
     const db = runtimeEnv?.DB;

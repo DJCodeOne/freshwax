@@ -308,7 +308,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           updateDocument('livestreamSlots', stream.id as string, {
             title: stationStatus.nowPlaying,
             updatedAt: new Date().toISOString()
-          }).catch(() => {});
+          }).catch(() => { /* non-critical: fire-and-forget Firestore slot title update */ });
           // Invalidate status cache so next poll sees the update
           await invalidateStatusCache();
         }

@@ -1,7 +1,7 @@
 // src/lib/order/vinyl-processing.ts
 // Vinyl stock updates and crates marketplace order processing
 
-import { getDocument, updateDocument, addDocument, setDocument, updateDocumentConditional, atomicIncrement } from '../firebase-rest';
+import { getDocument, getDocumentsBatch, updateDocument, addDocument, setDocument, updateDocumentConditional, atomicIncrement } from '../firebase-rest';
 import { sendVinylOrderSellerEmail, sendVinylOrderAdminEmail } from '../vinyl-order-emails';
 import { log } from './types';
 import type { CartItem } from './types';
@@ -10,62 +10,68 @@ import type { CartItem } from './types';
 export async function updateVinylStock(items: CartItem[], orderNumber: string, orderId: string, idToken?: string): Promise<void> {
   const now = new Date().toISOString();
 
-  for (const item of items) {
-    if (item.type === 'vinyl' && (item.releaseId || item.productId)) {
-      // Skip crates items (handled by processVinylCratesOrders)
-      if (item.sellerId && !item.releaseId) continue;
+  // Filter to vinyl release items (not crates)
+  const vinylItems = items.filter(item =>
+    item.type === 'vinyl' && (item.releaseId || item.productId) && !(item.sellerId && !item.releaseId)
+  );
 
-      const releaseId = item.releaseId || item.productId;
-      try {
-        const qty = item.quantity || 1;
-        log.info('[order-utils] Updating vinyl stock for:', item.name, 'qty:', qty);
+  if (vinylItems.length === 0) return;
 
-        // Atomic decrement stock and reserved - prevents race conditions on concurrent purchases
-        const incrementFields: Record<string, number> = {
-          vinylStock: -qty,
-          vinylSold: qty
-        };
+  // Batch pre-fetch all release docs for reservation check
+  const releaseIds = [...new Set(vinylItems.map(item => (item.releaseId || item.productId) as string).filter(Boolean))];
+  const preCheckMap = releaseIds.length > 0 ? await getDocumentsBatch('releases', releaseIds) : new Map<string, Record<string, unknown>>();
 
-        // Also clear the reservation counter if it was reserved
-        const preCheck = await getDocument('releases', releaseId);
-        if (preCheck && (preCheck.vinylReserved ?? 0) > 0) {
-          incrementFields.vinylReserved = -Math.min(qty, preCheck.vinylReserved);
-        }
+  for (const item of vinylItems) {
+    const releaseId = item.releaseId || item.productId;
+    try {
+      const qty = item.quantity || 1;
+      log.info('[order-utils] Updating vinyl stock for:', item.name, 'qty:', qty);
 
-        await atomicIncrement('releases', releaseId, incrementFields);
+      // Atomic decrement stock and reserved - prevents race conditions on concurrent purchases
+      const incrementFields: Record<string, number> = {
+        vinylStock: -qty,
+        vinylSold: qty
+      };
 
-        // Read AFTER atomic increment to get the actual current stock
-        const releaseData = await getDocument('releases', releaseId);
-        const currentStock = releaseData?.vinylStock || 0;
-        const previousStock = currentStock + qty; // Derive previous from current since we just decremented by qty
-        const newStock = currentStock;
-
-        // Sync vinylRecordCount (string field used by frontend display)
-        await updateDocument('releases', releaseId, {
-          vinylRecordCount: String(Math.max(0, newStock)),
-          updatedAt: now
-        });
-
-        // Record stock movement
-        await addDocument('vinyl-stock-movements', {
-          releaseId: releaseId,
-          releaseName: item.name || releaseData?.releaseName,
-          type: 'sell',
-          quantity: qty,
-          stockDelta: -qty,
-          previousStock: previousStock,
-          newStock: newStock,
-          orderId: orderId,
-          orderNumber: orderNumber,
-          notes: 'Order ' + orderNumber,
-          createdAt: now,
-          createdBy: 'system'
-        }, idToken);
-
-        log.info('[order-utils] ✓ Vinyl stock updated atomically:', item.name, previousStock, '->', newStock);
-      } catch (stockErr: unknown) {
-        log.error('[order-utils] Vinyl stock update error:', stockErr);
+      // Also clear the reservation counter if it was reserved (use pre-fetched data)
+      const preCheck = preCheckMap.get(releaseId as string) || null;
+      if (preCheck && (preCheck.vinylReserved ?? 0) > 0) {
+        incrementFields.vinylReserved = -Math.min(qty, preCheck.vinylReserved as number);
       }
+
+      await atomicIncrement('releases', releaseId as string, incrementFields);
+
+      // Read AFTER atomic increment to get the actual current stock
+      const releaseData = await getDocument('releases', releaseId as string);
+      const currentStock = (releaseData?.vinylStock as number) || 0;
+      const previousStock = currentStock + qty; // Derive previous from current since we just decremented by qty
+      const newStock = currentStock;
+
+      // Sync vinylRecordCount (string field used by frontend display)
+      await updateDocument('releases', releaseId as string, {
+        vinylRecordCount: String(Math.max(0, newStock)),
+        updatedAt: now
+      });
+
+      // Record stock movement
+      await addDocument('vinyl-stock-movements', {
+        releaseId: releaseId,
+        releaseName: item.name || releaseData?.releaseName,
+        type: 'sell',
+        quantity: qty,
+        stockDelta: -qty,
+        previousStock: previousStock,
+        newStock: newStock,
+        orderId: orderId,
+        orderNumber: orderNumber,
+        notes: 'Order ' + orderNumber,
+        createdAt: now,
+        createdBy: 'system'
+      }, idToken);
+
+      log.info('[order-utils] ✓ Vinyl stock updated atomically:', item.name, previousStock, '->', newStock);
+    } catch (stockErr: unknown) {
+      log.error('[order-utils] Vinyl stock update error:', stockErr);
     }
   }
 }
@@ -95,6 +101,17 @@ export async function processVinylCratesOrders(
 
   log.info('[order-utils] Processing', cratesItems.length, 'vinyl crates items');
 
+  // Batch pre-fetch all listings and seller data to avoid N+1 queries
+  const listingIds = [...new Set(cratesItems.map(item => item.id as string).filter(Boolean))];
+  const sellerIds = [...new Set(cratesItems.map(item => item.sellerId as string).filter(Boolean))];
+
+  const [listingMap, vinylSellerMap, legacySellerMap, userMap] = await Promise.all([
+    listingIds.length > 0 ? getDocumentsBatch('vinylListings', listingIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
+    sellerIds.length > 0 ? getDocumentsBatch('vinylSellers', sellerIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
+    sellerIds.length > 0 ? getDocumentsBatch('vinyl-sellers', sellerIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
+    sellerIds.length > 0 ? getDocumentsBatch('users', sellerIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
+  ]);
+
   for (const item of cratesItems) {
     try {
       const listingId = item.id;
@@ -106,10 +123,10 @@ export async function processVinylCratesOrders(
       // 1. Mark the listing as sold (with optimistic concurrency to prevent double-sell)
       // Accept both 'published' and 'reserved' status (reserved = in active checkout)
       try {
-        const listing = await getDocument('vinylListings', listingId);
+        const listing = listingMap.get(listingId as string) || null;
         const canSell = listing && (listing.status === 'published' || listing.status === 'reserved');
         if (canSell && listing._updateTime) {
-          await updateDocumentConditional('vinylListings', listingId, {
+          await updateDocumentConditional('vinylListings', listingId as string, {
             status: 'sold',
             soldAt: now,
             soldOrderNumber: orderNumber,
@@ -118,13 +135,13 @@ export async function processVinylCratesOrders(
             reservedAt: null,
             reservedBy: null,
             updatedAt: now
-          }, listing._updateTime);
+          }, listing._updateTime as string);
         } else if (listing && listing.status !== 'sold' && !listing._updateTime) {
           log.error('[order-utils] CRITICAL: Listing missing _updateTime, cannot guarantee concurrency protection:', listingId);
-          const freshListing = await getDocument('vinylListings', listingId);
+          const freshListing = await getDocument('vinylListings', listingId as string);
           const freshCanSell = freshListing && (freshListing.status === 'published' || freshListing.status === 'reserved');
           if (freshCanSell && freshListing._updateTime) {
-            await updateDocumentConditional('vinylListings', listingId, {
+            await updateDocumentConditional('vinylListings', listingId as string, {
               status: 'sold',
               soldAt: now,
               soldOrderNumber: orderNumber,
@@ -133,10 +150,10 @@ export async function processVinylCratesOrders(
               reservedAt: null,
               reservedBy: null,
               updatedAt: now
-            }, freshListing._updateTime);
+            }, freshListing._updateTime as string);
           } else if (freshCanSell) {
             log.error('[order-utils] WARNING: Listing missing _updateTime, using non-conditional update for:', listingId);
-            await updateDocument('vinylListings', listingId, {
+            await updateDocument('vinylListings', listingId as string, {
               status: 'sold',
               soldAt: now,
               soldOrderNumber: orderNumber,
@@ -195,21 +212,17 @@ export async function processVinylCratesOrders(
         log.error('[order-utils] Failed to create vinyl order:', orderErr);
       }
 
-      // 3. Get seller email and send notifications
+      // 3. Get seller email from pre-fetched data
       let sellerEmail = '';
       try {
-        // Try to get seller email from vinylSellers collection (or vinyl-sellers for legacy)
-        let seller = await getDocument('vinylSellers', sellerId);
-        if (!seller) {
-          seller = await getDocument('vinyl-sellers', sellerId);
-        }
+        const seller = vinylSellerMap.get(sellerId as string) || legacySellerMap.get(sellerId as string) || null;
         if (seller) {
-          sellerEmail = seller?.email || '';
+          sellerEmail = (seller.email as string) || '';
         }
-        // Also try users collection
+        // Fall back to users collection
         if (!sellerEmail) {
-          const user = await getDocument('users', sellerId);
-          sellerEmail = user?.email || '';
+          const user = userMap.get(sellerId as string) || null;
+          sellerEmail = (user?.email as string) || '';
         }
       } catch (e: unknown) {
         log.info('[order-utils] Could not fetch seller email');

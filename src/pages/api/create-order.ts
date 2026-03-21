@@ -367,7 +367,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Get download URLs for digital items
-    const itemsWithDownloads = await Promise.all(pricedItems.map(async (item: OrderItem) => {
+    // Use Promise.allSettled so a single failed enrichment doesn't block the entire order
+    const downloadResults = await Promise.allSettled(pricedItems.map(async (item: OrderItem) => {
       // Get the release ID (could be stored as id, productId, or releaseId)
       const releaseId = item.releaseId || item.productId || item.id;
 
@@ -501,6 +502,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
       return { ...item, releaseId };
     }));
+    const itemsWithDownloads = downloadResults.map((result, i) =>
+      result.status === 'fulfilled' ? result.value : { ...pricedItems[i], releaseId: pricedItems[i].releaseId || pricedItems[i].productId || pricedItems[i].id }
+    );
 
     // Strip download URLs from pending orders - these get added by the webhook when payment is confirmed
     const safeItems = itemsWithDownloads.map((item: OrderItem) => {

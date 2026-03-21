@@ -2930,7 +2930,7 @@
     font-size: 0.7rem;
     font-weight: 700;
     color: #fff;
-    animation: livePulse 1.5s ease-in-out infinite;
+    animation: livePulse-lobby 1.5s ease-in-out infinite;
   }
 
   .health-live-indicator .live-dot {
@@ -2940,7 +2940,7 @@
     border-radius: 50%;
   }
 
-  @keyframes livePulse {
+  @keyframes livePulse-lobby {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.7; }
   }
@@ -6495,10 +6495,10 @@
     top: 80px;
     right: 20px;
     z-index: 999;
-    animation: slideIn 0.3s ease;
+    animation: slideIn-lobby 0.3s ease;
   }
-  
-  @keyframes slideIn {
+
+  @keyframes slideIn-lobby {
     from {
       transform: translateX(100%);
       opacity: 0;
@@ -9406,7 +9406,7 @@
     height: 6px;
     background: #dc2626;
     border-radius: 50%;
-    animation: livePulse 1.2s ease-in-out infinite;
+    animation: livePulse-lobby 1.2s ease-in-out infinite;
     box-shadow: 0 0 8px rgba(220, 38, 38, 0.8);
   }
 
@@ -9883,10 +9883,10 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  animation: shimmer 2s infinite;
+  animation: shimmer-lobby 2s infinite;
 }
 
-@keyframes shimmer {
+@keyframes shimmer-lobby {
   100% { left: 100%; }
 }
 

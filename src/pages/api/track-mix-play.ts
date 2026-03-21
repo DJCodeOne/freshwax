@@ -54,7 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     clearCache('live-mixes:all');
 
     // Invalidate KV cache for dj-mixes
-    await kvDelete('live-dj-mixes-v2:all', CACHE_CONFIG.DJ_MIXES).catch(() => {});
+    await kvDelete('live-dj-mixes-v2:all', CACHE_CONFIG.DJ_MIXES).catch(() => { /* non-critical: KV cache invalidation */ });
 
     // Sync plays to D1 if available
     if (db) {

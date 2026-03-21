@@ -450,7 +450,11 @@ const merchItemList = {
 </Layout>
 
 <script define:vars={{ productsJson }} nonce={nonce}>
-  window.PRODUCTS_DATA = JSON.parse(productsJson);
+  try {
+    window.PRODUCTS_DATA = JSON.parse(productsJson);
+  } catch (e) {
+    window.PRODUCTS_DATA = [];
+  }
 </script>
 
 <script is:inline nonce={nonce}>
@@ -788,7 +792,12 @@ const merchItemList = {
         var card = dot.closest('.product-card');
         if (!card) return;
 
-        var product = JSON.parse(card.dataset.product || '{}');
+        var product;
+        try {
+          product = JSON.parse(card.dataset.product || '{}');
+        } catch (e) {
+          product = {};
+        }
         var cardImg = card.querySelector('.card-image img');
         var colorName = dot.dataset.color;
 
@@ -830,7 +839,12 @@ const merchItemList = {
         var card = dot.closest('.product-card');
         if (!card) return;
 
-        var product = JSON.parse(card.dataset.product || '{}');
+        var product;
+        try {
+          product = JSON.parse(card.dataset.product || '{}');
+        } catch (e) {
+          product = {};
+        }
         var cardImg = card.querySelector('.card-image img');
         var colorName = dot.dataset.color;
 
@@ -902,7 +916,12 @@ const merchItemList = {
         var card = target.closest('.product-card');
         if (!card) return;
 
-        var product = JSON.parse(card.dataset.product || '{}');
+        var product;
+        try {
+          product = JSON.parse(card.dataset.product || '{}');
+        } catch (err) {
+          product = {};
+        }
         e.preventDefault();
         openModal(product);
       });

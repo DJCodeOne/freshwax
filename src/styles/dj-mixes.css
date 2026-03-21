@@ -17,7 +17,7 @@
     z-index: -1;
     pointer-events: none;
     filter: blur(6px);
-    animation: bg-fade-in 2s ease-out 0.3s forwards;
+    animation: bg-fade-in-mixes 2s ease-out 0.3s forwards;
   }
 
   /* Mobile: hide video */
@@ -42,11 +42,11 @@
       z-index: -1;
       pointer-events: none;
       filter: blur(6px);
-      animation: bg-fade-in 2s ease-out 0.3s forwards;
+      animation: bg-fade-in-mixes 2s ease-out 0.3s forwards;
     }
   }
 
-  @keyframes bg-fade-in {
+  @keyframes bg-fade-in-mixes {
     to { opacity: 0.7; }
   }
 

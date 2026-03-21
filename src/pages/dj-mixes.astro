@@ -1447,7 +1447,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               liked.splice(idx, 1);
               localStorage.setItem('liked-mixes', JSON.stringify(liked));
             }
-          } catch (e) {}
+          } catch (e) { /* non-critical: localStorage parse/write for like state */ }
 
           trackUnlike(mixId).then(function(result) {
             if (result && result.likes !== undefined) updateLikeCount(mixId, result.likes);
@@ -1464,7 +1464,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               liked.push(mixId);
               localStorage.setItem('liked-mixes', JSON.stringify(liked));
             }
-          } catch (e) {}
+          } catch (e) { /* non-critical: localStorage parse/write for like state */ }
 
           trackLike(mixId).then(function(result) {
             if (result && result.likes !== undefined) updateLikeCount(mixId, result.likes);

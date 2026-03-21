@@ -2,6 +2,7 @@
 // DJ Lobby - Book a Slot
 // Compact 24-hour booking grid with stream key generation
 import '../../styles/global.css';
+import { FIREBASE_API_KEY } from '../../lib/constants';
 export const prerender = false;
 
 // Prevent caching to ensure fresh script execution
@@ -9,6 +10,14 @@ Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate
 Astro.response.headers.set('Pragma', 'no-cache');
 const nonce = Astro.locals.nonce || '';
 const csrfToken = Astro.locals.csrfToken || '';
+const firebaseConfig = {
+  apiKey: FIREBASE_API_KEY,
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store",
+  storageBucket: "freshwax-store.firebasestorage.app",
+  messagingSenderId: "675435782973",
+  appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+};
 ---
 <html lang="en-GB">
 <head>
@@ -22,15 +31,8 @@ const csrfToken = Astro.locals.csrfToken || '';
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script is:inline nonce={nonce}>
-    window.FIREBASE_CONFIG = {
-      apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-      authDomain: "freshwax-store.firebaseapp.com",
-      projectId: "freshwax-store",
-      storageBucket: "freshwax-store.firebasestorage.app",
-      messagingSenderId: "675435782973",
-      appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-    };
+  <script define:vars={{ firebaseConfig }} nonce={nonce}>
+    window.FIREBASE_CONFIG = firebaseConfig;
   </script>
 </head>
 <body>

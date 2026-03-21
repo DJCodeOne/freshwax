@@ -7,6 +7,7 @@ import { getDocument } from '../../lib/firebase-rest';
 import { normalizeRelease } from '../../lib/releases';
 import { createLogger } from '../../lib/api-utils';
 import { getSupportersForRelease } from '../../lib/dj-support';
+import { FIREBASE_API_KEY } from '../../lib/constants';
 
 const log = createLogger('item-page');
 
@@ -1241,11 +1242,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     letter-spacing: 0.05em;
     box-shadow: 0 4px 15px rgba(220, 38, 38, 0.5);
     border: 2px solid #fff;
-    animation: pulse-sale 2s ease-in-out infinite;
+    animation: pulse-sale-item 2s ease-in-out infinite;
     z-index: 10;
   }
 
-  @keyframes pulse-sale {
+  @keyframes pulse-sale-item {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); }
   }
@@ -1478,7 +1479,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   })();
 </script>
 
-<script is:inline define:vars={{ releaseId: id }} nonce={nonce}>
+<script is:inline define:vars={{ releaseId: id, firebaseApiKey: FIREBASE_API_KEY }} nonce={nonce}>
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -1571,7 +1572,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
       // Firebase config
       const firebaseConfig = {
-        apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+        apiKey: firebaseApiKey,
         authDomain: "freshwax-store.firebaseapp.com",
         projectId: "freshwax-store",
         storageBucket: "freshwax-store.firebasestorage.app",

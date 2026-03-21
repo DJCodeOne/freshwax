@@ -670,11 +670,11 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
   :global(.slot-block.live) {
     background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
     color: #fff;
-    animation: pulse-live 2s infinite;
+    animation: pulse-live-schedule 2s infinite;
     box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
   }
 
-  @keyframes pulse-live {
+  @keyframes pulse-live-schedule {
     0%, 100% { opacity: 1; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35); }
     50% { opacity: 0.9; box-shadow: 0 4px 20px rgba(220, 38, 38, 0.5); }
   }
@@ -757,10 +757,10 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
   :global(.status-badge.go-live) {
     background: #10b981;
     color: white;
-    animation: pulse-glow 2s ease-in-out infinite;
+    animation: pulse-glow-schedule 2s ease-in-out infinite;
   }
 
-  @keyframes pulse-glow {
+  @keyframes pulse-glow-schedule {
     0%, 100% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.4); }
     50% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.8); }
   }

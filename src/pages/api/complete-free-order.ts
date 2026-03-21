@@ -318,7 +318,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Record to sales ledger (even for free/credit orders for accurate tracking)
       try {
-        const enrichedItems = await Promise.all((validatedItems || []).map(async (item: Record<string, unknown>) => {
+        // Use Promise.allSettled so a single failed enrichment doesn't block the sales ledger
+        const enrichmentResults = await Promise.allSettled((validatedItems || []).map(async (item: Record<string, unknown>) => {
           const releaseId = item.releaseId || item.productId || item.id;
           let submitterId = null;
           let submitterEmail = null;
@@ -344,6 +345,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             artistName
           };
         }));
+        const enrichedItems = enrichmentResults.map((result, i) =>
+          result.status === 'fulfilled' ? result.value : { ...(validatedItems || [])[i], submitterId: null, submitterEmail: null, artistName: (validatedItems || [])[i]?.artist || (validatedItems || [])[i]?.artistName || null }
+        );
 
         await recordMultiSellerSale({
           orderId: result.orderId,

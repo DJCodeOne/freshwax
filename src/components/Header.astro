@@ -1076,7 +1076,8 @@ const firebaseConfig = {
         return null;
       }
       return data;
-    } catch {
+    } catch (e) {
+      /* intentional: sessionStorage parse failure returns null — cache miss fallback */
       return null;
     }
   }
@@ -1090,8 +1091,8 @@ const firebaseConfig = {
         displayName,
         timestamp: Date.now()
       }));
-    } catch {
-      // Ignore storage errors
+    } catch (e) {
+      /* intentional: sessionStorage write failure is non-critical */
     }
   }
 

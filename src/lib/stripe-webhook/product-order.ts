@@ -355,7 +355,8 @@ export async function handleProductOrder(
     const stripeFee = serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total! / 100) * 0.015 + 0.20);
 
     // Enrich items with seller info from release/product lookup
-    const enrichedItems = await Promise.all(items.map(async (item: Record<string, unknown>) => {
+    // Use Promise.allSettled so a single failed enrichment doesn't block the sales ledger
+    const enrichmentResults = await Promise.allSettled(items.map(async (item: Record<string, unknown>) => {
       const releaseId = item.releaseId || item.productId || item.id;
       let submitterId = null;
       let submitterEmail = null;
@@ -419,6 +420,9 @@ export async function handleProductOrder(
         artistName
       };
     }));
+    const enrichedItems = enrichmentResults.map((result, i) =>
+      result.status === 'fulfilled' ? result.value : { ...items[i], submitterId: null, submitterEmail: null, artistName: items[i].artist || items[i].artistName || null }
+    );
 
     // Use multi-seller recording to create per-seller ledger entries
     // Dual-write: D1 (primary) + Firebase (backup)

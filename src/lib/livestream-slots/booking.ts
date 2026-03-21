@@ -200,7 +200,7 @@ export async function handleBook(
       message: 'Slot booked successfully' });
   } catch (bookingError: unknown) {
     // Release lock on any error during booking
-    await releaseCronLock(db, 'slot_booking').catch(() => {});
+    await releaseCronLock(db, 'slot_booking').catch(() => { /* non-critical: lock release */ });
     throw bookingError;
   }
 }

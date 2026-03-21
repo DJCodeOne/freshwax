@@ -956,10 +956,10 @@ const totalDurationFormatted = totalDurationSeconds > 0
   
   /* Pre-order badge */
   .pre-order-badge {
-    animation: pulse-glow 2s ease-in-out infinite;
+    animation: pulse-glow-preorder 2s ease-in-out infinite;
   }
-  
-  @keyframes pulse-glow {
+
+  @keyframes pulse-glow-preorder {
     0%, 100% {
       box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4);
     }
@@ -970,10 +970,10 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
   /* Sale badge animation */
   .sale-badge {
-    animation: pulse-sale 2s ease-in-out infinite;
+    animation: pulse-sale-plate 2s ease-in-out infinite;
   }
 
-  @keyframes pulse-sale {
+  @keyframes pulse-sale-plate {
     0%, 100% {
       box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
       transform: scale(1);
@@ -1091,13 +1091,13 @@ const totalDurationFormatted = totalDurationSeconds > 0
     opacity: 0;
   }
   
-  @keyframes bounce {
+  @keyframes bounce-plate {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-4px); }
   }
-  
+
   .animate-bounce {
-    animation: bounce 2s infinite;
+    animation: bounce-plate 2s infinite;
   }
 
   .track-row {

@@ -86,7 +86,8 @@ export async function createPayout(
       try {
         const errorData = JSON.parse(errorText);
         errorMessage = errorData.message || errorData.details?.[0]?.issue || errorMessage;
-      } catch {
+      } catch (_e: unknown) {
+        /* intentional: PayPal error body not valid JSON — fallback to raw text */
         errorMessage = `PayPal API error (${response.status}): ${errorText.slice(0, 200)}`;
       }
       return {
@@ -158,7 +159,8 @@ export async function createBatchPayout(
       try {
         const errorData = JSON.parse(errorText);
         errorMessage = errorData.message || errorData.details?.[0]?.issue || errorMessage;
-      } catch {
+      } catch (_e: unknown) {
+        /* intentional: PayPal batch error body not valid JSON — fallback to raw text */
         errorMessage = `PayPal API error (${response.status}): ${errorText.slice(0, 200)}`;
       }
       return {

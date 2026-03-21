@@ -6,6 +6,7 @@ import Footer from '../../components/Footer.astro';
 import { getDocument } from '../../lib/firebase-rest';
 import { createLogger } from '../../lib/api-utils';
 import { getSupportsForMix } from '../../lib/dj-support';
+import { FIREBASE_API_KEY } from '../../lib/constants';
 
 const log = createLogger('dj-mix-page');
 
@@ -896,7 +897,7 @@ Artist - Track Title
   }
 </style>
 
-<script is:inline define:vars={{ mixId: id, mixTitle: title, mixDj: dj_name, mixArtwork: artwork_url, mixAudioUrl: audio_url }} nonce={nonce}>
+<script is:inline define:vars={{ mixId: id, mixTitle: title, mixDj: dj_name, mixArtwork: artwork_url, mixAudioUrl: audio_url, firebaseApiKey: FIREBASE_API_KEY }} nonce={nonce}>
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -1567,7 +1568,7 @@ Artist - Track Title
 
       // Firebase config
       const firebaseConfig = {
-        apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+        apiKey: firebaseApiKey,
         authDomain: "freshwax-store.firebaseapp.com",
         projectId: "freshwax-store",
         storageBucket: "freshwax-store.firebasestorage.app",
@@ -1841,7 +1842,7 @@ Artist - Track Title
       const { getAuth } = firebaseAuth;
 
       const firebaseConfig = {
-        apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+        apiKey: firebaseApiKey,
         authDomain: "freshwax-store.firebaseapp.com",
         projectId: "freshwax-store",
         storageBucket: "freshwax-store.firebasestorage.app",
@@ -1980,7 +1981,7 @@ Artist - Track Title
         const { getAuth } = firebaseAuth;
 
         const firebaseConfig = {
-          apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+          apiKey: firebaseApiKey,
           authDomain: "freshwax-store.firebaseapp.com",
           projectId: "freshwax-store",
           storageBucket: "freshwax-store.firebasestorage.app",

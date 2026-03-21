@@ -309,14 +309,14 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
   .hour-cell.live .hour-status {
     color: #dc2626;
-    animation: blink 1s infinite;
+    animation: blink-schedule 1s infinite;
   }
 
   .hour-cell.lobby .hour-status {
     color: #fbbf24;
   }
 
-  @keyframes blink {
+  @keyframes blink-schedule {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
   }

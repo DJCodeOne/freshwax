@@ -147,7 +147,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       text-transform: uppercase;
       letter-spacing: 1px;
       margin-bottom: 20px;
-      animation: pulse 2s infinite;
+      animation: pulse-embed 2s infinite;
     }
 
     .live-dot {
@@ -158,7 +158,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       animation: blink 1s infinite;
     }
 
-    @keyframes pulse {
+    @keyframes pulse-embed {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.05); }
     }

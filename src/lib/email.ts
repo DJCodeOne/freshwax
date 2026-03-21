@@ -260,8 +260,8 @@ export async function sendResendEmail(
     try {
       const result = await response.json() as { id?: string };
       messageId = result.id;
-    } catch {
-      // Non-critical — we still consider it a success if the HTTP status was 2xx
+    } catch (_e: unknown) {
+      /* intentional: response body parse failure is non-critical when HTTP status is 2xx */
     }
 
     const status = shouldRetry ? 'retried' : 'sent';
@@ -287,7 +287,8 @@ export async function sendResendEmail(
   let errorBody = '';
   try {
     errorBody = await response.text();
-  } catch {
+  } catch (_e: unknown) {
+    /* intentional: fallback to status code when error body is unreadable */
     errorBody = `HTTP ${response.status}`;
   }
 

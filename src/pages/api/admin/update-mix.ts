@@ -151,7 +151,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Clear mixes cache so changes appear immediately
     invalidateMixesCache();
-    await kvDelete('live-dj-mixes-v2:all', CACHE_CONFIG.DJ_MIXES).catch(() => {});
+    await kvDelete('live-dj-mixes-v2:all', CACHE_CONFIG.DJ_MIXES).catch(() => { /* non-critical: KV cache invalidation */ });
 
     return successResponse({ message: 'Mix updated successfully',
       updatedFields: Object.keys(updateData) });

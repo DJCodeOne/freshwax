@@ -1564,7 +1564,9 @@ export function initPlaylistModal() {
       // Fetch real title asynchronously
       const videoId = getYouTubeIdForPreview(currentItem.url);
       if (videoId) {
-        fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, { signal: controller.signal })
           .then(response => response.ok ? response.json() : null)
           .then(data => {
             if (data?.title && previewTitle) {
@@ -1573,8 +1575,14 @@ export function initPlaylistModal() {
               currentItem.title = data.title;
             }
           })
-          .catch(() => {
+          .catch((err: unknown) => {
+            if (err instanceof Error && err.name === 'AbortError') {
+              console.warn('[PlaylistModal] YouTube oEmbed timed out for preview');
+            }
             if (previewTitle) previewTitle.textContent = title;
+          })
+          .finally(() => {
+            clearTimeout(timeoutId);
           });
       }
     } else {

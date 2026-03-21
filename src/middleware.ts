@@ -328,7 +328,7 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     // Unhandled exception in API handler
     if (isApiRoute) {
       const env = locals.runtime?.env;
-      logServerError(err, request, env, { endpoint: pathname, statusCode: 500 }).catch(() => {});
+      logServerError(err, request, env, { endpoint: pathname, statusCode: 500 }).catch(() => { /* non-critical: error logging */ });
     }
     throw err; // Re-throw to let Astro handle the error page
   }
@@ -339,7 +339,7 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     logServerError(new Error(`${response.status} ${response.statusText || 'Server Error'}`), request, env, {
       endpoint: pathname,
       statusCode: response.status,
-    }).catch(() => {});
+    }).catch(() => { /* non-critical: error logging */ });
   }
 
   // Clone headers for modification

@@ -173,7 +173,8 @@ export async function parseJsonBody<T = unknown>(request: Request): Promise<T | 
     const text = await request.text();
     if (!text) return null;
     return JSON.parse(text) as T;
-  } catch {
+  } catch (_e: unknown) {
+    /* intentional: malformed JSON body returns null to caller */
     return null;
   }
 }

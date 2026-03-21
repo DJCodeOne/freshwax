@@ -1,31 +1,55 @@
 // src/lib/order/stock-reservation.ts
 // Stock reservation system — prevents overselling during checkout
 
-import { getDocument, updateDocument, setDocument, updateDocumentConditional, queryCollection } from '../firebase-rest';
+import { getDocument, getDocumentsBatch, updateDocument, setDocument, updateDocumentConditional, queryCollection } from '../firebase-rest';
 import { log, RESERVATION_TTL_MS } from './types';
 import type { CartItem, VariantStockEntry } from './types';
+
+// Internal: batch-fetch all documents needed for a set of reservation items, grouped by collection
+async function prefetchReservationDocs(
+  items: { itemType: string; productId: string }[]
+): Promise<{ merchMap: Map<string, Record<string, unknown>>; releaseMap: Map<string, Record<string, unknown>>; listingMap: Map<string, Record<string, unknown>> }> {
+  const merchIds = [...new Set(items.filter(r => (r.itemType || 'merch') === 'merch').map(r => r.productId))];
+  const releaseIds = [...new Set(items.filter(r => r.itemType === 'vinyl-release').map(r => r.productId))];
+  const listingIds = [...new Set(items.filter(r => r.itemType === 'vinyl-listing').map(r => r.productId))];
+
+  const [merchMap, releaseMap, listingMap] = await Promise.all([
+    merchIds.length > 0 ? getDocumentsBatch('merch', merchIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
+    releaseIds.length > 0 ? getDocumentsBatch('releases', releaseIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
+    listingIds.length > 0 ? getDocumentsBatch('vinylListings', listingIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
+  ]);
+
+  return { merchMap, releaseMap, listingMap };
+}
 
 // Internal: rollback reservations already made if a subsequent one fails
 async function rollbackReservations(reserved: { itemType: string; productId: string; variantKey: string; quantity: number }[]): Promise<void> {
   const MAX_RETRIES = 3;
+
+  // Batch pre-fetch all documents needed for rollback
+  const { merchMap, releaseMap, listingMap } = await prefetchReservationDocs(reserved);
+
   for (const res of reserved) {
     const itemType = res.itemType || 'merch';
 
     if (itemType === 'merch') {
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
-          const product = await getDocument('merch', res.productId);
+          // Use pre-fetched data on first attempt, fresh fetch on retry
+          const product = attempt === 0
+            ? (merchMap.get(res.productId) || null)
+            : await getDocument('merch', res.productId);
           if (!product) break;
 
           const variantStock = product.variantStock || {};
-          const variant = variantStock[res.variantKey];
+          const variant = (variantStock as Record<string, VariantStockEntry>)[res.variantKey];
           if (!variant) break;
 
           variant.reserved = Math.max(0, (variant.reserved || 0) - res.quantity);
-          variantStock[res.variantKey] = variant;
+          (variantStock as Record<string, VariantStockEntry>)[res.variantKey] = variant;
 
           let totalReserved = 0;
-          Object.values(variantStock).forEach((v: unknown) => {
+          Object.values(variantStock as Record<string, unknown>).forEach((v: unknown) => {
             if (typeof v === 'object' && v !== null) totalReserved += (v as VariantStockEntry).reserved || 0;
           });
 
@@ -34,7 +58,7 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
               variantStock,
               reservedStock: totalReserved,
               updatedAt: new Date().toISOString()
-            }, product._updateTime);
+            }, product._updateTime as string);
           } else {
             await updateDocument('merch', res.productId, {
               variantStock,
@@ -51,7 +75,10 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
     } else if (itemType === 'vinyl-release') {
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
-          const release = await getDocument('releases', res.productId);
+          // Use pre-fetched data on first attempt, fresh fetch on retry
+          const release = attempt === 0
+            ? (releaseMap.get(res.productId) || null)
+            : await getDocument('releases', res.productId);
           if (!release) break;
 
           const updateData: Record<string, unknown> = {
@@ -60,7 +87,7 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
           };
 
           if (release._updateTime) {
-            await updateDocumentConditional('releases', res.productId, updateData, release._updateTime);
+            await updateDocumentConditional('releases', res.productId, updateData, release._updateTime as string);
           } else {
             await updateDocument('releases', res.productId, updateData);
           }
@@ -72,7 +99,8 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
       }
     } else if (itemType === 'vinyl-listing') {
       try {
-        const listing = await getDocument('vinylListings', res.productId);
+        // Use pre-fetched data
+        const listing = listingMap.get(res.productId) || null;
         if (listing && listing.status === 'reserved') {
           await updateDocument('vinylListings', res.productId, {
             status: 'published',
@@ -148,6 +176,9 @@ export async function reserveStock(
     });
   }
 
+  // Batch pre-fetch all documents needed for reservations
+  const { merchMap, releaseMap, listingMap } = await prefetchReservationDocs(reservations);
+
   // Try to reserve each item with optimistic concurrency
   const reservedSoFar: typeof reservations = [];
 
@@ -158,7 +189,10 @@ export async function reserveStock(
       // --- MERCH RESERVATION (variant-level) ---
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
-          const product = await getDocument('merch', res.productId);
+          // Use pre-fetched data on first attempt, fresh fetch on retry
+          const product = attempt === 0
+            ? (merchMap.get(res.productId) || null)
+            : await getDocument('merch', res.productId);
           if (!product) {
             await rollbackReservations(reservedSoFar);
             return { success: false, error: `Product not found: ${res.productId}` };
@@ -166,8 +200,8 @@ export async function reserveStock(
 
           const variantStock = product.variantStock || {};
           let resolvedKey = res.variantKey;
-          if (!variantStock[resolvedKey]) {
-            const keys = Object.keys(variantStock);
+          if (!(variantStock as Record<string, unknown>)[resolvedKey]) {
+            const keys = Object.keys(variantStock as Record<string, unknown>);
             const [sizePart, colorPart] = resolvedKey.split('_');
             if (keys.length === 1) {
               // Only one variant — use it regardless of key name
@@ -179,7 +213,7 @@ export async function reserveStock(
               resolvedKey = sizeMatch || colorMatch || keys[0];
             }
           }
-          const variant = variantStock[resolvedKey];
+          const variant = (variantStock as Record<string, VariantStockEntry>)[resolvedKey];
           if (!variant) {
             await rollbackReservations(reservedSoFar);
             return { success: false, error: `Variant not found: ${res.variantKey}` };
@@ -192,10 +226,10 @@ export async function reserveStock(
           }
 
           variant.reserved = (variant.reserved || 0) + res.quantity;
-          variantStock[resolvedKey] = variant;
+          (variantStock as Record<string, VariantStockEntry>)[resolvedKey] = variant;
 
           let totalReserved = 0;
-          Object.values(variantStock).forEach((v: unknown) => {
+          Object.values(variantStock as Record<string, unknown>).forEach((v: unknown) => {
             if (typeof v === 'object' && v !== null) totalReserved += (v as VariantStockEntry).reserved || 0;
           });
 
@@ -206,7 +240,7 @@ export async function reserveStock(
           };
 
           if (product._updateTime) {
-            await updateDocumentConditional('merch', res.productId, updateData, product._updateTime);
+            await updateDocumentConditional('merch', res.productId, updateData, product._updateTime as string);
           } else {
             await updateDocument('merch', res.productId, updateData);
           }
@@ -227,14 +261,17 @@ export async function reserveStock(
       // --- VINYL RELEASE RESERVATION (vinylReserved counter) ---
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
-          const release = await getDocument('releases', res.productId);
+          // Use pre-fetched data on first attempt, fresh fetch on retry
+          const release = attempt === 0
+            ? (releaseMap.get(res.productId) || null)
+            : await getDocument('releases', res.productId);
           if (!release) {
             await rollbackReservations(reservedSoFar);
             return { success: false, error: `Release not found: ${res.productId}` };
           }
 
-          const vinylStock = release.vinylStock ?? 0;
-          const vinylReserved = release.vinylReserved ?? 0;
+          const vinylStock = (release.vinylStock as number) ?? 0;
+          const vinylReserved = (release.vinylReserved as number) ?? 0;
           const available = vinylStock - vinylReserved;
 
           if (available < res.quantity) {
@@ -248,7 +285,7 @@ export async function reserveStock(
           };
 
           if (release._updateTime) {
-            await updateDocumentConditional('releases', res.productId, updateData, release._updateTime);
+            await updateDocumentConditional('releases', res.productId, updateData, release._updateTime as string);
           } else {
             await updateDocument('releases', res.productId, updateData);
           }
@@ -269,7 +306,10 @@ export async function reserveStock(
       // --- VINYL LISTING RESERVATION (Crates - set status to 'reserved') ---
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
-          const listing = await getDocument('vinylListings', res.productId);
+          // Use pre-fetched data on first attempt, fresh fetch on retry
+          const listing = attempt === 0
+            ? (listingMap.get(res.productId) || null)
+            : await getDocument('vinylListings', res.productId);
           if (!listing) {
             await rollbackReservations(reservedSoFar);
             return { success: false, error: `Listing not found: ${res.productId}` };
@@ -288,7 +328,7 @@ export async function reserveStock(
           };
 
           if (listing._updateTime) {
-            await updateDocumentConditional('vinylListings', res.productId, updateData, listing._updateTime);
+            await updateDocumentConditional('vinylListings', res.productId, updateData, listing._updateTime as string);
           } else {
             await updateDocument('vinylListings', res.productId, updateData);
           }
@@ -362,25 +402,32 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
       return; // Nothing to release
     }
 
+    // Batch pre-fetch all documents needed for release
+    const resItems = (reservation.items || []) as { itemType: string; productId: string; variantKey: string; quantity: number }[];
+    const { merchMap, releaseMap, listingMap } = await prefetchReservationDocs(resItems);
+
     // Decrement reserved counts on each product
-    for (const res of reservation.items || []) {
+    for (const res of resItems) {
       const itemType = res.itemType || 'merch'; // Default to merch for backward compat
 
       if (itemType === 'merch') {
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           try {
-            const product = await getDocument('merch', res.productId);
+            // Use pre-fetched data on first attempt, fresh fetch on retry
+            const product = attempt === 0
+              ? (merchMap.get(res.productId) || null)
+              : await getDocument('merch', res.productId);
             if (!product) break;
 
             const variantStock = product.variantStock || {};
-            const variant = variantStock[res.variantKey];
+            const variant = (variantStock as Record<string, VariantStockEntry>)[res.variantKey];
             if (!variant) break;
 
             variant.reserved = Math.max(0, (variant.reserved || 0) - res.quantity);
-            variantStock[res.variantKey] = variant;
+            (variantStock as Record<string, VariantStockEntry>)[res.variantKey] = variant;
 
             let totalReserved = 0;
-            Object.values(variantStock).forEach((v: unknown) => {
+            Object.values(variantStock as Record<string, unknown>).forEach((v: unknown) => {
               if (typeof v === 'object' && v !== null) totalReserved += (v as VariantStockEntry).reserved || 0;
             });
 
@@ -391,7 +438,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
             };
 
             if (product._updateTime) {
-              await updateDocumentConditional('merch', res.productId, updateData, product._updateTime);
+              await updateDocumentConditional('merch', res.productId, updateData, product._updateTime as string);
             } else {
               await updateDocument('merch', res.productId, updateData);
             }
@@ -404,16 +451,19 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
       } else if (itemType === 'vinyl-release') {
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           try {
-            const release = await getDocument('releases', res.productId);
+            // Use pre-fetched data on first attempt, fresh fetch on retry
+            const release = attempt === 0
+              ? (releaseMap.get(res.productId) || null)
+              : await getDocument('releases', res.productId);
             if (!release) break;
 
             const updateData: Record<string, unknown> = {
-              vinylReserved: Math.max(0, (release.vinylReserved ?? 0) - res.quantity),
+              vinylReserved: Math.max(0, ((release.vinylReserved as number) ?? 0) - res.quantity),
               updatedAt: new Date().toISOString()
             };
 
             if (release._updateTime) {
-              await updateDocumentConditional('releases', res.productId, updateData, release._updateTime);
+              await updateDocumentConditional('releases', res.productId, updateData, release._updateTime as string);
             } else {
               await updateDocument('releases', res.productId, updateData);
             }
@@ -425,7 +475,8 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
         }
       } else if (itemType === 'vinyl-listing') {
         try {
-          const listing = await getDocument('vinylListings', res.productId);
+          // Use pre-fetched data
+          const listing = listingMap.get(res.productId) || null;
           if (listing && listing.status === 'reserved') {
             await updateDocument('vinylListings', res.productId, {
               status: 'published',
@@ -504,26 +555,38 @@ export async function cleanupExpiredReservations(): Promise<number> {
 
     if (!expired || expired.length === 0) return 0;
 
+    // Gather all items across all expired reservations for batch pre-fetch
+    const allItems: { itemType: string; productId: string; variantKey: string; quantity: number }[] = [];
+    for (const reservation of expired) {
+      for (const res of (reservation.items || []) as { itemType: string; productId: string; variantKey: string; quantity: number }[]) {
+        allItems.push(res);
+      }
+    }
+    const { merchMap, releaseMap, listingMap } = await prefetchReservationDocs(allItems);
+
     for (const reservation of expired) {
       // Decrement reserved counts per item type
-      for (const res of reservation.items || []) {
+      for (const res of (reservation.items || []) as { itemType: string; productId: string; variantKey: string; quantity: number }[]) {
         const itemType = res.itemType || 'merch';
 
         if (itemType === 'merch') {
           for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
             try {
-              const product = await getDocument('merch', res.productId);
+              // Use pre-fetched data on first attempt, fresh fetch on retry
+              const product = attempt === 0
+                ? (merchMap.get(res.productId) || null)
+                : await getDocument('merch', res.productId);
               if (!product) break;
 
               const variantStock = product.variantStock || {};
-              const variant = variantStock[res.variantKey];
+              const variant = (variantStock as Record<string, VariantStockEntry>)[res.variantKey];
               if (!variant) break;
 
               variant.reserved = Math.max(0, (variant.reserved || 0) - res.quantity);
-              variantStock[res.variantKey] = variant;
+              (variantStock as Record<string, VariantStockEntry>)[res.variantKey] = variant;
 
               let totalReserved = 0;
-              Object.values(variantStock).forEach((v: unknown) => {
+              Object.values(variantStock as Record<string, unknown>).forEach((v: unknown) => {
                 if (typeof v === 'object' && v !== null) totalReserved += (v as VariantStockEntry).reserved || 0;
               });
 
@@ -532,7 +595,7 @@ export async function cleanupExpiredReservations(): Promise<number> {
                   variantStock,
                   reservedStock: totalReserved,
                   updatedAt: new Date().toISOString()
-                }, product._updateTime);
+                }, product._updateTime as string);
               } else {
                 await updateDocument('merch', res.productId, {
                   variantStock,
@@ -549,16 +612,19 @@ export async function cleanupExpiredReservations(): Promise<number> {
         } else if (itemType === 'vinyl-release') {
           for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
             try {
-              const release = await getDocument('releases', res.productId);
+              // Use pre-fetched data on first attempt, fresh fetch on retry
+              const release = attempt === 0
+                ? (releaseMap.get(res.productId) || null)
+                : await getDocument('releases', res.productId);
               if (!release) break;
 
               const updateData: Record<string, unknown> = {
-                vinylReserved: Math.max(0, (release.vinylReserved ?? 0) - res.quantity),
+                vinylReserved: Math.max(0, ((release.vinylReserved as number) ?? 0) - res.quantity),
                 updatedAt: new Date().toISOString()
               };
 
               if (release._updateTime) {
-                await updateDocumentConditional('releases', res.productId, updateData, release._updateTime);
+                await updateDocumentConditional('releases', res.productId, updateData, release._updateTime as string);
               } else {
                 await updateDocument('releases', res.productId, updateData);
               }
@@ -570,7 +636,8 @@ export async function cleanupExpiredReservations(): Promise<number> {
           }
         } else if (itemType === 'vinyl-listing') {
           try {
-            const listing = await getDocument('vinylListings', res.productId);
+            // Use pre-fetched data
+            const listing = listingMap.get(res.productId) || null;
             if (listing && listing.status === 'reserved') {
               await updateDocument('vinylListings', res.productId, {
                 status: 'published',
@@ -585,7 +652,7 @@ export async function cleanupExpiredReservations(): Promise<number> {
         }
       }
 
-      await updateDocument('stock-reservations', reservation.id, {
+      await updateDocument('stock-reservations', reservation.id as string, {
         status: 'expired',
         releasedAt: new Date().toISOString()
       });

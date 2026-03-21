@@ -1,16 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock all external modules before importing the module under test
-vi.mock('../lib/firebase-rest', () => ({
-  getDocument: vi.fn(),
-  updateDocument: vi.fn(),
-  addDocument: vi.fn(),
-  setDocument: vi.fn(),
-  clearCache: vi.fn(),
-  atomicIncrement: vi.fn(),
-  updateDocumentConditional: vi.fn(),
-  queryCollection: vi.fn(),
-}));
+vi.mock('../lib/firebase-rest', () => {
+  const getDocumentMock = vi.fn();
+  return {
+    getDocument: getDocumentMock,
+    getDocumentsBatch: vi.fn(async (_collection: string, ids: string[]) => {
+      const map = new Map();
+      for (const id of ids) {
+        const doc = await getDocumentMock(_collection, id);
+        if (doc) map.set(id, doc);
+      }
+      return map;
+    }),
+    updateDocument: vi.fn(),
+    addDocument: vi.fn(),
+    setDocument: vi.fn(),
+    clearCache: vi.fn(),
+    atomicIncrement: vi.fn(),
+    updateDocumentConditional: vi.fn(),
+    queryCollection: vi.fn(),
+  };
+});
 
 vi.mock('../lib/d1-catalog', () => ({
   d1UpsertMerch: vi.fn(),

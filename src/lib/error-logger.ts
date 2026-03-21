@@ -58,8 +58,8 @@ export async function logError(entry: ErrorLogEntry, env: ErrorLogEnv | undefine
       entry.metadata ? JSON.stringify(entry.metadata).slice(0, 2000) : null,
       fp
     ).run();
-  } catch {
-    // Error logging must never throw
+  } catch (_e: unknown) {
+    /* intentional: error logging must never throw — swallow D1 write failures */
   }
 }
 
@@ -100,7 +100,8 @@ export async function cleanupErrorLogs(env: ErrorLogEnv | undefined, daysToKeep 
     const cutoff = new Date(Date.now() - daysToKeep * 24 * 60 * 60 * 1000).toISOString();
     const result = await db.prepare('DELETE FROM error_logs WHERE created_at < ?').bind(cutoff).run();
     return result?.meta?.changes || 0;
-  } catch {
+  } catch (_e: unknown) {
+    /* intentional: cleanup failure returns 0 deleted — non-critical maintenance task */
     return 0;
   }
 }

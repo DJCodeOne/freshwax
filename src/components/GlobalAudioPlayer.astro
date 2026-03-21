@@ -227,21 +227,21 @@ const { nonce = '' } = Astro.props;
   .mini-shuffle-btn.loading {
     opacity: 0.5;
     pointer-events: none;
-    animation: pulse 1s infinite;
+    animation: pulse-audio 1s infinite;
   }
-  
-  @keyframes pulse {
+
+  @keyframes pulse-audio {
     0%, 100% { opacity: 0.5; }
     50% { opacity: 0.8; }
   }
-  
-  @keyframes shimmer {
+
+  @keyframes shimmer-audio {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
   }
   
   .animate-shimmer {
-    animation: shimmer 2s infinite;
+    animation: shimmer-audio 2s infinite;
   }
   
   #mini-player.visible {

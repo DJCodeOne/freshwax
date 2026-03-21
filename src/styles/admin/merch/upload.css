@@ -273,9 +273,9 @@
 
     /* Subtle glow effect for product images */
     .image-preview-item {
-      animation: subtleGlow 3s ease-in-out infinite;
+      animation: subtleGlow-upload 3s ease-in-out infinite;
     }
-    @keyframes subtleGlow {
+    @keyframes subtleGlow-upload {
       0%, 100% {
         box-shadow: 0 0 5px rgba(220, 38, 38, 0.3), 0 0 10px rgba(220, 38, 38, 0.1);
       }

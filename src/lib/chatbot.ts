@@ -175,7 +175,8 @@ async function getCurrentStream(streamId: string, env: ChatbotEnv): Promise<Live
       title: data.fields?.title?.stringValue || '',
       genre: data.fields?.genre?.stringValue || ''
     };
-  } catch {
+  } catch (_e: unknown) {
+    /* intentional: slot lookup failure returns null gracefully */
     return null;
   }
 }
@@ -242,7 +243,8 @@ async function getTodaySchedule(env: ChatbotEnv): Promise<LivestreamSlotInfo[]> 
           scheduledFor: (doc.fields?.scheduledFor?.stringValue as string) || ''
         };
       });
-  } catch {
+  } catch (_e: unknown) {
+    /* intentional: schedule fetch failure returns empty list */
     return [];
   }
 }
@@ -306,7 +308,8 @@ async function getNextSlot(env: ChatbotEnv): Promise<LivestreamSlotInfo | null> 
       title: doc.fields?.title?.stringValue || '',
       scheduledFor: doc.fields?.scheduledFor?.stringValue || ''
     };
-  } catch {
+  } catch (_e: unknown) {
+    /* intentional: next slot lookup failure returns null gracefully */
     return null;
   }
 }

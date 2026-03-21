@@ -274,7 +274,43 @@ async function processArtistPayments(params: {
       items: string[];
     }> = {};
 
-    const releaseCache: Record<string, Record<string, unknown>> = {};
+    // Collect unique release IDs
+    const releaseIds = new Set<string>();
+    for (const item of items) {
+      if (item.type === 'merch') continue;
+      const releaseId = item.releaseId || item.id;
+      if (releaseId) releaseIds.add(releaseId as string);
+    }
+
+    // Batch-fetch all releases in parallel
+    const releaseEntries = await Promise.all(
+      [...releaseIds].map(async (id) => {
+        const doc = await getDocument('releases', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const releaseMap = new Map(releaseEntries.filter(([, doc]) => doc));
+
+    // Collect unique artist IDs from resolved releases
+    const artistIds = new Set<string>();
+    for (const item of items) {
+      if (item.type === 'merch') continue;
+      const releaseId = item.releaseId || item.id;
+      if (!releaseId) continue;
+      const release = releaseMap.get(releaseId as string);
+      if (!release) continue;
+      const aid = item.artistId || release.artistId || release.userId;
+      if (aid) artistIds.add(aid as string);
+    }
+
+    // Batch-fetch all artists in parallel
+    const artistEntries = await Promise.all(
+      [...artistIds].map(async (id) => {
+        const doc = await getDocument('artists', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const artistMap = new Map(artistEntries.filter(([, doc]) => doc));
 
     for (const item of items) {
       // Skip merch items - they go to suppliers
@@ -283,23 +319,13 @@ async function processArtistPayments(params: {
       const releaseId = item.releaseId || item.id;
       if (!releaseId) continue;
 
-      let release = releaseCache[releaseId];
-      if (!release) {
-        release = await getDocument('releases', releaseId);
-        if (release) releaseCache[releaseId] = release;
-      }
-
+      const release = releaseMap.get(releaseId as string);
       if (!release) continue;
 
-      const artistId = item.artistId || release.artistId || release.userId;
+      const artistId = (item.artistId || release.artistId || release.userId) as string;
       if (!artistId) continue;
 
-      let artist = null;
-      try {
-        artist = await getDocument('artists', artistId);
-      } catch (e: unknown) {
-        // Artist not found
-      }
+      const artist = artistMap.get(artistId) || null;
 
       const itemTotal = (item.price || 0) * (item.quantity || 1);
 
@@ -405,30 +431,52 @@ async function processMerchSupplierPayments(params: {
       items: string[];
     }> = {};
 
-    const merchCache: Record<string, Record<string, unknown>> = {};
+    // Collect unique product IDs
+    const productIds = new Set<string>();
+    for (const item of merchItems) {
+      const productId = item.productId || item.merchId || item.id;
+      if (productId) productIds.add(productId as string);
+    }
+
+    // Batch-fetch all merch products in parallel
+    const productEntries = await Promise.all(
+      [...productIds].map(async (id) => {
+        const doc = await getDocument('merch', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const productMap = new Map(productEntries.filter(([, doc]) => doc));
+
+    // Collect unique supplier IDs from resolved products
+    const supplierIds = new Set<string>();
+    for (const item of merchItems) {
+      const productId = item.productId || item.merchId || item.id;
+      if (!productId) continue;
+      const product = productMap.get(productId as string);
+      if (!product) continue;
+      if (product.supplierId) supplierIds.add(product.supplierId as string);
+    }
+
+    // Batch-fetch all suppliers in parallel
+    const supplierEntries = await Promise.all(
+      [...supplierIds].map(async (id) => {
+        const doc = await getDocument('merch-suppliers', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const supplierMap = new Map(supplierEntries.filter(([, doc]) => doc));
 
     for (const item of merchItems) {
       const productId = item.productId || item.merchId || item.id;
       if (!productId) continue;
 
-      let product = merchCache[productId];
-      if (!product) {
-        product = await getDocument('merch', productId);
-        if (product) merchCache[productId] = product;
-      }
-
+      const product = productMap.get(productId as string);
       if (!product) continue;
 
-      const supplierId = product.supplierId;
+      const supplierId = product.supplierId as string;
       if (!supplierId) continue;
 
-      let supplier = null;
-      try {
-        supplier = await getDocument('merch-suppliers', supplierId);
-      } catch (e: unknown) {
-        // Supplier not found
-      }
-
+      const supplier = supplierMap.get(supplierId) || null;
       if (!supplier) continue;
 
       const itemPrice = item.price || 0;
@@ -664,30 +712,57 @@ async function processVinylCrateSellerPayments(params: {
       items: string[];
     }> = {};
 
-    const listingCache: Record<string, Record<string, unknown>> = {};
-
+    // Collect unique listing IDs that need fetching (items without a sellerId)
+    const listingIds = new Set<string>();
     for (const item of crateItems) {
-      let sellerId = item.sellerId;
-      let listingId = item.crateListingId || item.listingId;
-
-      if (!sellerId && listingId) {
-        let listing = listingCache[listingId];
-        if (!listing) {
-          listing = await getDocument('crateListings', listingId);
-          if (listing) listingCache[listingId] = listing;
-        }
-        if (listing) sellerId = listing.sellerId || listing.userId;
+      if (!item.sellerId && (item.crateListingId || item.listingId)) {
+        listingIds.add((item.crateListingId || item.listingId) as string);
       }
+    }
+
+    // Batch-fetch all crate listings in parallel
+    const listingEntries = await Promise.all(
+      [...listingIds].map(async (id) => {
+        const doc = await getDocument('crateListings', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const listingMap = new Map(listingEntries.filter(([, doc]) => doc));
+
+    // Resolve sellerIds for all crate items, then collect unique seller IDs
+    const sellerIdSet = new Set<string>();
+    const itemSellerIds: (string | null)[] = [];
+    for (const item of crateItems) {
+      let sellerId = item.sellerId as string | null;
+      if (!sellerId) {
+        const listingId = (item.crateListingId || item.listingId) as string | undefined;
+        if (listingId) {
+          const listing = listingMap.get(listingId);
+          if (listing) {
+            sellerId = (listing.sellerId || listing.userId) as string | null;
+          }
+        }
+      }
+      itemSellerIds.push(sellerId || null);
+      if (sellerId) sellerIdSet.add(sellerId);
+    }
+
+    // Batch-fetch all sellers (users) in parallel
+    const sellerEntries = await Promise.all(
+      [...sellerIdSet].map(async (id) => {
+        const doc = await getDocument('users', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const sellerMap = new Map(sellerEntries.filter(([, doc]) => doc));
+
+    for (let i = 0; i < crateItems.length; i++) {
+      const item = crateItems[i];
+      const sellerId = itemSellerIds[i];
 
       if (!sellerId) continue;
 
-      let seller = null;
-      try {
-        seller = await getDocument('users', sellerId);
-      } catch (e: unknown) {
-        // Seller user not found
-      }
-
+      const seller = sellerMap.get(sellerId) || null;
       if (!seller) continue;
 
       const itemPrice = item.price || 0;

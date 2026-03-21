@@ -131,7 +131,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
 
           // Also clear KV cart
-          fetch('/api/cart/', { method: 'DELETE' }).catch(() => {});
+          fetch('/api/cart/', { method: 'DELETE' }).catch(() => { /* non-critical: KV cart cleanup after successful checkout */ });
         }
 
         if (result.success && result.orderId) {

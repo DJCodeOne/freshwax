@@ -76,7 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Clear caches
     clearCache('merch');
     clearCache('live-merch');
-    await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => {});
+    await kvDelete('live-merch-v2:all', CACHE_CONFIG.MERCH).catch(() => { /* non-critical: KV cache invalidation */ });
 
     return successResponse({ message: `Synced ${synced} of ${merchItems.length} items to D1, deleted ${toDelete.length} stale items`,
       synced,
