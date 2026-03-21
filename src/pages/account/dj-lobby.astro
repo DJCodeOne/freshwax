@@ -633,7 +633,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </div>
 
             <!-- Audio Toggle Button -->
-            <button type="button" class="audio-toggle-btn" id="audioToggleBtn" title="Switch Audio Source">
+            <button type="button" class="audio-toggle-btn" id="audioToggleBtn" title="Switch Audio Source" aria-label="Switch audio source">
               <span class="toggle-arrow left-arrow active">◀</span>
               <span class="toggle-label">AUDIO</span>
               <span class="toggle-arrow right-arrow">▶</span>
@@ -685,10 +685,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <span class="source-name">OBS</span>
               </span>
               <div class="panel-controls">
-                <button type="button" class="panel-btn" id="audioSourceToggle" title="Toggle Source">
+                <button type="button" class="panel-btn" id="audioSourceToggle" title="Toggle Source" aria-label="Toggle audio source">
                   <span class="source-label">PREVIEW</span>
                 </button>
-                <button type="button" class="panel-btn" id="calibrateBtn" title="Calibrate Meters">CAL</button>
+                <button type="button" class="panel-btn" id="calibrateBtn" title="Calibrate Meters" aria-label="Calibrate meters">CAL</button>
                 <button type="button" class="panel-btn" id="panelMinimize" title="Minimize" aria-label="Minimize panel">−</button>
               </div>
             </div>
@@ -718,7 +718,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <!-- LEFT: Mute Button + LUFS -->
               <div class="meter-column left-column">
                 <div class="mute-section">
-                  <button type="button" class="mute-btn-panel" id="obsMuteBtn" title="Toggle Preview Audio">
+                  <button type="button" class="mute-btn-panel" id="obsMuteBtn" title="Toggle Preview Audio" aria-label="Toggle preview audio">
                     <svg class="muted-icon" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
                       <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
                     </svg>
@@ -899,7 +899,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   </div>
                 </div>
                 <div class="mute-section">
-                  <button type="button" class="mute-btn-panel" id="liveMuteBtn" title="Toggle Live Audio">
+                  <button type="button" class="mute-btn-panel" id="liveMuteBtn" title="Toggle Live Audio" aria-label="Toggle live audio">
                     <svg class="muted-icon hidden" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
                       <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
                     </svg>
@@ -1016,10 +1016,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   <label for="inlineStreamTitle">Title</label>
                   <div class="title-input-row">
                     <input type="text" id="inlineStreamTitle" placeholder="Friday Night Session" maxlength="40" />
-                    <button type="button" id="saveTitleBtn" class="title-action-btn save-btn" title="Save title">
+                    <button type="button" id="saveTitleBtn" class="title-action-btn save-btn" title="Save title" aria-label="Save title">
                       <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                     </button>
-                    <button type="button" id="clearTitleBtn" class="title-action-btn clear-btn hidden" title="Clear title">
+                    <button type="button" id="clearTitleBtn" class="title-action-btn clear-btn hidden" title="Clear title" aria-label="Clear title">
                       <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                     </button>
                   </div>
@@ -1094,8 +1094,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="pro-card-body">
                 <div class="pro-input-row with-btn">
                   <input type="text" id="relayUrl" placeholder="Stream URL to relay" autocomplete="off" aria-label="Relay stream URL" />
-                  <button type="button" class="pro-select-btn" id="openRelayModal" title="Browse stations">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                  <button type="button" class="pro-select-btn" id="openRelayModal" title="Browse stations" aria-label="Browse relay stations">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true">
                       <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
                     </svg>
                   </button>
@@ -1792,7 +1792,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="auth-content">
             <div class="not-eligible-icon">⏳</div>
             <h2 style="margin: 1rem 0 0.5rem; color: #fff;">Taking too long?</h2>
-            <p style="color: #aaa; margin-bottom: 1.5rem;">Authentication is taking longer than expected.</p>
+            <p style="color: #ccc; margin-bottom: 1.5rem;">Authentication is taking longer than expected.</p>
             <button id="authTimeoutRefreshBtn" class="action-btn primary">Refresh Page</button>
             <a href="/live/" class="action-btn secondary" style="margin-top: 0.75rem; display: inline-block;">Back to Live</a>
           </div>
@@ -1825,7 +1825,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="auth-content">
             <div class="not-eligible-icon">⚠️</div>
             <h2 style="margin: 1rem 0 0.5rem; color: #fff;">Connection Issue</h2>
-            <p style="color: #aaa; margin-bottom: 1.5rem;">Unable to verify DJ access. Please check your connection and try again.</p>
+            <p style="color: #ccc; margin-bottom: 1.5rem;">Unable to verify DJ access. Please check your connection and try again.</p>
             <button id="accessCheckRetryBtn" class="action-btn primary">Try Again</button>
             <a href="/live/" class="action-btn secondary" style="margin-top: 0.75rem; display: inline-block;">Back to Live</a>
           </div>

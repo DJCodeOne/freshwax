@@ -488,34 +488,3 @@ export async function recordMultiSellerSale(params: {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
-
-/**
- * Calculate totals from ledger entries
- */
-export function calculateLedgerTotals(entries: LedgerEntry[]) {
-  return entries.reduce((acc, entry) => ({
-    orders: acc.orders + 1,
-    grossRevenue: acc.grossRevenue + entry.grossTotal,
-    netRevenue: acc.netRevenue + entry.netRevenue,
-    subtotal: acc.subtotal + entry.subtotal,
-    shipping: acc.shipping + entry.shipping,
-    discount: acc.discount + entry.discount,
-    stripeFees: acc.stripeFees + entry.stripeFee,
-    paypalFees: acc.paypalFees + entry.paypalFee,
-    freshWaxFees: acc.freshWaxFees + entry.freshWaxFee,
-    totalFees: acc.totalFees + entry.totalFees,
-    itemCount: acc.itemCount + entry.itemCount
-  }), {
-    orders: 0,
-    grossRevenue: 0,
-    netRevenue: 0,
-    subtotal: 0,
-    shipping: 0,
-    discount: 0,
-    stripeFees: 0,
-    paypalFees: 0,
-    freshWaxFees: 0,
-    totalFees: 0,
-    itemCount: 0
-  });
-}

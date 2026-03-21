@@ -106,7 +106,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           <div class="fs-offline-content">
             <div class="fs-offline-icon">OFFLINE</div>
             <p class="fs-offline-heading" role="status">No one is streaming right now</p>
-            <p class="fs-offline-subtext" style="font-size: 0.875rem; color: #888; margin-top: 0.5rem;">The playlist will start in a moment</p>
+            <p class="fs-offline-subtext" style="font-size: 0.875rem; color: #bbb; margin-top: 0.5rem;">The playlist will start in a moment</p>
           </div>
         </div>
         <div class="fs-video-container">
@@ -609,9 +609,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
               <label for="bookingDate">Select Date <span class="required">*</span></label>
               <div class="calendar-picker" id="bookingCalendar">
                 <div class="calendar-header">
-                  <button type="button" class="cal-nav-btn" id="calPrevMonth">&lt;</button>
+                  <button type="button" class="cal-nav-btn" id="calPrevMonth" aria-label="Previous month">&lt;</button>
                   <span class="cal-month-year" id="calMonthYear">December 2025</span>
-                  <button type="button" class="cal-nav-btn" id="calNextMonth">&gt;</button>
+                  <button type="button" class="cal-nav-btn" id="calNextMonth" aria-label="Next month">&gt;</button>
                 </div>
                 <div class="calendar-weekdays">
                   <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
