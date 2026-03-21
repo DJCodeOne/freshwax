@@ -849,7 +849,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- Dispute Details Modal -->
-  <div id="disputeModal" class="modal-overlay" slot="modals">
+  <div id="disputeModal" class="modal-overlay" slot="modals" role="dialog" aria-modal="true" aria-label="Dispute details">
     <div class="modal" style="max-width: 600px;">
       <div class="modal-header">
         <h2>Dispute Details</h2>
@@ -865,7 +865,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- Refund Details Modal -->
-  <div id="refundModal" class="modal-overlay" slot="modals">
+  <div id="refundModal" class="modal-overlay" slot="modals" role="dialog" aria-modal="true" aria-label="Refund details">
     <div class="modal" style="max-width: 600px;">
       <div class="modal-header">
         <h2>Refund Details</h2>
@@ -881,7 +881,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- Payout Details Modal -->
-  <div id="payoutModal" class="modal-overlay" slot="modals">
+  <div id="payoutModal" class="modal-overlay" slot="modals" role="dialog" aria-modal="true" aria-label="Payout details">
     <div class="modal" style="max-width: 600px;">
       <div class="modal-header">
         <h2>Payout Details</h2>
@@ -950,7 +950,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       // View dispute details
       document.querySelectorAll('.view-dispute-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          const dispute = JSON.parse(btn.dataset.dispute);
+          var dispute;
+          try { dispute = JSON.parse(btn.dataset.dispute); } catch(e) { dispute = {}; }
           showDisputeDetails(dispute);
         });
       });
@@ -1034,7 +1035,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       // View refund details
       document.querySelectorAll('.view-refund-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          const refund = JSON.parse(btn.dataset.refund);
+          var refund;
+          try { refund = JSON.parse(btn.dataset.refund); } catch(e) { refund = {}; }
           showRefundDetails(refund);
         });
       });
@@ -1107,7 +1109,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       // View payout details
       document.querySelectorAll('.view-payout-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          const payout = JSON.parse(btn.dataset.payout);
+          var payout;
+          try { payout = JSON.parse(btn.dataset.payout); } catch(e) { payout = {}; }
           showPayoutDetails(payout);
         });
       });

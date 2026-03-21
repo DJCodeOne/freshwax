@@ -716,8 +716,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
     })();
 
-    var socialLinks = JSON.parse(existingSocialLinks);
-    var timestampData = JSON.parse(timestamps);
+    var socialLinks;
+    try { socialLinks = JSON.parse(existingSocialLinks); } catch(e) { socialLinks = {}; }
+    var timestampData;
+    try { timestampData = JSON.parse(timestamps); } catch(e) { timestampData = {}; }
     
     // Format timestamp to human readable
     function formatTimestamp(isoString) {

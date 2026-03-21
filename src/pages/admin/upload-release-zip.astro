@@ -331,7 +331,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
 
         const releaseDataText = await releaseData.blob.text();
-        const release = JSON.parse(releaseDataText);
+        var release;
+        try { release = JSON.parse(releaseDataText); } catch(e) { throw new Error("Invalid release metadata JSON: " + e.message); }
         
         if (!release.id) {
           const artistName = (release.artistName || release.artist || 'Unknown').replace(/[^a-zA-Z0-9]/g, '');

@@ -74,7 +74,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- Delete Confirmation Modal -->
-  <div id="confirmModal" class="dedup-modal hidden">
+  <div id="confirmModal" class="dedup-modal hidden" role="dialog" aria-modal="true" aria-label="Confirm delete duplicates">
     <div class="dedup-modal-overlay"></div>
     <div class="dedup-modal-content">
       <div style="font-size: 3rem; text-align: center; margin-bottom: 1rem;">&#x26A0;&#xFE0F;</div>
@@ -89,7 +89,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- Progress Modal -->
-  <div id="progressModal" class="dedup-modal hidden">
+  <div id="progressModal" class="dedup-modal hidden" role="dialog" aria-modal="true" aria-label="Deleting duplicates progress">
     <div class="dedup-modal-overlay"></div>
     <div class="dedup-modal-content">
       <h3 style="text-align: center; color: #fff; margin: 0 0 1rem;">Deleting Duplicates...</h3>
@@ -132,7 +132,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       }
 
       // Parse releases from define:vars
-      const releases: Release[] = JSON.parse((window as Window & { __RELEASES_JSON?: string }).__RELEASES_JSON || '[]');
+      var releases;
+      try { releases = JSON.parse((window).__RELEASES_JSON || "[]"); } catch(e) { releases = []; }
 
       // Group by normalized artist+title
       const groups = new Map<string, Release[]>();

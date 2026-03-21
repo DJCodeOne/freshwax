@@ -107,7 +107,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
   <!-- Edit Partner Modal -->
   <Fragment slot="modals">
-    <div id="editModal" class="modal-overlay">
+    <div id="editModal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Edit partner">
       <div class="modal modal-lg">
         <div class="modal-header">
           <h2>Edit Partner</h2>
@@ -231,7 +231,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     </div>
 
     <!-- Quick Approve Modal -->
-    <div id="approveModal" class="modal-overlay">
+    <div id="approveModal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Approve partner">
       <div class="modal">
         <div class="modal-header">
           <h2>Approve Partner</h2>
@@ -249,7 +249,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     </div>
 
     <!-- Delete Modal -->
-    <div id="deleteModal" class="modal-overlay">
+    <div id="deleteModal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Delete partner">
       <div class="modal">
         <div class="modal-header">
           <h2>Delete Partner</h2>

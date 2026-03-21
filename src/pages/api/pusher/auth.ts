@@ -15,9 +15,11 @@ const ALLOWED_ORIGINS = [
   SITE_URL,
   SITE_URL.replace('://', '://www.'),
   'https://freshwax.pages.dev',
-  'http://localhost:4321',
-  'http://localhost:3000',
-  'http://127.0.0.1:4321',
+  ...(import.meta.env.DEV ? [
+    'http://localhost:4321',
+    'http://localhost:3000',
+    'http://127.0.0.1:4321',
+  ] : []),
 ];
 
 function getAllowedOrigin(request: Request): string | null {

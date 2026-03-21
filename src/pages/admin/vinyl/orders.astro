@@ -102,7 +102,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
   <!-- View Order Modal -->
   <Fragment slot="modals">
-    <div id="viewModal" class="modal-overlay">
+    <div id="viewModal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Order details">
       <div class="modal modal-lg">
         <div class="modal-header">
           <h2>Order Details</h2>

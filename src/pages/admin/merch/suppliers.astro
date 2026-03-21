@@ -205,7 +205,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   </div>
 
   <!-- Edit Supplier Modal -->
-  <div id="editModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+  <div id="editModal" role="dialog" aria-modal="true" aria-label="Edit supplier" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
     <div style="background: #fff; border: 3px solid #000; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
       <div style="background: #000; color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
         <h3 style="font-size: 16px; font-weight: 900; text-transform: uppercase;">Edit Supplier</h3>

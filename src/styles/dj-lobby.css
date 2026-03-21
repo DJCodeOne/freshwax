@@ -6471,6 +6471,11 @@
     font-size: 1rem;
     outline: none;
   }
+
+  #dmInput:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
   
   #dmSendBtn {
     display: flex;
@@ -6651,6 +6656,11 @@
     color: #fff;
     font-size: 0.9rem;
     outline: none;
+  }
+
+  #chatInput:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
   }
   
   #chatInput::placeholder { color: #6b7280; }

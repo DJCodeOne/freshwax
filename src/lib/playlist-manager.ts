@@ -6,6 +6,9 @@ import type { GlobalPlaylistItem, GlobalPlaylist } from './types';
 // embed-player.ts (~30KB) is only needed when playback starts.
 // url-parser.ts is only needed when adding items to the queue.
 import type { EmbedPlayerManager } from './embed-player';
+import { createClientLogger } from './client-logger';
+
+const log = createClientLogger('PlaylistManager');
 
 const PLAYLIST_HISTORY_KEY = 'freshwax_playlist_history';
 const RECENTLY_PLAYED_KEY = 'freshwax_recently_played';
@@ -148,7 +151,7 @@ export class PlaylistManager {
         }
       }
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error loading recently played:', error);
+      log.error('Error loading recently played:', error);
     }
   }
 
@@ -167,7 +170,7 @@ export class PlaylistManager {
       }
       localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(data));
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error saving recently played:', error);
+      log.error('Error saving recently played:', error);
     }
   }
 
@@ -264,14 +267,14 @@ export class PlaylistManager {
     }
 
     if (!window.Pusher) {
-      console.warn('[PlaylistManager] Pusher not available, no real-time sync');
+      log.warn('Pusher not available, no real-time sync');
       return;
     }
 
     // Get Pusher config from window
     const pusherConfig = window.PUSHER_CONFIG;
     if (!pusherConfig?.key) {
-      console.warn('[PlaylistManager] Pusher config not found');
+      log.warn('Pusher config not found');
       return;
     }
 
@@ -295,7 +298,7 @@ export class PlaylistManager {
 
       this.isSubscribed = true;
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Pusher subscription error:', error);
+      log.error('Pusher subscription error:', error);
     }
   }
 
@@ -500,7 +503,7 @@ export class PlaylistManager {
       this.renderUI();
       return { success: true, message: result.message || 'Added to queue' };
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error adding item:', error);
+      log.error('Error adding item:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to add to queue' };
     }
   }
@@ -510,7 +513,7 @@ export class PlaylistManager {
    */
   async removeItem(itemId: string): Promise<void> {
     if (!this.isAuthenticated || !this.userId) {
-      console.warn('[PlaylistManager] Must be authenticated to remove items');
+      log.warn('Must be authenticated to remove items');
       return;
     }
 
@@ -531,7 +534,7 @@ export class PlaylistManager {
       const result = await response.json();
 
       if (!result.success) {
-        console.error('[PlaylistManager] Remove failed:', result.error);
+        log.error('Remove failed:', result.error);
         return;
       }
 
@@ -550,7 +553,7 @@ export class PlaylistManager {
 
       this.renderUI();
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error removing item:', error);
+      log.error('Error removing item:', error);
     }
   }
 
@@ -564,7 +567,7 @@ export class PlaylistManager {
     }
 
     if (this.playlist.queue.length === 0) {
-      console.warn('[PlaylistManager] Cannot play - queue is empty');
+      log.warn('Cannot play - queue is empty');
       return;
     }
 
@@ -600,7 +603,7 @@ export class PlaylistManager {
         this.playlist = result.playlist;
       }
     } catch (error: unknown) {
-      console.warn('[PlaylistManager] Could not fetch latest state:', error);
+      log.warn('Could not fetch latest state:', error);
     }
 
     // Resume and sync to current global position
@@ -633,7 +636,7 @@ export class PlaylistManager {
    */
   async skipTrack(): Promise<void> {
     if (this.playlist.queue.length === 0) {
-      console.warn('[PlaylistManager] Cannot skip - queue is empty');
+      log.warn('Cannot skip - queue is empty');
       return;
     }
     await this.handleTrackEnded();
@@ -658,7 +661,7 @@ export class PlaylistManager {
     // Check if container exists
     const container = document.getElementById(this.containerId);
     if (!container) {
-      console.warn('[PlaylistManager] Auto-play skipped - player container not found');
+      log.warn('Auto-play skipped - player container not found');
       return false;
     }
 
@@ -686,7 +689,7 @@ export class PlaylistManager {
 
       return false;
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error requesting auto-play from server:', error);
+      log.error('Error requesting auto-play from server:', error);
       return false;
     }
   }
@@ -720,7 +723,7 @@ export class PlaylistManager {
         this.renderUI();
       }
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Control action error:', error);
+      log.error('Control action error:', error);
     }
   }
 
@@ -776,7 +779,7 @@ export class PlaylistManager {
     // (prevents errors when playlist manager exists but player isn't on page)
     const container = document.getElementById(this.containerId);
     if (!container) {
-      console.warn('[PlaylistManager] Player container not found - skipping playback');
+      log.warn('Player container not found - skipping playback');
       return;
     }
 
@@ -833,13 +836,13 @@ export class PlaylistManager {
           return;
         }
       } catch (e: unknown) {
-        console.warn('[PlaylistManager] Could not check duration, allowing track to play:', e);
+        log.warn('Could not check duration, allowing track to play:', e);
       }
 
       this.renderUI();
 
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error playing current:', error);
+      log.error('Error playing current:', error);
       // Remove failed track and pick a new one (maintains single-track queue for autoplay)
       await this.handleTrackEnded();
     } finally {
@@ -917,7 +920,7 @@ export class PlaylistManager {
         })
       });
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error logging to server history:', error);
+      log.error('Error logging to server history:', error);
     }
   }
 
@@ -1245,7 +1248,7 @@ export class PlaylistManager {
         duration = currentTrack.duration;
       }
     } catch (error: unknown) {
-      console.warn('[PlaylistManager] Error getting duration:', error);
+      log.warn('Error getting duration:', error);
     }
 
     this.isFetchingDuration = false;
@@ -1334,7 +1337,7 @@ export class PlaylistManager {
         this.playHistory = JSON.parse(stored);
       }
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error loading play history:', error);
+      log.error('Error loading play history:', error);
       this.playHistory = [];
     }
   }
@@ -1346,7 +1349,7 @@ export class PlaylistManager {
     try {
       localStorage.setItem(PLAYLIST_HISTORY_KEY, JSON.stringify(this.playHistory));
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error saving play history:', error);
+      log.error('Error saving play history:', error);
     }
   }
 
@@ -1444,7 +1447,7 @@ export class PlaylistManager {
         };
       }
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error fetching server history:', error);
+      log.error('Error fetching server history:', error);
     }
 
     // Fallback to local history if server fails
@@ -1496,13 +1499,13 @@ export class PlaylistManager {
       });
 
       if (!response.ok) {
-        console.warn('[PlaylistManager] Local playlist server returned', response.status);
+        log.warn('Local playlist server returned', response.status);
         return null;
       }
 
       const data = await response.json();
       if (!data.files || data.files.length === 0) {
-        console.warn('[PlaylistManager] Local playlist server has no files');
+        log.warn('Local playlist server has no files');
         return null;
       }
 
@@ -1522,7 +1525,7 @@ export class PlaylistManager {
         : (data.files as ServerFileItem[]).filter((f) => `${LOCAL_PLAYLIST_SERVER}${f.url}` !== this.lastPlayedUrl);
 
       if (tracksToPickFrom.length === 0) {
-        console.warn('[PlaylistManager] No local tracks available');
+        log.warn('No local tracks available');
         return null;
       }
 
@@ -1551,7 +1554,7 @@ export class PlaylistManager {
         addedByName: 'Auto-Play'
       };
     } catch (error: unknown) {
-      console.warn('[PlaylistManager] Local playlist server error:', error);
+      log.warn('Local playlist server error:', error);
       return null;
     }
   }
@@ -1578,7 +1581,7 @@ export class PlaylistManager {
         this.personalPlaylist = JSON.parse(stored);
       }
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error loading personal playlist:', error);
+      log.error('Error loading personal playlist:', error);
       this.personalPlaylist = [];
     }
   }
@@ -1627,7 +1630,7 @@ export class PlaylistManager {
         this.savePersonalPlaylistToServer();
       }
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error loading personal playlist from D1:', error);
+      log.error('Error loading personal playlist from D1:', error);
       // Keep using localStorage data
     }
   }
@@ -1639,7 +1642,7 @@ export class PlaylistManager {
     try {
       localStorage.setItem(PERSONAL_PLAYLIST_KEY, JSON.stringify(this.personalPlaylist));
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error saving personal playlist to localStorage:', error);
+      log.error('Error saving personal playlist to localStorage:', error);
     }
   }
 
@@ -1661,7 +1664,7 @@ export class PlaylistManager {
       const idToken = currentUser ? await currentUser.getIdToken() : null;
 
       if (!idToken) {
-        console.warn('[PlaylistManager] No auth token, skipping cloud save');
+        log.warn('No auth token, skipping cloud save');
         return;
       }
 
@@ -1686,7 +1689,7 @@ export class PlaylistManager {
       }
 
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error saving personal playlist to D1:', error);
+      log.error('Error saving personal playlist to D1:', error);
     }
   }
 
@@ -1763,7 +1766,7 @@ export class PlaylistManager {
 
       return { success: true, message: 'Added to your playlist' };
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error adding to personal playlist:', error);
+      log.error('Error adding to personal playlist:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to add to playlist' };
     }
   }
@@ -1942,7 +1945,7 @@ export class PlaylistManager {
         }
       }
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error calling trackEnded:', error);
+      log.error('Error calling trackEnded:', error);
       // Fallback: just stop playback on error
       this.playlist.isPlaying = false;
       if (this.player) await this.player.destroy();
@@ -1958,12 +1961,12 @@ export class PlaylistManager {
    * Handle playback error
    */
   private async handlePlaybackError(error: string): Promise<void> {
-    console.error('[PlaylistManager] Playback error:', error);
+    log.error('Playback error:', error);
 
     // Check if container exists - if not, stop trying
     const container = document.getElementById(this.containerId);
     if (!container) {
-      console.warn('[PlaylistManager] Container not found - player may not be on this page. Stopping playback attempts.');
+      log.warn('Container not found - player may not be on this page. Stopping playback attempts.');
       this.consecutiveErrors = 0;
       return;
     }
@@ -1997,7 +2000,7 @@ export class PlaylistManager {
 
     // Prevent infinite loops - max 3 consecutive errors
     if (this.consecutiveErrors >= 3) {
-      console.warn('[PlaylistManager] Too many consecutive errors, stopping playback');
+      log.warn('Too many consecutive errors, stopping playback');
       this.consecutiveErrors = 0;
       this.playlist.isPlaying = false;
       this.renderUI();
@@ -2029,10 +2032,10 @@ export class PlaylistManager {
       const result = await response.json();
       if (result.success) {
       } else {
-        console.warn('[PlaylistManager] Failed to remove blocked video from history:', result.error);
+        log.warn('Failed to remove blocked video from history:', result.error);
       }
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error marking video as blocked:', error);
+      log.error('Error marking video as blocked:', error);
     }
   }
 
@@ -2131,7 +2134,7 @@ export class PlaylistManager {
         }
       }
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error loading from server:', error);
+      log.error('Error loading from server:', error);
     }
   }
 
@@ -2160,7 +2163,7 @@ export class PlaylistManager {
       });
 
     } catch (error: unknown) {
-      console.error('[PlaylistManager] Error clearing stale playlist:', error);
+      log.error('Error clearing stale playlist:', error);
     }
   }
 
@@ -2223,7 +2226,7 @@ export class PlaylistManager {
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') {
-          console.warn('[PlaylistManager] noembed timed out');
+          log.warn('noembed timed out');
         } else {
           throw err;
         }
@@ -2231,7 +2234,7 @@ export class PlaylistManager {
         clearTimeout(timeoutId);
       }
     } catch (error: unknown) {
-      console.warn('[PlaylistManager] noembed failed:', error);
+      log.warn('noembed failed:', error);
     }
 
     // Fallback: Try YouTube oEmbed directly for YouTube URLs
@@ -2250,9 +2253,9 @@ export class PlaylistManager {
         }
       } catch (error: unknown) {
         if (error instanceof Error && error.name === 'AbortError') {
-          console.warn('[PlaylistManager] YouTube oEmbed timed out');
+          log.warn('YouTube oEmbed timed out');
         } else {
-          console.warn('[PlaylistManager] YouTube oEmbed failed:', error);
+          log.warn('YouTube oEmbed failed:', error);
         }
       } finally {
         clearTimeout(timeoutId);
@@ -2275,16 +2278,16 @@ export class PlaylistManager {
         }
       } catch (error: unknown) {
         if (error instanceof Error && error.name === 'AbortError') {
-          console.warn('[PlaylistManager] SoundCloud oEmbed timed out');
+          log.warn('SoundCloud oEmbed timed out');
         } else {
-          console.warn('[PlaylistManager] SoundCloud oEmbed failed:', error);
+          log.warn('SoundCloud oEmbed failed:', error);
         }
       } finally {
         clearTimeout(timeoutId);
       }
     }
 
-    console.warn('[PlaylistManager] Could not fetch metadata for:', url);
+    log.warn('Could not fetch metadata for:', url);
     return {};
   }
 
@@ -2305,7 +2308,7 @@ export class PlaylistManager {
           }
         }
       } catch (error: unknown) {
-        console.warn('[PlaylistManager] Could not fetch YouTube duration:', error);
+        log.warn('Could not fetch YouTube duration:', error);
       }
     }
 
@@ -2335,9 +2338,9 @@ export class PlaylistManager {
       }
     } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.warn('[PlaylistManager] YouTube title fetch timed out');
+        log.warn('YouTube title fetch timed out');
       } else {
-        console.warn('[PlaylistManager] Could not fetch YouTube title:', error);
+        log.warn('Could not fetch YouTube title:', error);
       }
     } finally {
       clearTimeout(timeoutId);

@@ -261,7 +261,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- Link Modal -->
-  <div id="link-modal" class="fixed inset-0 z-50 hidden">
+  <div id="link-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="Insert link">
     <div class="fixed inset-0 bg-black/80" id="link-modal-backdrop"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4">
       <div class="bg-gray-900 border border-white/10 rounded-xl max-w-md w-full p-6">
@@ -285,7 +285,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- Image Modal -->
-  <div id="image-modal" class="fixed inset-0 z-50 hidden">
+  <div id="image-modal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-label="Insert image">
     <div class="fixed inset-0 bg-black/80" id="image-modal-backdrop"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4">
       <div class="bg-gray-900 border border-white/10 rounded-xl max-w-md w-full p-6">

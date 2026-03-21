@@ -184,6 +184,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // Format numbers
   const formatNumber = (num) => (num || 0).toLocaleString();
 
+  // Escape HTML to prevent XSS in innerHTML templates
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   // Reset state for View Transitions
   function resetState() {
     mixesInitialized = false;
@@ -243,20 +249,20 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               ${data.mixes.map(mix => {
                 const rawArtworkUrl = mix.thumbUrl || mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
                 const artworkUrl = rawArtworkUrl && !rawArtworkUrl.includes('place-holder') ? rawArtworkUrl : '';
-                const title = (mix.title || 'Untitled Mix').replace(/"/g, '&quot;');
-                const description = (mix.description || '').replace(/"/g, '&quot;');
+                const title = escapeHtml(mix.title || 'Untitled Mix');
+                const description = escapeHtml(mix.description || '');
                 return `
-                  <div class="mix-card" data-mix-id="${mix.id}">
+                  <div class="mix-card" data-mix-id="${escapeHtml(mix.id)}">
                     <div class="mix-image">
-                      ${artworkUrl ? `<img src="${artworkUrl}" alt="${title}" />` : '<img src="/place-holder.webp" alt="Placeholder" />'}
+                      ${artworkUrl ? `<img src="${escapeHtml(artworkUrl)}" alt="${title}" />` : '<img src="/place-holder.webp" alt="Placeholder" />'}
                       <div class="mix-overlay">
-                        <a href="/dj-mix/${mix.id}/" class="overlay-btn" target="_blank" rel="noopener noreferrer">View</a>
+                        <a href="/dj-mix/${encodeURIComponent(mix.id)}/" class="overlay-btn" target="_blank" rel="noopener noreferrer">View</a>
                       </div>
                     </div>
                     <div class="mix-info">
-                      <h3 class="mix-title">${mix.title || 'Untitled Mix'}</h3>
-                      <p class="mix-dj">${mix.displayName || mix.djName || mix.artist || 'Unknown DJ'}</p>
-                      <p class="mix-genre">${mix.genre || 'Drum & Bass'}</p>
+                      <h3 class="mix-title">${escapeHtml(mix.title) || 'Untitled Mix'}</h3>
+                      <p class="mix-dj">${escapeHtml(mix.displayName || mix.djName || mix.artist || 'Unknown DJ')}</p>
+                      <p class="mix-genre">${escapeHtml(mix.genre || 'Drum & Bass')}</p>
                       <div class="mix-stats">
                         <span>▶ ${formatNumber(mix.plays || mix.playCount)}</span>
                         <span>♥ ${formatNumber(mix.likes || mix.likeCount)}</span>
@@ -264,9 +270,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         <span>💬 ${formatNumber(mix.commentCount || (Array.isArray(mix.comments) ? mix.comments.length : 0))}</span>
                       </div>
                       <div class="mix-actions">
-                        <a href="/dj-mix/${mix.id}/" class="btn-view" target="_blank" rel="noopener noreferrer">👁️ View</a>
-                        <button class="btn-edit" data-mix-id="${mix.id}" data-title="${title}" data-description="${description}" data-artwork="${artworkUrl}">✏️ Edit</button>
-                        <button class="btn-delete" data-mix-id="${mix.id}" data-title="${title}">🗑️ Delete</button>
+                        <a href="/dj-mix/${encodeURIComponent(mix.id)}/" class="btn-view" target="_blank" rel="noopener noreferrer">👁️ View</a>
+                        <button class="btn-edit" data-mix-id="${escapeHtml(mix.id)}" data-title="${title}" data-description="${description}" data-artwork="${escapeHtml(artworkUrl)}">✏️ Edit</button>
+                        <button class="btn-delete" data-mix-id="${escapeHtml(mix.id)}" data-title="${title}">🗑️ Delete</button>
                       </div>
                     </div>
                   </div>

@@ -3,6 +3,9 @@
 
 import type { PlaylistItem, MediaPlatform } from './types';
 import { escapeHtml } from './escape-html';
+import { createClientLogger } from './client-logger';
+
+const log = createClientLogger('EmbedPlayer');
 
 export interface PlayerCallbacks {
   onEnded?: () => void;
@@ -109,7 +112,7 @@ export class EmbedPlayerManager {
 
       this.currentPlatform = item.platform;
     } catch (error: unknown) {
-      console.error('[EmbedPlayerManager] Error loading item:', error);
+      log.error('Error loading item:', error);
       this.callbacks.onError?.(error instanceof Error ? error.message : 'Failed to load media');
     }
   }
@@ -259,7 +262,7 @@ export class EmbedPlayerManager {
         try {
           await this.vimeoPlayer?.setCurrentTime(seekPos);
         } catch (e: unknown) {
-          console.warn('[Vimeo] Seek error:', e);
+          log.warn('Seek error:', e);
         }
       }
       this.callbacks.onStateChange?.('playing');
@@ -366,7 +369,7 @@ export class EmbedPlayerManager {
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
           video.play().catch((err: unknown) => {
             if (err instanceof Error && err.name !== 'AbortError') {
-              console.error('[Direct] Autoplay failed:', err);
+              log.error('Autoplay failed:', err);
             }
           });
           this.callbacks.onReady?.();
@@ -382,7 +385,7 @@ export class EmbedPlayerManager {
         video.src = item.url;
         video.play().catch((err: unknown) => {
           if (err instanceof Error && err.name !== 'AbortError') {
-            console.error('[Direct] Autoplay failed:', err);
+            log.error('Autoplay failed:', err);
           }
         });
         this.callbacks.onReady?.();
@@ -417,7 +420,7 @@ export class EmbedPlayerManager {
       audio.src = item.url;
       audio.play().catch((err: unknown) => {
         if (err instanceof Error && err.name !== 'AbortError') {
-          console.error('[Direct] Audio autoplay failed:', err);
+          log.error('Audio autoplay failed:', err);
         }
       });
 
@@ -431,7 +434,7 @@ export class EmbedPlayerManager {
       video.src = item.url;
       video.play().catch((err: unknown) => {
         if (err instanceof Error && err.name !== 'AbortError') {
-          console.error('[Direct] Autoplay failed:', err);
+          log.error('Autoplay failed:', err);
         }
       });
 
@@ -456,7 +459,7 @@ export class EmbedPlayerManager {
         const errorDetails = mediaError
           ? `Media playback error (code ${mediaError.code}): ${mediaError.message}`
           : 'Media playback error (unknown)';
-        console.error('[EmbedPlayerManager] Direct media error:', errorDetails);
+        log.error('Direct media error:', errorDetails);
         this.callbacks.onError?.(errorDetails);
       });
 
@@ -496,7 +499,7 @@ export class EmbedPlayerManager {
       if (error instanceof Error && error.name === 'AbortError') {
         return;
       }
-      console.error('[EmbedPlayerManager] Play error:', error);
+      log.error('Play error:', error);
     }
   }
 
@@ -513,10 +516,10 @@ export class EmbedPlayerManager {
             : 'unknown';
           this.youtubePlayer.pauseVideo();
         } else {
-          console.error('[EmbedPlayerManager] pauseVideo is not a function on youtubePlayer');
+          log.error('pauseVideo is not a function on youtubePlayer');
         }
       } else if (this.currentPlatform === 'youtube' && !this.youtubePlayerReady) {
-        console.warn('[EmbedPlayerManager] YouTube player not ready yet, cannot pause');
+        log.warn('YouTube player not ready yet, cannot pause');
       } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
         await this.vimeoPlayer.pause();
       } else if (this.currentPlatform === 'soundcloud' && this.soundcloudWidget) {
@@ -524,10 +527,10 @@ export class EmbedPlayerManager {
       } else if (this.currentPlatform === 'direct' && this.directVideo) {
         this.directVideo.pause();
       } else {
-        console.warn('[EmbedPlayerManager] No player available to pause');
+        log.warn('No player available to pause');
       }
     } catch (error: unknown) {
-      console.error('[EmbedPlayerManager] Pause error:', error);
+      log.error('Pause error:', error);
     }
   }
 
@@ -548,7 +551,7 @@ export class EmbedPlayerManager {
         this.directVideo.volume = normalizedVolume / 100;
       }
     } catch (error: unknown) {
-      console.error('[EmbedPlayerManager] Volume error:', error);
+      log.error('Volume error:', error);
     }
   }
 
@@ -573,7 +576,7 @@ export class EmbedPlayerManager {
         this.directVideo.currentTime = position;
       }
     } catch (error: unknown) {
-      console.error('[EmbedPlayerManager] Seek error:', error);
+      log.error('Seek error:', error);
     }
   }
 
@@ -596,7 +599,7 @@ export class EmbedPlayerManager {
         return this.directVideo.currentTime || 0;
       }
     } catch (error: unknown) {
-      console.error('[EmbedPlayerManager] GetCurrentTime error:', error);
+      log.error('GetCurrentTime error:', error);
     }
     return 0;
   }
@@ -625,7 +628,7 @@ export class EmbedPlayerManager {
         return duration;
       }
     } catch (error: unknown) {
-      console.error('[EmbedPlayerManager] GetDuration error:', error);
+      log.error('GetDuration error:', error);
     }
     return 0;
   }
@@ -654,7 +657,7 @@ export class EmbedPlayerManager {
       const timeoutId = setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          console.warn('[EmbedPlayerManager] Metadata timeout after', timeoutMs, 'ms');
+          log.warn('Metadata timeout after', timeoutMs, 'ms');
           resolve(0);
         }
       }, timeoutMs);
@@ -669,7 +672,7 @@ export class EmbedPlayerManager {
         if (!isNaN(duration) && isFinite(duration) && duration > 0) {
           resolve(duration);
         } else {
-          console.warn('[EmbedPlayerManager] Metadata loaded but duration invalid:', duration);
+          log.warn('Metadata loaded but duration invalid:', duration);
           resolve(0);
         }
       };
@@ -706,7 +709,7 @@ export class EmbedPlayerManager {
       // For Vimeo and SoundCloud, we'd need async calls - return false as fallback
       return false;
     } catch (error: unknown) {
-      console.error('[EmbedPlayerManager] isActuallyPlaying error:', error);
+      log.error('isActuallyPlaying error:', error);
       return false;
     }
   }
@@ -724,7 +727,7 @@ export class EmbedPlayerManager {
       try {
         this.youtubePlayer.destroy();
       } catch (e: unknown) {
-        console.warn('[YouTube] Cleanup error:', e);
+        log.warn('Cleanup error:', e);
       }
       this.youtubePlayer = null;
     }
@@ -733,7 +736,7 @@ export class EmbedPlayerManager {
       try {
         await this.vimeoPlayer.destroy();
       } catch (e: unknown) {
-        console.warn('[Vimeo] Cleanup error:', e);
+        log.warn('Cleanup error:', e);
       }
       this.vimeoPlayer = null;
     }
@@ -747,7 +750,7 @@ export class EmbedPlayerManager {
           this.soundcloudWidget.unbind(SC.Widget.Events.PLAY);
         }
       } catch (e: unknown) {
-        console.warn('[SoundCloud] Cleanup error:', e);
+        log.warn('Cleanup error:', e);
       }
       this.soundcloudWidget = null;
     }

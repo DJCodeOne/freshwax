@@ -1,4 +1,7 @@
 import { escapeHtml } from './escape-html';
+import { createClientLogger } from './client-logger';
+
+const log = createClientLogger('ReleasePlate');
 
 // ============================================
 // UNIFIED CACHE SYSTEM - API FRIENDLY
@@ -303,7 +306,7 @@ function setupRatingClickHandlers() {
           }
         }
       })
-      .catch(function(error: unknown) { console.error('[ReleasePlate] Rating submission error:', error); });
+      .catch(function(error: unknown) { log.error('Rating submission error:', error); });
     };
   });
 }
@@ -369,7 +372,7 @@ async function fetchUserRatings() {
       });
     }
   } catch (e: unknown){
-    console.error('[Ratings] Failed to fetch user ratings:', e);
+    log.error('Failed to fetch user ratings:', e);
   }
 }
 
@@ -831,7 +834,7 @@ if (!window.cartListenersAttached) {
         }
       }
     } catch (err: unknown) {
-      console.warn('[ReleasePlate] Ownership check failed:', err);
+      log.warn('Ownership check failed:', err);
     }
 
     var cart = FreshWaxCart.get();
@@ -976,7 +979,7 @@ if (!window.cartListenersAttached) {
         }
       }
     } catch (err: unknown) {
-      console.warn('[ReleasePlate] Track ownership check failed:', err);
+      log.warn('Track ownership check failed:', err);
     }
 
     items.push({
@@ -1048,10 +1051,10 @@ function initWishlistSystem() {
             }
           })
           .catch(function(err: unknown) {
-            console.error('Failed to load wishlist state:', err);
+            log.error('Failed to load wishlist state:', err);
           });
       } catch (err: unknown) {
-        console.error('Failed to get auth token for wishlist:', err);
+        log.error('Failed to get auth token for wishlist:', err);
       }
     }
   }
@@ -1123,13 +1126,13 @@ function initWishlistSystem() {
       .catch(function(err: unknown) {
         btn.style.opacity = '1';
         btn.style.pointerEvents = 'auto';
-        console.error('Wishlist error:', err);
+        log.error('Wishlist error:', err);
         showToast('Failed to update wishlist');
       });
     } catch (err: unknown) {
       btn.style.opacity = '1';
       btn.style.pointerEvents = 'auto';
-      console.error('Auth error:', err);
+      log.error('Auth error:', err);
       showToast('Authentication error');
     }
   });

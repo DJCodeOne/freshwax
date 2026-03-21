@@ -291,7 +291,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- Order Details Modal -->
-  <div id="orderModal" class="modal-overlay" slot="modals">
+  <div id="orderModal" class="modal-overlay" slot="modals" role="dialog" aria-modal="true" aria-label="Order details">
     <div class="modal" style="max-width: 700px;">
       <div class="modal-header">
         <h2>Order Details</h2>
@@ -368,7 +368,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       // View order details
       document.querySelectorAll('.view-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          const order = JSON.parse(btn.dataset.order);
+          var order;
+          try { order = JSON.parse(btn.dataset.order); } catch(e) { order = {}; }
           showOrderDetails(order);
         });
       });
@@ -576,6 +577,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         overlay.className = 'modal-overlay';
         overlay.style.display = 'flex';
         overlay.id = 'trackingModal';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', 'Shipping details');
         overlay.innerHTML = `
           <div class="modal" style="max-width: 500px;">
             <div class="modal-header">

@@ -9,6 +9,9 @@
 // while the heavy playlist manager (~60KB) loads in the background during init.
 import type { PlaylistManager } from './playlist-manager';
 import { escapeHtml } from './escape-html';
+import { createClientLogger } from './client-logger';
+
+const log = createClientLogger('PlaylistModal');
 
 // Lightweight interface for playlist items used in the modal UI
 interface PlaylistItem {
@@ -367,7 +370,7 @@ export function initPlaylistModal() {
           }
         }
       } catch (error: unknown) {
-        console.warn('[PlaylistModal] Could not fetch duration:', error);
+        log.warn('Could not fetch duration:', error);
       }
     }
     return null;
@@ -561,7 +564,7 @@ export function initPlaylistModal() {
         }
       }
     } catch (e: unknown) {
-      console.warn('[PlaylistModal] Could not read auth from sessionStorage:', e);
+      log.warn('Could not read auth from sessionStorage:', e);
     }
 
     return false;
@@ -1352,7 +1355,7 @@ export function initPlaylistModal() {
         listContainer.innerHTML = '<div class="recently-played-empty">No tracks played yet</div>';
       }
     } catch (error: unknown) {
-      console.warn('[PlaylistModal] Could not fetch recently played:', error);
+      log.warn('Could not fetch recently played:', error);
       // Fallback to local history if server fails
       const localHistory = playlistManager?.getPlayHistory() || [];
       if (localHistory.length > 0) {
@@ -1466,7 +1469,7 @@ export function initPlaylistModal() {
               }
             }
           } catch (e: unknown) {
-            console.warn('[PlaylistModal] Could not fetch YouTube title for', videoId, e);
+            log.warn('Could not fetch YouTube title for', videoId, e);
           }
         }
       }
@@ -1577,7 +1580,7 @@ export function initPlaylistModal() {
           })
           .catch((err: unknown) => {
             if (err instanceof Error && err.name === 'AbortError') {
-              console.warn('[PlaylistModal] YouTube oEmbed timed out for preview');
+              log.warn('YouTube oEmbed timed out for preview');
             }
             if (previewTitle) previewTitle.textContent = title;
           })
@@ -1606,7 +1609,7 @@ export function initPlaylistModal() {
       try {
         playlistManager.destroy();
       } catch (e: unknown) {
-        console.error('[PlaylistModal] Error destroying manager:', e);
+        log.error('Error destroying manager:', e);
       }
     }
     playlistManager = null;
@@ -1661,7 +1664,7 @@ export function initPlaylistModal() {
         btn.innerHTML = originalText;
       }, 2000);
     } catch (err: unknown) {
-      console.error('Failed to copy:', err);
+      log.error('Failed to copy:', err);
     }
   }
 
