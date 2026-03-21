@@ -148,7 +148,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         </div>
         <!-- Twitch Chat Container -->
         <div id="fsTwitchChatContainer" class="fs-chat-container hidden">
-          <iframe id="fsTwitchChatFrame" class="fs-twitch-chat-frame" frameborder="0" scrolling="yes" allowfullscreen="true"></iframe>
+          <iframe id="fsTwitchChatFrame" class="fs-twitch-chat-frame" frameborder="0" scrolling="yes" allowfullscreen="true" title="Twitch chat"></iframe>
           <div class="fs-twitch-placeholder" id="fsTwitchPlaceholder">
             <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
               <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
@@ -358,7 +358,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
                 <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
               </div>
             </div>
-            <audio id="audioElement" crossorigin="anonymous" preload="auto"></audio>
+            <audio id="audioElement" crossorigin="anonymous" preload="auto" aria-label="Live stream audio"></audio>
           </div>
 
           <!-- Video Player (for both live stream and playlist) -->

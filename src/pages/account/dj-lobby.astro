@@ -55,7 +55,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     window.FIREBASE_CONFIG = firebaseConfig;
   </script>
   <!-- Email verification check (loaded early so FreshWax object exists) -->
-  <script is:inline src="/email-verify-check.js" nonce={nonce}></script>
+  <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
 </head>
 <body class="dj-lobby-page">
   <script is:inline src="/csrf-protect.js"></script>
@@ -475,7 +475,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <!-- BUTT Audio-Only Placeholder -->
                 <div id="buttAudioPreview" class="butt-audio-preview hidden">
                   <div class="audio-only-placeholder">
-                    <video class="stream-bg-video" autoplay muted playsinline preload="none" data-sources="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm,https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg-2.webm" data-src-index="0">
+                    <video class="stream-bg-video" autoplay muted playsinline preload="none" aria-hidden="true" data-sources="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm,https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg-2.webm" data-src-index="0">
                       <source src="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm" type="video/webm" />
                     </video>
                     <div class="audio-placeholder-branding">
@@ -486,7 +486,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <!-- Relay Preview Placeholder -->
                 <div id="relayPreview" class="butt-audio-preview hidden">
                   <div class="audio-only-placeholder">
-                    <video class="stream-bg-video" autoplay muted playsinline preload="none" data-sources="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm,https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg-2.webm" data-src-index="0">
+                    <video class="stream-bg-video" autoplay muted playsinline preload="none" aria-hidden="true" data-sources="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm,https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg-2.webm" data-src-index="0">
                       <source src="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm" type="video/webm" />
                     </video>
                     <div class="audio-placeholder-branding">
@@ -495,9 +495,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   </div>
                 </div>
                 <!-- Hidden audio element for Icecast/BUTT stream -->
-                <audio id="icecastAudio" crossorigin="anonymous" preload="none" style="display:none;"></audio>
+                <audio id="icecastAudio" crossorigin="anonymous" preload="none" style="display:none;" aria-label="Icecast stream preview"></audio>
                 <!-- Hidden audio element for Relay stream preview -->
-                <audio id="relayAudio" crossorigin="anonymous" preload="none" style="display:none;"></audio>
+                <audio id="relayAudio" crossorigin="anonymous" preload="none" style="display:none;" aria-label="Relay stream preview"></audio>
               </div>
             </div>
 
@@ -573,7 +573,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <div id="audioPreview" class="audio-preview hidden">
                   <div class="audio-only-placeholder">
                     <!-- Background video loop -->
-                    <video class="stream-bg-video" autoplay muted playsinline preload="none" data-sources="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm,https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg-2.webm" data-src-index="0">
+                    <video class="stream-bg-video" autoplay muted playsinline preload="none" aria-hidden="true" data-sources="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm,https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg-2.webm" data-src-index="0">
                       <source src="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm" type="video/webm" />
                     </video>
                     <!-- Branding top right -->
@@ -581,7 +581,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                       <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
                     </div>
                   </div>
-                  <audio id="audioElement" crossorigin="anonymous" autoplay></audio>
+                  <audio id="audioElement" crossorigin="anonymous" autoplay aria-label="Live stream audio"></audio>
                 </div>
 
                 <!-- Time Remaining (now shown in header) -->
@@ -1236,7 +1236,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <button id="toggleRelayChatBtn" class="toggle-relay-chat-btn" title="Toggle chat" aria-label="Toggle relay chat">−</button>
           </div>
           <div id="relayChatContainer" class="relay-chat-container">
-            <iframe id="relayChatFrame" class="relay-chat-frame" allow="autoplay" allowfullscreen></iframe>
+            <iframe id="relayChatFrame" class="relay-chat-frame" allow="autoplay" allowfullscreen title="Relay station chat"></iframe>
             <div id="relayChatUnsupported" class="relay-chat-unsupported hidden">
               <p>Chat embed not available for this platform.</p>
               <a id="relayChatExternalLink" href="#" target="_blank" rel="noopener" class="open-chat-link">Open Chat in New Tab →</a>
@@ -1988,7 +1988,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       requirements.innerHTML = `
         <div class="banned-notice">
           <p>Your streaming privileges have been suspended.</p>
-          ${eligibility.bannedReason ? `<p class="ban-reason">Reason: ${eligibility.bannedReason}</p>` : ''}
+          ${eligibility.bannedReason ? `<p class="ban-reason">Reason: ${escapeHtml(eligibility.bannedReason)}</p>` : ''}
           <p class="contact-info">If you believe this is a mistake, please contact us.</p>
         </div>
       `;
@@ -2009,7 +2009,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       requirements.innerHTML = `
         <div class="hold-notice">
           <p>Your streaming access is temporarily restricted.</p>
-          ${eligibility.holdReason ? `<p class="hold-reason">Reason: ${eligibility.holdReason}</p>` : ''}
+          ${eligibility.holdReason ? `<p class="hold-reason">Reason: ${escapeHtml(eligibility.holdReason)}</p>` : ''}
           <p class="contact-info">Please contact us if you have questions.</p>
         </div>
       `;
@@ -2794,8 +2794,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       return;
     }
 
-    // Save the title
-    savedTitle = titleInput.value.trim();
+    // Save the title (escape for safe innerHTML insertion)
+    savedTitle = escapeHtml(titleInput.value.trim());
     titleInput.readOnly = true;
     titleInput.style.background = '#0a0a0a';
     titleInput.style.color = '#22c55e';

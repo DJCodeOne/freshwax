@@ -242,7 +242,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <span class="form-hint">Audio files cannot be changed. Upload a new mix to replace.</span>
           </div>
           {mix.audioUrl || mix.mp3Url ? (
-            <audio controls class="audio-preview">
+            <audio controls class="audio-preview" aria-label="Mix audio preview">
               <source src={mix.audioUrl || mix.mp3Url} type="audio/mpeg" />
             </audio>
           ) : null}

@@ -479,8 +479,8 @@ const csrfToken = Astro.locals.csrfToken || '';
           for (var i = 0; i < cookies.length; i++) {
             var name = cookies[i].split('=')[0].trim();
             if (name === '_ga' || name === '_gid' || name.indexOf('_ga_') === 0) {
-              document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.' + location.hostname;
-              document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+              document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.' + location.hostname + ';Secure;SameSite=Lax';
+              document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;Secure;SameSite=Lax';
             }
           }
         }
