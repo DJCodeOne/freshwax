@@ -13,6 +13,12 @@ interface Props {
 const { title, activeSection } = Astro.props;
 const csrfToken = Astro.locals.csrfToken || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store"
+};
 ---
 <html lang="en-GB">
 <head>
@@ -495,8 +501,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
   </style>
 
-  <script is:inline>
-    // Admin check moved server-side - no UIDs exposed to client
+  <script define:vars={{ firebaseConfig }}>
+    window.FIREBASE_CONFIG = firebaseConfig;
   </script>
   <script type="module" is:inline>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
@@ -504,11 +510,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     const activeSection = document.body.dataset.activeSection || '';
 
-    const firebaseConfig = window.FIREBASE_CONFIG || {
-      apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-      authDomain: "freshwax-store.firebaseapp.com",
-      projectId: "freshwax-store"
-    };
+    const firebaseConfig = window.FIREBASE_CONFIG;
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);

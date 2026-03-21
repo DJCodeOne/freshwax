@@ -701,11 +701,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         var firebaseApp = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
         var firebaseAuth = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
 
-        var firebaseConfig = {
-          apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-          authDomain: "freshwax-store.firebaseapp.com",
-          projectId: "freshwax-store"
-        };
+        var firebaseConfig = window.FIREBASE_CONFIG;
 
         var app = firebaseApp.getApps().length ? firebaseApp.getApps()[0] : firebaseApp.initializeApp(firebaseConfig);
         var auth = firebaseAuth.getAuth(app);

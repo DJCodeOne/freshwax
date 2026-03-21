@@ -7,6 +7,15 @@ import Footer from '../../components/Footer.astro';
 export const prerender = false;
 const nonce = Astro.locals.nonce || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store",
+  storageBucket: "freshwax-store.firebasestorage.app",
+  messagingSenderId: "675435782973",
+  appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+};
 ---
 
 <Layout title="My Orders" noindex={true}>
@@ -371,17 +380,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }
 </style>
 
+<script define:vars={{ firebaseConfig }} nonce={nonce}>
+  window.FIREBASE_CONFIG = firebaseConfig;
+</script>
 <script is:inline nonce={nonce}>
-  // CORRECT Firebase config - matches login page
-  var firebaseConfig = {
-    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store",
-    storageBucket: "freshwax-store.firebasestorage.app",
-    messagingSenderId: "675435782973",
-    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-  };
-  
+  var firebaseConfig = window.FIREBASE_CONFIG;
+
   var currentUser = null;
   var ordersInitialized = false;
   

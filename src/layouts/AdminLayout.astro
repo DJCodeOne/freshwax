@@ -20,6 +20,12 @@ interface Props {
 const { title, activeNav = '', showStats = false, stats = [] } = Astro.props;
 const csrfToken = Astro.locals.csrfToken || '';
 
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store"
+};
+
 // Navigation items
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: '📊', id: 'dashboard' },
@@ -1643,16 +1649,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     });
   </script>
   
+  <!-- Firebase config for inline scripts -->
+  <script define:vars={{ firebaseConfig }}>
+    window.FIREBASE_CONFIG = firebaseConfig;
+  </script>
   <!-- Firebase Auth for admin token-based API authentication -->
   <script type="module" is:inline>
     import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-    const firebaseConfig = {
-      apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-      authDomain: 'freshwax-store.firebaseapp.com',
-      projectId: 'freshwax-store'
-    };
+    const firebaseConfig = window.FIREBASE_CONFIG;
 
     const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
     const auth = getAuth(app);

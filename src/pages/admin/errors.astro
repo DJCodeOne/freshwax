@@ -129,7 +129,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                 ${err.status_code ? `<span style="font-size: 0.75rem; color: #dc2626; font-weight: 600; flex-shrink: 0;">${err.status_code}</span>` : ''}
               </summary>
               <div style="padding: 1rem; border-top: 1px solid #e5e7eb; background: #f9fafb;">
-                <table style="width: 100%; font-size: 0.8125rem; border-collapse: collapse;">
+                <table style="width: 100%; font-size: 0.8125rem; border-collapse: collapse;" aria-label="Error details">
                   <tr><td style="padding: 0.25rem 0.5rem; color: #6b7280; width: 100px;">Message</td><td style="padding: 0.25rem 0.5rem; font-family: monospace; word-break: break-all;">${escapeHtml(err.message)}</td></tr>
                   ${err.url ? `<tr><td style="padding: 0.25rem 0.5rem; color: #6b7280;">URL</td><td style="padding: 0.25rem 0.5rem; font-family: monospace; word-break: break-all;">${escapeHtml(err.url)}</td></tr>` : ''}
                   ${err.endpoint ? `<tr><td style="padding: 0.25rem 0.5rem; color: #6b7280;">Endpoint</td><td style="padding: 0.25rem 0.5rem; font-family: monospace;">${escapeHtml(err.endpoint)}</td></tr>` : ''}

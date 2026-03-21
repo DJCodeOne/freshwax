@@ -347,8 +347,69 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // PayPal fee: approximately 2.9% + £0.30
       const paypalFee = (capturedAmount * 0.029) + 0.30;
 
-      // Enrich items with seller info from release lookup
-      const enrichedItems = await Promise.all(((orderData.items as Record<string, unknown>[]) || []).map(async (item: Record<string, unknown>) => {
+      // Batch-fetch all releases and merch products in parallel to avoid N+1
+      const itemsList = (orderData.items as Record<string, unknown>[]) || [];
+
+      // Collect unique release IDs
+      const ledgerReleaseIds = new Set<string>();
+      for (const item of itemsList) {
+        const releaseId = item.releaseId || item.productId || item.id;
+        if (releaseId && (item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.releaseId)) {
+          ledgerReleaseIds.add(releaseId as string);
+        }
+      }
+
+      // Collect unique merch product IDs
+      const ledgerMerchIds = new Set<string>();
+      for (const item of itemsList) {
+        if (item.type === 'merch' && item.productId) {
+          ledgerMerchIds.add(item.productId as string);
+        }
+      }
+
+      // Batch-fetch releases and merch in parallel
+      const [ledgerReleaseEntries, ledgerMerchEntries] = await Promise.all([
+        Promise.all([...ledgerReleaseIds].map(async (id) => {
+          const doc = await getDocument('releases', id).catch(() => null);
+          return [id, doc] as const;
+        })),
+        Promise.all([...ledgerMerchIds].map(async (id) => {
+          const doc = await getDocument('merch', id).catch(() => null);
+          return [id, doc] as const;
+        }))
+      ]);
+      const ledgerReleaseMap = new Map(ledgerReleaseEntries.filter(([, doc]) => doc));
+      const ledgerMerchMap = new Map(ledgerMerchEntries.filter(([, doc]) => doc));
+
+      // Collect submitterIds from merch items that need user/artist email lookup
+      const submitterLookupIds = new Set<string>();
+      for (const item of itemsList) {
+        if (item.type === 'merch' && item.productId) {
+          const merch = ledgerMerchMap.get(item.productId as string);
+          if (merch) {
+            const sid = merch.supplierId || merch.sellerId || merch.userId || merch.createdBy;
+            const hasEmail = merch.email || merch.sellerEmail;
+            if (!hasEmail && sid) submitterLookupIds.add(sid as string);
+          }
+        }
+      }
+
+      // Batch-fetch users and artists for submitter email resolution
+      const [submitterUserEntries, submitterArtistEntries] = await Promise.all([
+        Promise.all([...submitterLookupIds].map(async (id) => {
+          const doc = await getDocument('users', id).catch(() => null);
+          return [id, doc] as const;
+        })),
+        Promise.all([...submitterLookupIds].map(async (id) => {
+          const doc = await getDocument('artists', id).catch(() => null);
+          return [id, doc] as const;
+        }))
+      ]);
+      const submitterUserMap = new Map(submitterUserEntries.filter(([, doc]) => doc));
+      const submitterArtistMap = new Map(submitterArtistEntries.filter(([, doc]) => doc));
+
+      // Enrich items with seller info using pre-fetched data
+      const enrichedItems = itemsList.map((item: Record<string, unknown>) => {
         const releaseId = item.releaseId || item.productId || item.id;
         let submitterId = null;
         let submitterEmail = null;
@@ -356,51 +417,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // Look up release to get submitter info
         if (releaseId && (item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.releaseId)) {
-          try {
-            const release = await getDocument('releases', releaseId);
-            if (release) {
-              submitterId = release.submitterId || release.uploadedBy || release.userId || release.submittedBy || null;
-              // Email field - release stores it as 'email', not 'submitterEmail'
-              submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
-              artistName = release.artistName || release.artist || artistName;
-              // Item seller identified
-            }
-          } catch (lookupErr: unknown) {
-            log.error(`[PayPal] Failed to lookup release ${releaseId}:`, lookupErr);
+          const release = ledgerReleaseMap.get(releaseId as string);
+          if (release) {
+            submitterId = release.submitterId || release.uploadedBy || release.userId || release.submittedBy || null;
+            submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
+            artistName = release.artistName || release.artist || artistName;
           }
         }
 
         // For merch items, look up the merch document for seller info
         if (item.type === 'merch' && item.productId) {
-          try {
-            const merch = await getDocument('merch', item.productId);
-            if (merch) {
-              // Check supplierId first (set by assign-seller), then sellerId, then fallbacks
-              submitterId = merch.supplierId || merch.sellerId || merch.userId || merch.createdBy || null;
-              submitterEmail = merch.email || merch.sellerEmail || null;
-              artistName = merch.sellerName || merch.supplierName || merch.brandName || artistName;
+          const merch = ledgerMerchMap.get(item.productId as string);
+          if (merch) {
+            submitterId = merch.supplierId || merch.sellerId || merch.userId || merch.createdBy || null;
+            submitterEmail = merch.email || merch.sellerEmail || null;
+            artistName = merch.sellerName || merch.supplierName || merch.brandName || artistName;
 
-              // If no email on product, look up seller in users/artists collection
-              if (!submitterEmail && submitterId) {
-                try {
-                  const userData = await getDocument('users', submitterId);
-                  if (userData?.email) {
-                    submitterEmail = userData.email;
-                  } else {
-                    const artistData = await getDocument('artists', submitterId);
-                    if (artistData?.email) {
-                      submitterEmail = artistData.email;
-                    }
-                  }
-                } catch (e: unknown) {
-                  // Ignore lookup errors
+            // If no email on product, check pre-fetched user/artist data
+            if (!submitterEmail && submitterId) {
+              const userData = submitterUserMap.get(submitterId as string);
+              if (userData?.email) {
+                submitterEmail = userData.email;
+              } else {
+                const artistData = submitterArtistMap.get(submitterId as string);
+                if (artistData?.email) {
+                  submitterEmail = artistData.email;
                 }
               }
-
-              // Merch seller identified
             }
-          } catch (lookupErr: unknown) {
-            log.error(`[PayPal] Failed to lookup merch ${item.productId}:`, lookupErr);
           }
         }
 
@@ -410,7 +454,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           submitterEmail,
           artistName
         };
-      }));
+      });
 
       // Use multi-seller recording to create per-seller ledger entries
       // Dual-write: D1 (primary) + Firebase (backup)
@@ -574,7 +618,43 @@ async function processArtistPayments(params: {
       items: string[];
     }> = {};
 
-    const releaseCache: Record<string, Record<string, unknown>> = {};
+    // Collect unique release IDs
+    const releaseIds = new Set<string>();
+    for (const item of items) {
+      if (item.type === 'merch') continue;
+      const releaseId = item.releaseId || item.id;
+      if (releaseId) releaseIds.add(releaseId as string);
+    }
+
+    // Batch-fetch all releases in parallel
+    const releaseEntries = await Promise.all(
+      [...releaseIds].map(async (id) => {
+        const doc = await getDocument('releases', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const releaseMap = new Map(releaseEntries.filter(([, doc]) => doc));
+
+    // Collect unique artist IDs from resolved releases
+    const artistIds = new Set<string>();
+    for (const item of items) {
+      if (item.type === 'merch') continue;
+      const releaseId = item.releaseId || item.id;
+      if (!releaseId) continue;
+      const release = releaseMap.get(releaseId as string);
+      if (!release) continue;
+      const aid = item.artistId || release.artistId || release.userId;
+      if (aid) artistIds.add(aid as string);
+    }
+
+    // Batch-fetch all artists in parallel
+    const artistEntries = await Promise.all(
+      [...artistIds].map(async (id) => {
+        const doc = await getDocument('artists', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const artistMap = new Map(artistEntries.filter(([, doc]) => doc));
 
     for (const item of items) {
       // Skip merch items - they go to suppliers
@@ -583,23 +663,13 @@ async function processArtistPayments(params: {
       const releaseId = item.releaseId || item.id;
       if (!releaseId) continue;
 
-      let release = releaseCache[releaseId];
-      if (!release) {
-        release = await getDocument('releases', releaseId);
-        if (release) releaseCache[releaseId] = release;
-      }
-
+      const release = releaseMap.get(releaseId as string);
       if (!release) continue;
 
-      const artistId = item.artistId || release.artistId || release.userId;
+      const artistId = (item.artistId || release.artistId || release.userId) as string;
       if (!artistId) continue;
 
-      let artist = null;
-      try {
-        artist = await getDocument('artists', artistId);
-      } catch (e: unknown) {
-        // Artist not found
-      }
+      const artist = artistMap.get(artistId) || null;
 
       const itemTotal = (item.price || 0) * (item.quantity || 1);
 
@@ -792,41 +862,60 @@ async function processVinylCrateSellerPayments(params: {
       items: string[];
     }> = {};
 
-    // Cache for crate listing lookups
-    const listingCache: Record<string, unknown> = {};
-
+    // Collect unique listing IDs that need fetching (items without a sellerId)
+    const listingIds = new Set<string>();
     for (const item of crateItems) {
-      // Get the seller info
-      let sellerId = item.sellerId;
-      let listingId = item.crateListingId || item.listingId;
+      if (!item.sellerId && (item.crateListingId || item.listingId)) {
+        listingIds.add((item.crateListingId || item.listingId) as string);
+      }
+    }
 
-      // If no sellerId, try to get from listing
-      if (!sellerId && listingId) {
-        let listing = listingCache[listingId];
-        if (!listing) {
-          listing = await getDocument('crateListings', listingId);
+    // Batch-fetch all crate listings in parallel
+    const listingEntries = await Promise.all(
+      [...listingIds].map(async (id) => {
+        const doc = await getDocument('crateListings', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const listingMap = new Map(listingEntries.filter(([, doc]) => doc));
+
+    // Resolve sellerIds for all crate items, then collect unique seller IDs
+    const sellerIdSet = new Set<string>();
+    const itemSellerIds: (string | null)[] = [];
+    for (const item of crateItems) {
+      let sellerId = item.sellerId as string | null;
+      if (!sellerId) {
+        const listingId = (item.crateListingId || item.listingId) as string | undefined;
+        if (listingId) {
+          const listing = listingMap.get(listingId);
           if (listing) {
-            listingCache[listingId] = listing;
+            sellerId = (listing.sellerId || listing.userId) as string | null;
           }
         }
-        if (listing) {
-          sellerId = listing.sellerId || listing.userId;
-        }
       }
+      itemSellerIds.push(sellerId || null);
+      if (sellerId) sellerIdSet.add(sellerId);
+    }
+
+    // Batch-fetch all sellers (users) in parallel
+    const sellerEntries = await Promise.all(
+      [...sellerIdSet].map(async (id) => {
+        const doc = await getDocument('users', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const sellerMap = new Map(sellerEntries.filter(([, doc]) => doc));
+
+    for (let i = 0; i < crateItems.length; i++) {
+      const item = crateItems[i];
+      const sellerId = itemSellerIds[i];
 
       if (!sellerId) {
         // No seller ID for crate item
         continue;
       }
 
-      // Look up seller (user) for payout details
-      let seller = null;
-      try {
-        seller = await getDocument('users', sellerId);
-      } catch (e: unknown) {
-        // Seller user not found
-      }
-
+      const seller = sellerMap.get(sellerId) || null;
       if (!seller) continue;
 
       // Calculate seller share (same structure as releases)

@@ -105,7 +105,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 
 <!-- Admin: Add DJ Modal -->
 {mode === 'admin' && (
-  <div class="schedule-modal add-dj-modal hidden" data-modal="addDj">
+  <div class="schedule-modal add-dj-modal hidden" data-modal="addDj" role="dialog" aria-modal="true" aria-label="Add DJ to schedule">
     <div class="modal-overlay"></div>
     <div class="modal-content">
       <div class="modal-header">
@@ -148,7 +148,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 
 <!-- Admin: Edit Slot Modal -->
 {mode === 'admin' && (
-  <div class="schedule-modal edit-slot-modal hidden" data-modal="editSlot">
+  <div class="schedule-modal edit-slot-modal hidden" data-modal="editSlot" role="dialog" aria-modal="true" aria-label="Edit schedule slot">
     <div class="modal-overlay"></div>
     <div class="modal-content">
       <div class="modal-header">
@@ -170,7 +170,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 
 <!-- Admin: DJ Allowances Modal -->
 {mode === 'admin' && (
-  <div class="schedule-modal allowances-modal hidden" data-modal="allowances">
+  <div class="schedule-modal allowances-modal hidden" data-modal="allowances" role="dialog" aria-modal="true" aria-label="DJ time allowances">
     <div class="modal-overlay"></div>
     <div class="modal-content allowances-modal-content">
       <div class="modal-header">
@@ -1667,48 +1667,55 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           return a.hour - b.hour;
         });
 
-        // Create bookings
-        for (const slot of sortedSlots) {
+        // Get Firebase idToken once for all bookings
+        var idToken = null;
+        try {
+          if (window.firebaseAuth?.currentUser) {
+            idToken = await window.firebaseAuth.currentUser.getIdToken();
+          }
+        } catch (tokenErr) {
+          // Token retrieval failed — continue without auth
+        }
+
+        // Create all bookings in parallel
+        var bookingPromises = sortedSlots.map(function(slot) {
           // Parse the date string properly
-          const [year, month, day] = slot.date.split('-').map(Number);
+          var parts = slot.date.split('-').map(Number);
+          var year = parts[0], month = parts[1], day = parts[2];
 
           // Create date in UTC to avoid timezone issues
           // slot.hour is the UTC hour (grid shows UTC times)
-          const startTime = new Date(Date.UTC(year, month - 1, day, slot.hour, 0, 0, 0));
+          var startTime = new Date(Date.UTC(year, month - 1, day, slot.hour, 0, 0, 0));
 
-          // Get Firebase idToken for authenticated write
-          let idToken = null;
-          try {
-            if (window.firebaseAuth?.currentUser) {
-              idToken = await window.firebaseAuth.currentUser.getIdToken();
-            }
-          } catch (tokenErr) {
-            // Token retrieval failed — continue without auth
-          }
-
-          const requestBody = {
+          var requestBody = {
             action: 'book',
             djId: currentUserId,
             djName: userDisplayName,
-            title: `${userDisplayName} Live`,
+            title: userDisplayName + ' Live',
             startTime: startTime.toISOString(),
             duration: 60,
             idToken: idToken
           };
 
-          const response = await fetch('/api/livestream/slots/', {
+          return fetch('/api/livestream/slots/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
+            headers: Object.assign(
+              { 'Content-Type': 'application/json' },
+              idToken ? { 'Authorization': 'Bearer ' + idToken } : {}
+            ),
             body: JSON.stringify(requestBody)
+          }).then(function(response) {
+            if (!response.ok) { throw new Error('Server error'); }
+            return response.json();
+          }).then(function(data) {
+            if (!data.success) {
+              throw new Error(data.error || 'Booking failed');
+            }
+            return data;
           });
+        });
 
-          if (!response.ok) { throw new Error('Server error'); }
-          const data = await response.json();
-
-          if (!data.success) {
-            throw new Error(data.error || 'Booking failed');
-          }
-        }
+        await Promise.all(bookingPromises);
 
         // Success - clear selection, close modal and refresh
         selectedSlots = [];
