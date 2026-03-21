@@ -24,7 +24,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <h2>DJ Bypass Requests</h2>
         <button class="refresh-btn" id="refresh-bypass">↻ Refresh</button>
       </div>
-      <div id="bypass-requests" class="requests-list">
+      <div id="bypass-requests" class="requests-list" aria-live="polite">
         <div class="loading">Loading requests...</div>
       </div>
     </div>
@@ -35,7 +35,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <h2>Partner Applications</h2>
         <button class="refresh-btn" id="refresh-partners">↻ Refresh</button>
       </div>
-      <div id="partner-applications" class="requests-list">
+      <div id="partner-applications" class="requests-list" aria-live="polite">
         <div class="loading">Loading applications...</div>
       </div>
     </div>
@@ -46,7 +46,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <h2>Vinyl Listings</h2>
         <button class="refresh-btn" id="refresh-vinyl">↻ Refresh</button>
       </div>
-      <div id="vinyl-listings" class="requests-list">
+      <div id="vinyl-listings" class="requests-list" aria-live="polite">
         <div class="loading">Loading vinyl listings...</div>
       </div>
     </div>

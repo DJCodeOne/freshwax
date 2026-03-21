@@ -448,9 +448,9 @@
   
   .request-status.expired {
     background: #e5e7eb;
-    color: #6b7280;
+    color: #4b5563;
   }
-  
+
   .request-actions {
     display: flex;
     gap: 0.5rem;

@@ -758,7 +758,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
             <span>Queue</span>
             <span class="queue-count" id="queueCount">0 tracks</span>
           </div>
-          <div class="queue-list" id="queueList">
+          <div class="queue-list" id="queueList" aria-live="polite">
             <div class="queue-empty">Queue is empty</div>
           </div>
         </div>
@@ -837,7 +837,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       <div id="historyCount" class="mt-2 text-muted"></div>
       <div id="historyPreview" class="history-preview mt-3 hidden">
         <h4>History Entries (<span id="historyTotal">0</span>)</h4>
-        <div id="historyList" class="history-list"></div>
+        <div id="historyList" class="history-list" aria-live="polite"></div>
       </div>
     </div>
   </div>

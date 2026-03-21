@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://freshwax.co.uk/sitemap.xml

@@ -93,7 +93,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               <th scope="col">Actions</th>
             </tr>
           </thead>
-          <tbody id="balancesTable">
+          <tbody id="balancesTable" aria-live="polite">
             <tr><td colspan="6" class="loading">Loading...</td></tr>
           </tbody>
         </table>
@@ -130,7 +130,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               <th scope="col">Actions</th>
             </tr>
           </thead>
-          <tbody id="cardsTable">
+          <tbody id="cardsTable" aria-live="polite">
             <tr><td colspan="9" class="loading">Loading...</td></tr>
           </tbody>
         </table>
@@ -214,7 +214,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <h3>User Credit History</h3>
           <button class="close-modal" aria-label="Close">&times;</button>
         </div>
-        <div class="modal-body" id="userModalBody">
+        <div class="modal-body" id="userModalBody" aria-live="polite">
           Loading...
         </div>
       </div>
@@ -227,7 +227,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <h3>Gift Card Details</h3>
           <button class="close-card-modal" aria-label="Close">&times;</button>
         </div>
-        <div class="modal-body" id="cardModalBody">
+        <div class="modal-body" id="cardModalBody" aria-live="polite">
           Loading...
         </div>
         <div class="modal-actions" id="cardModalActions">
