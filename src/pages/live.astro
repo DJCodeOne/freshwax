@@ -981,7 +981,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   <PlaylistModal />
 </Layout>
 
-<script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
+<script async is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
 
 <script is:inline type="module">
   import { initSpeedTest } from '/live/speed-test.js';

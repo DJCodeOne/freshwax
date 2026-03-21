@@ -18,7 +18,7 @@ const PayPalCaptureSchema = z.object({
   paypalOrderId: z.string().min(1, 'PayPal order ID required'),
   orderData: z.record(z.unknown()).optional(),
   idToken: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

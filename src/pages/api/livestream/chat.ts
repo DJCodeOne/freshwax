@@ -25,7 +25,7 @@ const LivestreamChatSchema = z.object({
   replyTo: z.string().max(500).nullish(),
   replyToUserName: z.string().max(200).nullish(),
   replyToPreview: z.string().max(500).nullish(),
-}).passthrough();
+}).strip();
 
 // ============================================
 // CONTENT MODERATION

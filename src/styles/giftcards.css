@@ -69,7 +69,7 @@
   }
   
   .redeem-card > p {
-    color: #666;
+    color: #aaa;
     margin: 0 0 2rem 0;
   }
   
@@ -125,7 +125,7 @@
   }
 
   .code-input-wrapper input::placeholder {
-    color: #999;
+    color: #ccc;
     letter-spacing: 0.05em;
   }
   
@@ -289,7 +289,7 @@
   }
   
   .buy-subtitle {
-    color: #888;
+    color: #bbb;
     font-size: 1.125rem;
     margin: 0 0 2rem 0;
   }
@@ -335,7 +335,7 @@
   
   .custom-amount-wrapper label {
     display: block;
-    color: #888;
+    color: #bbb;
     font-size: 0.875rem;
     margin-bottom: 0.5rem;
   }
@@ -380,7 +380,7 @@
   }
   
   .amount-label {
-    color: #888;
+    color: #bbb;
     font-size: 1rem;
   }
   
@@ -431,7 +431,7 @@
     background: #222;
     border: 2px solid #444;
     border-radius: 8px;
-    color: #888;
+    color: #bbb;
     font-size: 1rem;
     transition: background-color 0.2s, color 0.2s;
   }
@@ -458,7 +458,7 @@
   
   .form-group label {
     display: block;
-    color: #888;
+    color: #bbb;
     font-size: 0.875rem;
     margin-bottom: 0.5rem;
   }
@@ -495,7 +495,7 @@
   .char-count {
     display: block;
     text-align: right;
-    color: #666;
+    color: #bbb;
     font-size: 0.75rem;
     margin-top: 0.25rem;
   }
