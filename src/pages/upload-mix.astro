@@ -84,7 +84,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </div>
           <div class="p-6">
             <div class="flex items-center gap-4 mb-6">
-              <img id="quick-drop-artwork-preview" src="/place-holder.webp" alt="Placeholder artwork" class="w-20 h-20 rounded-lg border-2 border-amber-200 object-cover" width="80" height="80" />
+              <img id="quick-drop-artwork-preview" src="/place-holder.webp" alt="Placeholder artwork" class="w-20 h-20 rounded-lg border-2 border-amber-200 object-cover" width="80" height="80" loading="lazy" decoding="async" />
               <div class="flex-1 min-w-0">
                 <p class="font-bold text-gray-900 truncate" id="quick-drop-title-preview">Mix Title</p>
                 <p class="text-gray-600 text-sm" id="quick-drop-dj-preview">DJ Name</p>
@@ -375,7 +375,7 @@ Artist - Track Title
                 <div class="flex flex-col md:flex-row items-center gap-6">
                   <!-- Large Preview -->
                   <div class="flex-shrink-0">
-                    <img id="artwork-preview-img" src="" alt="Artwork preview" class="w-48 h-48 object-cover rounded-lg shadow-lg border-2 border-green-300" width="192" height="192" />
+                    <img id="artwork-preview-img" src="" alt="Artwork preview" class="w-48 h-48 object-cover rounded-lg shadow-lg border-2 border-green-300" width="192" height="192" loading="lazy" decoding="async" />
                   </div>
                   
                   <!-- Info & Actions -->

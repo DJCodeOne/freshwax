@@ -34,7 +34,7 @@ const PlaylistPutSchema = z.object({
   action: z.string().min(1).max(50),
   userId: z.string().max(200).nullish(),
   playlist: z.object({
-    queue: z.array(z.unknown()).nullish(),
+    queue: z.array(PlaylistItemSchema).nullish(),
     currentIndex: z.number().int().min(0).nullish(),
     isPlaying: z.boolean().nullish(),
     trackStartedAt: z.string().max(100).nullish(),

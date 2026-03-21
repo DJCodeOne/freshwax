@@ -411,6 +411,13 @@ export class EmbedPlayerManager {
             0%, 100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.1); opacity: 0.8; }
           }
+          @media (prefers-reduced-motion: reduce) {
+            * {
+              animation-duration: 0.01ms !important;
+              animation-iteration-count: 1 !important;
+              transition-duration: 0.01ms !important;
+            }
+          }
         </style>
       `;
       const audio = document.getElementById('direct-audio') as HTMLAudioElement;

@@ -538,7 +538,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="profile-view" id="profile-view">
                 <div class="profile-avatar">
                   {partner.avatarUrl || partner.imageUrl || partner.photoURL ? (
-                    <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt={partner.artistName} width="80" height="80" data-fallback="show-next" />
+                    <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt={partner.artistName} width="80" height="80" loading="lazy" decoding="async" data-fallback="show-next" />
                     <span style="display:none;">{(partner.artistName || 'A')[0].toUpperCase()}</span>
                   ) : (
                     <span>{(partner.artistName || 'A')[0].toUpperCase()}</span>

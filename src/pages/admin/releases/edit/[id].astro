@@ -491,7 +491,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
             {release.coverArtUrl && (
               <div class="form-group">
-                <img src={release.coverArtUrl} alt="Cover Art" width="300" height="300" style="max-width: 100%; border: 2px solid #000000;" />
+                <img src={release.coverArtUrl} alt="Cover Art" width="300" height="300" style="max-width: 100%; border: 2px solid #000000;" loading="lazy" decoding="async" />
                 <div class="url-display" style="margin-top: 10px;">{release.coverArtUrl}</div>
               </div>
             )}

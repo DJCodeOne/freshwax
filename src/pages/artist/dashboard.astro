@@ -371,7 +371,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="welcome-left">
             <div class="avatar">
               {partner.avatarUrl || partner.imageUrl || partner.photoURL ? (
-                <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt={partner.displayName || partner.artistName || 'Artist avatar'} data-fallback="show-next" width="80" height="80" />
+                <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt={partner.displayName || partner.artistName || 'Artist avatar'} data-fallback="show-next" width="80" height="80" loading="lazy" decoding="async" />
                 <span style="display:none;">{(partner.displayName || partner.artistName)?.charAt(0).toUpperCase() || '?'}</span>
               ) : (
                 <span>{(partner.displayName || partner.artistName)?.charAt(0).toUpperCase() || '?'}</span>

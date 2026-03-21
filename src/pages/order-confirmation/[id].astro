@@ -281,7 +281,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 {groupedDigitalItems.map((item) => (
                   <div class="download-release">
                     <div class="release-header">
-                      <img src={item.image || item.downloads?.artworkUrl || '/place-holder.webp'} alt={item.downloads?.releaseName || item.name} class="release-art" width="80" height="80" />
+                      <img src={item.image || item.downloads?.artworkUrl || '/place-holder.webp'} alt={item.downloads?.releaseName || item.name} class="release-art" width="80" height="80" loading="lazy" decoding="async" />
                       <div class="release-info">
                         <h3>{item.downloads?.artistName} - {item.downloads?.releaseName}</h3>
                         <p>
@@ -371,7 +371,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="card-body">
                 {physicalItems.map((item) => (
                   <div class="order-item">
-                    <img src={item.image || '/place-holder.webp'} alt={item.name} class="item-img" width="80" height="80" />
+                    <img src={item.image || '/place-holder.webp'} alt={item.name} class="item-img" width="80" height="80" loading="lazy" decoding="async" />
                     <div class="item-details">
                       <h4>{item.name}</h4>
                       <span class="item-meta">

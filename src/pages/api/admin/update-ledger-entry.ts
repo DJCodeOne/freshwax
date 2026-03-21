@@ -13,7 +13,18 @@ const log = createLogger('[update-ledger-entry]');
 
 const updateLedgerEntrySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('list'), adminKey: z.string().optional() }),
-  z.object({ action: z.literal('update'), ledgerId: z.string().min(1), updates: z.record(z.string(), z.unknown()), adminKey: z.string().optional() }),
+  z.object({ action: z.literal('update'), ledgerId: z.string().min(1), updates: z.object({
+    grossTotal: z.number().optional(),
+    stripeFee: z.number().optional(),
+    paypalFee: z.number().optional(),
+    freshWaxFee: z.number().optional(),
+    totalFees: z.number().optional(),
+    netRevenue: z.number().optional(),
+    status: z.string().optional(),
+    notes: z.string().optional(),
+    artistId: z.string().optional(),
+    orderId: z.string().optional(),
+  }).passthrough(), adminKey: z.string().optional() }),
   z.object({ action: z.literal('delete'), ledgerId: z.string().min(1), adminKey: z.string().optional() }),
 ]);
 

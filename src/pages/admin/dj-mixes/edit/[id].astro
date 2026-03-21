@@ -99,7 +99,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <div class="card-body">
           <div class="artwork-preview" id="artworkPreview">
             {mix.artworkUrl || mix.imageUrl ? (
-              <img src={mix.artworkUrl || mix.imageUrl} alt="Mix artwork" id="previewImg" width="200" height="200" />
+              <img src={mix.artworkUrl || mix.imageUrl} alt="Mix artwork" id="previewImg" width="200" height="200" loading="lazy" decoding="async" />
             ) : (
               <div class="artwork-placeholder">🎧 No artwork</div>
             )}

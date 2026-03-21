@@ -298,3 +298,13 @@
       .size-grid { grid-template-columns: repeat(4, 1fr); }
       .image-preview-grid { grid-template-columns: repeat(3, 1fr); }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }

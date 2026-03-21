@@ -545,3 +545,13 @@
       .header-bar { flex-direction: column; gap: 15px; }
       .form-row-2, .form-row-3, .form-row-4 { grid-template-columns: 1fr; }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }

@@ -9,11 +9,20 @@ import { successResponse, ApiErrors, parseJsonBody, createLogger } from '../../.
 const log = createLogger('admin/update-settings');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
+// Settings values can be strings, numbers, booleans, or nested objects of the same
+const settingsValueSchema: z.ZodType<string | number | boolean | null | Record<string, unknown>> = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+  z.record(z.string(), z.lazy(() => z.union([z.string(), z.number(), z.boolean(), z.null(), z.record(z.string(), z.unknown())]))),
+]);
+
 const updateSettingsSchema = z.object({
   action: z.enum(['save', 'reset']),
-  settings: z.record(z.string(), z.unknown()).optional(),
+  settings: z.record(z.string(), settingsValueSchema).optional(),
   section: z.string().optional(),
-  sectionData: z.record(z.string(), z.unknown()).optional(),
+  sectionData: z.record(z.string(), settingsValueSchema).optional(),
   adminKey: z.string().optional(),
 });
 

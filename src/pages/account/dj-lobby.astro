@@ -215,7 +215,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       <div class="header-left">
         <div class="user-info">
           <div class="header-avatar-container">
-            <img id="headerAvatar" src="/place-holder.webp" alt="Your DJ avatar" class="header-avatar" width="48" height="48" />
+            <img id="headerAvatar" src="/place-holder.webp" alt="Your DJ avatar" class="header-avatar" width="48" height="48" loading="lazy" decoding="async" />
             <div id="headerAvatarLetter" class="header-avatar-letter hidden">?</div>
           </div>
           <span id="headerName" class="header-name">Loading...</span>
@@ -376,7 +376,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div id="incomingTakeover" class="incoming-takeover hidden">
             <div class="incoming-badge">⚡ TAKEOVER REQUEST</div>
             <div class="incoming-dj">
-              <img id="incomingDjAvatar" src="/place-holder.webp" alt="Incoming DJ avatar" width="48" height="48" />
+              <img id="incomingDjAvatar" src="/place-holder.webp" alt="Incoming DJ avatar" width="48" height="48" loading="lazy" decoding="async" />
               <div>
                 <strong id="incomingDjName">DJ Name</strong>
                 <span>wants to take over</span>
@@ -1186,7 +1186,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   <span>📸</span>
                   <span>No thumbnail</span>
                 </div>
-                <img id="shareThumbImg" src="" alt="Stream thumbnail" class="hidden" width="300" height="300" />
+                <img id="shareThumbImg" src="" alt="Stream thumbnail" class="hidden" width="300" height="300" loading="lazy" decoding="async" />
               </div>
               <div class="share-thumb-actions">
                 <button id="shareCaptureBtn" class="share-action-btn capture">

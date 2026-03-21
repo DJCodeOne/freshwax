@@ -11,13 +11,30 @@ import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successRespon
 const log = createLogger('admin/update-order');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
+const OrderItemSchema = z.object({
+  id: z.string().optional(),
+  releaseId: z.string().optional(),
+  productId: z.string().optional(),
+  trackId: z.string().optional(),
+  name: z.string().optional(),
+  type: z.string().optional(),
+  price: z.number().nonnegative().optional(),
+  quantity: z.number().int().positive().optional(),
+  size: z.string().optional(),
+  color: z.string().optional(),
+  image: z.string().optional(),
+  artwork: z.string().optional(),
+  artist: z.string().optional(),
+  artistId: z.string().optional(),
+}).passthrough();
+
 const updateOrderSchema = z.object({
   orderId: z.string().min(1),
   updates: z.object({
-    totals: z.record(z.string(), z.unknown()).optional(),
+    totals: z.record(z.string(), z.number()).optional(),
     status: z.string().optional(),
     paymentMethod: z.string().optional(),
-    items: z.array(z.unknown()).optional(),
+    items: z.array(OrderItemSchema).optional(),
     notes: z.string().optional(),
   }).passthrough().optional(),
   adminKey: z.string().optional(),

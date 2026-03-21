@@ -1184,6 +1184,16 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       min-width: auto;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 </style>
 
 <script define:vars={{ id, mode }} nonce={nonce}>

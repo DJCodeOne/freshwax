@@ -434,7 +434,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                 
                 <!-- GIF Preview -->
                 <div id="gif-preview-container" class="hidden mb-3 relative">
-                  <img id="gif-preview" src="" alt="Selected GIF" class="max-h-24 rounded border-2 border-blue-500" width="150" height="96">
+                  <img id="gif-preview" src="" alt="Selected GIF" class="max-h-24 rounded border-2 border-blue-500" width="150" height="96" loading="lazy" decoding="async">
                   <button type="button" id="remove-gif-btn" class="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-700" aria-label="Remove GIF">×</button>
                 </div>
                 
@@ -1354,14 +1354,22 @@ Artist - Track Title
       nativeShareBtn.classList.add('flex');
     }
 
+    sharePreviousFocus = document.activeElement;
     shareModal?.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    if (shareModalClose) shareModalClose.focus();
   });
+
+  var sharePreviousFocus = null;
 
   // Close modal handlers
   function closeShareModal() {
     shareModal?.classList.add('hidden');
     document.body.style.overflow = '';
+    if (sharePreviousFocus && typeof sharePreviousFocus.focus === 'function') {
+      sharePreviousFocus.focus();
+      sharePreviousFocus = null;
+    }
   }
 
   shareModalClose?.addEventListener('click', closeShareModal);
@@ -1372,6 +1380,30 @@ Artist - Track Title
     }
   }
   document.addEventListener('keydown', handleKeydownEscape);
+
+  // Focus trap: Tab/Shift+Tab cycles within the share modal
+  if (shareModal) {
+    shareModal.addEventListener('keydown', function(e) {
+      if (e.key !== 'Tab') return;
+      var focusableEls = shareModal.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusableEls.length === 0) return;
+      var firstEl = focusableEls[0];
+      var lastEl = focusableEls[focusableEls.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    });
+  }
 
   // Copy URL button
   copyUrlButton?.addEventListener('click', function() {
@@ -2111,6 +2143,30 @@ Artist - Track Title
       if (gifPickerBtn) gifPickerBtn.focus();
     }
   });
+
+  // Focus trap: Tab/Shift+Tab cycles within the Giphy modal
+  if (giphyModal) {
+    giphyModal.addEventListener('keydown', function(e) {
+      if (e.key !== 'Tab') return;
+      var focusableEls = giphyModal.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusableEls.length === 0) return;
+      var firstEl = focusableEls[0];
+      var lastEl = focusableEls[focusableEls.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    });
+  }
 
   // Load trending GIFs via server-side proxy
   async function loadTrendingGifs() {

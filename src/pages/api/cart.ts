@@ -15,7 +15,18 @@ const CartItemSchema = z.object({
   name: z.string().max(500).optional(),
   price: z.number().min(0).optional(),
   quantity: z.number().int().min(1).max(100).optional(),
-}).catchall(z.unknown());
+  type: z.string().max(100).optional(),
+  image: z.string().max(2000).optional(),
+  artwork: z.string().max(2000).optional(),
+  artist: z.string().max(200).optional(),
+  artistId: z.string().max(200).optional(),
+  releaseId: z.string().max(200).optional(),
+  productId: z.string().max(200).optional(),
+  trackId: z.string().max(200).optional(),
+  size: z.string().max(50).optional(),
+  color: z.union([z.string().max(100), z.object({ name: z.string().max(100), hex: z.string().max(20) })]).optional(),
+  format: z.string().max(50).optional(),
+}).passthrough();
 
 const CartSaveSchema = z.object({
   items: z.array(CartItemSchema).max(100),
