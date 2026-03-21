@@ -1,4 +1,7 @@
 import { escapeHtml } from './escape-html';
+import { createClientLogger } from './client-logger';
+
+const logger = createClientLogger('Checkout');
 
 export function init() {
   // LIGHTWEIGHT AUTH: Uses window.firebaseAuth + window.authReady from Header.astro
@@ -106,7 +109,7 @@ export function init() {
         cart = [];
       }
     } catch (e: unknown){
-      console.error('[Checkout] Cart parse error:', e);
+      logger.error('Cart parse error:', e);
       cart = [];
     }
     return cart;
@@ -155,9 +158,9 @@ export function init() {
       }
     } catch (e: unknown){
       if (e instanceof Error && e.name === 'AbortError') {
-        console.error('[Checkout] Credit balance request timed out');
+        logger.error('Credit balance request timed out');
       } else {
-        console.error('[Checkout] Failed to load credit balance:', e);
+        logger.error('Failed to load credit balance:', e);
       }
     }
     creditLoaded = true;
@@ -261,9 +264,9 @@ export function init() {
       return data;
     } catch (e: unknown){
       if (e instanceof Error && e.name === 'AbortError') {
-        console.error('[Checkout] Duplicate check timed out');
+        logger.error('Duplicate check timed out');
       } else {
-        console.error('[Checkout] Error checking duplicate purchases:', e);
+        logger.error('Error checking duplicate purchases:', e);
       }
       return { duplicates: [], ownedReleases: [] };
     }
@@ -361,9 +364,9 @@ export function init() {
       }
     } catch (e: unknown){
       if (e instanceof Error && e.name === 'AbortError') {
-        console.error('[Checkout] Customer data request timed out');
+        logger.error('Customer data request timed out');
       } else {
-        console.error('[Checkout] Error loading customer data:', e);
+        logger.error('Error loading customer data:', e);
       }
     }
     return null;
@@ -995,7 +998,7 @@ export function init() {
       }
 
     } catch (error: unknown) {
-      console.error('PayPal error:', error);
+      logger.error('PayPal error:', error);
       errorMsg.textContent = (error instanceof Error ? error.message : null) || 'PayPal error. Please try again.';
       errorMsg.style.display = 'block';
       errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1145,14 +1148,14 @@ export function init() {
             throw new Error(result.error || 'Payment failed');
           }
         } catch (error: unknown) {
-          console.error('PayPal capture error:', error);
+          logger.error('PayPal capture error:', error);
           errorMsg.textContent = (error instanceof Error ? error.message : null) || 'Payment failed. Please try again.';
           errorMsg.style.display = 'block';
         }
       },
 
       onError: function(err: unknown) {
-        console.error('PayPal error:', err);
+        logger.error('PayPal error:', err);
         const errorMsg = document.getElementById('error-message');
         errorMsg.textContent = 'PayPal error. Please try again or use card payment.';
         errorMsg.style.display = 'block';
@@ -1179,7 +1182,7 @@ export function init() {
         }
       }, 100);
     }).catch((err: unknown) => {
-      console.error('PayPal render error:', err);
+      logger.error('PayPal render error:', err);
       // Reset flag on error so user can retry
       paypalButtonsRendered = false;
     });
@@ -1243,7 +1246,7 @@ export function init() {
           })
         });
       } catch (e: unknown){
-        console.error('Error saving customer details:', e);
+        logger.error('Error saving customer details:', e);
       }
     }
 
@@ -1404,7 +1407,7 @@ export function init() {
         }
       }
     } catch (error: unknown) {
-      console.error('Checkout error:', error);
+      logger.error('Checkout error:', error);
       errorMsg.textContent = (error instanceof Error ? error.message : null) || 'Something went wrong. Please try again.';
       errorMsg.style.display = 'block';
       submitBtn.disabled = false;
@@ -1433,7 +1436,7 @@ export function init() {
       const data = await response.json();
       return data;
     } catch (e: unknown){
-      console.error('Error checking user type:', e);
+      logger.error('Error checking user type:', e);
       return { isCustomer: false, isArtist: false };
     }
   }

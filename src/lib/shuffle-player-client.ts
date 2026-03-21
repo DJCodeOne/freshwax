@@ -1,6 +1,9 @@
 // src/lib/shuffle-player-client.ts
 // Extracted from ShufflePlayer.astro — client-side shuffle player controller
 import { escapeHtml } from './escape-html';
+import { createClientLogger } from './client-logger';
+
+const logger = createClientLogger('ShufflePlayer');
 
 var ShufflePlayer = {
   tracks: [] as Array<{
@@ -45,7 +48,7 @@ var ShufflePlayer = {
       var tracksData = container.getAttribute('data-tracks');
       this.tracks = JSON.parse(tracksData || '[]');
     } catch (e: unknown){
-      console.error('[ShufflePlayer] Failed to parse tracks:', e);
+      logger.error('Failed to parse tracks:', e);
       this.tracks = [];
     }
 
@@ -246,7 +249,7 @@ var ShufflePlayer = {
     };
 
     audio.onerror = function() {
-      console.error('[ShufflePlayer] Audio error, skipping to next');
+      logger.error('Audio error, skipping to next');
       self.playNext();
     };
   },
@@ -266,7 +269,7 @@ var ShufflePlayer = {
     }
 
     this.audio.play().catch(function(err: unknown) {
-      console.error('[ShufflePlayer] Play failed:', err);
+      logger.error('Play failed:', err);
     });
   },
 
