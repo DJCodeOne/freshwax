@@ -368,7 +368,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Batch-fetch releases and merch in parallel
-      const [ledgerReleaseEntries, ledgerMerchEntries] = await Promise.all([
+      // Use Promise.allSettled so a failed batch doesn't block the entire ledger enrichment
+      const [ledgerReleaseResult, ledgerMerchResult] = await Promise.allSettled([
         Promise.all([...ledgerReleaseIds].map(async (id) => {
           const doc = await getDocument('releases', id).catch(() => null);
           return [id, doc] as const;
@@ -378,6 +379,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return [id, doc] as const;
         }))
       ]);
+      const ledgerReleaseEntries = ledgerReleaseResult.status === 'fulfilled' ? ledgerReleaseResult.value : [];
+      const ledgerMerchEntries = ledgerMerchResult.status === 'fulfilled' ? ledgerMerchResult.value : [];
+      if (ledgerReleaseResult.status === 'rejected') {
+        log.error('[PayPal] Ledger release batch fetch failed', { error: ledgerReleaseResult.reason });
+      }
+      if (ledgerMerchResult.status === 'rejected') {
+        log.error('[PayPal] Ledger merch batch fetch failed', { error: ledgerMerchResult.reason });
+      }
       const ledgerReleaseMap = new Map(ledgerReleaseEntries.filter(([, doc]) => doc));
       const ledgerMerchMap = new Map(ledgerMerchEntries.filter(([, doc]) => doc));
 
@@ -395,7 +404,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Batch-fetch users and artists for submitter email resolution
-      const [submitterUserEntries, submitterArtistEntries] = await Promise.all([
+      // Use Promise.allSettled so a failed batch doesn't block the entire ledger enrichment
+      const [submitterUserResult, submitterArtistResult] = await Promise.allSettled([
         Promise.all([...submitterLookupIds].map(async (id) => {
           const doc = await getDocument('users', id).catch(() => null);
           return [id, doc] as const;
@@ -405,6 +415,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return [id, doc] as const;
         }))
       ]);
+      const submitterUserEntries = submitterUserResult.status === 'fulfilled' ? submitterUserResult.value : [];
+      const submitterArtistEntries = submitterArtistResult.status === 'fulfilled' ? submitterArtistResult.value : [];
+      if (submitterUserResult.status === 'rejected') {
+        log.error('[PayPal] Submitter user batch fetch failed', { error: submitterUserResult.reason });
+      }
+      if (submitterArtistResult.status === 'rejected') {
+        log.error('[PayPal] Submitter artist batch fetch failed', { error: submitterArtistResult.reason });
+      }
       const submitterUserMap = new Map(submitterUserEntries.filter(([, doc]) => doc));
       const submitterArtistMap = new Map(submitterArtistEntries.filter(([, doc]) => doc));
 
@@ -492,49 +510,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return sum + ((item.price || 0) * (item.quantity || 1));
       }, 0);
 
-      try {
-        await processArtistPayments({
-          orderId: result.orderId,
-          orderNumber: result.orderNumber || '',
-          items: orderData.items,
-          totalItemCount,
-          orderSubtotal,
-          stripeSecretKey,
-          env
-        });
-      } catch (paymentErr: unknown) {
-        log.error('[PayPal] Artist payment processing error:', paymentErr);
-        // Don't fail the order, just log the error
-      }
-
-      // Process merch supplier payments
-      try {
-        await processMerchSupplierPayments({
-          orderId: result.orderId,
-          orderNumber: result.orderNumber || '',
-          items: orderData.items,
-          totalItemCount,
-          orderSubtotal,
-          stripeSecretKey,
-          env
-        });
-      } catch (supplierErr: unknown) {
-        log.error('[PayPal] Supplier payment processing error:', supplierErr);
-      }
-
-      // Process vinyl crate seller payments
-      try {
-        await processVinylCrateSellerPayments({
-          orderId: result.orderId,
-          orderNumber: result.orderNumber || '',
-          items: orderData.items,
-          totalItemCount,
-          orderSubtotal,
-          stripeSecretKey,
-          env
-        });
-      } catch (sellerErr: unknown) {
-        log.error('[PayPal] Crate seller payment processing error:', sellerErr);
+      // Process all seller payment types in parallel — each is independent and
+      // failures in one category should not block or delay the others
+      const paymentParams = {
+        orderId: result.orderId!,
+        orderNumber: result.orderNumber || '',
+        items: orderData.items,
+        totalItemCount,
+        orderSubtotal,
+        stripeSecretKey,
+        env
+      };
+      const paymentResults = await Promise.allSettled([
+        processArtistPayments(paymentParams),
+        processMerchSupplierPayments(paymentParams),
+        processVinylCrateSellerPayments(paymentParams)
+      ]);
+      const paymentLabels = ['Artist', 'Supplier', 'Crate seller'];
+      for (let i = 0; i < paymentResults.length; i++) {
+        if (paymentResults[i].status === 'rejected') {
+          log.error(`[PayPal] ${paymentLabels[i]} payment processing error:`, (paymentResults[i] as PromiseRejectedResult).reason);
+        }
       }
     }
 

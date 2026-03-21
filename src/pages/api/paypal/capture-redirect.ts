@@ -156,48 +156,27 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
         return sum + ((item.price || 0) * (item.quantity || 1));
       }, 0);
 
-      try {
-        await processArtistPayments({
-          orderId: result.orderId,
-          orderNumber: result.orderNumber || '',
-          items: pendingOrder.items,
-          totalItemCount,
-          orderSubtotal,
-          stripeSecretKey,
-          env
-        });
-      } catch (paymentErr: unknown) {
-        log.error('[PayPal Redirect] Artist payment processing error:', paymentErr);
-      }
-
-      // Process merch supplier payments
-      try {
-        await processMerchSupplierPayments({
-          orderId: result.orderId,
-          orderNumber: result.orderNumber || '',
-          items: pendingOrder.items,
-          totalItemCount,
-          orderSubtotal,
-          stripeSecretKey,
-          env
-        });
-      } catch (supplierErr: unknown) {
-        log.error('[PayPal Redirect] Supplier payment processing error:', supplierErr);
-      }
-
-      // Process vinyl crate seller payments
-      try {
-        await processVinylCrateSellerPayments({
-          orderId: result.orderId,
-          orderNumber: result.orderNumber || '',
-          items: pendingOrder.items,
-          totalItemCount,
-          orderSubtotal,
-          stripeSecretKey,
-          env
-        });
-      } catch (sellerErr: unknown) {
-        log.error('[PayPal Redirect] Crate seller payment processing error:', sellerErr);
+      // Process all seller payment types in parallel — each is independent and
+      // failures in one category should not block or delay the others
+      const paymentParams = {
+        orderId: result.orderId!,
+        orderNumber: result.orderNumber || '',
+        items: pendingOrder.items,
+        totalItemCount,
+        orderSubtotal,
+        stripeSecretKey,
+        env
+      };
+      const paymentResults = await Promise.allSettled([
+        processArtistPayments(paymentParams),
+        processMerchSupplierPayments(paymentParams),
+        processVinylCrateSellerPayments(paymentParams)
+      ]);
+      const paymentLabels = ['Artist', 'Supplier', 'Crate seller'];
+      for (let i = 0; i < paymentResults.length; i++) {
+        if (paymentResults[i].status === 'rejected') {
+          log.error(`[PayPal Redirect] ${paymentLabels[i]} payment processing error:`, (paymentResults[i] as PromiseRejectedResult).reason);
+        }
       }
     }
 
