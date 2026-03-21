@@ -4732,7 +4732,7 @@
   }
 
   .key-generating .spawn-icon {
-    animation: spawnRotate 3s linear infinite;
+    animation: lobbySpin 3s linear infinite;
     filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.8));
   }
 
@@ -4774,11 +4774,6 @@
       transform: translateY(-6px) scale(1);
       opacity: 1;
     }
-  }
-
-  @keyframes spawnRotate {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
   }
 
   @keyframes keyPulse {

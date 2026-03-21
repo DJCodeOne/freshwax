@@ -496,7 +496,7 @@
   
   
   .fs-reaction-btn.liked {
-    animation: likePopAnim 0.3s ease;
+    animation: like-pulse 0.3s ease;
     border-color: #444;
   }
   @media (hover: hover) {
@@ -2744,11 +2744,7 @@
     border-top-color: #16a34a;
     border-radius: 50%;
     margin: 0 auto 1.5rem;
-    animation: initSpin 1s linear infinite;
-  }
-
-  @keyframes initSpin {
-    to { transform: rotate(360deg); }
+    animation: spin 1s linear infinite;
   }
 
   .initializing-title {
@@ -4215,7 +4211,7 @@
   .reaction-btn.liked {
     background: #dc2626;
     border-color: #dc2626;
-    animation: likePopAnim 0.3s ease;
+    animation: like-pulse 0.3s ease;
   }
 
   /* Disabled state for reaction buttons when offline */
@@ -4240,12 +4236,6 @@
     transform: none;
   }
 
-  @keyframes likePopAnim {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
-  }
-  
   .rating-section {
     display: flex;
     align-items: center;
