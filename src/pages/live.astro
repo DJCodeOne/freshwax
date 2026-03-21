@@ -3511,7 +3511,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   }, { once: true });
 </script>
 
-<script is:inline src="/email-verify-check.js" nonce={nonce}></script>
+<script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
 <script type="module" src="/live-stream.js?v=20260228-v3"></script>
 
 <script is:inline nonce={nonce}>

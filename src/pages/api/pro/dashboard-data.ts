@@ -196,8 +196,10 @@ async function handleAnalytics(userId: string, params: URLSearchParams) {
 }
 
 async function handleAccount(userId: string) {
-  const userData = await getDocument('users', userId);
-  const sellerDoc = await getDocument('merch-sellers', userId);
+  const [userData, sellerDoc] = await Promise.all([
+    getDocument('users', userId),
+    getDocument('merch-sellers', userId),
+  ]);
 
   return jsonResponse({
     success: true,
