@@ -453,8 +453,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   const cancelBtn = document.getElementById('cancelBtn');
   const checkMethodSelect = document.getElementById('checkMethod');
   const statusUrlGroup = document.getElementById('statusUrlGroup');
-  
+
   let sources = [];
+
+  // Escape HTML to prevent XSS
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
 
   // Event delegation for source card actions
   sourcesGrid.addEventListener('click', (e) => {
@@ -503,16 +509,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     sourcesGrid.innerHTML = sources.map(source => `
       <div class="source-card ${source.active ? '' : 'inactive'}">
         <div class="source-header">
-          ${source.logoUrl 
-            ? `<img src="${source.logoUrl}" alt="${source.name}" class="source-logo" width="48" height="48" loading="lazy" />`
+          ${source.logoUrl
+            ? `<img src="${escapeHtml(source.logoUrl)}" alt="${escapeHtml(source.name)}" class="source-logo" width="48" height="48" loading="lazy" />`
             : `<div class="source-logo placeholder">📻</div>`
           }
           <div class="source-info">
-            <h3>${source.name}</h3>
-            <span class="source-genre">${source.genre || 'Jungle / D&B'}</span>
+            <h3>${escapeHtml(source.name)}</h3>
+            <span class="source-genre">${escapeHtml(source.genre || 'Jungle / D&B')}</span>
           </div>
           <div class="source-status">
-            ${!source.active 
+            ${!source.active
               ? '<span class="status-badge inactive"><span class="status-dot"></span> Disabled</span>'
               : source.isCurrentlyLive
                 ? '<span class="status-badge live"><span class="status-dot"></span> Live</span>'
@@ -521,12 +527,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           </div>
         </div>
         <div class="source-body">
-          ${source.nowPlaying ? `<div class="now-playing">🎵 ${source.nowPlaying}</div>` : ''}
-          <div class="stream-url">${source.streamUrl}</div>
+          ${source.nowPlaying ? `<div class="now-playing">🎵 ${escapeHtml(source.nowPlaying)}</div>` : ''}
+          <div class="stream-url">${escapeHtml(source.streamUrl)}</div>
           <div class="source-actions">
-            <button class="btn-test" data-action="test" data-id="${source.id}">Test Stream</button>
-            <button class="btn-edit" data-action="edit" data-id="${source.id}">Edit</button>
-            <button class="btn-delete" data-action="delete" data-id="${source.id}">Delete</button>
+            <button class="btn-test" data-action="test" data-id="${escapeHtml(source.id)}">Test Stream</button>
+            <button class="btn-edit" data-action="edit" data-id="${escapeHtml(source.id)}">Edit</button>
+            <button class="btn-delete" data-action="delete" data-id="${escapeHtml(source.id)}">Delete</button>
           </div>
         </div>
       </div>

@@ -1553,7 +1553,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <button id="addDJBtn" class="add-btn">+ Add DJ</button>
         </div>
       </div>
-      <div id="approvedDJs" class="dj-list">
+      <div id="approvedDJs" class="dj-list" aria-live="polite">
         <p class="loading">Loading...</p>
       </div>
     </div>
@@ -1561,7 +1561,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     <!-- Pending Requests -->
     <div class="section">
       <h2>⏳ Pending Requests</h2>
-      <div id="pendingDJs" class="dj-list">
+      <div id="pendingDJs" class="dj-list" aria-live="polite">
         <p class="empty-state">No pending requests</p>
       </div>
     </div>
@@ -1573,7 +1573,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <button id="refreshBypassRequests" class="refresh-btn">↻ Refresh</button>
       </div>
       <p class="section-desc">DJs requesting immediate access to go live without meeting the 10-likes requirement.</p>
-      <div id="bypassRequests" class="bypass-requests-list">
+      <div id="bypassRequests" class="bypass-requests-list" aria-live="polite">
         <p class="loading">Loading...</p>
       </div>
     </div>
@@ -1585,7 +1585,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <button id="refreshEventRequests" class="refresh-btn">↻ Refresh</button>
       </div>
       <p class="section-desc">Pro DJs requesting extended streaming hours for special events (beyond the standard 2 hours).</p>
-      <div id="eventRequests" class="bypass-requests-list">
+      <div id="eventRequests" class="bypass-requests-list" aria-live="polite">
         <p class="loading">Loading...</p>
       </div>
     </div>
@@ -1593,7 +1593,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     <!-- Recent Streams -->
     <div class="section">
       <h2>📼 Recent Streams</h2>
-      <div id="recentStreams" class="streams-list">
+      <div id="recentStreams" class="streams-list" aria-live="polite">
         <p class="loading">Loading...</p>
       </div>
     </div>

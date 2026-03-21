@@ -8,6 +8,9 @@ import Footer from '../components/Footer.astro';
 import ReleasePlate from '../components/ReleasePlate.astro';
 
 import { getLiveReleases } from '../lib/firebase-rest';
+import { createLogger } from '../lib/api-utils';
+
+const log = createLogger('homepage');
 
 // Get the 10 most recent published releases from Firebase (authoritative source)
 // KV-cached for 30 minutes so Firebase is only hit infrequently
@@ -15,7 +18,7 @@ let featuredReleases: Record<string, unknown>[] = [];
 try {
   featuredReleases = await getLiveReleases(10);
 } catch (e: unknown) {
-  console.error('Failed to fetch featured releases:', e instanceof Error ? e.message : e);
+  log.error('Failed to fetch featured releases:', e);
 }
 
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');

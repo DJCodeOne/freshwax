@@ -6,6 +6,9 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ReleasePlate from '../components/ReleasePlate.astro';
 import { getLiveReleases } from '../lib/firebase-rest';
+import { createLogger } from '../lib/api-utils';
+
+const log = createLogger('releases-page');
 
 // Fetch all live releases from Firebase (authoritative source)
 // KV-cached for 10 minutes so Firebase is only hit infrequently
@@ -13,7 +16,7 @@ let allReleases: Record<string, unknown>[] = [];
 try {
   allReleases = await getLiveReleases();
 } catch (e: unknown) {
-  console.error('Failed to fetch releases:', e instanceof Error ? e.message : e);
+  log.error('Failed to fetch releases:', e);
 }
 
 // Group releases by label locally

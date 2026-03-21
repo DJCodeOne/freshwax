@@ -215,9 +215,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const processingStatus = document.getElementById('processingStatus');
     const results = document.getElementById('results');
     const imageGrid = document.getElementById('imageGrid');
-    
+
     let processedImages = [];
-    
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
     // Drag and drop handlers
     dropZone.addEventListener('click', () => fileInput.click());
     
@@ -398,21 +404,21 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <span class="status-badge error">Failed</span>
               </div>
               <div class="image-info">
-                <div class="image-name">${img.originalName}</div>
-                <div class="image-meta" style="color: #dc2626;">${img.error}</div>
+                <div class="image-name">${escapeHtml(img.originalName)}</div>
+                <div class="image-meta" style="color: #dc2626;">${escapeHtml(img.error)}</div>
               </div>
             </div>
           `;
         }
-        
+
         return `
           <div class="image-card" id="card-${idx}">
             <div class="image-preview">
-              <img src="${img.main.dataUrl}" alt="${img.originalName}" width="200" height="200" loading="lazy">
+              <img src="${img.main.dataUrl}" alt="${escapeHtml(img.originalName)}" width="200" height="200" loading="lazy">
               <span class="status-badge processing" id="badge-${idx}">Ready</span>
             </div>
             <div class="image-info">
-              <div class="image-name" title="${img.originalName}">${img.baseName}.webp</div>
+              <div class="image-name" title="${escapeHtml(img.originalName)}">${escapeHtml(img.baseName)}.webp</div>
               <div class="image-meta">
                 <span>${formatBytes(img.originalSize)} → ${formatBytes(img.main.size)}</span>
                 <span class="image-size-reduction">-${img.reduction}%</span>

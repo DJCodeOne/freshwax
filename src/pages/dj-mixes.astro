@@ -6,7 +6,10 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 // FloatingShuffleButton is already included in Layout.astro
 import { getLiveDJMixes, getSettings } from '../lib/firebase-rest';
+import { createLogger } from '../lib/api-utils';
 import '../styles/dj-mixes.css';
+
+const log = createLogger('dj-mixes-page');
 
 // Get D1 binding from Cloudflare runtime
 const db = Astro.locals.runtime.env?.DB;
@@ -26,7 +29,7 @@ try {
     showMixCharts = settings.showMixCharts || false;
   }
 } catch (error: unknown) {
-  console.error('[DJ-MIXES PAGE] Error loading mixes:', error);
+  log.error('Error loading mixes:', error);
 }
 
 // Calculate chart rankings if enabled
