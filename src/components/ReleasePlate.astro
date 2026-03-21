@@ -574,13 +574,14 @@ const totalDurationFormatted = totalDurationSeconds > 0
           <div class="track-list-container relative" style="max-height: 160px; overflow-y: auto; overflow-x: hidden;">
             {tracksWithIds.map((track) => (
               <div class="track-row flex items-center gap-2 py-2 px-2 hover:bg-white/10 rounded transition-colors border-b border-gray-700/50 last:border-b-0">
-                <button 
+                <button
                   class="play-button flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-white text-black transition-colors"
                   data-track-id={track.id}
                   data-release-id={id}
                   data-preview-url={track.preview_url || ''}
                   data-track-title={track.title}
                   title="Play"
+                  aria-label={`Play ${track.title}`}
                 >
                   <svg class="w-3.5 h-3.5 play-icon" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"/>

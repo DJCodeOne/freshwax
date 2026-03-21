@@ -6,7 +6,8 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import Stripe from 'stripe';
 import { createOrder } from '../../../lib/order-utils';
-import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
+import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion, queryCollection } from '../../../lib/firebase-rest';
+import { SITE_URL } from '../../../lib/constants';
 import { createLogger, fetchWithTimeout } from '../../../lib/api-utils';
 
 const log = createLogger('[paypal-redirect]');
@@ -51,6 +52,23 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     if (!paypalClientId || !paypalSecret) {
       log.error('[PayPal Redirect] PayPal not configured');
       return redirect('/checkout?error=config');
+    }
+
+    // IDEMPOTENCY CHECK: If an order with this PayPal ID already exists, redirect to success
+    // Prevents duplicate orders from browser back-button or double-click
+    try {
+      const existingOrders = await queryCollection('orders', {
+        filters: [{ field: 'paypalOrderId', op: 'EQUAL', value: paypalOrderId }],
+        limit: 1
+      }, true);
+      if (existingOrders && existingOrders.length > 0) {
+        log.info('[PayPal Redirect] Order already exists for paypalOrderId:', paypalOrderId);
+        return redirect(`${SITE_URL}/order-confirmation/${existingOrders[0].id}`);
+      }
+    } catch (idempotencyErr: unknown) {
+      log.error('[PayPal Redirect] Idempotency check failed (Firebase unreachable):', idempotencyErr);
+      // Don't proceed if we can't verify — customer can retry
+      return redirect('/checkout?error=service_unavailable');
     }
 
     // Retrieve order data from Firebase (stored when order was created)

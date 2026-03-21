@@ -59,6 +59,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.unauthorized('Authentication required');
     }
 
+    // IDEMPOTENCY CHECK: If user already has an active Plus subscription, return early
+    // Prevents duplicate activation from double-click or network retry
+    try {
+      const existingUser = await getDocument('users', verifiedUserId);
+      if (existingUser?.subscription) {
+        const sub = existingUser.subscription;
+        const expiresAt = sub.expiresAt || '';
+        const isActive = expiresAt && new Date(expiresAt) > new Date();
+        if (isActive && (sub.tier === 'pro' || sub.tier === 'plus')) {
+          log.info('[PayPal Plus] Plus already active for user:', verifiedUserId);
+          return successResponse({
+            alreadyActive: true,
+            plusId: sub.plusId || '',
+            expiresAt: expiresAt,
+            message: 'Plus subscription already active'
+          });
+        }
+      }
+    } catch (userCheckErr: unknown) {
+      log.error('[PayPal Plus] Idempotency check failed:', userCheckErr);
+      // Don't block — proceed with capture if we can't verify
+    }
+
     const rawBody = await request.json();
 
     const parseResult = PayPalPlusCaptureSchema.safeParse(rawBody);

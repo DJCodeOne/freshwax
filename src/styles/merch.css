@@ -49,7 +49,7 @@
 
   .hero-subtitle {
     font-size: 1.125rem;
-    color: #888;
+    color: #aaa;
     margin: 0;
     animation: fadeSlideUp 0.5s ease-out 0.3s both;
   }
@@ -83,7 +83,7 @@
   .filter-item label {
     font-size: 0.65rem;
     font-weight: 600;
-    color: #666;
+    color: #aaa;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding-left: 2px;
@@ -255,7 +255,7 @@
 
   .products-count {
     font-size: 0.8rem;
-    color: #666;
+    color: #aaa;
     white-space: nowrap;
     font-weight: 500;
     padding: 0 0.25rem;
@@ -405,7 +405,7 @@
 
   .product-meta {
     font-size: 0.77rem;
-    color: #888;
+    color: #aaa;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin: 0 0 0.385rem;
@@ -563,7 +563,7 @@
 
   .modal-cat {
     font-size: 0.9rem;
-    color: #888;
+    color: #aaa;
     text-transform: uppercase;
     margin: 0 0 0.75rem;
   }
@@ -591,7 +591,7 @@
 
   .old-price {
     font-size: 1.25rem;
-    color: #666;
+    color: #aaa;
     text-decoration: line-through;
   }
 

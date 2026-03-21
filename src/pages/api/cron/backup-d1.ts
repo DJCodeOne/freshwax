@@ -151,23 +151,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const timestamp = new Date().toISOString();
     const results: Record<string, { rows: number } | { error: string }> = {};
 
-    for (const table of BACKUP_TABLES) {
-      try {
-        const data = await fetchAllRows(db, table);
-        const key = `backups/d1/${table}/${timestamp}.json`;
-
-        await r2.put(key, JSON.stringify(data, null, 2), {
-          httpMetadata: { contentType: 'application/json' },
-        });
-
-        log.info(`[Backup D1] ${table}: backed up ${data.length} rows to ${key}`);
-        results[table] = { rows: data.length };
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        log.error(`[Backup D1] ${table} backup failed:`, message);
-        results[table] = { error: 'backup failed' };
-      }
-    }
+    // Backup all tables in parallel
+    const backupResults = await Promise.allSettled(
+      BACKUP_TABLES.map(async (table) => {
+        try {
+          const data = await fetchAllRows(db, table);
+          const key = `backups/d1/${table}/${timestamp}.json`;
+          await r2.put(key, JSON.stringify(data, null, 2), {
+            httpMetadata: { contentType: 'application/json' },
+          });
+          log.info(`[Backup D1] ${table}: backed up ${data.length} rows to ${key}`);
+          results[table] = { rows: data.length };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          log.error(`[Backup D1] ${table} backup failed:`, message);
+          results[table] = { error: 'backup failed' };
+        }
+      })
+    );
 
     // Retention cleanup — delete backups older than 30 days
     let deletedCount = 0;

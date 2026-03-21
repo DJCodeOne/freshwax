@@ -532,9 +532,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
 
         <!-- Plus Member Modal -->
-        <div id="plusMemberModal" class="modal-overlay hidden">
+        <div id="plusMemberModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Fresh Wax Plus">
           <div class="modal-content plus-modal">
-            <button class="modal-close" id="plusMemberModalCloseBtn">&times;</button>
+            <button class="modal-close" id="plusMemberModalCloseBtn" aria-label="Close">&times;</button>
             <div class="plus-modal-header">
               <span class="plus-modal-icon">⚡</span>
               <h2>Plus Membership</h2>
@@ -565,7 +565,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
 
         <!-- Download Data Modal -->
-        <div id="downloadDataModal" class="modal-overlay hidden">
+        <div id="downloadDataModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Download your data">
           <div class="modal-content download-modal">
             <h2>Download Your Data</h2>
             <p class="modal-description">Select items to download:</p>
@@ -643,7 +643,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
 
         <!-- Delete Account Modal -->
-        <div id="deleteModal" class="modal-overlay hidden">
+        <div id="deleteModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Delete account">
           <div class="modal-content">
             <div class="modal-header">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
@@ -677,7 +677,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     </div>
 
     <!-- Go Plus Modal -->
-    <div id="goPlusModal" class="goplus-modal hidden">
+    <div id="goPlusModal" class="goplus-modal hidden" role="dialog" aria-modal="true" aria-label="Go Plus">
       <div class="goplus-modal-backdrop"></div>
       <div class="goplus-modal-content">
         <button class="goplus-modal-close" id="goPlusModalClose">&times;</button>

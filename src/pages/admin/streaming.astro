@@ -2989,16 +2989,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           bannedContainer.innerHTML = result.banned.map(dj => {
             const date = dj.bannedAt ? new Date(dj.bannedAt).toLocaleDateString('en-GB') : 'Unknown';
             return `
-              <div class="mod-card banned" data-user-id="${dj.userId}">
+              <div class="mod-card banned" data-user-id="${escapeHtml(dj.userId)}">
                 <div class="mod-info">
-                  <h4>${dj.email || dj.name || 'Unknown'} <span class="mod-badge banned">BANNED</span></h4>
+                  <h4>${escapeHtml(dj.email || dj.name || 'Unknown')} <span class="mod-badge banned">BANNED</span></h4>
                   <div class="mod-meta">
                     Since: ${date}
-                    ${dj.reason ? ` • Reason: ${dj.reason}` : ''}
+                    ${dj.reason ? ` • Reason: ${escapeHtml(dj.reason)}` : ''}
                   </div>
                 </div>
                 <div class="mod-actions">
-                  <button class="unban-btn" data-action="unbanDJ" data-user-id="${dj.userId}" data-email="${dj.email || ''}">Unban</button>
+                  <button class="unban-btn" data-action="unbanDJ" data-user-id="${escapeHtml(dj.userId)}" data-email="${escapeHtml(dj.email || '')}">Unban</button>
                 </div>
               </div>
             `;
@@ -3012,16 +3012,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           onholdContainer.innerHTML = result.onhold.map(dj => {
             const date = dj.holdAt ? new Date(dj.holdAt).toLocaleDateString('en-GB') : 'Unknown';
             return `
-              <div class="mod-card onhold" data-user-id="${dj.userId}">
+              <div class="mod-card onhold" data-user-id="${escapeHtml(dj.userId)}">
                 <div class="mod-info">
-                  <h4>${dj.email || dj.name || 'Unknown'} <span class="mod-badge onhold">ON HOLD</span></h4>
+                  <h4>${escapeHtml(dj.email || dj.name || 'Unknown')} <span class="mod-badge onhold">ON HOLD</span></h4>
                   <div class="mod-meta">
                     Since: ${date}
-                    ${dj.reason ? ` • Reason: ${dj.reason}` : ''}
+                    ${dj.reason ? ` • Reason: ${escapeHtml(dj.reason)}` : ''}
                   </div>
                 </div>
                 <div class="mod-actions">
-                  <button class="release-btn" data-action="releaseDJ" data-user-id="${dj.userId}" data-email="${dj.email || ''}">Release</button>
+                  <button class="release-btn" data-action="releaseDJ" data-user-id="${escapeHtml(dj.userId)}" data-email="${escapeHtml(dj.email || '')}">Release</button>
                 </div>
               </div>
             `;
@@ -3138,26 +3138,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           const isUrgent = requestDate && (Date.now() - requestDate.getTime()) > 3600000;
           
           return `
-            <div class="bypass-request-card ${isUrgent ? 'urgent' : ''}" data-request-id="${req.id}" data-user-id="${req.userId}">
+            <div class="bypass-request-card ${isUrgent ? 'urgent' : ''}" data-request-id="${escapeHtml(req.id)}" data-user-id="${escapeHtml(req.userId)}">
               <div class="bypass-request-info">
                 <h4>
-                  ${req.djName || req.userName || 'Unknown DJ'}
+                  ${escapeHtml(req.djName || req.userName || 'Unknown DJ')}
                   <span class="pending-badge">⏳ Pending</span>
                 </h4>
                 <div class="bypass-request-meta">
-                  <span>📧 ${req.email || req.userEmail || 'No email'}</span>
+                  <span>📧 ${escapeHtml(req.email || req.userEmail || 'No email')}</span>
                   <span>🕐 ${timeAgo}</span>
                 </div>
                 ${req.reason ? `
                   <div class="bypass-request-reason">
-                    <strong>Reason:</strong> ${req.reason}
+                    <strong>Reason:</strong> ${escapeHtml(req.reason)}
                   </div>
                 ` : ''}
                 ${req.stationName || req.relayUrl ? `
                   <div class="bypass-request-relay">
                     <strong>📡 Relay Request:</strong>
-                    ${req.stationName ? `<span class="relay-station">${req.stationName}</span>` : ''}
-                    ${req.relayUrl ? `<code class="relay-url">${req.relayUrl}</code>` : ''}
+                    ${req.stationName ? `<span class="relay-station">${escapeHtml(req.stationName)}</span>` : ''}
+                    ${req.relayUrl ? `<code class="relay-url">${escapeHtml(req.relayUrl)}</code>` : ''}
                   </div>
                 ` : ''}
                 <div class="bypass-request-stats">
@@ -3172,8 +3172,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                 </div>
               </div>
               <div class="bypass-request-actions">
-                <button class="approve-bypass-btn" data-action="approveBypassRequest" data-request-id="${req.id}" data-user-id="${req.userId}" data-email="${req.email || req.userEmail || ''}" data-dj-name="${(req.djName || req.userName || '').replace(/"/g, '&quot;')}">✓ Approve</button>
-                <button class="deny-bypass-btn" data-action="showDenyBypassModal" data-request-id="${req.id}" data-user-id="${req.userId}" data-email="${req.email || req.userEmail || ''}">✗ Deny</button>
+                <button class="approve-bypass-btn" data-action="approveBypassRequest" data-request-id="${escapeHtml(req.id)}" data-user-id="${escapeHtml(req.userId)}" data-email="${escapeHtml(req.email || req.userEmail || '')}" data-dj-name="${escapeHtml(req.djName || req.userName || '')}">✓ Approve</button>
+                <button class="deny-bypass-btn" data-action="showDenyBypassModal" data-request-id="${escapeHtml(req.id)}" data-user-id="${escapeHtml(req.userId)}" data-email="${escapeHtml(req.email || req.userEmail || '')}">✗ Deny</button>
               </div>
             </div>
           `;
@@ -3315,25 +3315,25 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           const eventDate = req.eventDate ? new Date(req.eventDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Unknown';
 
           return `
-            <div class="bypass-request-card" data-request-id="${req.id}">
+            <div class="bypass-request-card" data-request-id="${escapeHtml(req.id)}">
               <div class="bypass-request-info">
                 <h4>
-                  ${req.userName || 'Unknown DJ'}
+                  ${escapeHtml(req.userName || 'Unknown DJ')}
                   <span class="pending-badge">⏳ ${req.hoursRequested}h requested</span>
                 </h4>
                 <div class="bypass-request-meta">
-                  <span>📧 ${req.userEmail || 'No email'}</span>
+                  <span>📧 ${escapeHtml(req.userEmail || 'No email')}</span>
                   <span>📅 Event: ${eventDate}</span>
                   <span>🕐 Requested ${timeAgo}</span>
                 </div>
                 <div class="bypass-request-reason">
-                  <strong>Event:</strong> ${req.eventName || 'Untitled Event'}
-                  ${req.eventDescription ? `<br><strong>Details:</strong> ${req.eventDescription}` : ''}
+                  <strong>Event:</strong> ${escapeHtml(req.eventName || 'Untitled Event')}
+                  ${req.eventDescription ? `<br><strong>Details:</strong> ${escapeHtml(req.eventDescription)}` : ''}
                 </div>
               </div>
               <div class="bypass-request-actions">
-                <button class="approve-bypass-btn" data-action="approveEventRequest" data-request-id="${req.id}" data-dj-name="${(req.userName || '').replace(/"/g, '&quot;')}" data-hours="${req.hoursRequested}">✓ Approve ${req.hoursRequested}h</button>
-                <button class="deny-bypass-btn" data-action="rejectEventRequest" data-request-id="${req.id}" data-dj-name="${(req.userName || '').replace(/"/g, '&quot;')}">✗ Reject</button>
+                <button class="approve-bypass-btn" data-action="approveEventRequest" data-request-id="${escapeHtml(req.id)}" data-dj-name="${escapeHtml(req.userName || '')}" data-hours="${req.hoursRequested}">✓ Approve ${req.hoursRequested}h</button>
+                <button class="deny-bypass-btn" data-action="rejectEventRequest" data-request-id="${escapeHtml(req.id)}" data-dj-name="${escapeHtml(req.userName || '')}">✗ Reject</button>
               </div>
             </div>
           `;

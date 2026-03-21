@@ -48,11 +48,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <form id="artistForm" class="request-form">
             <div class="form-group">
               <label for="artistName">Artist / Label Name *</label>
-              <input type="text" id="artistName" required placeholder="Your artist or label name">
+              <input type="text" id="artistName" required aria-required="true" placeholder="Your artist or label name">
             </div>
             <div class="form-group">
               <label for="artistBio">Tell us about yourself *</label>
-              <textarea id="artistBio" required rows="3" placeholder="Brief description of your music, releases, previous work, etc." aria-label="DJ experience"></textarea>
+              <textarea id="artistBio" required aria-required="true" rows="3" placeholder="Brief description of your music, releases, previous work, etc." aria-label="DJ experience"></textarea>
             </div>
             <div class="form-group">
               <label for="artistLinks">Links (SoundCloud, Bandcamp, etc.)</label>
@@ -77,11 +77,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <form id="merchForm" class="request-form">
             <div class="form-group">
               <label for="businessName">Business / Brand Name *</label>
-              <input type="text" id="businessName" required placeholder="Your business or brand name">
+              <input type="text" id="businessName" required aria-required="true" placeholder="Your business or brand name">
             </div>
             <div class="form-group">
               <label for="merchDescription">What do you sell? *</label>
-              <textarea id="merchDescription" required rows="3" placeholder="Describe the merchandise you want to sell" aria-label="Merchandise description"></textarea>
+              <textarea id="merchDescription" required aria-required="true" rows="3" placeholder="Describe the merchandise you want to sell" aria-label="Merchandise description"></textarea>
             </div>
             <div class="form-group">
               <label for="merchWebsite">Website (optional)</label>
@@ -106,11 +106,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <form id="vinylForm" class="request-form">
             <div class="form-group">
               <label for="vinylStoreName">Store / Seller Name *</label>
-              <input type="text" id="vinylStoreName" required placeholder="Your store or seller name">
+              <input type="text" id="vinylStoreName" required aria-required="true" placeholder="Your store or seller name">
             </div>
             <div class="form-group">
               <label for="vinylDescription">Tell us about your collection *</label>
-              <textarea id="vinylDescription" required rows="3" placeholder="What kind of vinyl do you sell? Genres, era, condition, quantity..." aria-label="Vinyl collection description"></textarea>
+              <textarea id="vinylDescription" required aria-required="true" rows="3" placeholder="What kind of vinyl do you sell? Genres, era, condition, quantity..." aria-label="Vinyl collection description"></textarea>
             </div>
             <div class="form-group">
               <label for="vinylLocation">Location (City/Region)</label>

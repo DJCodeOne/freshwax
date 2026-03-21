@@ -133,62 +133,66 @@ export const GET: APIRoute = async ({ request, locals }) => {
       'pendingCrateSellerPayouts'
     ];
 
-    // Get completed payouts
-    const allPayouts: Record<string, unknown>[] = [];
-    for (const collection of payoutCollections) {
-      try {
-        const payouts = await queryCollection(collection, {
+    // Fetch all payout and pending collections in parallel (6 queries)
+    const [payoutResults, pendingResults] = await Promise.all([
+      Promise.all(payoutCollections.map(col =>
+        queryCollection(col, {
           filters: [{ field: 'recipientId', op: 'EQUAL', value: userId }],
           orderBy: { field: 'createdAt', direction: 'DESCENDING' },
           limit: 50
-        });
-
-        for (const p of payouts) {
-          const amount = p.amount || 0;
-          earnings.totalPaid += amount;
-
-          // Add type for display
-          const type = collection === 'payouts' ? 'Release' :
-                       collection === 'supplierPayouts' ? 'Merch' : 'Vinyl';
-          allPayouts.push({ ...p, type });
-
-          // Track by role
-          if (collection === 'payouts') {
-            earnings.breakdown.artist = (earnings.breakdown.artist || 0) + amount;
-          } else if (collection === 'supplierPayouts') {
-            earnings.breakdown.merchSupplier = (earnings.breakdown.merchSupplier || 0) + amount;
-          } else {
-            earnings.breakdown.vinylSeller = (earnings.breakdown.vinylSeller || 0) + amount;
-          }
-
-          // This month
-          if (p.createdAt && p.createdAt >= thisMonthStart) {
-            earnings.thisMonthPaid += amount;
-          }
-        }
-      } catch (e: unknown) {
-        // Collection might not exist yet
-      }
-    }
-
-    // Get pending payouts
-    const allPendingPayouts: Record<string, unknown>[] = [];
-    for (const collection of pendingCollections) {
-      try {
-        const pending = await queryCollection(collection, {
+        }).catch(() => [] as Record<string, unknown>[]) // Collection might not exist yet
+      )),
+      Promise.all(pendingCollections.map(col =>
+        queryCollection(col, {
           filters: [{ field: 'recipientId', op: 'EQUAL', value: userId }],
           orderBy: { field: 'createdAt', direction: 'DESCENDING' },
           limit: 20
-        });
+        }).catch(() => [] as Record<string, unknown>[]) // Collection might not exist yet
+      ))
+    ]);
 
-        for (const p of pending) {
-          earnings.totalPending += p.amount || 0;
-          const type = collection === 'pendingPayouts' ? 'Release' :
-                       collection === 'pendingSupplierPayouts' ? 'Merch' : 'Vinyl';
-          allPendingPayouts.push({ ...p, type });
+    // Process completed payouts
+    const allPayouts: Record<string, unknown>[] = [];
+    for (let i = 0; i < payoutCollections.length; i++) {
+      const collection = payoutCollections[i];
+      const payouts = payoutResults[i];
+
+      for (const p of payouts) {
+        const amount = p.amount || 0;
+        earnings.totalPaid += amount;
+
+        // Add type for display
+        const type = collection === 'payouts' ? 'Release' :
+                     collection === 'supplierPayouts' ? 'Merch' : 'Vinyl';
+        allPayouts.push({ ...p, type });
+
+        // Track by role
+        if (collection === 'payouts') {
+          earnings.breakdown.artist = (earnings.breakdown.artist || 0) + amount;
+        } else if (collection === 'supplierPayouts') {
+          earnings.breakdown.merchSupplier = (earnings.breakdown.merchSupplier || 0) + amount;
+        } else {
+          earnings.breakdown.vinylSeller = (earnings.breakdown.vinylSeller || 0) + amount;
         }
-      } catch (e: unknown) {
-        // Collection might not exist yet
+
+        // This month
+        if (p.createdAt && p.createdAt >= thisMonthStart) {
+          earnings.thisMonthPaid += amount;
+        }
+      }
+    }
+
+    // Process pending payouts
+    const allPendingPayouts: Record<string, unknown>[] = [];
+    for (let i = 0; i < pendingCollections.length; i++) {
+      const collection = pendingCollections[i];
+      const pending = pendingResults[i];
+
+      for (const p of pending) {
+        earnings.totalPending += p.amount || 0;
+        const type = collection === 'pendingPayouts' ? 'Release' :
+                     collection === 'pendingSupplierPayouts' ? 'Merch' : 'Vinyl';
+        allPendingPayouts.push({ ...p, type });
       }
     }
 

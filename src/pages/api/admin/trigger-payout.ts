@@ -175,6 +175,44 @@ export const POST: APIRoute = async ({ request, locals }) => {
       items: string[];
     }> = {};
 
+    // Collect unique release IDs to batch-fetch (avoid N+1)
+    const releaseIds = new Set<string>();
+    for (const item of items) {
+      if (item.type === 'merch') continue;
+      const releaseId = item.releaseId || item.id;
+      if (releaseId) releaseIds.add(releaseId);
+    }
+
+    // Batch-fetch all releases in parallel
+    const releaseEntries = await Promise.all(
+      [...releaseIds].map(async (id) => {
+        const doc = await getDocument('releases', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const releaseMap = new Map(releaseEntries.filter(([, doc]) => doc));
+
+    // Collect unique artist IDs from resolved releases
+    const artistIds = new Set<string>();
+    for (const item of items) {
+      if (item.type === 'merch') continue;
+      const releaseId = item.releaseId || item.id;
+      if (!releaseId) continue;
+      const release = releaseMap.get(releaseId);
+      if (!release) continue;
+      const itemArtistId = item.artistId || release.artistId || release.userId;
+      if (itemArtistId) artistIds.add(itemArtistId);
+    }
+
+    // Batch-fetch all artists in parallel
+    const artistEntries = await Promise.all(
+      [...artistIds].map(async (id) => {
+        const doc = await getDocument('artists', id).catch(() => null);
+        return [id, doc] as const;
+      })
+    );
+    const artistMap = new Map(artistEntries.filter(([, doc]) => doc));
+
     for (const item of items) {
       // Skip merch items
       if (item.type === 'merch') continue;
@@ -182,8 +220,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const releaseId = item.releaseId || item.id;
       if (!releaseId) continue;
 
-      // Get release to find artist
-      const release = await getDocument('releases', releaseId);
+      const release = releaseMap.get(releaseId);
       if (!release) continue;
 
       const itemArtistId = item.artistId || release.artistId || release.userId;
@@ -192,8 +229,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Filter by specific artist if provided
       if (artistId && itemArtistId !== artistId) continue;
 
-      // Get artist for payment details
-      const artist = await getDocument('artists', itemArtistId);
+      // Get artist for payment details (from pre-fetched map)
+      const artist = artistMap.get(itemArtistId) || null;
       const paypalEmail = artist?.paypalEmail || null;
       const stripeConnectId = artist?.stripeConnectId || null;
       const stripeConnectStatus = artist?.stripeConnectStatus || null;
