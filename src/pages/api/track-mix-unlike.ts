@@ -22,19 +22,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  // Auth check - require logged-in user
+  // Auth check - require verified Firebase auth (no cookie fallback to prevent IDOR)
   let userId: string | null = null;
   try {
     const result = await verifyRequestUser(request);
     if (result.userId) userId = result.userId;
   } catch (_e: unknown) {
-    /* non-critical: token verification failed, will try cookie fallback */
-  }
-  // Also try cookie fallback
-  if (!userId) {
-    const cookieHeader = request.headers.get('cookie') || '';
-    const match = cookieHeader.match(/(?:^|;\s*)customerId=([^;]+)/);
-    if (match?.[1]) userId = match[1];
+    // No valid auth token
   }
   if (!userId) {
     return ApiErrors.unauthorized('Authentication required');

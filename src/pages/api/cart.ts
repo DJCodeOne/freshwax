@@ -34,27 +34,14 @@ const CartSaveSchema = z.object({
 
 export const prerender = false;
 
-// Helper to get user ID - prefers verified Firebase auth, falls back to customerId cookie
-async function getUserId(request: Request, locals: App.Locals): Promise<string | null> {
-  // Try Firebase auth first (secure, verified identity)
+// Helper to get user ID - requires verified Firebase auth
+async function getUserId(request: Request): Promise<string | null> {
   try {
     const { userId: verifiedUserId } = await verifyRequestUser(request);
     if (verifiedUserId) return verifiedUserId;
   } catch (e: unknown) {
-    // No auth token - fall through to cookie
+    // No valid auth token
   }
-
-  // Fallback to customerId cookie (set at login, scoped to same user)
-  const cookieHeader = request.headers.get('cookie') || '';
-  const cookies = cookieHeader.split(';').map(c => c.trim());
-
-  for (const cookie of cookies) {
-    const [name, value] = cookie.split('=');
-    if (name === 'customerId' && value) {
-      return value;
-    }
-  }
-
   return null;
 }
 
@@ -66,7 +53,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const userId = await getUserId(request, locals);
+  const userId = await getUserId(request);
 
   if (!userId) {
     return ApiErrors.unauthorized('Not authenticated');
@@ -106,7 +93,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimitPost.retryAfter!);
   }
 
-  const userId = await getUserId(request, locals);
+  const userId = await getUserId(request);
 
   if (!userId) {
     return ApiErrors.unauthorized('Not authenticated');
@@ -157,7 +144,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimitDelete.retryAfter!);
   }
 
-  const userId = await getUserId(request, locals);
+  const userId = await getUserId(request);
 
   if (!userId) {
     return ApiErrors.unauthorized('Not authenticated');
