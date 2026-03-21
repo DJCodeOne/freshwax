@@ -174,9 +174,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
         // Update all sessions (note: batch operations not available in REST API)
-        await Promise.all(sessions.map(session =>
+        const results = await Promise.allSettled(sessions.map(session =>
           updateDocument('livestream-viewers', session.id, { isActive: false, leftAt: nowISO })
         ));
+        const failures = results.filter(r => r.status === 'rejected');
+        if (failures.length > 0) {
+          log.warn(`Failed to end ${failures.length}/${sessions.length} viewer sessions`);
+        }
         
         return successResponse({ message: 'Stream ended successfully' });
       }

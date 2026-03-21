@@ -641,7 +641,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="permission-desc">Prevents user from logging in</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="perm_disabled" ${isDisabled ? 'checked' : ''}>
+            <input type="checkbox" id="perm_disabled" aria-label="Account Disabled" ${isDisabled ? 'checked' : ''}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -656,7 +656,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="permission-desc">Full access to admin dashboard</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="perm_admin" ${isAdmin ? 'checked' : ''}>
+            <input type="checkbox" id="perm_admin" aria-label="Administrator" ${isAdmin ? 'checked' : ''}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -666,7 +666,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="permission-desc">Can purchase items</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="perm_customer" ${isCustomer ? 'checked' : ''}>
+            <input type="checkbox" id="perm_customer" aria-label="Customer" ${isCustomer ? 'checked' : ''}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -676,7 +676,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="permission-desc">Can upload releases</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="perm_artist" ${isArtist ? 'checked' : ''}>
+            <input type="checkbox" id="perm_artist" aria-label="Artist" ${isArtist ? 'checked' : ''}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -686,7 +686,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="permission-desc">Can go live and upload mixes</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="perm_dj" ${isDJ ? 'checked' : ''}>
+            <input type="checkbox" id="perm_dj" aria-label="DJ" ${isDJ ? 'checked' : ''}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -696,7 +696,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="permission-desc">Can supply merchandise</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="perm_supplier" ${isMerchSupplier ? 'checked' : ''}>
+            <input type="checkbox" id="perm_supplier" aria-label="Merch Supplier" ${isMerchSupplier ? 'checked' : ''}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -706,7 +706,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="permission-desc">Partner content is live</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="perm_approved" ${isApproved ? 'checked' : ''}>
+            <input type="checkbox" id="perm_approved" aria-label="Approved Partner" ${isApproved ? 'checked' : ''}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -721,7 +721,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="permission-desc">Allowed to buy items</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="perm_buy" ${canBuy ? 'checked' : ''}>
+            <input type="checkbox" id="perm_buy" aria-label="Can Purchase" ${canBuy ? 'checked' : ''}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -731,7 +731,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="permission-desc">Allowed to leave comments</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="perm_comment" ${canComment ? 'checked' : ''}>
+            <input type="checkbox" id="perm_comment" aria-label="Can Comment" ${canComment ? 'checked' : ''}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -741,7 +741,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="permission-desc">Allowed to rate releases</div>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" id="perm_rate" ${canRate ? 'checked' : ''}>
+            <input type="checkbox" id="perm_rate" aria-label="Can Rate" ${canRate ? 'checked' : ''}>
             <span class="toggle-slider"></span>
           </label>
         </div>

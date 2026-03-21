@@ -2,7 +2,7 @@
 // Refund handling for Stripe webhook
 
 import Stripe from 'stripe';
-import { getDocument, queryCollection, addDocument, updateDocument } from '../firebase-rest';
+import { getDocument, getDocumentsBatch, queryCollection, addDocument, updateDocument } from '../firebase-rest';
 import { createLogger } from '../api-utils';
 import { sendRefundNotificationEmail } from './emails';
 
@@ -123,6 +123,10 @@ export async function handleRefund(charge: Record<string, unknown>, stripeSecret
     let transfersReversed: Record<string, unknown>[] = [];
     let totalReversed = 0;
 
+    // Batch fetch artists to avoid N+1 queries in reversal and notification loops
+    const payoutArtistIds = [...new Set(payouts.map((p) => p.artistId).filter(Boolean))] as string[];
+    const artistMap = payoutArtistIds.length > 0 ? await getDocumentsBatch('artists', payoutArtistIds) : new Map<string, Record<string, unknown>>();
+
     for (const payout of payouts) {
       if (!payout.stripeTransferId) continue;
 
@@ -190,7 +194,7 @@ export async function handleRefund(charge: Record<string, unknown>, stripeSecret
 
         // Update artist's total earnings
         if (payout.artistId) {
-          const artist = await getDocument('artists', payout.artistId);
+          const artist = artistMap.get(payout.artistId as string) || null;
           if (artist) {
             await updateDocument('artists', payout.artistId, {
               totalEarnings: Math.max(0, (artist.totalEarnings || 0) - actualReversalAmount),
@@ -277,7 +281,7 @@ export async function handleRefund(charge: Record<string, unknown>, stripeSecret
       if (reversal.failed) continue;
 
       // Get artist email
-      const artist = await getDocument('artists', reversal.artistId);
+      const artist = artistMap.get(reversal.artistId as string) || null;
       if (artist?.email) {
         // Find original payout amount
         const payout = payouts.find((p: Record<string, unknown>) => p.stripeTransferId === reversal.transferId);

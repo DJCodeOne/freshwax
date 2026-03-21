@@ -1,7 +1,7 @@
 // src/lib/order/merch-processing.ts
 // Merch stock updates with optimistic concurrency
 
-import { getDocument, updateDocument, addDocument, clearCache, updateDocumentConditional, atomicIncrement } from '../firebase-rest';
+import { getDocument, getDocumentsBatch, updateDocument, addDocument, clearCache, updateDocumentConditional, atomicIncrement } from '../firebase-rest';
 import { d1UpsertMerch } from '../d1-catalog';
 import { log } from './types';
 import type { CartItem, VariantStockEntry } from './types';
@@ -11,6 +11,10 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
   const now = new Date().toISOString();
   const MAX_RETRIES = 3;
 
+  // Batch fetch merch products to avoid N+1 queries
+  const merchIds = [...new Set(items.filter(i => i.type === 'merch' && i.productId).map(i => i.productId!))];
+  const merchMap = merchIds.length > 0 ? await getDocumentsBatch('merch', merchIds) : new Map<string, Record<string, unknown>>();
+
   for (const item of items) {
     if (item.type === 'merch' && item.productId) {
       let stockUpdated = false;
@@ -19,7 +23,8 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
         try {
           log.info('[order-utils] Updating stock for merch item:', item.name, 'qty:', item.quantity, 'attempt:', attempt + 1);
 
-          const productData = await getDocument('merch', item.productId);
+          // Use batch result on first attempt, re-fetch on retries (for fresh _updateTime after conflict)
+          const productData = attempt === 0 ? (merchMap.get(item.productId) || null) : await getDocument('merch', item.productId);
 
           if (!productData) break;
 

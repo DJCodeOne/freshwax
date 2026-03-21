@@ -80,6 +80,7 @@ export default [
       '@typescript-eslint/no-non-null-asserted-optional-chain': 'warn',
       '@typescript-eslint/no-this-alias': 'warn',
       '@typescript-eslint/prefer-as-const': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
 ];

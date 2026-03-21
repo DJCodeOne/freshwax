@@ -289,7 +289,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       if (rolePromises.length > 0) {
-        await Promise.all(rolePromises);
+        const results = await Promise.allSettled(rolePromises);
+        const failures = results.filter(r => r.status === 'rejected');
+        if (failures.length > 0) {
+          log.warn(`Failed to save ${failures.length}/${rolePromises.length} role requests`);
+        }
       }
 
       return successResponse({ created: true });

@@ -68,7 +68,7 @@ function formatDate(date: unknown): string {
   try {
     const d = new Date(date as string | number);
     return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0];
-  } catch {
+  } catch { /* intentional: invalid date value — fall back to today */
     return new Date().toISOString().split('T')[0];
   }
 }

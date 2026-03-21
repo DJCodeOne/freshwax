@@ -140,7 +140,7 @@ const mixesItemList = {
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
-<Layout title="DJ Mixes - Jungle & DnB Sets" description="Listen to DJ mixes on Fresh Wax. Jungle, drum & bass, and breakbeat sets from UK underground DJs." itemList={mixesItemList}>
+<Layout title="DJ Mixes - Jungle & DnB Sets" description="Listen to DJ mixes on Fresh Wax with free streaming and download options. Jungle, drum & bass, and breakbeat sets from top DJs in the UK underground." itemList={mixesItemList}>
   {firstMixArtwork && <link rel="preload" href={firstMixArtwork} as="image" slot="head" />}
   <Header />
 
@@ -693,7 +693,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           chartList.innerHTML = data.chart.slice(0, 10).map((mix, index) => `
             <a href="/dj-mix/${mix.id}/" class="chart-item">
               <span class="chart-position">${index + 1}</span>
-              <img src="${mix.thumbUrl || mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}" alt="${escapeHtml(mix.title)} artwork" class="chart-artwork" width="48" height="48" loading="lazy" decoding="async" />
+              <img src="${escapeHtml(mix.thumbUrl || mix.artwork_url || mix.artworkUrl || '/place-holder.webp')}" alt="${escapeHtml(mix.title)} artwork" class="chart-artwork" width="48" height="48" loading="lazy" decoding="async" />
               <div class="chart-info">
                 <span class="chart-title">${escapeHtml(mix.title || 'Untitled')}</span>
                 <span class="chart-dj">${escapeHtml(mix.dj_name || mix.djName || 'Unknown DJ')}</span>

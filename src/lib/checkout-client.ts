@@ -394,11 +394,11 @@ export function init() {
 
     try {
       const response = await fetch(`/api/postcode-lookup/?postcode=${encodeURIComponent(postcode)}`);
+      if (!response.ok) {
+        throw new Error('Postcode not found');
+      }
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Postcode not found');
-      }
 
       // Postcode validated! Auto-fill the location fields
       document.getElementById('postcode').value = data.postcode;
@@ -1082,6 +1082,9 @@ export function init() {
           body: JSON.stringify(orderData)
         });
 
+        if (!response.ok) {
+          throw new Error('Failed to create PayPal order');
+        }
         const result = await response.json();
 
         if (!result.success) {
@@ -1120,6 +1123,9 @@ export function init() {
             })
           });
 
+          if (!response.ok) {
+            throw new Error('Payment capture failed');
+          }
           const result = await response.json();
 
           if (result.success) {
@@ -1421,6 +1427,9 @@ export function init() {
       const response = await fetch('/api/get-user-type/?uid=' + uid, {
         headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
       });
+      if (!response.ok) {
+        throw new Error('Failed to check user type');
+      }
       const data = await response.json();
       return data;
     } catch (e: unknown){

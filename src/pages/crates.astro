@@ -1405,7 +1405,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       <button class="collection-box" data-collection="${c.id}">
         <div class="collection-box-inner">
           <span class="collection-number">Collection ${c.collectionNumber || '1'}</span>
-          <span class="collection-store">${c.storeName || 'Unknown Store'}</span>
+          <span class="collection-store">${escapeHtml(c.storeName || 'Unknown Store')}</span>
         </div>
       </button>
     `).join('');
@@ -1659,7 +1659,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             <div class="vinyl-left-col">
               <div class="vinyl-artwork">
                 ${imageUrl
-                  ? `<img src="${imageUrl}" alt="${escapeHtml(listing.title)}" width="200" height="200" loading="lazy" decoding="async" data-fallback="show-next" />
+                  ? `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(listing.title)}" width="200" height="200" loading="lazy" decoding="async" data-fallback="show-next" />
                      <div class="vinyl-artwork-placeholder" style="display:none;">📀</div>`
                   : '<div class="vinyl-artwork-placeholder">📀</div>'}
                 ${hasDiscount ? `<div class="sale-badge">${listing.discountPercent}% OFF</div>` : ''}

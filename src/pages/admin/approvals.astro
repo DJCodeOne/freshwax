@@ -452,7 +452,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <div class="request-card vinyl-card" data-vinyl-id="${listing.id}">
           <div class="vinyl-preview">
             ${listing.images && listing.images.length > 0
-              ? `<img src="${listing.images[0]}" alt="${escapeHtml(listing.title || '')}" class="vinyl-thumb" />`
+              ? `<img src="${escapeHtml(listing.images[0])}" alt="${escapeHtml(listing.title || '')}" class="vinyl-thumb" />`
               : '<div class="vinyl-thumb-placeholder">📀</div>'}
           </div>
           <div class="request-info">

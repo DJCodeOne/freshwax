@@ -1,7 +1,7 @@
 // src/lib/order/refund.ts
 // Stock refund logic for cancelled/returned orders
 
-import { getDocument, updateDocument, addDocument, clearCache, updateDocumentConditional, atomicIncrement } from '../firebase-rest';
+import { getDocument, getDocumentsBatch, updateDocument, addDocument, clearCache, updateDocumentConditional, atomicIncrement } from '../firebase-rest';
 import { d1UpsertMerch } from '../d1-catalog';
 import { log } from './types';
 import type { CartItem, VariantStockEntry } from './types';
@@ -11,13 +11,21 @@ export async function refundOrderStock(orderId: string, items: CartItem[], order
   const now = new Date().toISOString();
   const failedRefunds: Array<{ item: string; type: string; error: string }> = [];
 
+  // Batch fetch merch products and releases to avoid N+1 queries
+  const merchIds = [...new Set(items.filter(i => i.type === 'merch' && i.productId).map(i => i.productId!))];
+  const releaseIds = [...new Set(items.filter(i => i.type === 'vinyl' && (i.releaseId || i.productId)).map(i => (i.releaseId || i.productId)!))];
+  const [merchMap, releaseMap] = await Promise.all([
+    merchIds.length > 0 ? getDocumentsBatch('merch', merchIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
+    releaseIds.length > 0 ? getDocumentsBatch('releases', releaseIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
+  ]);
+
   for (const item of items) {
     // Refund merch stock
     if (item.type === 'merch' && item.productId) {
       try {
         log.info('[order-utils] Refunding merch stock for:', item.name, 'qty:', item.quantity);
 
-        const productData = await getDocument('merch', item.productId);
+        const productData = merchMap.get(item.productId) || null;
 
         if (productData) {
           const variantStock = productData.variantStock || {};
@@ -118,7 +126,7 @@ export async function refundOrderStock(orderId: string, items: CartItem[], order
       try {
         log.info('[order-utils] Refunding vinyl stock for:', item.name, 'qty:', item.quantity);
 
-        const releaseData = await getDocument('releases', releaseId);
+        const releaseData = releaseMap.get(releaseId) || null;
 
         if (releaseData) {
           const previousStock = releaseData.vinylStock || 0;

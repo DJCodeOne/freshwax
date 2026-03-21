@@ -24,7 +24,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
       <!-- Day Navigation -->
       <div class="day-nav">
-        <button id="prevDay" class="nav-btn">←</button>
+        <button id="prevDay" class="nav-btn" aria-label="Previous day">←</button>
         <div class="day-selector">
           <button class="day-btn" data-offset="-1">Yesterday</button>
           <button class="day-btn active today-marker" data-offset="0">Today</button>
@@ -34,7 +34,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <button class="day-btn" data-offset="4"></button>
           <button class="day-btn" data-offset="5"></button>
         </div>
-        <button id="nextDay" class="nav-btn">→</button>
+        <button id="nextDay" class="nav-btn" aria-label="Next day">→</button>
       </div>
 
       <!-- Selected Date Display -->

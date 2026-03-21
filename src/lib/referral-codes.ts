@@ -89,7 +89,7 @@ export async function getReferralCode(kv: KVNamespace, code: string): Promise<Re
   if (!data) return null;
   try {
     return JSON.parse(data) as ReferralCode;
-  } catch {
+  } catch { /* intentional: corrupted KV data — treat as missing code */
     return null;
   }
 }

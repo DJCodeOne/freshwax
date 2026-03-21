@@ -2,7 +2,7 @@
 // Dispute handling for Stripe webhook
 
 import Stripe from 'stripe';
-import { getDocument, queryCollection, addDocument, updateDocument, atomicIncrement } from '../firebase-rest';
+import { getDocument, getDocumentsBatch, queryCollection, addDocument, updateDocument, atomicIncrement } from '../firebase-rest';
 import { createLogger } from '../api-utils';
 
 const log = createLogger('stripe-webhook-disputes');
@@ -50,6 +50,10 @@ export async function handleDisputeCreated(dispute: Record<string, unknown>, str
 
       // Found transfers to potentially reverse
 
+
+      // Batch fetch artists to avoid N+1 queries
+      const artistIds = [...new Set(transfers.data.map(t => t.metadata?.artistId).filter(Boolean))] as string[];
+      const artistMap = artistIds.length > 0 ? await getDocumentsBatch('artists', artistIds) : new Map<string, Record<string, unknown>>();
       // Reverse each transfer to recover funds
       for (const transfer of transfers.data) {
         // Skip if already fully reversed
@@ -102,7 +106,7 @@ export async function handleDisputeCreated(dispute: Record<string, unknown>, str
           // Update artist's total earnings
           const artistId = transfer.metadata?.artistId;
           if (artistId) {
-            const artist = await getDocument('artists', artistId);
+            const artist = artistMap.get(artistId) || null;
             if (artist) {
               await updateDocument('artists', artistId, {
                 totalEarnings: Math.max(0, (artist.totalEarnings || 0) - reversedAmount),
@@ -188,10 +192,14 @@ export async function handleDisputeClosed(dispute: Record<string, unknown>, stri
 
       const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
+      // Batch fetch artists to avoid N+1 queries
+      const retransferArtistIds = [...new Set((disputeRecord.transfersReversed || []).map((t) => t.artistId).filter(Boolean))] as string[];
+      const retransferArtistMap = retransferArtistIds.length > 0 ? await getDocumentsBatch('artists', retransferArtistIds) : new Map<string, Record<string, unknown>>();
+
       for (const reversedTransfer of disputeRecord.transfersReversed) {
         try {
           // Get the artist's current Stripe Connect ID
-          const artist = await getDocument('artists', reversedTransfer.artistId);
+          const artist = retransferArtistMap.get(reversedTransfer.artistId) || null;
 
           if (!artist?.stripeConnectId || artist.stripeConnectStatus !== 'active') {
             // Artist no longer has active Connect - storing as pending

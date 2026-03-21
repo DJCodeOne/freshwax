@@ -40,7 +40,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       let data: Record<string, unknown>;
       try {
         data = JSON.parse(result.data as string);
-      } catch {
+      } catch { /* intentional: malformed JSON in D1 data column — return error response */
         return ApiErrors.serverError('Failed to parse release data');
       }
       return jsonResponse({

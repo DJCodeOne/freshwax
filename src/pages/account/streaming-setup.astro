@@ -59,7 +59,7 @@ const firebaseConfig = {
       <!-- Speed Test Results (shown when test completes) -->
       <div id="speedResultsCard" class="speed-results-card hidden">
         <div class="results-header">
-          <h3>📊 Speed Test Results</h3>
+          <h2>📊 Speed Test Results</h2>
           <button id="closeResultsBtn" class="close-results-btn" aria-label="Close results">✕</button>
         </div>
         <div class="speed-results-grid">
@@ -74,7 +74,7 @@ const firebaseConfig = {
         </div>
         
         <div class="recommendation-section">
-          <h4>Recommended Settings</h4>
+          <h3>Recommended Settings</h3>
           
           <div class="rec-card" id="videoRec">
             <div class="rec-header">
@@ -104,7 +104,7 @@ const firebaseConfig = {
       <div id="testingOverlay" class="testing-overlay hidden">
         <div class="testing-content">
           <div class="speed-spinner"></div>
-          <h3>Testing your connection...</h3>
+          <h2>Testing your connection...</h2>
           <div class="countdown-display">
             <span id="testCountdown">10</span>
             <span>seconds remaining</span>
@@ -398,7 +398,7 @@ const firebaseConfig = {
       </div>
 
       <!-- Relay Sources Modal -->
-      <div id="relaySourcesModal" class="modal-overlay hidden">
+      <div id="relaySourcesModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Select radio station">
         <div class="modal-content">
           <div class="modal-header">
             <h3>Select Radio Station</h3>
@@ -530,7 +530,7 @@ const firebaseConfig = {
     margin-bottom: 1rem;
   }
   
-  .results-header h3 {
+  .results-header h2 {
     font-size: 1.1rem;
     color: #fff;
   }
@@ -583,7 +583,7 @@ const firebaseConfig = {
     color: #fff;
   }
   
-  .recommendation-section h4 {
+  .recommendation-section h3 {
     font-size: 0.95rem;
     margin-bottom: 0.75rem;
     color: #fff;
@@ -660,7 +660,7 @@ const firebaseConfig = {
     margin: 0 auto 1.5rem;
   }
   
-  .testing-content h3 {
+  .testing-content h2 {
     font-size: 1.25rem;
     margin-bottom: 1rem;
     color: #fff;

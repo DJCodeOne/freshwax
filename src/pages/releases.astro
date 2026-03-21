@@ -65,7 +65,7 @@ const releaseItemList = {
 };
 ---
 
-<Layout title="All Releases - Jungle & DnB Music" description="Browse all jungle and drum & bass releases. Digital downloads and limited edition vinyl from Fresh Wax." itemList={releaseItemList}>
+<Layout title="All Releases - Jungle & DnB Music" description="Browse all jungle and drum & bass releases on Fresh Wax. Shop vinyl, digital downloads, and discover new and classic tracks from underground labels." itemList={releaseItemList}>
   {firstCoverArt && <link rel="preload" href={firstCoverArt} as="image" slot="head" />}
   <Header />
   
@@ -311,7 +311,14 @@ const releaseItemList = {
         }
 
         const label = btn.getAttribute('data-label');
-        const releasesData = JSON.parse(btn.getAttribute('data-releases') || '[]');
+        var releasesData = [];
+        try {
+          releasesData = JSON.parse(btn.getAttribute('data-releases') || '[]');
+        } catch (e) {
+          showToast('Failed to load releases data', 'error');
+          btn.disabled = false;
+          return;
+        }
         const totalPrice = parseFloat(btn.getAttribute('data-total-price') || '0');
 
         if (releasesData.length === 0) {

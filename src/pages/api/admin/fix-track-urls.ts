@@ -26,7 +26,7 @@ async function getToken(serviceAccountKey: string): Promise<string> {
   let key: Record<string, unknown>;
   try {
     key = JSON.parse(serviceAccountKey);
-  } catch {
+  } catch { /* intentional: invalid JSON in service account key — re-throw with clear message */
     throw new Error('Invalid service account key format');
   }
   const now = Math.floor(Date.now() / 1000);

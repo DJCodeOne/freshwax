@@ -30,7 +30,7 @@ function extractKeyFromUrl(url: string): string | null {
     }
 
     return key;
-  } catch {
+  } catch { /* intentional: malformed URL — return null to signal invalid input */
     return null;
   }
 }
