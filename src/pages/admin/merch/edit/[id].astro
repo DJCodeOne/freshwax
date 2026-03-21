@@ -534,6 +534,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 </div>
 
+<style>
+  table {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;
+  }
+</style>
+
 <script define:vars={{ id, product }} nonce={nonce}>
   // Get initial images array
   let images = [];

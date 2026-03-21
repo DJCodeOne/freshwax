@@ -307,6 +307,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <Fragment slot="scripts">
+    <style>
+      table {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 500px;
+      }
+    </style>
     <script is:inline nonce={nonce}>
       const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
@@ -588,7 +594,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             </div>
             <div class="modal-body">
               <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Courier</label>
+                <label for="trackingCourier" style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Courier</label>
                 <select id="trackingCourier" class="form-select" style="width: 100%; padding: 0.5rem;">
                   <option value="">Select courier...</option>
                   <option value="Royal Mail">Royal Mail</option>
@@ -600,15 +606,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                 </select>
               </div>
               <div id="customCourierWrap" style="display: none; margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Courier Name</label>
+                <label for="customCourierName" style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Courier Name</label>
                 <input type="text" id="customCourierName" class="form-input" placeholder="Enter courier name" style="width: 100%;" />
               </div>
               <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Tracking Number</label>
+                <label for="trackingNumber" style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Tracking Number</label>
                 <input type="text" id="trackingNumber" class="form-input" placeholder="e.g. AB123456789GB" style="width: 100%;" />
               </div>
               <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Tracking URL <span style="color: #888; font-weight: 400;">(optional, auto-generated if left blank)</span></label>
+                <label for="trackingUrl" style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Tracking URL <span style="color: #888; font-weight: 400;">(optional, auto-generated if left blank)</span></label>
                 <input type="url" id="trackingUrl" class="form-input" placeholder="https://..." style="width: 100%;" />
               </div>
             </div>

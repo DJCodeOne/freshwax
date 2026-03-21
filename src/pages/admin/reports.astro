@@ -608,7 +608,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       </div>
       <div class="detail-row">
         <div class="detail-label">Admin Notes</div>
-        <textarea class="admin-notes-input" id="admin-notes" placeholder="Add notes...">${escapeHtml(report.adminNotes || '')}</textarea>
+        <textarea class="admin-notes-input" id="admin-notes" aria-label="Admin notes" placeholder="Add notes...">${escapeHtml(report.adminNotes || '')}</textarea>
       </div>
     `;
 

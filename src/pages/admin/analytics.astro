@@ -562,6 +562,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     text-overflow: ellipsis;
   }
   
+  table {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;
+  }
+
   @media print {
     /* Page setup */
     @page {

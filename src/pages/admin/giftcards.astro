@@ -212,7 +212,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="modal-content">
         <div class="modal-header">
           <h3>User Credit History</h3>
-          <button class="close-modal">&times;</button>
+          <button class="close-modal" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body" id="userModalBody">
           Loading...
@@ -225,7 +225,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="modal-content modal-wide">
         <div class="modal-header">
           <h3>Gift Card Details</h3>
-          <button class="close-card-modal">&times;</button>
+          <button class="close-card-modal" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body" id="cardModalBody">
           Loading...
@@ -240,7 +240,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="modal-content">
         <div class="modal-header">
           <h3>Resend Gift Card Email</h3>
-          <button class="close-resend-modal">&times;</button>
+          <button class="close-resend-modal" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body">
           <form id="resendEmailForm">
@@ -267,6 +267,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 </AdminLayout>
 
+<style>
+  table {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;
+  }
+</style>
 
 <script>
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}

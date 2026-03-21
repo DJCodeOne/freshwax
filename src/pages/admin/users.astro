@@ -338,6 +338,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </Fragment>
 
   <Fragment slot="scripts">
+    <style>
+      table {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 500px;
+      }
+    </style>
     <script type="module">
       function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
       import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';

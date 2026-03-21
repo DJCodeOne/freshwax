@@ -55,7 +55,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     .table-card { background: #fff; border: 3px solid #000; overflow-x: auto; }
     .table-card h2 { font-size: 16px; font-weight: 900; text-transform: uppercase; padding: 20px 25px 15px; border-bottom: 2px solid #000; }
 
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; content-visibility: auto; contain-intrinsic-size: auto 500px; }
     th { background: #f9fafb; padding: 12px 15px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; font-weight: 700; border-bottom: 2px solid #eee; white-space: nowrap; }
     td { padding: 12px 15px; border-bottom: 1px solid #eee; }
     tr:hover td { background: #f9fafb; }

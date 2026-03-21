@@ -283,6 +283,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   
   <div class="toast" id="toast"></div>
 
+  <style>
+    table {
+      content-visibility: auto;
+      contain-intrinsic-size: auto 500px;
+    }
+  </style>
+
   <script>
     import { escapeHtml } from '../../../lib/escape-html';
     let allProducts = [];

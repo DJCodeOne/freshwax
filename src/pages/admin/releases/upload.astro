@@ -28,22 +28,22 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   <h4 style="margin-bottom:1rem">Or upload individual files:</h4>
 
   <div style="margin-bottom:1rem">
-    <label style="display:block;margin-bottom:0.25rem;font-weight:500">Artist Name</label>
+    <label for="artist" style="display:block;margin-bottom:0.25rem;font-weight:500">Artist Name</label>
     <input id="artist" placeholder="Artist" class="input-field" style="width:100%">
   </div>
 
   <div style="margin-bottom:1rem">
-    <label style="display:block;margin-bottom:0.25rem;font-weight:500">Release Name</label>
+    <label for="release" style="display:block;margin-bottom:0.25rem;font-weight:500">Release Name</label>
     <input id="release" placeholder="Release" class="input-field" style="width:100%">
   </div>
 
   <div style="margin-bottom:1rem">
-    <label style="display:block;margin-bottom:0.25rem;font-weight:500">Cover Art</label>
+    <label for="cover" style="display:block;margin-bottom:0.25rem;font-weight:500">Cover Art</label>
     <input type="file" id="cover" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" style="display:block">
   </div>
 
   <div style="margin-bottom:1rem">
-    <label style="display:block;margin-bottom:0.25rem;font-weight:500">Audio Tracks</label>
+    <label for="tracks" style="display:block;margin-bottom:0.25rem;font-weight:500">Audio Tracks</label>
     <input type="file" id="tracks" accept="audio/mpeg,audio/wav,audio/flac,audio/aiff,audio/mp4,.mp3,.wav,.flac,.aiff,.m4a" multiple style="display:block">
     <small style="color:#666">Select multiple audio files (MP3, WAV, FLAC, AIFF, M4A)</small>
   </div>

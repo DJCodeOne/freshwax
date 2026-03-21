@@ -93,7 +93,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <!-- Left column: Requirements -->
         <div class="eligibility-left">
           <div class="eligibility-requirements">
-            <h3>To Access DJ Lobby, You Need:</h3>
+            <h2>To Access DJ Lobby, You Need:</h2>
             <div class="requirement-list">
               <div id="reqMixes" class="requirement">
                 <span class="req-icon">❌</span>
@@ -1140,7 +1140,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <div class="modal-content relay-modal">
           <div class="modal-header">
             <h3>Select Radio Station</h3>
-            <button class="modal-close-btn" id="closeRelayModal">&times;</button>
+            <button class="modal-close-btn" id="closeRelayModal" aria-label="Close relay modal">&times;</button>
           </div>
           <div class="modal-body">
             <p class="modal-hint">Select a station you're currently streaming on to relay through Fresh Wax</p>
@@ -1167,7 +1167,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <div class="modal-content share-modal">
           <div class="modal-header">
             <h3>Share Your Stream</h3>
-            <button class="modal-close-btn" id="closeShareModal">&times;</button>
+            <button class="modal-close-btn" id="closeShareModal" aria-label="Close share modal">&times;</button>
           </div>
           <div class="modal-body">
             <!-- Stream Info Preview -->
@@ -1316,7 +1316,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <span class="dm-notif-icon">💬</span>
         <span id="dmNotifText">New DM from DJ Name</span>
         <button id="dmNotifOpenBtn" class="dm-notif-open">Open</button>
-        <button id="dmNotifDismissBtn" class="dm-notif-dismiss">✕</button>
+        <button id="dmNotifDismissBtn" class="dm-notif-dismiss" aria-label="Dismiss notification">✕</button>
       </div>
     </div>
   </div>

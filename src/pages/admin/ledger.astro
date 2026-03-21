@@ -478,6 +478,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   .adjusted-row td {
     border-top: 1px solid rgba(234, 179, 8, 0.3);
   }
+
+  table {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;
+  }
 </style>
 
 <script>

@@ -346,6 +346,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   .btn-save:hover {
     background: #15803d;
   }
+
+  table {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 500px;
+  }
 </style>
 
 <script is:inline nonce={nonce}>
@@ -596,7 +601,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="permission-group">
         <h3>Contact Info</h3>
         <div style="margin-bottom: 1rem;">
-          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Phone Number</label>
+          <label for="edit_phone" style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Phone Number</label>
           <input type="tel" id="edit_phone" value="${escapeHtml(user.phone || '')}" placeholder="Enter phone number"
             style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
         </div>
@@ -605,29 +610,29 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="permission-group">
         <h3>Address</h3>
         <div style="margin-bottom: 0.75rem;">
-          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Address Line 1</label>
+          <label for="edit_address1" style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Address Line 1</label>
           <input type="text" id="edit_address1" value="${escapeHtml(user.address?.line1 || user.address?.address1 || '')}" placeholder="Street address"
             style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
         </div>
         <div style="margin-bottom: 0.75rem;">
-          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Address Line 2</label>
+          <label for="edit_address2" style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Address Line 2</label>
           <input type="text" id="edit_address2" value="${escapeHtml(user.address?.line2 || user.address?.address2 || '')}" placeholder="Flat, unit, etc. (optional)"
             style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
           <div>
-            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">City</label>
+            <label for="edit_city" style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">City</label>
             <input type="text" id="edit_city" value="${escapeHtml(user.address?.city || '')}" placeholder="City"
               style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
           </div>
           <div>
-            <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Postcode</label>
+            <label for="edit_postcode" style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Postcode</label>
             <input type="text" id="edit_postcode" value="${escapeHtml(user.address?.postcode || user.address?.postalCode || '')}" placeholder="Postcode"
               style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
           </div>
         </div>
         <div>
-          <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Country</label>
+          <label for="edit_country" style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Country</label>
           <input type="text" id="edit_country" value="${escapeHtml(user.address?.country || 'United Kingdom')}" placeholder="Country"
             style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
         </div>
