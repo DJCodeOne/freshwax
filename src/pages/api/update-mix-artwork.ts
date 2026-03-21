@@ -7,7 +7,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createS3Client } from '../../lib/s3-client';
 import { getDocument, updateDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
-import { kvDelete } from '../../lib/kv-cache';
+import { invalidateMixesKVCache } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 
 const log = createLogger('update-mix-artwork');
@@ -142,10 +142,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Invalidate in-memory and KV caches so all edge workers serve fresh data
     invalidateMixesCache();
-    const MIXES_CACHE = { prefix: 'mixes' };
-    await kvDelete('public:50', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('public:20', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('public:100', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateMixesKVCache();
 
     return successResponse({ artworkUrl,
       message: 'Artwork updated successfully' });

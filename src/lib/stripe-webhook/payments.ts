@@ -49,6 +49,8 @@ export async function processArtistPayments(params: {
 
     // Cache for release lookups
     const releaseCache: Record<string, Record<string, unknown>> = {};
+    // Cache for artist lookups
+    const artistCache: Record<string, Record<string, unknown>> = {};
 
     for (const item of items) {
       // Skip merch items - they go to suppliers, not artists
@@ -68,11 +70,14 @@ export async function processArtistPayments(params: {
       const artistId = item.artistId || release.artistId || release.userId;
       if (!artistId) continue;
 
-      let artist = null;
-      try {
-        artist = await getDocument('artists', artistId);
-      } catch (e: unknown) {
-        // Artist not found
+      let artist = artistCache[artistId] || null;
+      if (!artist) {
+        try {
+          artist = await getDocument('artists', artistId);
+          if (artist) artistCache[artistId] = artist;
+        } catch (e: unknown) {
+          // Artist not found
+        }
       }
 
       const itemTotal = (item.price || 0) * (item.quantity || 1);

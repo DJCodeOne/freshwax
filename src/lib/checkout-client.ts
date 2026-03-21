@@ -898,7 +898,7 @@ export function init() {
         const firstInvalid = form.querySelector(':invalid');
         if (firstInvalid) {
           firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          setTimeout(() => { try { firstInvalid.focus(); } catch(_e){} }, 300);
+          setTimeout(() => { try { firstInvalid.focus(); } catch(_e: unknown){} }, 300);
         }
         errorMsg.textContent = 'Please fill in all required fields before paying';
         errorMsg.style.display = 'block';

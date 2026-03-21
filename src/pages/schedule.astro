@@ -770,7 +770,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       html += `
         <div class="${cellClass}" data-hour="${hour}">
           <div class="hour-time">${formatHour(hour)}</div>
-          ${djText ? `<div class="hour-dj">${djText}</div>` : ''}
+          ${djText ? `<div class="hour-dj">${escapeHtml(djText)}</div>` : ''}
           ${statusText ? `<div class="hour-status">${statusText}</div>` : ''}
         </div>
       `;

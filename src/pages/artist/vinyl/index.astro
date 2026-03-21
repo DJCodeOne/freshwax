@@ -125,7 +125,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       document.getElementById('listingsLoadingState').innerHTML = `
         <div class="empty-icon">❌</div>
         <h3>Error loading listings</h3>
-        <p>${error instanceof Error ? error.message : String(error)}</p>
+        <p>${escapeHtml(error instanceof Error ? error.message : String(error))}</p>
       `;
     }
   }
@@ -195,10 +195,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <span class="status-badge ${statusClass}">${statusLabel}</span>
           </div>
           <div class="listing-info">
-            <h3>${l.artist || 'Unknown Artist'}</h3>
-            <p class="title">${l.title || 'Untitled'}</p>
+            <h3>${escapeHtml(l.artist || 'Unknown Artist')}</h3>
+            <p class="title">${escapeHtml(l.title || 'Untitled')}</p>
             <div class="meta">
-              <span class="condition">${l.mediaCondition || 'N/A'} / ${l.sleeveCondition || 'N/A'}</span>
+              <span class="condition">${escapeHtml(l.mediaCondition || 'N/A')} / ${escapeHtml(l.sleeveCondition || 'N/A')}</span>
               <span class="price">£${(l.price || 0).toFixed(2)}</span>
             </div>
             <div class="actions">

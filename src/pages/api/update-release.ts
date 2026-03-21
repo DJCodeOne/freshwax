@@ -6,7 +6,7 @@ import { saUpdateDocument, getServiceAccountKey } from '../../lib/firebase-servi
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1UpsertRelease } from '../../lib/d1-catalog';
-import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+import { invalidateReleasesKVCache } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const updateReleaseSchema = z.object({
@@ -200,8 +200,7 @@ export async function POST({ request, locals }: { request: Request; locals: App.
     }
 
     // Invalidate KV cache for releases list so all edge workers serve fresh data
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateReleasesKVCache();
 
     log.info('[update-release] Success - Update complete');
 

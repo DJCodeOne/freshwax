@@ -447,7 +447,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           topProductsEl.innerHTML = topProducts.map(([name, data]) => `
             <div class="top-item">
               <div class="top-item-info">
-                <span class="top-item-name">${name}</span>
+                <span class="top-item-name">${escapeHtml(name)}</span>
                 <span class="top-item-units">${data.units} units</span>
               </div>
               <span class="top-item-revenue">£${data.revenue.toFixed(2)}</span>
@@ -463,7 +463,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           tableBody.innerHTML = recentSales.slice(0, 10).map(sale => `
             <tr>
               <td>${sale.date.toLocaleDateString('en-GB')}</td>
-              <td>${sale.product}</td>
+              <td>${escapeHtml(sale.product)}</td>
               <td>${sale.quantity}</td>
               <td>£${sale.revenue.toFixed(2)}</td>
             </tr>

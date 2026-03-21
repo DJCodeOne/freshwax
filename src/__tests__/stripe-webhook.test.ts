@@ -41,6 +41,8 @@ vi.mock('../lib/firebase-rest', () => ({
 vi.mock('../lib/kv-cache', () => ({
   kvDelete: vi.fn().mockResolvedValue(undefined),
   CACHE_CONFIG: { RELEASES: {}, MERCH: {} },
+  invalidateReleasesKVCache: vi.fn().mockResolvedValue(undefined),
+  invalidateMixesKVCache: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock order-utils

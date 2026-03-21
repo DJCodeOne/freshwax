@@ -7,7 +7,7 @@ import { getDocument, arrayUnion, clearCache } from '../../lib/firebase-rest';
 import { containsProfanity } from '../../lib/validation';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1AddComment } from '../../lib/d1-catalog';
-import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+import { invalidateReleasesKVCache } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 import { logActivity } from '../../lib/activity-feed';
 
@@ -141,8 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     clearCache(`doc:releases:${releaseId}`);
 
     // Invalidate KV cache for releases list so all edge workers serve fresh data
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateReleasesKVCache();
 
     log.info('[add-comment] Added comment to:', releaseId);
 

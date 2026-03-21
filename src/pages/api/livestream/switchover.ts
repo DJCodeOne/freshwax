@@ -153,7 +153,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       })
     );
 
-    await Promise.all(missedUpdates);
+    await Promise.allSettled(missedUpdates);
 
     // 4. Get current queue status
     const queue = await queryCollection('livestreamSlots', {

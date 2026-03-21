@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, invalidateReleasesCache } from '../../../lib/firebase-rest';
-import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
+import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
@@ -114,8 +114,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Clear in-memory and KV caches so fresh data is served immediately
     invalidateReleasesCache();
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateReleasesKVCache();
 
     return successResponse({ message: `Synced ${results.length} releases to D1 and cleared caches`,
       results });

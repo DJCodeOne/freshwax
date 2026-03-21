@@ -9,7 +9,7 @@ import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } fro
 import { d1UpsertMix } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
-import { kvDelete } from '../../lib/kv-cache';
+import { invalidateMixesKVCache } from '../../lib/kv-cache';
 import { errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
 import { logActivity } from '../../lib/activity-feed';
 import { scanTracklistForSupport } from '../../lib/dj-support';
@@ -364,10 +364,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     invalidateMixesCache();
 
     // Invalidate KV cache for mixes list so all edge workers serve fresh data
-    const MIXES_CACHE = { prefix: 'dj-mixes' };
-    await kvDelete('public:50', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('public:20', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('public:100', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateMixesKVCache();
 
     // Log to activity feed (non-blocking)
     if (db) {

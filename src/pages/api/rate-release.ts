@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, clearCache } from '../../lib/firebase-rest';
 import { d1UpsertRating } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+import { invalidateReleasesKVCache } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 import { logActivity } from '../../lib/activity-feed';
 
@@ -158,8 +158,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     clearCache(`doc:releases:${releaseId}`);
 
     // Invalidate KV cache for releases list so all edge workers serve fresh data
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateReleasesKVCache();
 
     return successResponse({ newRating: releaseData.ratings.average,
       ratingsCount: releaseData.ratings.count,

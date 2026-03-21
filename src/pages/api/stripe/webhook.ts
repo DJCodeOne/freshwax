@@ -21,7 +21,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { createOrder, validateStock } from '../../../lib/order-utils';
 import { getDocument, queryCollection, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion, invalidateReleasesCache, clearAllMerchCache } from '../../../lib/firebase-rest';
-import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
+import { kvDelete, CACHE_CONFIG, invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { logStripeEvent } from '../../../lib/webhook-logger';
 import { redeemReferralCode } from '../../../lib/referral-codes';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
@@ -1019,8 +1019,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (hasReleaseItems) {
         invalidateReleasesCache();
-        await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
-        await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+        await invalidateReleasesKVCache();
       }
       if (hasMerchItems) {
         clearAllMerchCache();

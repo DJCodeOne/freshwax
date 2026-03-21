@@ -119,3 +119,20 @@ export const CACHE_CONFIG = {
   MERCH: { prefix: 'merch', ttl: 300 },              // 5 minutes for merch
   DJ_MIXES: { prefix: 'dj-mixes', ttl: 120 },       // 2 minutes for DJ mixes
 } as const;
+
+/** Invalidate all KV-cached release listings */
+export async function invalidateReleasesKVCache(): Promise<void> {
+  await Promise.allSettled([
+    kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES),
+    kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES),
+  ]);
+}
+
+/** Invalidate all KV-cached mix listings (public get-dj-mixes cache) */
+export async function invalidateMixesKVCache(): Promise<void> {
+  await Promise.allSettled([
+    kvDelete('public:50', { prefix: 'mixes' }),
+    kvDelete('public:20', { prefix: 'mixes' }),
+    kvDelete('public:100', { prefix: 'mixes' }),
+  ]);
+}

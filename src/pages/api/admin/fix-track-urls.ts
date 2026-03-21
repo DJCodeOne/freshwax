@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, invalidateReleasesCache } from '../../../lib/firebase-rest';
-import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
+import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
@@ -170,7 +170,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }, 10000);
 
     if (!patchResponse.ok) {
-      const errorData = await patchResponse.json();
+      const errorData = await patchResponse.json().catch(() => ({}));
       return ApiErrors.serverError('Failed to update');
     }
 
@@ -193,8 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Clear in-memory and KV caches
     invalidateReleasesCache();
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateReleasesKVCache();
 
     return successResponse({ message: 'Track URLs updated and caches cleared',
       releaseId,

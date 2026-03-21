@@ -10,7 +10,7 @@ import { createLogger, errorResponse, successResponse, ApiErrors } from '../../l
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
-import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+import { invalidateReleasesKVCache } from '../../lib/kv-cache';
 import type { Track } from '../../lib/types';
 
 const processReleaseSchema = z.object({
@@ -570,8 +570,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     invalidateReleasesCache();
     clearCache(`doc:releases:${releaseId}`);
     // Invalidate KV cache for releases list so all edge workers serve fresh data
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateReleasesKVCache();
 
     log.info(`Created release: ${releaseId}`);
 

@@ -8,7 +8,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,7 +20,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
+  <a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999;padding:8px 16px;background:#e53e3e;color:#fff;font-weight:600;text-decoration:none;border-radius:0 0 4px 0;" onfocus="this.style.cssText='position:fixed;left:0;top:0;z-index:9999;padding:8px 16px;background:#e53e3e;color:#fff;font-weight:600;text-decoration:none;border-radius:0 0 4px 0;'" onblur="this.style.cssText='position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;'">Skip to main content</a>
   <script is:inline src="/csrf-protect.js"></script>
+  <main id="main-content">
   <!-- Auth Gate -->
   <div id="authGate" class="auth-gate">
     <div class="loading-spinner"></div>
@@ -409,6 +411,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       </div>
     </div>
   </div>
+  </main>
 
 <style is:global>
   * {

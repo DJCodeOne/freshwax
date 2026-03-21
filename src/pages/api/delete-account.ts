@@ -122,8 +122,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Account not found');
     }
 
+    const safeDetails: Record<string, { success: boolean; count: number }> = {};
+    for (const [key, value] of Object.entries(results)) {
+      safeDetails[key] = { success: value.success, count: value.count || 0 };
+    }
     return successResponse({ message: 'Account and all associated data have been permanently deleted.',
-      details: results });
+      details: safeDetails });
 
   } catch (error: unknown) {
     log.error('[delete-account] Error:', error);

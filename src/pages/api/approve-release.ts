@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, invalidateReleasesCache } from '../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../lib/d1-catalog';
 import { requireAdminAuth } from '../../lib/admin';
-import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+import { invalidateReleasesKVCache } from '../../lib/kv-cache';
 import { createLogger, errorResponse, successResponse } from '../../lib/api-utils';
 import { logActivity } from '../../lib/activity-feed';
 import { broadcastActivity } from '../../lib/pusher';
@@ -99,8 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Invalidate in-memory and KV caches to ensure fresh data across all edge workers
     invalidateReleasesCache();
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateReleasesKVCache();
     log.info('[approve-release] Cache invalidated');
 
     log.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);

@@ -117,7 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }, 10000);
 
     if (!captureResponse.ok) {
-      const errorData = await captureResponse.json();
+      const errorData = await captureResponse.json().catch(() => ({}));
       log.error('[PayPal Plus] Capture failed:', errorData);
       return ApiErrors.serverError('Payment capture failed');
     }

@@ -54,8 +54,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   <meta property="og:locale" content="en_GB" />
 
   <!-- Video Tags -->
-  <meta property="og:video" content={`${SITE_URL}/live/embed`} />
-  <meta property="og:video:secure_url" content={`${SITE_URL}/live/embed`} />
+  <meta property="og:video" content={`${SITE_URL}/live/embed/`} />
+  <meta property="og:video:secure_url" content={`${SITE_URL}/live/embed/`} />
   <meta property="og:video:type" content="text/html" />
   <meta property="og:video:width" content="1280" />
   <meta property="og:video:height" content="720" />
@@ -74,7 +74,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   <meta name="twitter:title" content={`${isLive ? '🔴 LIVE: ' : ''}${streamTitle}`} />
   <meta name="twitter:description" content={isLive ? `${djName} is streaming live!` : 'Watch live DJ streams on Fresh Wax'} />
   <meta name="twitter:image" content={thumbnailUrl} />
-  <meta name="twitter:player" content={`${SITE_URL}/live/embed`} />
+  <meta name="twitter:player" content={`${SITE_URL}/live/embed/`} />
   <meta name="twitter:player:width" content="1280" />
   <meta name="twitter:player:height" content="720" />
 

@@ -6,7 +6,7 @@ import { getDocument, updateDocument, verifyRequestUser } from '../../lib/fireba
 import { d1UpsertMix } from '../../lib/d1-catalog';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { kvDelete } from '../../lib/kv-cache';
+import { invalidateMixesKVCache } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 import { scanTracklistForSupport } from '../../lib/dj-support';
 
@@ -133,10 +133,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Invalidate KV cache for mixes list so all edge workers serve fresh data
-    const MIXES_CACHE = { prefix: 'mixes' };
-    await kvDelete('public:50', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('public:20', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('public:100', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateMixesKVCache();
 
     // Auto-scan tracklist for catalog matches if tracklist was updated (non-blocking)
     if (db && tracklist !== undefined && updateData.tracklistArray && (updateData.tracklistArray as string[]).length > 0) {

@@ -7,7 +7,7 @@ import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { saDeleteDocument, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, delay, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
-import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
+import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('cleanup-duplicates');
@@ -184,8 +184,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // 7. Invalidate KV cache
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateReleasesKVCache();
 
     const succeeded = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success).length;

@@ -153,7 +153,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       document.getElementById('ordersLoadingState').innerHTML = `
         <div class="empty-icon">❌</div>
         <h3>Error loading orders</h3>
-        <p>${error instanceof Error ? error.message : String(error)}</p>
+        <p>${escapeHtml(error instanceof Error ? error.message : String(error))}</p>
       `;
     }
   }
@@ -201,7 +201,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       const items = (o.items || []).map(item =>
         `<div class="item-row">
-          <span class="item-title">${item.artist || ''} - ${item.title || ''}</span>
+          <span class="item-title">${escapeHtml(item.artist || '')} - ${escapeHtml(item.title || '')}</span>
           <span class="item-price">£${(item.price || 0).toFixed(2)}</span>
         </div>`
       ).join('');
@@ -209,11 +209,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const address = o.shippingAddress ? `
         <div class="address">
           <strong>Ship to:</strong><br>
-          ${o.shippingAddress.name || ''}<br>
-          ${o.shippingAddress.line1 || ''}<br>
-          ${o.shippingAddress.line2 ? o.shippingAddress.line2 + '<br>' : ''}
-          ${o.shippingAddress.city || ''}, ${o.shippingAddress.postcode || ''}<br>
-          ${o.shippingAddress.country || 'United Kingdom'}
+          ${escapeHtml(o.shippingAddress.name || '')}<br>
+          ${escapeHtml(o.shippingAddress.line1 || '')}<br>
+          ${o.shippingAddress.line2 ? escapeHtml(o.shippingAddress.line2) + '<br>' : ''}
+          ${escapeHtml(o.shippingAddress.city || '')}, ${escapeHtml(o.shippingAddress.postcode || '')}<br>
+          ${escapeHtml(o.shippingAddress.country || 'United Kingdom')}
         </div>
       ` : '';
 
@@ -242,8 +242,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <button class="btn btn-primary" data-action="openShipModal" data-order-id="${o.id}">Mark as Shipped</button>
               ` : o.status === 'shipped' ? `
                 <span class="shipped-info">
-                  ${o.carrier ? `<span>${o.carrier}</span>` : ''}
-                  ${o.trackingNumber ? `<code>${o.trackingNumber}</code>` : ''}
+                  ${o.carrier ? `<span>${escapeHtml(o.carrier)}</span>` : ''}
+                  ${o.trackingNumber ? `<code>${escapeHtml(o.trackingNumber)}</code>` : ''}
                 </span>
               ` : ''}
             </div>

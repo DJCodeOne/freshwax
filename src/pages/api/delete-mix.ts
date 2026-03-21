@@ -8,7 +8,7 @@ import { createS3Client } from '../../lib/s3-client';
 import { getDocument, deleteDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1DeleteMix } from '../../lib/d1-catalog';
-import { kvDelete } from '../../lib/kv-cache';
+import { invalidateMixesKVCache } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 import { z } from 'zod';
 
@@ -138,10 +138,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Invalidate KV cache for mixes list so all edge workers serve fresh data
-    const MIXES_CACHE = { prefix: 'mixes' };
-    await kvDelete('public:50', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('public:20', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('public:100', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateMixesKVCache();
 
     return successResponse({ message: 'Mix deleted successfully',
       deletedId: mixId,

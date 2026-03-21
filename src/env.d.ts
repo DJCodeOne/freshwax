@@ -131,14 +131,10 @@ interface CloudflareEnv {
   DB: D1Database;
   /** KV namespace binding (wrangler.toml: binding = "CACHE") */
   CACHE: KVNamespace;
-  /** Alias used in some health-check code */
-  KV: KVNamespace;
   /** KV namespace for Astro session driver (wrangler.toml: binding = "SESSION") */
   SESSION: KVNamespace;
-  /** R2 bucket binding (used in health checks) */
+  /** R2 bucket binding (wrangler.toml: binding = "R2") */
   R2: R2Bucket;
-  /** R2 bucket binding alias */
-  BUCKET: R2Bucket;
 
   // ---- Firebase (server-side) ----
   FIREBASE_PROJECT_ID: string;
@@ -231,7 +227,6 @@ interface CloudflareEnv {
   PUBLIC_VINYL_API_URL: string;
 
   // ---- Google Analytics ----
-  PUBLIC_GA4_MEASUREMENT_ID: string;
   PUBLIC_GA4_ID: string;
 }
 

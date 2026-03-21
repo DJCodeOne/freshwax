@@ -169,7 +169,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }, 10000);
 
     if (!paypalResponse.ok) {
-      const errorData = await paypalResponse.json();
+      const errorData = await paypalResponse.json().catch(() => ({}));
       log.error('[PayPal Plus] Order creation failed:', errorData);
       return ApiErrors.serverError('Failed to create PayPal order');
     }

@@ -48,6 +48,8 @@ export async function processVinylCrateSellerPayments(params: {
 
     // Cache for crate listing lookups
     const listingCache: Record<string, unknown> = {};
+    // Cache for seller lookups
+    const sellerCache: Record<string, Record<string, unknown>> = {};
 
     for (const item of crateItems) {
       // Get the seller info
@@ -74,11 +76,14 @@ export async function processVinylCrateSellerPayments(params: {
       }
 
       // Look up seller (user) for Connect details
-      let seller = null;
-      try {
-        seller = await getDocument('users', sellerId);
-      } catch (e: unknown) {
-        // Seller user not found
+      let seller = sellerCache[sellerId] || null;
+      if (!seller) {
+        try {
+          seller = await getDocument('users', sellerId);
+          if (seller) sellerCache[sellerId] = seller;
+        } catch (e: unknown) {
+          // Seller user not found
+        }
       }
 
       if (!seller) continue;

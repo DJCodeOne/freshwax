@@ -386,14 +386,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div class="order-items">
               ${(order.items || []).map(item => `
                 <div class="order-item">
-                  <span class="item-name">${item.name || 'Item'}</span>
+                  <span class="item-name">${escapeHtml(item.name || 'Item')}</span>
                   <span class="item-qty">×${item.quantity || 1}</span>
                 </div>
               `).join('') || '<div class="order-item"><span>No items</span></div>'}
             </div>
             <div class="order-footer">
               <span class="order-total">£${(order.total || 0).toFixed(2)}</span>
-              <span class="customer-name">${order.customerName || 'Customer'}</span>
+              <span class="customer-name">${escapeHtml(order.customerName || 'Customer')}</span>
             </div>
           </div>
         `;

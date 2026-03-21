@@ -8,7 +8,7 @@ import { getDocument, arrayUnion, clearCache } from '../../lib/firebase-rest';
 import { containsProfanity } from '../../lib/validation';
 import { d1AddComment } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { kvDelete } from '../../lib/kv-cache';
+import { invalidateMixesKVCache } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
@@ -210,10 +210,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     clearCache(`doc:dj-mixes:${mixId}`);
 
     // Invalidate KV cache for mixes list so all edge workers serve fresh data
-    const MIXES_CACHE = { prefix: 'mixes' };
-    await kvDelete('public:50', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('public:20', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
-    await kvDelete('public:100', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
+    await invalidateMixesKVCache();
 
     log.info('[add-mix-comment] Comment saved');
 

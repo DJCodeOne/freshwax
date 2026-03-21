@@ -43,7 +43,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // Check R2 — head a non-existent key to verify bucket connectivity
   // Returns null (not found) but shouldn't throw if the binding works
   try {
-    const r2 = env?.R2 || env?.BUCKET;
+    const r2 = env?.R2;
     if (r2) {
       const start = Date.now();
       await r2.head('healthcheck-probe');
@@ -62,7 +62,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // Check KV — get a non-existent key to verify namespace connectivity
   // Returns null (not found) but shouldn't throw if the binding works
   try {
-    const kv = env?.CACHE || env?.KV;
+    const kv = env?.CACHE;
     if (kv) {
       const start = Date.now();
       await kv.get('health-check-probe');

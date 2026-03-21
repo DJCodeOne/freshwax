@@ -362,7 +362,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }, 10000);
 
     if (!stripeResponse.ok) {
-      const errorData = await stripeResponse.json();
+      const errorData = await stripeResponse.json().catch(() => ({}));
       log.error('[Stripe] Create session error:', errorData);
       if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
       return ApiErrors.serverError('Failed to create checkout session');
