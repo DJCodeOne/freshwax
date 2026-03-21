@@ -293,7 +293,7 @@ export class EmbedPlayerManager {
     const embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false`;
 
     // Clear container and create iframe
-    container.innerHTML = `<iframe id="soundcloud-player" width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="${embedUrl}"></iframe>`;
+    container.innerHTML = `<iframe id="soundcloud-player" width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="${escapeHtml(embedUrl)}"></iframe>`;
 
     const iframe = document.getElementById('soundcloud-player') as HTMLIFrameElement;
 

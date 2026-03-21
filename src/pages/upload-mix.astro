@@ -115,7 +115,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
             <!-- DJ Name for Quick Drop -->
             <div class="mb-4">
-              <label for="quick-drop-dj-name" class="block text-sm font-bold text-gray-700 mb-2">DJ Name <span class="text-gray-500 font-normal">(optional)</span></label>
+              <label for="quick-drop-dj-name" class="block text-sm font-bold text-gray-700 mb-2">DJ Name <span class="text-gray-300 font-normal">(optional)</span></label>
               <input type="text" id="quick-drop-dj-name" maxlength="30" placeholder="Enter your DJ name..." class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white text-gray-900" />
             </div>
 
@@ -168,7 +168,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     <div class="container mx-auto px-6 max-w-4xl relative z-10">
       <div class="flex items-center gap-4 py-4">
         <div class="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-gray-300"></div>
-        <span class="text-gray-500 font-bold text-sm uppercase tracking-wider px-4">Or fill in the details below</span>
+        <span class="text-gray-300 font-bold text-sm uppercase tracking-wider px-4">Or fill in the details below</span>
         <div class="flex-1 h-px bg-gradient-to-l from-transparent via-gray-300 to-gray-300"></div>
       </div>
     </div>
@@ -182,7 +182,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div>
             <label for="dj-name" class="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">
               DJ Name <span class="text-red-600">*</span>
-              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="dj-name-count">0</span>/22)</span>
+              <span class="text-gray-300 text-xs font-normal ml-2">(<span id="dj-name-count">0</span>/22)</span>
             </label>
             <input
               type="text"
@@ -200,7 +200,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div>
             <label for="mix-title" class="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">
               Mix Title <span class="text-red-600">*</span>
-              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="mix-title-count">0</span>/37)</span>
+              <span class="text-gray-300 text-xs font-normal ml-2">(<span id="mix-title-count">0</span>/37)</span>
             </label>
             <input
               type="text"
@@ -244,8 +244,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <!-- Description / Shout Outs -->
           <div>
             <label for="mix-description" class="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">
-              About Mix / Shout Outs <span class="text-gray-500 text-xs">(Optional)</span>
-              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="mix-description-count">0</span>/300)</span>
+              About Mix / Shout Outs <span class="text-gray-300 text-xs">(Optional)</span>
+              <span class="text-gray-300 text-xs font-normal ml-2">(<span id="mix-description-count">0</span>/300)</span>
             </label>
             <textarea
               id="mix-description"
@@ -289,8 +289,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <!-- Tracklist -->
           <div>
             <label for="tracklist" class="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">
-              Tracklist <span class="text-gray-500 text-xs">(Optional)</span>
-              <span class="text-gray-500 text-xs font-normal ml-2">(<span id="tracklist-count">0</span>/1500)</span>
+              Tracklist <span class="text-gray-300 text-xs">(Optional)</span>
+              <span class="text-gray-300 text-xs font-normal ml-2">(<span id="tracklist-count">0</span>/1500)</span>
             </label>
             <textarea
               id="tracklist"
@@ -305,13 +305,13 @@ Artist - Track Title
 
 (One track per line, numbers added automatically)"
             ></textarea>
-            <p class="text-xs text-gray-500 mt-1">List your tracks, one per line. Format: Artist - Track Title (track numbers added automatically)</p>
+            <p class="text-xs text-gray-300 mt-1">List your tracks, one per line. Format: Artist - Track Title (track numbers added automatically)</p>
           </div>
 
           <!-- Audio File Upload -->
           <div>
             <label for="audio-file-input" class="block text-sm font-bold text-blue-600 mb-2 uppercase tracking-wide">
-              Audio File <span class="text-gray-500 text-xs font-normal">(.mp3 only, up to 500MB)</span> <span class="text-red-600">*</span>
+              Audio File <span class="text-gray-300 text-xs font-normal">(.mp3 only, up to 500MB)</span> <span class="text-red-600">*</span>
             </label>
             
             <div id="audio-drop-zone" class="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center hover:border-blue-600 transition-colors cursor-pointer bg-blue-50 hover:bg-blue-100">
@@ -353,7 +353,7 @@ Artist - Track Title
           <!-- Artwork Upload -->
           <div>
             <label for="artwork-file-input" class="block text-sm font-bold text-green-600 mb-2 uppercase tracking-wide">
-              Artwork <span class="text-gray-500 text-xs font-normal">(Optional - Square cover image)</span>
+              Artwork <span class="text-gray-300 text-xs font-normal">(Optional - Square cover image)</span>
             </label>
             
             <!-- Drop Zone (Hidden when artwork selected) -->
