@@ -169,7 +169,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
     if (RESEND_API_KEY && returnRequest.customerEmail && emailSubject) {
       try {
-        await fetchWithTimeout('https://api.resend.com/emails', {
+        const returnEmailResp = await fetchWithTimeout('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -190,6 +190,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             `
           })
         }, 10000);
+        if (!returnEmailResp.ok) {
+          log.error('Return email failed', { status: returnEmailResp.status });
+        }
       } catch (emailErr: unknown) {
         log.error('Email error:', emailErr);
       }

@@ -407,7 +407,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         return `
           <div class="image-card" id="card-${idx}">
             <div class="image-preview">
-              <img src="${img.main.dataUrl}" alt="${img.originalName}">
+              <img src="${img.main.dataUrl}" alt="${img.originalName}" width="200" height="200" loading="lazy">
               <span class="status-badge processing" id="badge-${idx}">Ready</span>
             </div>
             <div class="image-info">

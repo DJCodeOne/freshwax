@@ -186,7 +186,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                 <td>
                   <div class="item-cell">
                     {mix.artworkUrl || mix.imageUrl ? (
-                      <img src={mix.artworkUrl || mix.imageUrl} alt={mix.title || 'Mix artwork'} style="width: 56px; height: 56px;">
+                      <img src={mix.artworkUrl || mix.imageUrl} alt={mix.title || 'Mix artwork'} width="56" height="56" style="width: 56px; height: 56px;" loading="lazy">
                     ) : (
                       <div style="width: 56px; height: 56px; background: #e5e5e5; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">🎧</div>
                     )}

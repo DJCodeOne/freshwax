@@ -109,7 +109,7 @@ async function sendWelcomeEmail(apiKey: string, email: string, name?: string): P
     footerExtra: `<p style="color: #737373; font-size: 12px; margin: 0; text-align: center;" class="text-muted"><a href="${SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}" style="color: #737373; text-decoration: underline;">Unsubscribe</a></p>`,
   });
 
-  await fetchWithTimeout('https://api.resend.com/emails', {
+  const resp = await fetchWithTimeout('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -122,4 +122,8 @@ async function sendWelcomeEmail(apiKey: string, email: string, name?: string): P
       html: welcomeHtml
     })
   }, 10000);
+
+  if (!resp.ok) {
+    log.error('Failed to send welcome email', { status: resp.status });
+  }
 }

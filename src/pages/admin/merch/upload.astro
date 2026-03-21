@@ -382,7 +382,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       </div>
       <div class="image-editor-body">
         <div class="crop-container" id="cropContainer">
-          <img id="cropImage" src="" alt="Crop preview" />
+          <img id="cropImage" src="" alt="Crop preview" width="400" height="400" />
           <div class="crop-grid"></div>
         </div>
         <div class="editor-controls">
@@ -860,7 +860,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         return `
           <div class="image-preview-item">
             <div class="image-wrapper">
-              <img src="${img.dataUrl}" alt="Product image ${idx + 1}" />
+              <img src="${img.dataUrl}" alt="Product image ${idx + 1}" width="200" height="200" loading="lazy" />
               ${idx === 0 ? '<div class="badge">PRIMARY</div>' : ''}
               <button type="button" class="edit-btn" data-action="edit-image" data-idx="${idx}">Edit</button>
               <button type="button" class="remove-btn" data-action="remove-image" data-idx="${idx}" aria-label="Remove image">×</button>

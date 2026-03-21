@@ -478,7 +478,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <tr data-id="${u.id}">
               <td>
                 <div class="user-cell">
-                  <div class="avatar">${u.avatarUrl ? `<img src="${escapeHtml(u.avatarUrl)}" alt="${escapeHtml(u.displayName || 'User')} avatar" data-fallback="show-next" /><span style="display:none;">${escapeHtml(u.displayName.charAt(0).toUpperCase())}</span>` : escapeHtml(u.displayName.charAt(0).toUpperCase())}</div>
+                  <div class="avatar">${u.avatarUrl ? `<img src="${escapeHtml(u.avatarUrl)}" alt="${escapeHtml(u.displayName || 'User')} avatar" width="40" height="40" loading="lazy" data-fallback="show-next" /><span style="display:none;">${escapeHtml(u.displayName.charAt(0).toUpperCase())}</span>` : escapeHtml(u.displayName.charAt(0).toUpperCase())}</div>
                   <div>
                     <div class="user-name">${escapeHtml(u.displayName)}</div>
                     ${u.fullName && u.fullName !== u.displayName ? `<div class="text-muted text-sm">${escapeHtml(u.fullName)}</div>` : ''}

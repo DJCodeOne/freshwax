@@ -263,7 +263,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           try {
             const artist = await saGetDocument(serviceAccountKey, projectId, 'artists', item.artistId);
             if (artist?.email) {
-              await fetchWithTimeout('https://api.resend.com/emails', {
+              const artistResp = await fetchWithTimeout('https://api.resend.com/emails', {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -282,7 +282,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     <p>- Fresh Wax</p>`
                 })
               }, 10000);
-              // Artist notification sent
+              if (!artistResp.ok) {
+                log.error('[admin] Artist notification email failed', { status: artistResp.status, email: artist.email });
+              }
             }
           } catch (artistErr: unknown) {
             log.error('[admin] Artist notification error:', artistErr);

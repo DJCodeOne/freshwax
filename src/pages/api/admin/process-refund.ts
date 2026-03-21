@@ -165,7 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
     if (RESEND_API_KEY && order.customer?.email) {
       try {
-        await fetchWithTimeout('https://api.resend.com/emails', {
+        const emailResp = await fetchWithTimeout('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -190,7 +190,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
             `
           })
         }, 10000);
-        log.info('[process-refund] Refund email sent');
+        if (!emailResp.ok) {
+          log.error('[process-refund] Refund email failed', { status: emailResp.status });
+        } else {
+          log.info('[process-refund] Refund email sent');
+        }
       } catch (emailErr: unknown) {
         log.error('[process-refund] Email error:', emailErr);
       }

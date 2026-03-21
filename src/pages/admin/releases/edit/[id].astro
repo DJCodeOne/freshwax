@@ -52,7 +52,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <script is:inline src="/csrf-protect.js"></script>
   <div class="container">
     <div class="header-bar">
-      <img src="/logo.webp" alt="Fresh Wax" class="logo" data-fallback="hide">
+      <img src="/logo.webp" alt="Fresh Wax" class="logo" width="67" height="53" data-fallback="hide">
       <div style="display: flex; gap: 10px;">
         <button type="button" id="refreshBtn" class="back-btn" style="background: #16a34a; border-color: #16a34a;">
           🔄 Refresh
@@ -491,7 +491,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
             {release.coverArtUrl && (
               <div class="form-group">
-                <img src={release.coverArtUrl} alt="Cover Art" style="max-width: 100%; border: 2px solid #000000;" />
+                <img src={release.coverArtUrl} alt="Cover Art" width="300" height="300" style="max-width: 100%; border: 2px solid #000000;" />
                 <div class="url-display" style="margin-top: 10px;">{release.coverArtUrl}</div>
               </div>
             )}

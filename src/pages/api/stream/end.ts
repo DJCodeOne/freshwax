@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ]
       });
 
-      await Promise.all(
+      await Promise.allSettled(
         sessions.map(session =>
           updateDocument('livestream-viewers', session.id, {
             isActive: false,

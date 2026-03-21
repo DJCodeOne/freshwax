@@ -461,7 +461,7 @@ const firebaseConfig = {
         var item = items[j];
         itemsHtml +=
           '<div class="order-item">' +
-            '<img src="' + escapeHtml(item.image || '/place-holder.webp') + '" alt="' + escapeHtml(item.name || item.title || 'Item') + '" class="order-item-image" />' +
+            '<img src="' + escapeHtml(item.image || '/place-holder.webp') + '" alt="' + escapeHtml(item.name || item.title || 'Item') + '" class="order-item-image" width="80" height="80" loading="lazy" />' +
             '<div class="order-item-details">' +
               '<div class="order-item-name">' + escapeHtml(item.name || item.title || 'Unknown Item') + '</div>' +
               '<div class="order-item-meta">' + escapeHtml(item.type || 'Digital') + ' × ' + (item.quantity || 1) + '</div>' +

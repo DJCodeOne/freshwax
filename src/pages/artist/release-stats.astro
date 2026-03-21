@@ -248,10 +248,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   <div class="release-rank">#{index + 1}</div>
                   
                   <div class="release-info">
-                    <img 
-                      src={release.coverArtUrl || release.artworkUrl || release.artwork_url || release.coverUrl || '/place-holder.webp'} 
+                    <img
+                      src={release.coverArtUrl || release.artworkUrl || release.artwork_url || release.coverUrl || '/place-holder.webp'}
                       alt={release.releaseName || release.title}
                       class="release-artwork"
+                      width="80" height="80" loading="lazy"
                     />
                     <div class="release-details">
                       <h3>{release.releaseName || release.title}</h3>

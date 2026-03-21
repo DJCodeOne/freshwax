@@ -504,7 +504,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="source-card ${source.active ? '' : 'inactive'}">
         <div class="source-header">
           ${source.logoUrl 
-            ? `<img src="${source.logoUrl}" alt="${source.name}" class="source-logo" />`
+            ? `<img src="${source.logoUrl}" alt="${source.name}" class="source-logo" width="48" height="48" loading="lazy" />`
             : `<div class="source-logo placeholder">📻</div>`
           }
           <div class="source-info">

@@ -134,7 +134,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (results.notified >= MAX_NOTIFICATIONS_PER_RUN) break;
 
           try {
-            await fetchWithTimeout('https://api.resend.com/emails', {
+            const restockResp = await fetchWithTimeout('https://api.resend.com/emails', {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -172,6 +172,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 `
               })
             }, 10000);
+
+            if (!restockResp.ok) {
+              log.error('[Restock Notifications] Email send failed', { status: restockResp.status, email: sub.email });
+            }
 
             // Remove subscription after sending
             await deleteDocument('restockNotifications', sub.id);

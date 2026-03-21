@@ -452,7 +452,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <div class="card preview-card">
             <div class="preview-image">
               {(product.images?.[0]?.url || product.images?.[0] || product.imageUrl) ? (
-                <img src={typeof product.images?.[0] === 'string' ? product.images[0] : (product.images?.[0]?.url || product.imageUrl)} alt={product.name} />
+                <img src={typeof product.images?.[0] === 'string' ? product.images[0] : (product.images?.[0]?.url || product.imageUrl)} alt={product.name} width="300" height="300" />
               ) : (
                 <div class="placeholder">👕</div>
               )}
@@ -514,7 +514,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     </div>
     <div class="image-editor-body">
       <div class="crop-container" id="cropContainer">
-        <img id="cropImage" src="" alt="Crop preview" />
+        <img id="cropImage" src="" alt="Crop preview" width="400" height="400" />
         <div class="crop-grid"></div>
       </div>
       <div class="editor-controls">
@@ -1294,7 +1294,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       const selectedColor = img.color || '';
 
       div.innerHTML = `
-        <img src="${img.url}" alt="Product image ${idx + 1}" />
+        <img src="${img.url}" alt="Product image ${idx + 1}" width="200" height="200" loading="lazy" />
         <div class="image-overlay">
           <button type="button" class="image-btn image-btn-edit" title="Edit image" data-action="edit">✏️</button>
           <button type="button" class="image-btn image-btn-primary" title="Set as primary" data-action="primary">⭐</button>

@@ -75,7 +75,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </div>
           
           <div class="selected-product" id="selectedProduct">
-            <img src="" alt="Selected product" id="selectedProductImage">
+            <img src="" alt="Selected product" id="selectedProductImage" width="50" height="50">
             <div class="selected-product-info">
               <div class="selected-product-name" id="selectedProductName"></div>
               <div class="selected-product-sku" id="selectedProductSku"></div>
@@ -491,7 +491,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </td>
             <td>
               <div style="display: flex; align-items: center; gap: 1rem;">
-                <img src="${product.images?.[0]?.url || product.primaryImage || '/place-holder.webp'}" alt="${escapeHtml(product.name || 'Product')}" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #ddd;">
+                <img src="${product.images?.[0]?.url || product.primaryImage || '/place-holder.webp'}" alt="${escapeHtml(product.name || 'Product')}" width="50" height="50" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #ddd;" loading="lazy">
                 <div>
                   <div style="font-weight: 600;">${escapeHtml(product.name || 'Unknown')}</div>
                   <div style="font-size: 0.75rem; color: #666;">${escapeHtml(product.sku || '-')}</div>
@@ -644,7 +644,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           container.innerHTML = results.map(p => `
             <div style="${resultStyle}" data-product-id="${p.productId}" class="search-result-item inv-search-hover">
-              <img src="${p.images?.[0]?.url || p.primaryImage || '/place-holder.webp'}" alt="${escapeHtml(p.name || 'Product')}" style="${imgStyle}">
+              <img src="${p.images?.[0]?.url || p.primaryImage || '/place-holder.webp'}" alt="${escapeHtml(p.name || 'Product')}" width="50" height="50" style="${imgStyle}" loading="lazy">
               <div style="flex: 1;">
                 <div style="${nameStyle}">${escapeHtml(p.name)}</div>
                 <div style="${skuStyle}">${escapeHtml(p.sku || '-')}</div>

@@ -167,7 +167,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                   <td>
                     <div class="listing-info">
                       {listing.images?.[0] && (
-                        <img src={listing.images[0]} alt={listing.title || 'Vinyl listing'} class="listing-thumb" />
+                        <img src={listing.images[0]} alt={listing.title || 'Vinyl listing'} class="listing-thumb" width="80" height="80" loading="lazy" />
                       )}
                       <div class="listing-details">
                         <span class="listing-title">{listing.artist} - {listing.title}</span>

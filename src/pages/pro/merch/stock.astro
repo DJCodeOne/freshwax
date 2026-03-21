@@ -316,7 +316,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <tr>
               <td>
                 <div class="product-cell">
-                  <img src="${escapeHtml(product.image || '/place-holder.webp')}" alt="${escapeHtml(product.name)}" class="product-thumb">
+                  <img src="${escapeHtml(product.image || '/place-holder.webp')}" alt="${escapeHtml(product.name)}" class="product-thumb" width="48" height="48" loading="lazy">
                   <span>${escapeHtml(product.name || 'Unnamed')}</span>
                 </div>
               </td>

@@ -202,7 +202,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           </div>
           <div class="card-body">
             <div id="featured-image-preview" class={post.featuredImage ? 'mb-4' : 'hidden mb-4'}>
-              <img id="featured-image-img" src={post.featuredImage || ''} alt="Featured" class="w-full h-40 object-cover rounded-lg" />
+              <img id="featured-image-img" src={post.featuredImage || ''} alt="Featured" class="w-full h-40 object-cover rounded-lg" width="800" height="160" />
               <button id="remove-image-btn" class="mt-2 text-sm text-red-400 hover:text-red-300">Remove image</button>
             </div>
             <input
@@ -508,7 +508,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
   document.getElementById('image-insert')?.addEventListener('click', () => {
     if (imageUrl.value) {
-      const html = `<img src="${imageUrl.value}" alt="${imageAlt.value || ''}" />`;
+      const html = `<img src="${imageUrl.value}" alt="${imageAlt.value || ''}" width="800" height="450" loading="lazy" />`;
 
       if (savedSelection) {
         const selection = window.getSelection();

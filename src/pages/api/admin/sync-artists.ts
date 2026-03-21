@@ -44,6 +44,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const errors: string[] = [];
     const usersWithArtistRole: string[] = [];
 
+    // Collect users that need artist entries
+    interface SyncTask {
+      user: Record<string, unknown>;
+      pendingArtist: Record<string, unknown>;
+      pendingMerch: Record<string, unknown>;
+      roles: Record<string, unknown>;
+    }
+    const syncTasks: SyncTask[] = [];
+
     for (const user of users) {
       const roles = user.roles || {};
 
@@ -52,13 +61,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
         usersWithArtistRole.push(`${user.displayName || user.email || user.id} (artist: ${roles.artist}, merch: ${roles.merchSeller}, inArtists: ${artistIds.has(user.id)})`);
       }
 
-      // Check if user has artist or merchSeller role but no artists entry
+      // Collect users that have artist/merchSeller role but no artists entry
       if ((roles.artist || roles.merchSeller) && !artistIds.has(user.id)) {
-        try {
-          const pendingArtist = user.pendingRoles?.artist || {};
-          const pendingMerch = user.pendingRoles?.merchSeller || {};
+        syncTasks.push({
+          user,
+          pendingArtist: user.pendingRoles?.artist || {},
+          pendingMerch: user.pendingRoles?.merchSeller || {},
+          roles
+        });
+      }
+    }
 
-          await setDocument('artists', user.id, {
+    // Process sync tasks in batches of 10 to avoid overwhelming Firebase
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < syncTasks.length; i += BATCH_SIZE) {
+      const batch = syncTasks.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(syncTasks.length / BATCH_SIZE);
+      log.info(`[sync-artists] Processing batch ${batchNum}/${totalBatches} (${batch.length} users)`);
+
+      const results = await Promise.allSettled(
+        batch.map(({ user, pendingArtist, pendingMerch, roles }) =>
+          setDocument('artists', user.id as string, {
             id: user.id,
             userId: user.id,
             artistName: pendingArtist.artistName || user.displayName || user.name || 'Partner',
@@ -74,16 +98,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
             isMerchSupplier: roles.merchSeller || false,
             approved: true,
             suspended: false,
-            approvedAt: pendingArtist.approvedAt || pendingMerch.approvedAt || new Date().toISOString(),
-            registeredAt: user.createdAt || new Date().toISOString(),
-            createdAt: user.createdAt || new Date().toISOString(),
+            approvedAt: (pendingArtist.approvedAt || pendingMerch.approvedAt || new Date().toISOString()) as string,
+            registeredAt: (user.createdAt || new Date().toISOString()) as string,
+            createdAt: (user.createdAt || new Date().toISOString()) as string,
             updatedAt: new Date().toISOString()
-          });
+          }).then(() => ({ user, success: true as const }))
+        )
+      );
 
+      for (let j = 0; j < results.length; j++) {
+        const result = results[j];
+        const { user } = batch[j];
+        if (result.status === 'fulfilled') {
           synced.push(`${user.displayName || user.email || user.id}`);
           log.info(`[sync-artists] Created artists/${user.id} for ${user.displayName || user.email}`);
-        } catch (err: unknown) {
-          const errorMsg = `Failed to sync ${user.id}: ${err}`;
+        } else {
+          const errorMsg = `Failed to sync ${user.id}: ${result.reason}`;
           errors.push(errorMsg);
           log.error(`[sync-artists] ${errorMsg}`);
         }
@@ -97,7 +127,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       debug: {
         totalUsers: users.length,
         totalExistingArtists: existingArtists.length,
-        usersWithArtistRole
+        usersWithArtistRole,
+        batchSize: BATCH_SIZE,
+        totalBatches: Math.ceil(syncTasks.length / BATCH_SIZE)
       },
       message: synced.length > 0
         ? `Synced ${synced.length} artist(s) to artists collection`

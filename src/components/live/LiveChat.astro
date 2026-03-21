@@ -3,7 +3,7 @@
 // Live stream chat with emoji picker, GIF support, and online users
 ---
 
-<div class="chat-section">
+<section class="chat-section" aria-label="Live chat">
     <div class="chat-header">
       <h3>LIVE CHAT</h3>
       <span class="chat-viewers" id="chatViewers">0 watching</span>
@@ -24,7 +24,7 @@
       <div id="emojiPanel" class="emoji-panel" style="display: none;">
         <div class="emoji-panel-header">
           <span>Emojis</span>
-          <button type="button" class="emoji-panel-close" id="closeEmojiPanel" aria-label="Close">×</button>
+          <button type="button" class="emoji-panel-close" id="closeEmojiPanel" aria-label="Close emoji panel">×</button>
         </div>
         <div class="emoji-panel-cats">
           <button class="emoji-panel-cat active" data-category="music" aria-label="Music emojis">🎵</button>
@@ -36,6 +36,7 @@
       </div>
 
       <div class="chat-input-wrapper">
+        <label for="chatInput" class="sr-only">Chat message</label>
         <input type="text" id="chatInput" placeholder="Message..." maxlength="500" autocomplete="off" aria-label="Chat message" />
         <button type="button" id="openEmojiPanel" class="chat-tool-btn" title="Emojis" aria-label="Open emoji picker">😀</button>
         <button type="button" id="openGifModal" class="chat-tool-btn" title="GIFs" aria-label="Search for GIFs">GIF</button>
@@ -45,7 +46,7 @@
       </div>
     </div>
   </div>
-</div>
+</section>
 
 <!-- DM Modal -->
 <div id="dmModal" class="dm-modal-bg" style="display: none;" role="dialog" aria-modal="true" aria-label="Direct message">
@@ -55,6 +56,7 @@
       <button type="button" id="closeDmModal" class="dm-modal-close" aria-label="Close">×</button>
     </div>
     <div class="dm-modal-body">
+      <label for="dmMessageInput" class="sr-only">Direct message</label>
       <textarea id="dmMessageInput" placeholder="Type your message..." maxlength="500" aria-label="Direct message"></textarea>
     </div>
     <div class="dm-modal-footer">
@@ -288,6 +290,14 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
     closeEmoji?.addEventListener('click', () => {
       emojiPanel.style.display = 'none';
     });
+
+    // Close emoji panel on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && emojiPanel && emojiPanel.style.display !== 'none') {
+        emojiPanel.style.display = 'none';
+        emojiBtn?.focus();
+      }
+    }, { signal: liveChatCleanupController.signal });
 
     // Emoji category buttons
     document.querySelectorAll('.emoji-panel-cat').forEach(btn => {
@@ -594,7 +604,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
   .dm-modal-close {
     background: none;
     border: none;
-    color: #888;
+    color: #d4d4d4;
     font-size: 1.5rem;
     cursor: pointer;
     line-height: 1;
@@ -688,7 +698,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
   .emoji-panel-close {
     background: none;
     border: none;
-    color: #888;
+    color: #d4d4d4;
     font-size: 1.25rem;
     cursor: pointer;
     line-height: 1;
@@ -752,7 +762,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
     background: #2a2a2a;
     border: none;
     border-radius: 6px;
-    color: #aaa;
+    color: #d4d4d4;
     cursor: pointer;
     font-size: 0.875rem;
     font-weight: 700;
@@ -811,7 +821,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
   .gif-modal-x {
     background: none;
     border: none;
-    color: #888;
+    color: #d4d4d4;
     font-size: 1.75rem;
     cursor: pointer;
     line-height: 1;
@@ -861,7 +871,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
     border-radius: 16px;
     font-size: 0.8125rem;
     cursor: pointer;
-    color: #aaa;
+    color: #ccc;
     font-weight: 500;
   }
 

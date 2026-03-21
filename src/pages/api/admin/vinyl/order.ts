@@ -254,7 +254,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
         if (RESEND_API_KEY && order.buyer?.email) {
           try {
-            await fetchWithTimeout('https://api.resend.com/emails', {
+            const buyerEmailResp = await fetchWithTimeout('https://api.resend.com/emails', {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -328,7 +328,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 </html>`
               })
             }, 10000);
-            log.info('[vinyl/order refund] Buyer refund email sent');
+            if (!buyerEmailResp.ok) {
+              log.error('[vinyl/order refund] Buyer refund email failed', { status: buyerEmailResp.status });
+            } else {
+              log.info('[vinyl/order refund] Buyer refund email sent');
+            }
           } catch (emailErr: unknown) {
             log.error('[vinyl/order refund] Buyer email error:', emailErr);
           }
@@ -352,7 +356,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
 
             if (sellerEmail) {
-              await fetchWithTimeout('https://api.resend.com/emails', {
+              const sellerEmailResp = await fetchWithTimeout('https://api.resend.com/emails', {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -422,7 +426,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 </html>`
                 })
               }, 10000);
-              log.info('[vinyl/order refund] Seller refund notification sent to:', sellerEmail);
+              if (!sellerEmailResp.ok) {
+                log.error('[vinyl/order refund] Seller refund notification failed', { status: sellerEmailResp.status });
+              } else {
+                log.info('[vinyl/order refund] Seller refund notification sent to:', sellerEmail);
+              }
             }
           } catch (sellerEmailErr: unknown) {
             log.error('[vinyl/order refund] Seller email error:', sellerEmailErr);

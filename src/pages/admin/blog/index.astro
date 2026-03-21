@@ -261,7 +261,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <td class="p-4">
               <div class="flex items-center gap-3">
                 ${post.featuredImage ? `
-                  <img src="${post.featuredImage}" alt="${escapeHtml(post.title)}" class="w-12 h-12 rounded-lg object-cover hidden sm:block" />
+                  <img src="${post.featuredImage}" alt="${escapeHtml(post.title)}" class="w-12 h-12 rounded-lg object-cover hidden sm:block" width="48" height="48" loading="lazy" />
                 ` : `
                   <div class="w-12 h-12 rounded-lg bg-white/5 hidden sm:flex items-center justify-center">
                     <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

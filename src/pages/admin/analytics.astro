@@ -396,7 +396,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                     <td>
                       <div class="item-cell">
                         {release.artwork && (
-                          <img src={release.artwork} alt={`Cover art for ${release.title}`} style="width: 40px; height: 40px;">
+                          <img src={release.artwork} alt={`Cover art for ${release.title}`} width="40" height="40" style="width: 40px; height: 40px;" loading="lazy">
                         )}
                         <div class="item-info">
                           <h4 style="font-size: 0.85rem;">{release.title}</h4>
@@ -443,7 +443,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                     <td>
                       <div class="item-cell">
                         {item.image && (
-                          <img src={item.image} alt={`Product image for ${item.title}`} style="width: 40px; height: 40px;">
+                          <img src={item.image} alt={`Product image for ${item.title}`} width="40" height="40" style="width: 40px; height: 40px;" loading="lazy">
                         )}
                         <div class="item-info">
                           <h4 style="font-size: 0.85rem;">{item.title}</h4>

@@ -161,7 +161,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                 <td>
                   <div class="item-cell">
                     {release.coverArtUrl ? (
-                      <img src={release.coverArtUrl} alt={`Cover art for ${release.releaseName || 'Untitled'}`} loading="lazy">
+                      <img src={release.coverArtUrl} alt={`Cover art for ${release.releaseName || 'Untitled'}`} width="48" height="48" loading="lazy">
                     ) : (
                       <div style="width: 48px; height: 48px; background: #e5e5e5; display: flex; align-items: center; justify-content: center;">💿</div>
                     )}

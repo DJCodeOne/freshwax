@@ -250,8 +250,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       createdAt: now.toISOString()
     };
 
-    // Send to both sender and receiver's private channels
-    await Promise.all([
+    // Send to both sender and receiver's private channels — allSettled so one failure doesn't block the other
+    await Promise.allSettled([
       triggerPusher(`private-dj-${senderId}`, 'dm-message', pusherMessage, env),
       triggerPusher(`private-dj-${receiverId}`, 'dm-message', pusherMessage, env)
     ]);

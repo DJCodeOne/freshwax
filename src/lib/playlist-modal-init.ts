@@ -86,14 +86,16 @@ function injectModalHTML() {
               <span>Sign in to add videos to the playlist</span>
             </div>
             <div id="playlistInputGroup" class="playlist-input-group">
+              <label for="playlistUrlInput" class="sr-only">Playlist URL</label>
               <input
                 type="url"
                 id="playlistUrlInput"
                 class="playlist-url-input"
                 placeholder="Paste a YouTube Link..."
                 autocomplete="off"
+                aria-label="Paste a YouTube link to add to the playlist"
               />
-              <button id="clearPlaylistInput" class="clear-input-btn hidden" title="Clear input">
+              <button id="clearPlaylistInput" class="clear-input-btn hidden" title="Clear input" aria-label="Clear input">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1716,15 +1718,15 @@ export function initPlaylistModal() {
           </div>
           <div class="playlist-grid-actions">
             ${isAuthenticated ? `
-              <button class="playlist-action-btn playlist-save-btn" data-url="${escapeHtml(item.url)}" data-title="${escapeHtml(item.title || '')}" data-thumbnail="${escapeHtml(item.thumbnail || '')}" title="Save to My Playlist">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button class="playlist-action-btn playlist-save-btn" data-url="${escapeHtml(item.url)}" data-title="${escapeHtml(item.title || '')}" data-thumbnail="${escapeHtml(item.thumbnail || '')}" title="Save to My Playlist" aria-label="Save to My Playlist">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                 </svg>
               </button>
             ` : ''}
             ${canRemove ? `
-              <button class="playlist-action-btn playlist-remove-btn" data-id="${item.id}" title="Leave Queue">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button class="playlist-action-btn playlist-remove-btn" data-id="${item.id}" title="Leave Queue" aria-label="Remove from queue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
@@ -1929,8 +1931,8 @@ export function initPlaylistModal() {
             </svg>
             Queue
           </button>
-          <button class="personal-delete-btn" data-id="${item.id}" title="Remove from playlist">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button class="personal-delete-btn" data-id="${item.id}" title="Remove from playlist" aria-label="Remove from playlist">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>

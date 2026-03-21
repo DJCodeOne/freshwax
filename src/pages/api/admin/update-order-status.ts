@@ -105,7 +105,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                ${tracking.trackingUrl ? `<p><a href="${tracking.trackingUrl}" style="color: #dc2626;">Track Your Package</a></p>` : ''}`
             : '';
 
-          await fetchWithTimeout('https://api.resend.com/emails', {
+          const shippedResp = await fetchWithTimeout('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -127,9 +127,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
               `
             })
           }, 10000);
-          log.info('[update-order-status] Shipping notification sent');
+          if (!shippedResp.ok) {
+            log.error('[update-order-status] Shipping notification failed', { status: shippedResp.status });
+          } else {
+            log.info('[update-order-status] Shipping notification sent');
+          }
         } else if (status === 'cancelled') {
-          await fetchWithTimeout('https://api.resend.com/emails', {
+          const cancelResp = await fetchWithTimeout('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -151,7 +155,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
               `
             })
           }, 10000);
-          log.info('[update-order-status] Cancellation notification sent');
+          if (!cancelResp.ok) {
+            log.error('[update-order-status] Cancellation notification failed', { status: cancelResp.status });
+          } else {
+            log.info('[update-order-status] Cancellation notification sent');
+          }
         }
       } catch (emailErr: unknown) {
         log.error('[update-order-status] Email notification error:', emailErr);

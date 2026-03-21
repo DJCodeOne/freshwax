@@ -65,8 +65,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const now = new Date();
 
-    // Process slots with optional health check
-    const slotsWithInfo = await Promise.all(liveSlots.map(async slot => {
+    // Process slots with optional health check — use allSettled so one failing health check doesn't crash the batch
+    const slotResults = await Promise.allSettled(liveSlots.map(async slot => {
       const startedAt = slot.startedAt || slot.liveStartTime || slot.startTime;
       const startDate = startedAt ? new Date(startedAt) : null;
       const ageMs = startDate ? now.getTime() - startDate.getTime() : 0;
@@ -91,9 +91,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
         healthCheck: healthStatus,
       };
     }));
+    const slotsWithInfo: Record<string, unknown>[] = [];
+    for (const r of slotResults) {
+      if (r.status === 'fulfilled') {
+        slotsWithInfo.push(r.value);
+      }
+    }
 
     // Sort by age descending (oldest first)
-    slotsWithInfo.sort((a, b) => b.ageHours - a.ageHours);
+    slotsWithInfo.sort((a, b) => (b.ageHours as number) - (a.ageHours as number));
 
     const staleCount = slotsWithInfo.filter(s => s.isStale).length;
     const disconnectedCount = slotsWithInfo.filter(s => s.isDisconnected === true).length;

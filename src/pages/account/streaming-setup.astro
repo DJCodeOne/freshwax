@@ -1558,7 +1558,7 @@ const firebaseConfig = {
         function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
         listEl.innerHTML = data.sources.map(source => `
           <div class="relay-source-item" data-url="${escAttr(source.url)}" data-name="${escAttr(source.name)}">
-            <img src="${escAttr(source.logo || '/place-holder.webp')}" alt="${escAttr(source.name)}" class="source-logo" />
+            <img src="${escAttr(source.logo || '/place-holder.webp')}" alt="${escAttr(source.name)}" class="source-logo" width="40" height="40" loading="lazy" />
             <div class="source-info">
               <span class="source-name">${escHtml(source.name)}</span>
               <span class="source-url-preview">${escHtml(source.url.substring(0, 40))}...</span>
