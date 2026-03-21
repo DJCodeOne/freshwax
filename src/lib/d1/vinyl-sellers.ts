@@ -44,15 +44,16 @@ export function vinylSellerToD1Row(id: string, doc: FirestoreDoc): Partial<D1Vin
 
 // Convert D1 row back to vinyl seller document
 export function d1RowToVinylSeller(row: D1VinylSeller): FirestoreDoc | null {
+  let doc;
   try {
-    const doc = JSON.parse(row.data);
-    doc.id = row.id;
-    doc.userId = row.id;
-    return doc;
+    doc = JSON.parse(row.data);
   } catch (error: unknown) {
     log.error('[D1] Error parsing vinyl seller data:', error);
     return null;
   }
+  doc.id = row.id;
+  doc.userId = row.id;
+  return doc;
 }
 
 // Get vinyl seller settings by user ID

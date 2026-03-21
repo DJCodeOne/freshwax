@@ -62,15 +62,16 @@ export function releaseToD1Row(id: string, doc: FirestoreDoc): Partial<D1Release
 
 // Convert D1 row back to release document
 export function d1RowToRelease(row: D1Release): FirestoreDoc | null {
+  let doc;
   try {
-    const doc = JSON.parse(row.data);
-    // Ensure id is set
-    doc.id = row.id;
-    return doc;
+    doc = JSON.parse(row.data);
   } catch (error: unknown) {
     log.error('[D1] Error parsing release data:', error);
     return null;
   }
+  // Ensure id is set
+  doc.id = row.id;
+  return doc;
 }
 
 export async function d1GetAllPublishedReleases(db: D1Database, limit: number = 500): Promise<FirestoreDoc[]> {

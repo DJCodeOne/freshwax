@@ -44,14 +44,15 @@ export function slotToD1Row(id: string, doc: FirestoreDoc): Partial<D1Livestream
 
 // Convert D1 row back to slot document
 export function d1RowToSlot(row: D1LivestreamSlot): FirestoreDoc | null {
+  let doc;
   try {
-    const doc = JSON.parse(row.data);
-    doc.id = row.id;
-    return doc;
+    doc = JSON.parse(row.data);
   } catch (error: unknown) {
     log.error('[D1] Error parsing slot data:', error);
     return null;
   }
+  doc.id = row.id;
+  return doc;
 }
 
 // Get all live slots (status = 'live')
@@ -159,7 +160,14 @@ export async function d1UpdateSlotStatus(db: D1Database, id: string, status: str
       return false;
     }
 
-    const doc = JSON.parse((row as D1Row).data as string);
+    let doc;
+    try {
+      doc = JSON.parse((row as D1Row).data as string);
+    } catch (parseError: unknown) {
+      log.error('[D1] Error parsing slot data for status update:', parseError);
+      return false;
+    }
+
     doc.status = status;
     if (extraData) {
       Object.assign(doc, extraData);

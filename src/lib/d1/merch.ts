@@ -49,14 +49,15 @@ export function merchToD1Row(id: string, doc: FirestoreDoc): Partial<D1Merch> {
 
 // Convert D1 row back to merch document
 export function d1RowToMerch(row: D1Merch): FirestoreDoc | null {
+  let doc;
   try {
-    const doc = JSON.parse(row.data);
-    doc.id = row.id;
-    return doc;
+    doc = JSON.parse(row.data);
   } catch (error: unknown) {
     log.error('[D1] Error parsing merch data:', error);
     return null;
   }
+  doc.id = row.id;
+  return doc;
 }
 
 export async function d1SearchPublishedMerch(db: D1Database, query: string, limit: number = 50): Promise<FirestoreDoc[]> {

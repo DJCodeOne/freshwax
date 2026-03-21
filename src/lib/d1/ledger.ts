@@ -80,17 +80,18 @@ export function ledgerToD1Row(entry: FirestoreDoc): Partial<D1LedgerEntry> {
 
 // Convert D1 row to ledger entry format
 export function d1RowToLedger(row: D1LedgerEntry): FirestoreDoc | null {
+  let doc;
   try {
-    const doc = JSON.parse(row.data);
-    doc.id = row.id;
-    // Ensure key fields are present
-    doc.artistPayoutStatus = row.artist_payout_status;
-    doc.artistPayout = row.artist_payout;
-    return doc;
+    doc = JSON.parse(row.data);
   } catch (error: unknown) {
     log.error('[D1] Error parsing ledger data:', error);
     return null;
   }
+  doc.id = row.id;
+  // Ensure key fields are present
+  doc.artistPayoutStatus = row.artist_payout_status;
+  doc.artistPayout = row.artist_payout;
+  return doc;
 }
 
 // Insert a new ledger entry

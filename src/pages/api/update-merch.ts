@@ -233,8 +233,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         updates.sizes = JSON.parse(sizesJson as string);
         updates.hasSizes = updates.sizes.length > 0;
-      } catch (e: unknown) {
-        log.error('Error parsing sizes JSON');
+      } catch {
+        return ApiErrors.badRequest('Invalid sizes format');
       }
     }
 
@@ -243,8 +243,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         updates.colors = JSON.parse(colorsJson as string);
         updates.hasColors = updates.colors.length > 0;
-      } catch (e: unknown) {
-        log.error('Error parsing colors JSON');
+      } catch {
+        return ApiErrors.badRequest('Invalid colors format');
       }
     }
 
@@ -254,32 +254,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let images = [...(existingProduct.images || [])];
 
     if (deleteImageIndexes) {
+      let indexesToDelete: number[];
       try {
-        const indexesToDelete = JSON.parse(deleteImageIndexes as string) as number[];
+        indexesToDelete = JSON.parse(deleteImageIndexes as string) as number[];
+      } catch {
+        return ApiErrors.badRequest('Invalid deleteImages format');
+      }
 
-        for (const idx of indexesToDelete) {
-          const imageToDelete = images[idx];
-          if (imageToDelete && imageToDelete.key) {
-            try {
-              await s3Client.send(
-                new DeleteObjectCommand({
-                  Bucket: R2_CONFIG.bucketName,
-                  Key: imageToDelete.key
-                })
-              );
-              log.info('[update-merch] Deleted image:', imageToDelete.key);
-            } catch (e: unknown) {
-              log.error('[update-merch] Failed to delete image from R2');
-            }
+      for (const idx of indexesToDelete) {
+        const imageToDelete = images[idx];
+        if (imageToDelete && imageToDelete.key) {
+          try {
+            await s3Client.send(
+              new DeleteObjectCommand({
+                Bucket: R2_CONFIG.bucketName,
+                Key: imageToDelete.key
+              })
+            );
+            log.info('[update-merch] Deleted image:', imageToDelete.key);
+          } catch (e: unknown) {
+            log.error('[update-merch] Failed to delete image from R2');
           }
         }
-
-        indexesToDelete.sort((a, b) => b - a).forEach(idx => {
-          images.splice(idx, 1);
-        });
-      } catch (e: unknown) {
-        log.error('Error parsing deleteImages');
       }
+
+      indexesToDelete.sort((a, b) => b - a).forEach(idx => {
+        images.splice(idx, 1);
+      });
     }
 
     if (newImageCount > 0) {

@@ -109,10 +109,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     try {
       sizes = JSON.parse(sizesJson);
+    } catch {
+      return ApiErrors.badRequest('Invalid sizes format');
+    }
+
+    try {
       colors = JSON.parse(colorsJson);
+    } catch {
+      return ApiErrors.badRequest('Invalid colors format');
+    }
+
+    try {
       variants = JSON.parse(variantsJson);
-    } catch (e: unknown) {
-      log.error('Error parsing variants JSON');
+    } catch {
+      return ApiErrors.badRequest('Invalid variants format');
     }
 
     const imageCount = parseInt(formData.get('imageCount') as string || '0');
@@ -149,13 +159,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Parse image-color mappings
     let imageColorMap: Array<{index: number; color: string | null; colorHex: string | null; keepOriginal?: boolean}> = [];
-    try {
-      const mapJson = formData.get('imageColorMap') as string;
-      if (mapJson) {
+    const mapJson = formData.get('imageColorMap') as string;
+    if (mapJson) {
+      try {
         imageColorMap = JSON.parse(mapJson);
+      } catch {
+        return ApiErrors.badRequest('Invalid imageColorMap format');
       }
-    } catch (e: unknown) {
-      log.info('[upload-merch] No image color map provided');
     }
 
     const uploadedImages: Array<{

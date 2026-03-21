@@ -50,18 +50,19 @@ export function mixToD1Row(id: string, doc: FirestoreDoc): Partial<D1DjMix> {
 
 // Convert D1 row back to mix document
 export function d1RowToMix(row: D1DjMix): FirestoreDoc | null {
+  let doc;
   try {
-    const doc = JSON.parse(row.data);
-    doc.id = row.id;
-    // Prefer D1 column values for stats (updated atomically, no race conditions)
-    if (row.plays != null) doc.plays = row.plays;
-    if (row.downloads != null) doc.downloads = row.downloads;
-    if (row.likes != null) doc.likes = row.likes;
-    return doc;
+    doc = JSON.parse(row.data);
   } catch (error: unknown) {
     log.error('[D1] Error parsing mix data:', error);
     return null;
   }
+  doc.id = row.id;
+  // Prefer D1 column values for stats (updated atomically, no race conditions)
+  if (row.plays != null) doc.plays = row.plays;
+  if (row.downloads != null) doc.downloads = row.downloads;
+  if (row.likes != null) doc.likes = row.likes;
+  return doc;
 }
 
 export async function d1SearchPublishedMixes(db: D1Database, query: string, limit: number = 50): Promise<FirestoreDoc[]> {
