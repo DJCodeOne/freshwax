@@ -7,6 +7,9 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { getLiveDJMixes } from '../lib/firebase-rest';
+import { createLogger } from '../lib/api-utils';
+
+const log = createLogger('dj-mix-chart');
 
 // Get D1 binding from Cloudflare runtime
 const db = Astro.locals.runtime.env?.DB;
@@ -52,7 +55,7 @@ try {
   mixes.sort((a, b) => (b.engagementScore as number) - (a.engagementScore as number));
 
 } catch (e: unknown) {
-  console.error('Error fetching mixes:', e);
+  log.error('Error fetching mixes:', e);
 }
 
 const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);

@@ -12,7 +12,7 @@ import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { recordSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
 import { formatPrice } from '../../../lib/format-utils';
-import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse, maskEmail } from '../../../lib/api-utils';
 const log = createLogger('admin/create-manual-order');
 
 const createManualOrderSchema = z.object({
@@ -201,7 +201,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Generate a unique order ID
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    log.info('[admin] Creating manual order:', orderNumber, 'for:', order.customer.email);
+    log.info('[admin] Creating manual order:', orderNumber, 'for:', maskEmail(order.customer.email));
 
     // Save order using service account
     await saSetDocument(serviceAccountKey, projectId, 'orders', orderId, order);
@@ -293,7 +293,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 })
               }, 10000);
               if (!artistResp.ok) {
-                log.error('[admin] Artist notification email failed', { status: artistResp.status, email: artist.email });
+                log.error('[admin] Artist notification email failed', { status: artistResp.status, email: maskEmail(artist.email) });
               }
             }
           } catch (artistErr: unknown) {

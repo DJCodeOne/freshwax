@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, setDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, successResponse, maskEmail } from '../../../lib/api-utils';
 const log = createLogger('[sync-artists]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -111,7 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const { user } = batch[j];
         if (result.status === 'fulfilled') {
           synced.push(`${user.displayName || user.email || user.id}`);
-          log.info(`[sync-artists] Created artists/${user.id} for ${user.displayName || user.email}`);
+          log.info(`[sync-artists] Created artists/${user.id} for ${user.displayName || maskEmail(user.email)}`);
         } else {
           const errorMsg = `Failed to sync ${user.id}: ${result.reason}`;
           errors.push(errorMsg);

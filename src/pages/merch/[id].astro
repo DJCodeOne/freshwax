@@ -5,6 +5,9 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import { getDocument } from '../../lib/firebase-rest';
+import { createLogger } from '../../lib/api-utils';
+
+const log = createLogger('merch-page');
 
 const { id } = Astro.params;
 
@@ -61,7 +64,7 @@ try {
     Astro.response.status = 404;
   }
 } catch (err: unknown) {
-  console.error('[MERCH PAGE] Error:', err);
+  log.error('Error loading product:', err);
   error = 'Failed to load product';
 }
 

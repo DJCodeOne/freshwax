@@ -9,7 +9,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { generateOrderNumber } from '../../lib/order-utils';
 import { SITE_URL } from '../../lib/constants';
 import { formatPrice } from '../../lib/format-utils';
-import { fetchWithTimeout, errorResponse, successResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, successResponse, ApiErrors, createLogger, maskEmail } from '../../lib/api-utils';
 import { buildOrderConfirmationEmail, buildStockistFulfillmentEmail, buildDigitalSaleEmail, buildMerchSaleEmail } from '../../lib/order/create-order-emails';
 import type { OrderItem } from '../../lib/order/create-order-emails';
 
@@ -294,7 +294,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     } else {
       // Guest checkout - allowed for non-logged-in users
-      log.info('[create-order] Guest checkout for:', orderData.customer.email);
+      log.info('[create-order] Guest checkout for:', maskEmail(orderData.customer.email));
     }
 
     const orderNumber = generateOrderNumber();
@@ -733,7 +733,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 if (supplierData?.email) {
                   item.sellerEmail = supplierData.email;
                   item.supplierId = productData.supplierId;
-                  log.info('[create-order] ✓ Attached seller email from merch-suppliers:', supplierData.email);
+                  log.info('[create-order] ✓ Attached seller email from merch-suppliers:', maskEmail(supplierData.email));
                 }
 
                 // If no email yet, try users collection
@@ -742,7 +742,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   if (userData?.email) {
                     item.sellerEmail = userData.email;
                     item.supplierId = productData.supplierId;
-                    log.info('[create-order] ✓ Attached seller email from users:', userData.email);
+                    log.info('[create-order] ✓ Attached seller email from users:', maskEmail(userData.email));
                   }
                 }
 
@@ -752,7 +752,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   if (artistData?.email) {
                     item.sellerEmail = artistData.email;
                     item.supplierId = productData.supplierId;
-                    log.info('[create-order] ✓ Attached seller email from artists:', artistData.email);
+                    log.info('[create-order] ✓ Attached seller email from artists:', maskEmail(artistData.email));
                   }
                 }
               } catch (supplierErr: unknown) {
@@ -788,7 +788,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
       if (RESEND_API_KEY && order.customer?.email) {
-        log.info('[create-order] Sending email to:', order.customer.email);
+        log.info('[create-order] Sending email to:', maskEmail(order.customer.email));
 
         // Extract short order number for customer display (e.g., "FW-ABC123" from "FW-241204-abc123")
         const orderParts = orderNumber.split('-');
@@ -910,7 +910,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Send email to each artist
         for (const [artistEmail, items] of Object.entries(itemsByArtist)) {
           if (RESEND_API_KEY && artistEmail) {
-            log.info('[create-order] Sending digital sale email to artist:', artistEmail);
+            log.info('[create-order] Sending digital sale email to artist:', maskEmail(artistEmail));
 
             const digitalHtml = buildDigitalSaleEmail(orderNumber, order, items);
 
@@ -930,7 +930,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }, 10000);
 
             if (digitalResponse.ok) {
-              log.info('[create-order] ✓ Digital sale email sent to:', artistEmail);
+              log.info('[create-order] ✓ Digital sale email sent to:', maskEmail(artistEmail));
             } else {
               const error = await digitalResponse.text();
               log.error('[create-order] ❌ Digital sale email failed:', error);
@@ -963,7 +963,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Send email to each seller
         for (const [sellerEmail, items] of Object.entries(itemsBySeller)) {
           if (RESEND_API_KEY && sellerEmail) {
-            log.info('[create-order] Sending merch sale email to seller:', sellerEmail);
+            log.info('[create-order] Sending merch sale email to seller:', maskEmail(sellerEmail));
 
             const merchHtml = buildMerchSaleEmail(orderNumber, order, items);
 
@@ -983,7 +983,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }, 10000);
 
             if (merchResponse.ok) {
-              log.info('[create-order] ✓ Merch sale email sent to:', sellerEmail);
+              log.info('[create-order] ✓ Merch sale email sent to:', maskEmail(sellerEmail));
             } else {
               const error = await merchResponse.text();
               log.error('[create-order] ❌ Merch sale email failed:', error);

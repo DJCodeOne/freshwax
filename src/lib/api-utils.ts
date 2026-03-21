@@ -67,6 +67,24 @@ export function createLogger(prefix: string, config?: Partial<LoggerConfig>) {
 }
 
 // ============================================
+// PII HELPERS
+// ============================================
+
+/**
+ * Mask an email address for safe logging (PII protection).
+ * "user@example.com" → "us***@example.com"
+ */
+export function maskEmail(email: unknown): string {
+  if (!email || typeof email !== 'string') return '[no-email]';
+  const atIndex = email.indexOf('@');
+  if (atIndex < 1) return '***';
+  const localPart = email.substring(0, atIndex);
+  const domain = email.substring(atIndex);
+  const visible = Math.min(localPart.length, 2);
+  return localPart.substring(0, visible) + '***' + domain;
+}
+
+// ============================================
 // API RESPONSE HELPERS
 // ============================================
 
