@@ -165,7 +165,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       <div class="modal-content waveform-modal">
         <div class="modal-header">
           <h3>Select Sample Clip</h3>
-          <button type="button" class="modal-close" id="closeWaveformModal">&times;</button>
+          <button type="button" class="modal-close" id="closeWaveformModal" aria-label="Close">&times;</button>
         </div>
 
         <div class="audio-upload-modal">
@@ -352,7 +352,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     <section class="form-section">
       <h2>Description <span class="optional">(Optional)</span></h2>
       <div class="form-group">
-        <textarea id="description" name="description" maxlength="2000" rows="5" placeholder="Any additional details about the record, pressing info, history, etc..."></textarea>
+        <textarea id="description" name="description" maxlength="2000" rows="5" placeholder="Any additional details about the record, pressing info, history, etc..." aria-label="Listing description"></textarea>
         <div class="char-count"><span id="descCount">0</span>/2000</div>
       </div>
     </section>
@@ -396,7 +396,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
   const firebaseConfig = {
-    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store"
   };
@@ -506,7 +506,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       <div class="track-number">${tracks.indexOf(track) + 1}</div>
       <div class="track-fields">
         <div class="track-field track-side">
-          <select class="track-side-select" data-field="side">
+          <select class="track-side-select" data-field="side" aria-label="Track side">
             <option value="A" ${track.side === 'A' ? 'selected' : ''}>A</option>
             <option value="B" ${track.side === 'B' ? 'selected' : ''}>B</option>
             <option value="C" ${track.side === 'C' ? 'selected' : ''}>C</option>
@@ -514,7 +514,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </select>
         </div>
         <div class="track-field track-name-field">
-          <input type="text" class="track-name-input" data-field="name" placeholder="Track name" value="${track.name}" maxlength="100">
+          <input type="text" class="track-name-input" data-field="name" placeholder="Track name" value="${track.name}" maxlength="100" aria-label="Track name">
         </div>
         <div class="track-field track-sample">
           <button type="button" class="add-sample-btn ${track.audioBlob ? 'has-sample' : ''}" data-action="add-sample">

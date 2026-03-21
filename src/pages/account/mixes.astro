@@ -71,12 +71,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     </div>
 
     <!-- Edit Modal -->
-    <div id="editModal" class="modal hidden">
+    <div id="editModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Edit mix">
       <div class="modal-backdrop"></div>
       <div class="modal-content">
         <div class="modal-header">
           <h2>Edit Mix</h2>
-          <button class="modal-close">&times;</button>
+          <button class="modal-close" aria-label="Close">&times;</button>
         </div>
         <form id="editForm">
           <input type="hidden" id="editMixId" name="mixId">
@@ -148,12 +148,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" class="modal hidden">
+    <div id="deleteModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Delete mix confirmation">
       <div class="modal-backdrop"></div>
       <div class="modal-content">
         <div class="modal-header">
           <h2>Delete Mix</h2>
-          <button class="modal-close">&times;</button>
+          <button class="modal-close" aria-label="Close">&times;</button>
         </div>
         <p class="delete-warning">Are you sure you want to delete "<span id="deleteMixTitle"></span>"? This cannot be undone.</p>
         <input type="hidden" id="deleteMixId">

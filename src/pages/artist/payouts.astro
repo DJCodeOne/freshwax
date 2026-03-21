@@ -325,7 +325,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </p>
 
               <div class="payouts-table-wrap">
-                <table class="payouts-table">
+                <table class="payouts-table" aria-label="Pending payouts">
                   <thead>
                     <tr>
                       <th scope="col">Date</th>
@@ -366,7 +366,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </div>
             ) : (
               <div class="payouts-table-wrap">
-                <table class="payouts-table breakdown-table">
+                <table class="payouts-table breakdown-table" aria-label="Earnings breakdown">
                   <thead>
                     <tr>
                       <th scope="col">Date</th>

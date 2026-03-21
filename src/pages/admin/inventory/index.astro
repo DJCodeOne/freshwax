@@ -120,7 +120,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <div class="filters">
           <div class="filter-group">
             <span class="filter-label">Filter:</span>
-            <select class="filter-select" id="stockFilter">
+            <select class="filter-select" id="stockFilter" aria-label="Stock filter">
               <option value="all">All Products</option>
               <option value="low">Low Stock Only</option>
               <option value="out">Out of Stock Only</option>
@@ -128,7 +128,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </select>
           </div>
           <div class="filter-group">
-            <input type="text" class="filter-input" id="stockSearch" placeholder="Search products...">
+            <input type="text" class="filter-input" id="stockSearch" placeholder="Search products..." aria-label="Search stock">
           </div>
         </div>
         
@@ -164,13 +164,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="stocktake-filters">
             <div class="filter-group">
               <span class="filter-label">Supplier:</span>
-              <select class="filter-select" id="supplierFilter">
+              <select class="filter-select" id="supplierFilter" aria-label="Supplier filter">
                 <option value="all">All Suppliers</option>
               </select>
             </div>
             <div class="filter-group">
               <span class="filter-label">Category:</span>
-              <select class="filter-select" id="categoryFilter">
+              <select class="filter-select" id="categoryFilter" aria-label="Category filter">
                 <option value="all">All Categories</option>
                 <option value="clothing">Clothing</option>
                 <option value="accessories">Accessories</option>
@@ -224,7 +224,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <div class="filters">
           <div class="filter-group">
             <span class="filter-label">Type:</span>
-            <select class="filter-select" id="movementFilter">
+            <select class="filter-select" id="movementFilter" aria-label="Movement filter">
               <option value="all">All Movements</option>
               <option value="receive">Received</option>
               <option value="sell">Sold</option>
@@ -250,7 +250,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title">Quick Stock Update</h3>
-        <button class="modal-close" data-action="close-modal">&times;</button>
+        <button class="modal-close" data-action="close-modal" aria-label="Close">&times;</button>
       </div>
       <div class="modal-body">
         <div id="modalProductInfo" style="margin-bottom: 1rem;"></div>

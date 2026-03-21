@@ -230,12 +230,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- User Details Modal -->
-  <div id="userModal" class="modal hidden">
+  <div id="userModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="User details">
     <div class="modal-backdrop" id="userModalBackdrop"></div>
     <div class="modal-content">
       <div class="modal-header">
         <h3>User Details</h3>
-        <button class="modal-close" id="userModalCloseBtn">&times;</button>
+        <button class="modal-close" id="userModalCloseBtn" aria-label="Close">&times;</button>
       </div>
       <div class="modal-body" id="userModalBody">
         Loading...
@@ -244,12 +244,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- Extend Subscription Modal -->
-  <div id="extendModal" class="modal hidden">
+  <div id="extendModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Extend subscription">
     <div class="modal-backdrop" id="extendModalBackdrop"></div>
     <div class="modal-content">
       <div class="modal-header">
         <h3>Extend Subscription</h3>
-        <button class="modal-close" id="extendModalCloseBtn">&times;</button>
+        <button class="modal-close" id="extendModalCloseBtn" aria-label="Close">&times;</button>
       </div>
       <div class="modal-body">
         <p>Extend subscription for user: <strong id="extendUserName"></strong></p>

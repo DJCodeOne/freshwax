@@ -42,10 +42,6 @@ const ALLOWED_ORIGINS = [
   'https://freshwax.pages.dev',
   'https://stream.freshwax.co.uk',
   'https://icecast.freshwax.co.uk',
-  // Development
-  'http://localhost:4321',
-  'http://localhost:3000',
-  'http://127.0.0.1:4321',
 ];
 
 // Check if origin is allowed

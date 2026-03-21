@@ -41,7 +41,7 @@ export async function handleCheckoutExpired(
         const userId = session.metadata?.userId || session.metadata?.customer_id;
         if (userId) {
           try {
-            const userDoc = await getDocument('customers', userId, env as unknown as number);
+            const userDoc = await getDocument('customers', userId);
             if (userDoc && (userDoc as Record<string, unknown>).emailOptOut) {
               optedOut = true;
             }
@@ -51,10 +51,12 @@ export async function handleCheckoutExpired(
         if (!optedOut) {
           // Rate limit: max 1 per email per 24h
           const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-          const recentEmails = await queryCollection('abandonedCartEmails', env as unknown as Record<string, unknown>, [
-            { field: 'email', op: 'EQUAL', value: customerEmail },
-            { field: 'sentAt', op: 'GREATER_THAN_OR_EQUAL', value: oneDayAgo }
-          ] as unknown as boolean);
+          const recentEmails = await queryCollection('abandonedCartEmails', {
+            filters: [
+              { field: 'email', op: 'EQUAL', value: customerEmail },
+              { field: 'sentAt', op: 'GREATER_THAN_OR_EQUAL', value: oneDayAgo }
+            ]
+          });
 
           if (!recentEmails || recentEmails.length === 0) {
             const { sendAbandonedCartEmail } = await import('../abandoned-cart-email');
@@ -73,7 +75,7 @@ export async function handleCheckoutExpired(
               messageId: emailResult.messageId || null,
               error: emailResult.error || null,
               sentAt: new Date().toISOString()
-            }, env as unknown as string);
+            });
 
             log.debug('[Stripe Webhook] Abandoned cart email:', emailResult.success ? 'sent' : 'failed');
           } else {

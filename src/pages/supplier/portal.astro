@@ -116,6 +116,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 </Layout>
 
 <script define:vars={{ code }} nonce={nonce}>
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   const accessCode = code;
   let supplierData = {};
 
@@ -201,7 +211,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <span class="status-icon">✓</span>
           <div>
             <strong>PayPal Connected</strong>
-            <p>Payouts will be sent to: <strong>${data.paypalEmail}</strong></p>
+            <p>Payouts will be sent to: <strong>${escapeHtml(data.paypalEmail)}</strong></p>
           </div>
           <div class="status-actions-col">
             <button id="paypal-change-btn" class="btn btn-secondary">Change Email</button>
@@ -394,7 +404,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <span class="status-icon">⚠</span>
           <div>
             <strong>Action Required</strong>
-            <p>Stripe requires additional information: ${data.disabledReason || 'Please update your account'}</p>
+            <p>Stripe requires additional information: ${escapeHtml(data.disabledReason) || 'Please update your account'}</p>
           </div>
           <button id="update-btn" class="btn btn-warning">Update Account</button>
         </div>
@@ -445,11 +455,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         html += `
           <div class="payout-item pending">
             <div class="payout-info">
-              <span class="payout-order">Order #${p.orderNumber || p.orderId?.slice(-6).toUpperCase()}</span>
-              <span class="payout-date">${formatDate(p.createdAt)}</span>
+              <span class="payout-order">Order #${escapeHtml(p.orderNumber || p.orderId?.slice(-6).toUpperCase())}</span>
+              <span class="payout-date">${escapeHtml(formatDate(p.createdAt))}</span>
               <span class="payout-status pending">Pending</span>
             </div>
-            <span class="payout-amount">£${p.amount.toFixed(2)}</span>
+            <span class="payout-amount">&pound;${escapeHtml(p.amount.toFixed(2))}</span>
           </div>
         `;
       }
@@ -458,14 +468,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     // Completed payouts
     if (payouts && payouts.length > 0) {
       for (const p of payouts) {
+        var escapedStatus = escapeHtml(p.status);
         html += `
-          <div class="payout-item ${p.status}">
+          <div class="payout-item ${escapedStatus}">
             <div class="payout-info">
-              <span class="payout-order">Order #${p.orderNumber || p.orderId?.slice(-6).toUpperCase()}</span>
-              <span class="payout-date">${formatDate(p.completedAt || p.createdAt)}</span>
-              <span class="payout-status ${p.status}">${p.status === 'completed' ? 'Paid' : p.status}</span>
+              <span class="payout-order">Order #${escapeHtml(p.orderNumber || p.orderId?.slice(-6).toUpperCase())}</span>
+              <span class="payout-date">${escapeHtml(formatDate(p.completedAt || p.createdAt))}</span>
+              <span class="payout-status ${escapedStatus}">${p.status === 'completed' ? 'Paid' : escapedStatus}</span>
             </div>
-            <span class="payout-amount">£${p.amount.toFixed(2)}</span>
+            <span class="payout-amount">&pound;${escapeHtml(p.amount.toFixed(2))}</span>
           </div>
         `;
       }

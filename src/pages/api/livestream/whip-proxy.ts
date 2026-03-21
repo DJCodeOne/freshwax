@@ -48,8 +48,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.forbidden('Stream slot has expired');
       }
     } catch (validationErr: unknown) {
-      // Fail open — don't block streaming if validation query fails
-      log.warn('WHIP proxy: slot validation failed, allowing:', validationErr instanceof Error ? validationErr.message : String(validationErr));
+      // Fail closed — deny streaming if validation query fails
+      log.error('WHIP proxy: slot validation failed, denying:', validationErr instanceof Error ? validationErr.message : String(validationErr));
+      return ApiErrors.serverError('Stream validation unavailable');
     }
 
     const whipBaseUrl = (locals as App.Locals).runtime?.env?.WHIP_BASE_URL || import.meta.env.WHIP_BASE_URL;

@@ -906,11 +906,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   <button type="button" id="remove-gif-btn" class="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-700" aria-label="Remove GIF">×</button>
                 </div>
                 
-                <textarea 
-                  id="comment-text" 
-                  placeholder="Write your comment... (login required, max 150 characters)" 
+                <textarea
+                  id="comment-text"
+                  placeholder="Write your comment... (login required, max 150 characters)"
                   maxlength="150"
                   rows="3"
+                  aria-label="Write a comment"
                   class="w-full px-3 py-2 border-2 border-gray-600 bg-gray-900 text-white text-sm md:text-base placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-600 resize-none rounded flex-1 shadow-inner"
                 ></textarea>
                 

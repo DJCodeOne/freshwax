@@ -1233,26 +1233,24 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   }
 
   function renderConditionBadge(abbr) {
-    const data = conditionData[abbr] || { name: abbr, color: '#6b7280' };
-    return `
-      <div class="condition-badge">
-        <span class="condition-icon" style="background: ${data.color}">${abbr}</span>
-        <span class="condition-label">${data.name}</span>
-      </div>
-    `;
+    var safeAbbr = escapeHtml(abbr);
+    var data = conditionData[abbr] || { name: safeAbbr, color: '#6b7280' };
+    return '<div class="condition-badge">' +
+      '<span class="condition-icon" style="background: ' + escapeHtml(data.color) + '">' + safeAbbr + '</span>' +
+      '<span class="condition-label">' + escapeHtml(data.name) + '</span>' +
+      '</div>';
   }
 
   function renderConditionBadgeWithLabel(abbr, label) {
-    const data = conditionData[abbr] || { name: abbr, color: '#6b7280' };
-    return `
-      <div class="condition-badge-full">
-        <span class="condition-type">${label}</span>
-        <div class="condition-row">
-          <span class="condition-icon" style="background: ${data.color}">${abbr}</span>
-          <span class="condition-label">${data.name}</span>
-        </div>
-      </div>
-    `;
+    var safeAbbr = escapeHtml(abbr);
+    var data = conditionData[abbr] || { name: safeAbbr, color: '#6b7280' };
+    return '<div class="condition-badge-full">' +
+      '<span class="condition-type">' + escapeHtml(label) + '</span>' +
+      '<div class="condition-row">' +
+      '<span class="condition-icon" style="background: ' + escapeHtml(data.color) + '">' + safeAbbr + '</span>' +
+      '<span class="condition-label">' + escapeHtml(data.name) + '</span>' +
+      '</div>' +
+      '</div>';
   }
 
   function renderListing() {

@@ -1136,7 +1136,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           djText = 'You';
         } else if (booking) {
           cellClass += ' booked';
-          djText = booking.djName || 'Booked';
+          djText = escapeHtml(booking.djName) || 'Booked';
         } else {
           cellClass += ' open';
           djText = ''; // No text for open slots - just color indicator
@@ -1367,12 +1367,12 @@ const csrfToken = Astro.locals.csrfToken || '';
           html += `
             <div class="booking-item">
               <div class="booking-info">
-                <div class="booking-title">${slot.djName} - ${slot.title}</div>
+                <div class="booking-title">${escapeHtml(slot.djName)} - ${escapeHtml(slot.title)}</div>
                 <div class="booking-time">${dateStr} • ${timeStr} (${durationHours}hr)</div>
               </div>
               <div class="booking-actions">
-                <button class="edit-btn" data-id="${slot.id}" data-djname="${slot.djName}" data-title="${slot.title}" data-genre="${slot.genre || ''}">Edit</button>
-                <button class="cancel-btn" data-id="${slot.id}">Cancel</button>
+                <button class="edit-btn" data-id="${escapeHtml(slot.id)}" data-djname="${escapeHtml(slot.djName)}" data-title="${escapeHtml(slot.title)}" data-genre="${escapeHtml(slot.genre || '')}">Edit</button>
+                <button class="cancel-btn" data-id="${escapeHtml(slot.id)}">Cancel</button>
               </div>
             </div>
           `;

@@ -99,7 +99,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="filters-row">
         <div class="filter-group">
           <label>Status</label>
-          <select id="filterStatus" class="filter-select">
+          <select id="filterStatus" class="filter-select" aria-label="Status filter">
             <option value="">All</option>
             <option value="published">Published</option>
             <option value="pending">Pending</option>
@@ -110,7 +110,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         </div>
         <div class="filter-group">
           <label>Seller</label>
-          <select id="filterSeller" class="filter-select">
+          <select id="filterSeller" class="filter-select" aria-label="Seller filter">
             <option value="">All Sellers</option>
             {vinylSellers.map(seller => (
               <option value={seller.id}>{seller.storeName || seller.email}</option>
@@ -223,12 +223,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <!-- Edit Listing Modal -->
-  <div id="editListingModal" class="modal hidden">
+  <div id="editListingModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Edit vinyl listing">
     <div class="modal-backdrop"></div>
     <div class="modal-content modal-large">
       <div class="modal-header">
         <h3>Edit Vinyl Listing</h3>
-        <button class="modal-close" data-action="close-modal">&times;</button>
+        <button class="modal-close" data-action="close-modal" aria-label="Close">&times;</button>
       </div>
       <form id="editListingForm">
         <input type="hidden" id="editListingId" name="listingId" />
