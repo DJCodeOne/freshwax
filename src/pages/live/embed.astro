@@ -288,7 +288,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   </div>
 
   {isLive && hlsUrl && (
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12" is:inline integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12" is:inline async integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
   )}
 
   <script is:inline define:vars={{ hlsUrl, isLive }} nonce={nonce}>

@@ -24,7 +24,7 @@ const bypassRequestPostSchema = z.object({
   relayUrl: z.string().optional(),
   mixCount: z.number().optional(),
   bestMixLikes: z.number().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

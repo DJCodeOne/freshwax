@@ -26,7 +26,7 @@ const TrackSchema = z.object({
   mp3Url: z.string().max(2000).nullish(),
   wavUrl: z.string().max(2000).nullish(),
   previewUrl: z.string().max(2000).nullish(),
-}).passthrough();
+}).strip();
 
 const CompleteUploadSchema = z.object({
   releaseId: z.string().min(1).max(200),
@@ -37,7 +37,7 @@ const CompleteUploadSchema = z.object({
   coverArtUrl: z.string().max(2000).nullish(),
   uploadedBy: z.string().max(200).nullish(),
   metadata: z.record(z.unknown()).default({}),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

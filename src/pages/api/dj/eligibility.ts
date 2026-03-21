@@ -10,7 +10,7 @@ const EligibilitySchema = z.object({
   action: z.enum(['checkAndUpdate', 'requestBypass']),
   uid: z.string().min(1).max(200),
   reason: z.string().max(2000).nullish(),
-}).passthrough();
+}).strip();
 
 // Default requirements (can be overridden by admin settings)
 const DEFAULT_REQUIREMENTS = {

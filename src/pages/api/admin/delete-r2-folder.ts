@@ -13,7 +13,7 @@ export const prerender = false;
 
 const deleteR2FolderSchema = z.object({
   folder: z.string().min(1),
-}).passthrough();
+}).strip();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);

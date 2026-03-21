@@ -19,7 +19,7 @@ const CreditAccountSchema = z.object({
   }, 'Amount must be a positive number'),
   reason: z.string().max(500).optional(),
   isWelcomeCredit: z.boolean().optional(),
-}).passthrough();
+}).strip();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: 10 per minute for credit account operations

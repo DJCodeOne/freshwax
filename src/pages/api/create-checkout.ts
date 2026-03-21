@@ -18,7 +18,7 @@ const CreateCheckoutSchema = z.object({
   promoCode: z.string().max(50).optional(),
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

@@ -16,11 +16,12 @@ let mixes: Record<string, unknown>[] = [];
 let showMixCharts = false;
 
 try {
-  // Get published mixes - D1 first, Firebase fallback
-  mixes = await getLiveDJMixes(50, db);
-
-  // Get settings for mix chart visibility (30-min cache)
-  const settings = await getSettings();
+  // Fetch mixes and settings in parallel
+  const [fetchedMixes, settings] = await Promise.all([
+    getLiveDJMixes(50, db),
+    getSettings()
+  ]);
+  mixes = fetchedMixes;
   if (settings) {
     showMixCharts = settings.showMixCharts || false;
   }

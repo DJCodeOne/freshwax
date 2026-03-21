@@ -11,7 +11,7 @@ const HeartbeatSchema = z.object({
   action: z.string().max(50).nullish(),
   userName: z.string().max(200).nullish(),
   userAvatar: z.string().max(2000).nullish(),
-}).passthrough();
+}).strip();
 
 // Viewer info structure
 interface ViewerInfo {

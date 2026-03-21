@@ -19,16 +19,16 @@ const PlaylistItemSchema = z.object({
   embedId: z.string().max(500).nullish(),
   title: z.string().max(500).nullish(),
   thumbnail: z.string().max(2000).nullish(),
-}).passthrough();
+}).strip();
 
 const PlaylistPostSchema = z.object({
   item: PlaylistItemSchema,
   userName: z.string().max(200).nullish(),
-}).passthrough();
+}).strip();
 
 const PlaylistDeleteSchema = z.object({
   itemId: z.string().min(1).max(200),
-}).passthrough();
+}).strip();
 
 const PlaylistPutSchema = z.object({
   action: z.string().min(1).max(50),
@@ -38,12 +38,12 @@ const PlaylistPutSchema = z.object({
     currentIndex: z.number().int().min(0).nullish(),
     isPlaying: z.boolean().nullish(),
     trackStartedAt: z.string().max(100).nullish(),
-  }).passthrough().nullish(),
+  }).strip().nullish(),
   trackId: z.string().max(200).nullish(),
   finishedTrackTitle: z.string().max(500).nullish(),
   emoji: z.string().max(50).nullish(),
   sessionId: z.string().max(200).nullish(),
-}).passthrough();
+}).strip();
 
 // KV keys for playlist data
 const KV_PLAYLIST_KEY = 'global-playlist';

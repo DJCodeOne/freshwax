@@ -19,7 +19,7 @@ const UpdateMixSchema = z.object({
   tracklist: z.string().max(10000).nullish(),
   artworkUrl: z.string().max(2000).nullish(),
   partnerId: z.string().max(500).nullish(),
-}).passthrough();
+}).strip();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: write operations - 30 per minute

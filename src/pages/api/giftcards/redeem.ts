@@ -14,7 +14,7 @@ const log = createLogger('[giftcards/redeem]');
 // Zod schema for gift card redemption
 const RedeemSchema = z.object({
   code: z.string().min(1, 'Gift card code is required').max(50),
-}).passthrough();
+}).strip();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: destructive operation - 3 per hour (prevent brute force)

@@ -13,7 +13,7 @@ import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 const sendVerificationEmailSchema = z.object({
   email: z.string().email(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

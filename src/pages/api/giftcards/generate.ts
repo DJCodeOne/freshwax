@@ -17,7 +17,7 @@ const GenerateGiftCardSchema = z.object({
   description: z.string().max(500).optional(),
   createdFor: z.string().optional(),
   systemKey: z.string().min(1, 'System key required'),
-}).passthrough();
+}).strip();
 
 // Timing-safe string comparison to prevent timing attacks
 function timingSafeEqual(a: string, b: string): boolean {

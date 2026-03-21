@@ -29,7 +29,7 @@ const PayPalItemSchema = z.object({
   artist: z.string().nullish(),
   artistId: z.string().nullish(),
   sellerId: z.string().nullish(),
-}).passthrough();
+}).strip();
 
 const PayPalCreateOrderSchema = z.object({
   items: z.array(PayPalItemSchema).min(1, 'At least one item required').max(50),
@@ -39,7 +39,7 @@ const PayPalCreateOrderSchema = z.object({
     lastName: z.string().nullish(),
     phone: z.string().nullish(),
     userId: z.string().nullish(),
-  }).passthrough().nullish(),
+  }).strip().nullish(),
   shipping: z.object({
     address1: z.string().nullish(),
     address2: z.string().nullish(),
@@ -47,9 +47,9 @@ const PayPalCreateOrderSchema = z.object({
     county: z.string().nullish(),
     postcode: z.string().nullish(),
     country: z.string().nullish(),
-  }).passthrough().nullish(),
+  }).strip().nullish(),
   hasPhysicalItems: z.boolean().nullish(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

@@ -15,7 +15,7 @@ const vinylListingPostSchema = z.object({
   sellerId: z.string().min(1),
   sellerName: z.string().optional(),
   listingId: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

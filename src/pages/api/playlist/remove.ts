@@ -10,7 +10,7 @@ import type { UserPlaylist } from '../../../lib/types';
 
 const PlaylistRemoveSchema = z.object({
   itemId: z.string().min(1).max(500),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

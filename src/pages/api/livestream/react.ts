@@ -22,7 +22,7 @@ const ReactSchema = z.object({
   emoji: z.string().max(50).nullish(),
   emojiType: z.string().max(50).nullish(),
   message: z.string().max(30).nullish(),
-}).passthrough();
+}).strip();
 
 // Helper to get stream document from either collection (livestreamSlots or livestreams)
 async function getStreamDocument(streamId: string) {

@@ -29,7 +29,7 @@ const blogCreateSchema = z.object({
 const blogUpdateSchema = z.object({
   id: z.string().min(1),
   adminKey: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

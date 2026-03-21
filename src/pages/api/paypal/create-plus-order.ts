@@ -15,7 +15,7 @@ import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth
 const PayPalPlusOrderSchema = z.object({
   email: z.string().email('Valid email required'),
   promoCode: z.string().max(50).optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

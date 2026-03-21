@@ -12,7 +12,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 
 const PlaylistAddSchema = z.object({
   url: z.string().min(1).max(2000),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

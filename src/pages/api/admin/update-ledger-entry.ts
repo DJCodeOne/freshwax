@@ -24,7 +24,7 @@ const updateLedgerEntrySchema = z.discriminatedUnion('action', [
     notes: z.string().optional(),
     artistId: z.string().optional(),
     orderId: z.string().optional(),
-  }).passthrough(), adminKey: z.string().optional() }),
+  }).strip(), adminKey: z.string().optional() }),
   z.object({ action: z.literal('delete'), ledgerId: z.string().min(1), adminKey: z.string().optional() }),
 ]);
 

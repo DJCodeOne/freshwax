@@ -31,7 +31,7 @@ const CheckoutItemSchema = z.object({
   isPreOrder: z.boolean().nullish(),
   releaseDate: z.string().nullish(),
   sellerId: z.string().nullish(),
-}).passthrough();
+}).strip();
 
 const CheckoutCustomerSchema = z.object({
   email: z.string().email('Valid email required'),
@@ -40,7 +40,7 @@ const CheckoutCustomerSchema = z.object({
   displayName: z.string().nullish(),
   phone: z.string().nullish(),
   userId: z.string().nullish(),
-}).passthrough();
+}).strip();
 
 const CheckoutShippingSchema = z.object({
   address1: z.string().nullish(),
@@ -49,7 +49,7 @@ const CheckoutShippingSchema = z.object({
   county: z.string().nullish(),
   postcode: z.string().nullish(),
   country: z.string().nullish(),
-}).passthrough().nullish();
+}).strip().nullish();
 
 const StripeCheckoutSchema = z.object({
   items: z.array(CheckoutItemSchema).min(1, 'At least one item required').max(50),
@@ -60,8 +60,8 @@ const StripeCheckoutSchema = z.object({
     subtotal: z.number().optional(),
     shipping: z.number().optional(),
     total: z.number().optional(),
-  }).passthrough().optional(),
-}).passthrough();
+  }).strip().optional(),
+}).strip();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit

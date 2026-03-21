@@ -17,7 +17,7 @@ const TakeoverSchema = z.object({
   targetDjName: z.string().max(200).nullish(),
   streamKey: z.string().max(500).nullish(),
   serverUrl: z.string().max(2000).nullish(),
-}).passthrough();
+}).strip();
 
 // Pusher configuration
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;

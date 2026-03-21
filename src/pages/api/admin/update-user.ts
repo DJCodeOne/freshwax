@@ -26,19 +26,19 @@ const updateUserSchema = z.object({
       county: z.string().optional(),
       postcode: z.string().optional(),
       country: z.string().optional(),
-    }).passthrough().optional(),
+    }).strip().optional(),
     roles: z.object({
       customer: z.boolean().optional(),
       dj: z.boolean().optional(),
       artist: z.boolean().optional(),
       merchSupplier: z.boolean().optional(),
-    }).passthrough().optional(),
+    }).strip().optional(),
     isAdmin: z.boolean().optional(),
     permissions: z.record(z.string(), z.boolean()).optional(),
     approved: z.boolean().optional(),
     suspended: z.boolean().optional(),
     adminNotes: z.string().optional(),
-  }).passthrough(),
+  }).strip(),
   adminKey: z.string().optional(),
 });
 

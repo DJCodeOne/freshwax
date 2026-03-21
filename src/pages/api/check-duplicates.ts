@@ -15,11 +15,11 @@ const CartItemSchema = z.object({
   productId: z.string().max(200).nullish(),
   id: z.string().max(200).nullish(),
   trackId: z.string().max(200).nullish(),
-}).passthrough();
+}).strip();
 
 const CheckDuplicatesSchema = z.object({
   cartItems: z.array(CartItemSchema).max(100),
-}).passthrough();
+}).strip();
 
 const log = createLogger('check-duplicates');
 

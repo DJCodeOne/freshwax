@@ -14,7 +14,7 @@ const ApplyCreditSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
   orderId: z.string().optional(),
   orderNumber: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

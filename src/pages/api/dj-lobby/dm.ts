@@ -17,7 +17,7 @@ const DmSchema = z.object({
   receiverName: z.string().max(200).nullish(),
   text: z.string().min(1).max(2000),
   senderAvatar: z.string().max(2000).nullish(),
-}).passthrough();
+}).strip();
 
 // Web Crypto API helper for HMAC-SHA256 (hex output)
 async function hmacSha256Hex(key: string, data: string): Promise<string> {

@@ -18,7 +18,7 @@ const cleanupStreamsPostSchema = z.object({
   ids: z.array(z.string().min(1)).optional(),
   cleanDisconnected: z.boolean().optional(),
   disconnectThreshold: z.number().positive().optional(),
-}).passthrough();
+}).strip();
 
 function initServices(locals: App.Locals) {
   const env = locals.runtime.env;

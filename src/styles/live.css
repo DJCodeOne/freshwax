@@ -1677,7 +1677,7 @@
   .schedule-item.cancelled .schedule-duration,
   .schedule-item.cancelled .schedule-duration-val {
     text-decoration: line-through;
-    color: #6b7280;
+    color: #d1d5db;
   }
 
   .schedule-time-block {
@@ -4859,7 +4859,7 @@
   
   .time-dropdown.unavailable {
     background-color: #f3f4f6;
-    color: #9ca3af;
+    color: #6b7280;
   }
   
   .selected-time-info {
@@ -8056,7 +8056,7 @@
 }
 
 .playlist-url-input::placeholder {
-  color: #6b7280;
+  color: #d1d5db;
 }
 
 .add-to-playlist-btn {
@@ -8149,7 +8149,7 @@
   align-items: center;
   justify-content: center;
   padding: 3rem 1rem;
-  color: #6b7280;
+  color: #d1d5db;
   text-align: center;
 }
 

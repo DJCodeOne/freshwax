@@ -15,7 +15,7 @@ const log = createLogger('plus/validate-promo');
 const ValidatePromoSchema = z.object({
   code: z.string().min(1, 'Referral code is required').max(50),
   userId: z.string().min(1, 'User ID is required'),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

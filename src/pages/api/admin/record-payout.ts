@@ -15,7 +15,7 @@ const log = createLogger('[record-payout]');
 const recordPayoutSchema = z.object({
   orderId: z.string().min(1),
   notes: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

@@ -15,7 +15,7 @@ import { z } from 'zod';
 const DeleteMixSchema = z.object({
   mixId: z.string().min(1).max(200),
   folderPath: z.string().max(500).nullish(),
-}).passthrough();
+}).strip();
 
 const log = createLogger('delete-mix');
 

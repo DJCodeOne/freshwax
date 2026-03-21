@@ -26,7 +26,7 @@ const FinalizeUploadSchema = z.object({
   tracklist: z.string().max(10000).nullish(),
   durationSeconds: z.number().min(0).nullish(),
   userId: z.string().max(500).nullish(),
-}).passthrough();
+}).strip();
 
 
 export const prerender = false;

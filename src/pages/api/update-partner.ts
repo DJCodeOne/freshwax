@@ -19,7 +19,7 @@ const UpdatePartnerSchema = z.object({
   bannerUrl: z.string().max(2000).nullish(),
   location: z.string().max(200).nullish(),
   genres: z.array(z.string().max(100)).max(20).nullish(),
-}).passthrough();
+}).strip();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);

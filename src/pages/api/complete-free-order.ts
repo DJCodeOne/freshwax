@@ -25,7 +25,7 @@ const FreeOrderItemSchema = z.object({
   artist: z.string().optional(),
   artistId: z.string().optional(),
   sellerId: z.string().optional(),
-}).passthrough();
+}).strip();
 
 const FreeOrderCustomerSchema = z.object({
   email: z.string().email('Valid email required'),
@@ -33,7 +33,7 @@ const FreeOrderCustomerSchema = z.object({
   lastName: z.string().min(1, 'Last name required'),
   phone: z.string().optional(),
   userId: z.string().optional(),
-}).passthrough();
+}).strip();
 
 const FreeOrderSchema = z.object({
   customer: FreeOrderCustomerSchema,
@@ -45,10 +45,10 @@ const FreeOrderSchema = z.object({
     county: z.string().optional(),
     postcode: z.string().optional(),
     country: z.string().optional(),
-  }).passthrough().optional().nullable(),
+  }).strip().optional().nullable(),
   appliedCredit: z.number().min(0).optional(),
   idToken: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

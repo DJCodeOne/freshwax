@@ -17,7 +17,7 @@ const UpdateShippingSchema = z.object({
   vinylShippingEU: z.union([z.string().max(20), z.number().min(0).max(1000)]).nullish(),
   vinylShippingIntl: z.union([z.string().max(20), z.number().min(0).max(1000)]).nullish(),
   vinylShipsFrom: z.string().max(200).nullish(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

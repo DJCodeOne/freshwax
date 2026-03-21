@@ -26,7 +26,7 @@ const CartItemSchema = z.object({
   size: z.string().max(50).optional(),
   color: z.union([z.string().max(100), z.object({ name: z.string().max(100), hex: z.string().max(20) })]).optional(),
   format: z.string().max(50).optional(),
-}).passthrough();
+}).strip();
 
 const CartSaveSchema = z.object({
   items: z.array(CartItemSchema).max(100),

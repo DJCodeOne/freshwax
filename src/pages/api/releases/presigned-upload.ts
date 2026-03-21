@@ -14,7 +14,7 @@ const FileItemSchema = z.object({
   filename: z.string().min(1).max(500),
   contentType: z.string().min(1).max(200),
   size: z.number().int().min(0).nullish(),
-}).passthrough();
+}).strip();
 
 const PresignedUploadSchema = z.object({
   files: z.array(FileItemSchema).min(1).max(100),
@@ -22,7 +22,7 @@ const PresignedUploadSchema = z.object({
   releaseName: z.string().max(500).nullish(),
   uploadType: z.string().max(50).default('release'),
   releaseId: z.string().max(200).nullish(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

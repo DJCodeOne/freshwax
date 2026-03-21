@@ -34,7 +34,7 @@ const VinylSettingsSchema = z.object({
   discogsUrl: z.string().max(200).nullish(),
   // Meta
   createdAt: z.string().max(100).nullish(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

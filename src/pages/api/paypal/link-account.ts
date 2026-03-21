@@ -16,7 +16,7 @@ const LinkAccountPostSchema = z.object({
   entityId: z.string().optional(),
   paypalEmail: z.string().email('Valid PayPal email required'),
   accessCode: z.string().optional(),
-}).passthrough();
+}).strip();
 
 const LinkAccountGetSchema = z.object({
   entityType: z.enum(['artist', 'supplier', 'user']),

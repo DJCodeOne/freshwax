@@ -16,7 +16,7 @@ const LobbyChatSchema = z.object({
   name: z.string().max(200).nullish(),
   text: z.string().min(1).max(2000),
   avatar: z.string().max(2000).nullish(),
-}).passthrough();
+}).strip();
 
 // Web Crypto API helper for HMAC-SHA256 (hex output)
 async function hmacSha256Hex(key: string, data: string): Promise<string> {

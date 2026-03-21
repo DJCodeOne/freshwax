@@ -15,7 +15,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 const deleteMixSchema = z.object({
   mixId: z.string().min(1),
   folderPath: z.string().optional(),
-}).passthrough();
+}).strip();
 
 const log = createLogger('admin/delete-mix');
 

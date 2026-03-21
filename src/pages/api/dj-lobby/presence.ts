@@ -17,7 +17,7 @@ const PresenceSchema = z.object({
   avatar: z.string().max(2000).nullish(),
   avatarLetter: z.string().max(5).nullish(),
   isReady: z.boolean().nullish(),
-}).passthrough();
+}).strip();
 
 // Pusher configuration is loaded from env at runtime (not module level)
 // This is required for Cloudflare Workers compatibility

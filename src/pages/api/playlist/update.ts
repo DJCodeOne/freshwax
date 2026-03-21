@@ -11,7 +11,7 @@ import type { UserPlaylist } from '../../../lib/types';
 const PlaylistUpdateSchema = z.object({
   currentIndex: z.number().int().min(0).nullish(),
   isPlaying: z.boolean().nullish(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

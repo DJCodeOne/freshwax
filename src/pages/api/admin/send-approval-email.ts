@@ -15,7 +15,7 @@ const sendApprovalEmailSchema = z.object({
   email: z.string().email(),
   name: z.string().optional(),
   type: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

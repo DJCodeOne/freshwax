@@ -16,7 +16,7 @@ const PresignDownloadSchema = z.object({
   trackIndex: z.number().int().min(0).max(999),
   fileType: z.enum(['mp3', 'wav', 'artwork']),
   filename: z.string().max(300).optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

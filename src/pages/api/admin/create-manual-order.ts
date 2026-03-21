@@ -39,7 +39,7 @@ const createManualOrderSchema = z.object({
       artwork: z.string().optional(),
       artist: z.string().optional(),
       artistId: z.string().optional(),
-    }).passthrough()).min(1),
+    }).strip()).min(1),
     totals: z.object({
       subtotal: z.number().optional(),
       shipping: z.number().optional(),
@@ -58,7 +58,7 @@ const createManualOrderSchema = z.object({
       postcode: z.string().optional(),
       country: z.string().optional(),
       method: z.string().optional(),
-    }).passthrough().optional(),
+    }).strip().optional(),
     paymentMethod: z.string().optional(),
     paymentIntentId: z.string().optional(),
     paypalOrderId: z.string().optional(),

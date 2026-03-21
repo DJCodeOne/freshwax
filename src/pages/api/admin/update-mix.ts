@@ -24,7 +24,7 @@ const updateMixSchema = z.object({
   featured: z.boolean().optional(),
   durationSeconds: z.union([z.number(), z.string()]).optional().nullable(),
   userId: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

@@ -16,7 +16,7 @@ import type { Track } from '../../lib/types';
 const processReleaseSchema = z.object({
   submissionId: z.string().min(1, 'submissionId is required'),
   adminKey: z.string().optional(),
-}).passthrough();
+}).strip();
 
 const log = createLogger('process-release');
 

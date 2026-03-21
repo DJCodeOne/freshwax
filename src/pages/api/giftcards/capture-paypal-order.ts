@@ -14,7 +14,7 @@ import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth
 // Zod schema for gift card PayPal capture
 const GiftCardCaptureSchema = z.object({
   paypalOrderId: z.string().min(1, 'PayPal order ID required'),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

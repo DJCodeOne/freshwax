@@ -24,7 +24,7 @@ const GiftCardPayPalSchema = z.object({
   recipientName: z.string().max(200).optional(),
   recipientEmail: z.string().email().optional(),
   message: z.string().max(500).optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

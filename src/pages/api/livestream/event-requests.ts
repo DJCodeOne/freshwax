@@ -23,7 +23,7 @@ const EventRequestSchema = z.object({
   requestId: z.string().max(200).nullish(),
   adminId: z.string().max(200).nullish(),
   reason: z.string().max(2000).nullish(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

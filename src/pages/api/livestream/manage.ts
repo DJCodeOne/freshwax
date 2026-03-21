@@ -14,7 +14,7 @@ const livestreamManageSchema = z.object({
   action: z.enum(['start', 'stop', 'update', 'schedule', 'dj_ready', 'slot_expired', 'claim_slot']),
   djId: z.string().min(1),
   streamId: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: stream management - 30 per minute

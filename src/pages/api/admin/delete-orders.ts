@@ -11,7 +11,7 @@ const log = createLogger('[delete-orders]');
 
 const deleteOrdersSchema = z.object({
   orderIds: z.array(z.string().min(1)).min(1).max(50),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

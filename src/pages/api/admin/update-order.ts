@@ -26,7 +26,7 @@ const OrderItemSchema = z.object({
   artwork: z.string().optional(),
   artist: z.string().optional(),
   artistId: z.string().optional(),
-}).passthrough();
+}).strip();
 
 const updateOrderSchema = z.object({
   orderId: z.string().min(1),
@@ -36,7 +36,7 @@ const updateOrderSchema = z.object({
     paymentMethod: z.string().optional(),
     items: z.array(OrderItemSchema).optional(),
     notes: z.string().optional(),
-  }).passthrough().optional(),
+  }).strip().optional(),
   adminKey: z.string().optional(),
 });
 

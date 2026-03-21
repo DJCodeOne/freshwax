@@ -2046,7 +2046,7 @@
   .meter-value {
     font-family: 'JetBrains Mono', 'Consolas', monospace;
     font-size: 0.55rem;
-    color: #777;
+    color: #bbb;
     text-align: center;
     width: 36px;
     background: rgba(0, 0, 0, 0.4);
@@ -2864,7 +2864,7 @@
 
   .health-stat .stat-label {
     font-size: 0.55rem;
-    color: #6b7280;
+    color: #d1d5db;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.1rem;
@@ -3067,7 +3067,7 @@
 
   .info-label {
     font-size: 0.7rem;
-    color: #6b7280;
+    color: #d1d5db;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.25rem;
@@ -3365,7 +3365,7 @@
 
   .relay-station-badge.offline {
     background: rgba(107, 114, 128, 0.2);
-    color: #6b7280;
+    color: #d1d5db;
   }
 
   .relay-hint-text {
@@ -3739,7 +3739,7 @@
 
   .multi-stream-title p {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: #d1d5db;
     margin: 0.15rem 0 0;
   }
 
@@ -3873,7 +3873,7 @@
   }
 
   .social-post-input::placeholder {
-    color: #6b7280;
+    color: #d1d5db;
   }
 
   .social-post-input:focus {
@@ -4417,7 +4417,7 @@
   .output-url-hint {
     display: block;
     font-size: 0.6rem;
-    color: #6b7280;
+    color: #d1d5db;
     margin-top: 0.25rem;
   }
 
@@ -6663,7 +6663,7 @@
     outline-offset: 2px;
   }
   
-  #chatInput::placeholder { color: #6b7280; }
+  #chatInput::placeholder { color: #d1d5db; }
   
   #sendBtn {
     display: flex;
@@ -7564,7 +7564,7 @@
 
   .ls-chat-time {
     font-size: 0.7rem;
-    color: #6b7280;
+    color: #d1d5db;
     flex-shrink: 0;
   }
 
@@ -7609,7 +7609,7 @@
     align-items: center;
     justify-content: center;
     padding: 2rem;
-    color: #6b7280;
+    color: #d1d5db;
     text-align: center;
     gap: 0.5rem;
   }
@@ -7867,7 +7867,7 @@
   }
 
   .social-post-input::placeholder {
-    color: #6b7280;
+    color: #d1d5db;
   }
 
   .share-buttons {
@@ -9466,7 +9466,7 @@
   }
 
   .indicator.source-toggle.disconnected .indicator-label {
-    color: #6b7280;
+    color: #d1d5db;
   }
 
   /* Active/Selected state - blue border (overrides connected/disconnected border) */
@@ -10206,7 +10206,7 @@
 .broadcast-mode-toggle button {
   background: none;
   border: 1px solid #374151;
-  color: #9ca3af;
+  color: #d1d5db;
   font-size: 0.75rem;
   padding: 6px 14px;
   border-radius: 6px;
@@ -10258,7 +10258,7 @@
 }
 
 .mobile-offline-text {
-  color: #6b7280;
+  color: #d1d5db;
   font-size: 0.875rem;
   margin-top: 4px;
   text-transform: uppercase;
@@ -10490,7 +10490,7 @@
 
 .mobile-status-text {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #d1d5db;
   text-align: center;
   min-height: 1.2em;
   margin: 0;
@@ -10623,7 +10623,7 @@
 
 .chooser-subtitle {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: #d1d5db;
   text-align: center;
   line-height: 1.3;
 }
@@ -10667,7 +10667,7 @@
 .change-method-link button {
   background: none;
   border: none;
-  color: #6b7280;
+  color: #d1d5db;
   font-size: 0.7rem;
   cursor: pointer;
   text-decoration: underline;
@@ -10675,7 +10675,7 @@
 }
 
 .change-method-link button:hover {
-  color: #9ca3af;
+  color: #d1d5db;
 }
 
 @media (max-width: 400px) {

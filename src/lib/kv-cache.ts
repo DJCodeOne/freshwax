@@ -108,7 +108,7 @@ export async function kvCacheThrough<T>(
   const freshData = await fetcher();
 
   // Cache the result (don't await to avoid blocking)
-  kvSet(key, freshData, options).catch((e) => log.error('[KVCache] Background set error:', e));
+  kvSet(key, freshData, options).catch((e: unknown) => log.error('[KVCache] Background set error:', e));
 
   return freshData;
 }

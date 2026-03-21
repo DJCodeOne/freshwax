@@ -23,8 +23,8 @@ const PlusCommandSchema = z.object({
   currentTrack: z.object({
     title: z.string().max(500).nullish(),
     artist: z.string().max(200).nullish(),
-  }).passthrough().nullish(),
-}).passthrough();
+  }).strip().nullish(),
+}).strip();
 
 export const prerender = false;
 

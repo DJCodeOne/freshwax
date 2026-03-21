@@ -5,63 +5,9 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
+import { getServiceAccountKey, getServiceAccountToken } from '../../../lib/firebase-service-account';
 
 export const prerender = false;
-
-// Get service account token
-async function getToken(serviceAccountKey: string): Promise<string> {
-  let key: Record<string, unknown>;
-  try {
-    key = JSON.parse(serviceAccountKey);
-  } catch { /* intentional: invalid JSON in service account key — re-throw with clear message */
-    throw new Error('Invalid service account key format');
-  }
-  const now = Math.floor(Date.now() / 1000);
-
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const payload = {
-    iss: key.client_email,
-    scope: 'https://www.googleapis.com/auth/datastore',
-    aud: key.token_uri,
-    iat: now,
-    exp: now + 3600
-  };
-
-  const encoder = new TextEncoder();
-  const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-  const payloadB64 = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-
-  const privateKeyPem = key.private_key;
-  const pemContents = privateKeyPem.replace(/-----BEGIN PRIVATE KEY-----/, '').replace(/-----END PRIVATE KEY-----/, '').replace(/\s/g, '');
-  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    binaryKey,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const signatureData = encoder.encode(`${headerB64}.${payloadB64}`);
-  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', cryptoKey, signatureData);
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-
-  const jwt = `${headerB64}.${payloadB64}.${signatureB64}`;
-
-  const tokenResponse = await fetchWithTimeout(key.token_uri, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
-  }, 10000);
-
-  if (!tokenResponse.ok) {
-    throw new Error(`Token request failed: ${tokenResponse.status}`);
-  }
-
-  const tokenData = await tokenResponse.json() as Record<string, unknown>;
-  return tokenData.access_token as string;
-}
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -77,27 +23,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const confirm = url.searchParams.get('confirm');
 
   const env = locals.runtime.env;
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+  const projectId = (env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store') as string;
 
-  if (!clientEmail || !privateKey) {
+  const serviceAccountKey = getServiceAccountKey(env as Record<string, unknown>);
+  if (!serviceAccountKey) {
     return ApiErrors.serverError('Service account not configured');
   }
 
-  const serviceAccountKey = JSON.stringify({
-    type: 'service_account',
-    project_id: projectId,
-    private_key_id: 'auto',
-    private_key: privateKey.replace(/\\n/g, '\n'),
-    client_email: clientEmail,
-    client_id: '',
-    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-    token_uri: 'https://oauth2.googleapis.com/token'
-  });
-
   try {
-    const token = await getToken(serviceAccountKey);
+    const token = await getServiceAccountToken(serviceAccountKey);
     const docUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
 
     // First, GET the current document

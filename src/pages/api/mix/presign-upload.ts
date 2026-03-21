@@ -20,7 +20,7 @@ const PresignUploadSchema = z.object({
   mixId: z.string().max(500).nullish(),
   artworkFileName: z.string().max(500).nullish(),
   artworkContentType: z.string().max(100).nullish(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

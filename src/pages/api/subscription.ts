@@ -38,7 +38,7 @@ const SubscriptionPostSchema = z.object({
   paymentId: z.string().min(1).optional(),
   paymentMethod: z.enum(['stripe', 'paypal']).optional(),
   userName: z.string().optional(),
-}).passthrough();
+}).strip();
 
 // GET: Check subscription status and limits
 export const GET: APIRoute = async ({ request, locals }) => {

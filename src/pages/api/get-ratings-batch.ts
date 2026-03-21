@@ -12,7 +12,7 @@ import { z } from 'zod';
 
 const GetRatingsBatchSchema = z.object({
   releaseIds: z.array(z.string().max(200)).min(1).max(50),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

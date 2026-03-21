@@ -22,7 +22,7 @@ const ReferralPostSchema = z.object({
   userId: z.string().optional(),
   paymentId: z.string().optional(),
   userName: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

@@ -385,7 +385,7 @@
   .genre-arrow {
     width: 1rem;
     height: 1rem;
-    color: #6b7280;
+    color: #d1d5db;
     flex-shrink: 0;
     opacity: 0;
     transition: opacity 0.2s, transform 0.2s;
@@ -1053,7 +1053,7 @@
     background: none;
     border: none;
     cursor: pointer;
-    color: #6b7280;
+    color: #d1d5db;
     transition: color 0.2s;
   }
 
@@ -1081,7 +1081,7 @@
 
   .share-mix-dj {
     font-size: 0.9rem;
-    color: #6b7280;
+    color: #d1d5db;
   }
 
   .share-mix-dj span {

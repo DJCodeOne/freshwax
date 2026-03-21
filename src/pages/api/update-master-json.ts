@@ -18,7 +18,7 @@ const UpdateMasterJsonSchema = z.object({
     status: z.string().optional(),
     published: z.boolean().optional(),
     approved: z.boolean().optional(),
-  }).passthrough(),
+  }).strip(),
 });
 
 export const prerender = false;

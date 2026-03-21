@@ -14,8 +14,19 @@ const log = createLogger('update-partner');
 const updatePartnerSchema = z.object({
   adminUid: z.string().min(1),
   partnerId: z.string().min(1),
-  updates: z.object({}).passthrough().optional(),
-}).passthrough();
+  updates: z.object({
+    name: z.string().optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    adminNotes: z.string().optional(),
+    isArtist: z.boolean().optional(),
+    isMerchSupplier: z.boolean().optional(),
+    isVinylSeller: z.boolean().optional(),
+    isAdmin: z.boolean().optional(),
+    approved: z.boolean().optional(),
+    suspended: z.boolean().optional(),
+  }).strip().optional(),
+}).strip();
 
 export const prerender = false;
 

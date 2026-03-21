@@ -16,7 +16,7 @@ const SetPayoutMethodSchema = z.object({
   entityId: z.string().optional(),
   payoutMethod: z.enum(['stripe', 'paypal']),
   accessCode: z.string().optional(),
-}).passthrough();
+}).strip();
 
 export const prerender = false;
 

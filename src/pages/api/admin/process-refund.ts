@@ -18,7 +18,7 @@ const processRefundSchema = z.object({
   reason: z.enum(['duplicate', 'fraudulent', 'requested_by_customer']).optional(),
   refundItems: z.array(z.object({
     id: z.string().min(1),
-  }).passthrough()).optional(),
+  }).strip()).optional(),
   adminKey: z.string().optional(),
 });
 
