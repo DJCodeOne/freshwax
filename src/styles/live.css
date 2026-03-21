@@ -185,7 +185,7 @@
   .fs-live-badge.is-loading {
     background: #4b5563;
     color: #d1d5db;
-    animation: loading-pulse 1.5s ease-in-out infinite;
+    animation: pulse-opacity-60 1.5s ease-in-out infinite;
   }
 
   .fs-live-badge.is-loading .fs-live-dot {
@@ -873,12 +873,7 @@
     height: 8px;
     background: #22c55e;
     border-radius: 50%;
-    animation: onlinePulse 2s infinite;
-  }
-
-  @keyframes onlinePulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+    animation: pulse 2s infinite;
   }
 
   .online-count {
@@ -2315,7 +2310,7 @@
   .live-badge.is-loading {
     background: #4b5563;
     color: #d1d5db;
-    animation: loading-pulse 1.5s ease-in-out infinite;
+    animation: pulse-opacity-60 1.5s ease-in-out infinite;
   }
 
   .live-badge.is-loading .live-dot {
@@ -2323,11 +2318,6 @@
     animation: pulse-dot 1s infinite;
   }
 
-  @keyframes loading-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-  }
-  
   .live-badge .live-dot {
     width: 8px;
     height: 8px;
@@ -4975,14 +4965,9 @@
     border-radius: 4px;
     font-size: 0.75rem;
     font-weight: 700;
-    animation: pulse-badge-opacity 2s infinite;
+    animation: pulse-opacity-70 2s infinite;
   }
 
-  @keyframes pulse-badge-opacity {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
-  }
-  
   .share-preview-dj {
     display: flex;
     align-items: center;
@@ -5114,12 +5099,7 @@
   #shareBtn.live-active {
     background: #dc2626;
     color: #fff;
-    animation: pulse-share 2s infinite;
-  }
-  
-  @keyframes pulse-share {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+    animation: pulse-red-ring 2s infinite;
   }
   
   .modal-header {
@@ -6057,17 +6037,6 @@
     right: 20px;
     z-index: 1000;
     animation: slideInRight 0.3s ease-out;
-  }
-  
-  @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
   }
   
   .incoming-takeover-content {

@@ -66,7 +66,7 @@ const StripeCheckoutSchema = z.object({
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit
   const clientIdReq = getClientId(request);
-  const rateLimit = checkRateLimit(`stripe-checkout:${clientIdReq}`, RateLimiters.standard);
+  const rateLimit = checkRateLimit(`stripe-checkout:${clientIdReq}`, RateLimiters.strict);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }

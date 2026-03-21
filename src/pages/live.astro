@@ -10,6 +10,7 @@ import '../styles/live.css';
 import ScheduleModal from '../components/ScheduleModal.astro';
 import PlaylistModal from '../components/live/PlaylistModal.astro';
 import { SITE_URL, FIREBASE_API_KEY } from '../lib/constants';
+import { queryCollection } from '../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -27,6 +28,56 @@ const firebaseConfig = {
 const ogImageUrl = `${SITE_URL}/api/livestream/thumbnail/`;
 const nonce = Astro.locals.nonce || '';
 Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800, stale-while-revalidate=3600');
+
+// Fetch current or next upcoming livestream slot for MusicEvent structured data
+let eventData: {
+  startDate: string;
+  endDate?: string;
+  performer?: string;
+  eventStatus?: 'EventScheduled' | 'EventRescheduled' | 'EventCancelled' | 'EventPostponed';
+  eventAttendanceMode?: 'OnlineEventAttendanceMode';
+} | undefined;
+
+try {
+  const now = new Date().toISOString();
+  // Check for live slots first, then upcoming
+  const liveSlots = await queryCollection('livestreamSlots', {
+    filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+    limit: 1
+  });
+  const slot = liveSlots?.[0] || null;
+  if (slot) {
+    eventData = {
+      startDate: slot.startTime || slot.bookedStart || now,
+      endDate: slot.endTime || undefined,
+      performer: slot.djName || slot.displayName || undefined,
+      eventStatus: 'EventScheduled',
+      eventAttendanceMode: 'OnlineEventAttendanceMode',
+    };
+  } else {
+    // No live slot — check for next scheduled slot
+    const upcomingSlots = await queryCollection('livestreamSlots', {
+      filters: [
+        { field: 'status', op: 'EQUAL', value: 'scheduled' },
+        { field: 'bookedStart', op: 'GREATER_THAN_OR_EQUAL', value: now },
+      ],
+      orderBy: 'bookedStart',
+      limit: 1,
+    });
+    const upcoming = upcomingSlots?.[0] || null;
+    if (upcoming) {
+      eventData = {
+        startDate: upcoming.bookedStart || upcoming.startTime || now,
+        endDate: upcoming.bookedEnd || upcoming.endTime || undefined,
+        performer: upcoming.djName || upcoming.displayName || undefined,
+        eventStatus: 'EventScheduled',
+        eventAttendanceMode: 'OnlineEventAttendanceMode',
+      };
+    }
+  }
+} catch {
+  // Non-critical — page renders fine without event structured data
+}
 ---
 
 <Layout
@@ -43,6 +94,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     contentUrl: `${SITE_URL}/live`,
     embedUrl: `${SITE_URL}/live/embed/`
   }}
+  event={eventData}
 >
   <link rel="preconnect" href="https://js.pusher.com" crossorigin slot="head" />
   <link rel="preconnect" href="https://ws-eu.pusher.com" crossorigin slot="head" />
@@ -679,7 +731,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             </div>
           </div>
           
-          <div id="bookingError" class="form-error hidden"></div>
+          <div id="bookingError" class="form-error hidden" role="alert" aria-live="assertive"></div>
           
           <button type="submit" class="submit-btn" id="submitBooking">Book Slot</button>
         </form>
@@ -725,7 +777,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             <span class="char-count"><span id="goLiveNowDescCount">0</span>/150</span>
           </div>
           
-          <div id="goLiveNowError" class="form-error hidden"></div>
+          <div id="goLiveNowError" class="form-error hidden" role="alert" aria-live="assertive"></div>
           
           <button type="button" class="submit-btn go-live-submit" id="submitGoLiveNow">Go Live Now</button>
         </div>

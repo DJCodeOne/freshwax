@@ -35,7 +35,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
     <div class="shuffle-header">
       <div class="shuffle-title">
         <div class="shuffle-icon-wrapper">
-          <svg class="shuffle-icon" viewBox="0 0 24 24" fill="currentColor">
+          <svg class="shuffle-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
           </svg>
         </div>
@@ -58,7 +58,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
         <p id="shuffle-track-artist" class="shuffle-track-artist">--</p>
         <a id="shuffle-release-link" href="javascript:void(0)" class="shuffle-release-link" role="link">
           <span id="shuffle-release-title">View Release</span>
-          <svg class="link-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <svg class="link-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
           </svg>
         </a>

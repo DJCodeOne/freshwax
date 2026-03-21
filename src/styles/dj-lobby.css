@@ -2337,14 +2337,9 @@
   .status-dot.offline { background: #9ca3af; }
   .status-dot.live {
     background: #dc2626;
-    animation: pulse-red 1.5s infinite;
+    animation: pulse-red-ring 1.5s infinite;
   }
-  
-  @keyframes pulse-red {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
-  }
-  
+
   /* Player - Fill Available Space */
   .preview-player {
     background: #111;
@@ -2930,7 +2925,7 @@
     font-size: 0.7rem;
     font-weight: 700;
     color: #fff;
-    animation: livePulse-lobby 1.5s ease-in-out infinite;
+    animation: pulse-opacity-70 1.5s ease-in-out infinite;
   }
 
   .health-live-indicator .live-dot {
@@ -2938,11 +2933,6 @@
     height: 6px;
     background: #fff;
     border-radius: 50%;
-  }
-
-  @keyframes livePulse-lobby {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
   }
 
   /* Stream Stats Container - Below Video Players */
@@ -6500,20 +6490,9 @@
     top: 80px;
     right: 20px;
     z-index: 999;
-    animation: slideIn-lobby 0.3s ease;
+    animation: slideInRight 0.3s ease;
   }
 
-  @keyframes slideIn-lobby {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-  
   .dm-notif-content {
     display: flex;
     align-items: center;
@@ -9416,7 +9395,7 @@
     height: 6px;
     background: #dc2626;
     border-radius: 50%;
-    animation: livePulse-lobby 1.2s ease-in-out infinite;
+    animation: pulse-opacity-70 1.2s ease-in-out infinite;
     box-shadow: 0 0 8px rgba(220, 38, 38, 0.8);
   }
 

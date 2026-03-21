@@ -25,7 +25,7 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit
   const clientIdReq = getClientId(request);
-  const rateLimit = checkRateLimit(`paypal-capture:${clientIdReq}`, RateLimiters.standard);
+  const rateLimit = checkRateLimit(`paypal-capture:${clientIdReq}`, RateLimiters.strict);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }

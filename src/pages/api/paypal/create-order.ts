@@ -57,7 +57,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let reservation: { success: boolean; reservationId?: string } | null = null;
   // Rate limit
   const clientId = getClientId(request);
-  const rateLimit = checkRateLimit(`paypal-create:${clientId}`, RateLimiters.standard);
+  const rateLimit = checkRateLimit(`paypal-create:${clientId}`, RateLimiters.strict);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }

@@ -794,12 +794,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }
 
   .zip-progress-fill.creating {
-    animation: pulse-progress 1.5s ease-in-out infinite;
-  }
-
-  @keyframes pulse-progress {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    animation: pulse-opacity-60 1.5s ease-in-out infinite;
   }
 
   .zip-progress-text {

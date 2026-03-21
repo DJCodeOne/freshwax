@@ -410,17 +410,13 @@ const releaseItemList = {
       z-index: -1;
       pointer-events: none;
       filter: blur(3px);
-      animation: bg-fade-in-releases 2s ease-out 0.3s forwards;
+      animation: bgFadeIn045 2s ease-out 0.3s forwards;
     }
 
     @media (min-width: 640px) {
       .bg-image-overlay {
         background-size: cover;
       }
-    }
-
-    @keyframes bg-fade-in-releases {
-      to { opacity: 0.45; }
     }
 
     /* Releases Header - column layout with title-row for line centering */

@@ -290,7 +290,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         {isPreOrder && (
           <div class="pre-order-badge absolute top-2 left-2 z-10 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg uppercase tracking-wide">
             <span class="flex items-center gap-1">
-              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>
               Pre-order • {daysUntilRelease} day{daysUntilRelease !== 1 ? 's' : ''}
             </span>
           </div>
@@ -298,7 +298,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         {hasSale && (
           <div class="sale-badge absolute top-2 right-2 z-10 bg-gradient-to-r from-red-600 to-red-700 text-white text-xs font-black px-3 py-1.5 rounded-lg shadow-lg uppercase tracking-wide">
             <span class="flex items-center gap-1">
-              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
               {saleDiscount}% OFF
             </span>
           </div>
@@ -337,7 +337,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-is-preorder={isPreOrder ? 'true' : 'false'}
             class="nyop-open-modal w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-bold text-sm shadow-sm font-body bg-green-700 hover:bg-green-800 text-white"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
             </svg>
             <span>Buy Digital</span>
@@ -357,7 +357,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-bold text-sm flex-1 font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-sm' : 'bg-green-700 hover:bg-green-800 text-white'}`}
             style={isPreOrder ? undefined : 'animation: buy-glow-pulse 2s ease-in-out infinite; box-shadow: 0 0 12px rgba(21, 128, 61, 0.7), 0 0 24px rgba(21, 128, 61, 0.5), 0 0 48px rgba(21, 128, 61, 0.3);'}
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               {isPreOrder ? (
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               ) : (
@@ -395,7 +395,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
               : 'bg-sky-600/40 text-sky-200/70 cursor-not-allowed'
           }`}
         >
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
             <circle cx="12" cy="12" r="3" fill="currentColor"/>
           </svg>
@@ -434,7 +434,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-is-preorder={isPreOrder ? 'true' : 'false'}
             class="add-to-cart w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-bold text-sm shadow-sm font-body bg-red-600 hover:bg-red-700 text-white"
           >
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
               <circle cx="12" cy="12" r="3" fill="currentColor"/>
             </svg>
@@ -462,7 +462,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           <svg class="w-4 h-4 wishlist-icon-empty text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
           </svg>
-          <svg class="w-4 h-4 wishlist-icon-filled text-red-500 hidden" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 wishlist-icon-filled text-red-500 hidden" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
           </svg>
           <span class="wishlist-text text-gray-800 text-xs">Wishlist</span>
@@ -475,7 +475,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             class="preorder-link flex items-center gap-1 text-xs font-body font-semibold text-orange-500 hover:text-orange-400 transition-colors"
             title={`Pre-order - Available ${formattedDate}`}
           >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>Pre-order</span>
@@ -538,7 +538,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
               <div class="flex items-center justify-center px-5 bg-gradient-to-r from-red-600 to-red-700 group-hover:from-red-500 group-hover:to-red-600 transition-colors">
                 <div class="flex flex-col items-center gap-1">
                   <span class="text-xs text-white uppercase font-heading font-bold tracking-wide whitespace-nowrap">View</span>
-                  <svg class="w-5 h-5 text-white group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-5 h-5 text-white group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                   </svg>
                 </div>
@@ -583,10 +583,10 @@ const totalDurationFormatted = totalDurationSeconds > 0
                   title="Play"
                   aria-label={`Play ${track.title}`}
                 >
-                  <svg class="w-3.5 h-3.5 play-icon" fill="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-3.5 h-3.5 play-icon" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M8 5v14l11-7z"/>
                   </svg>
-                  <svg class="w-3.5 h-3.5 pause-icon hidden" fill="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-3.5 h-3.5 pause-icon hidden" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
                   </svg>
                 </button>
@@ -618,7 +618,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             
             {tracksWithIds.length > 3 && (
               <div class="scroll-indicator absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/60 to-transparent pointer-events-none flex items-end justify-center pb-1">
-                <svg class="w-4 h-4 text-white animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-white animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
               </div>
@@ -634,20 +634,20 @@ const totalDurationFormatted = totalDurationSeconds > 0
                 </p>
               </div>
               <div class="flex items-center gap-2 flex-shrink-0 min-w-fit">
-                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                   <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0 3 3 0 010 4.242 1 1 0 11-1.414-1.414 1 1 0 000-1.414 1 1 0 010-1.414z" clip-rule="evenodd"/>
                 </svg>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value="70" 
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value="70"
                   class="shared-volume-slider flex-shrink-0"
                   style="width: 72px;"
                   data-release-id={id}
                   title="Volume"
                 />
-                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                   <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>
                 </svg>
               </div>
@@ -683,7 +683,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           <span class="text-red-500">Share</span> This Release
         </h3>
         <button id="share-modal-close" aria-label="Close share dialog" class="text-gray-300 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
@@ -709,35 +709,35 @@ const totalDurationFormatted = totalDurationSeconds > 0
           <div class="grid grid-cols-5 gap-2">
             <!-- X/Twitter -->
             <button id="share-twitter" aria-label="Share on X" class="group flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-[#000000] rounded-xl border border-white/10 hover:border-white/30 transition-colors">
-              <svg class="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
+              <svg class="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
               </svg>
               <span class="text-[10px] text-gray-300 group-hover:text-white mt-1 font-medium">X</span>
             </button>
             <!-- Facebook -->
             <button id="share-facebook" aria-label="Share on Facebook" class="group flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-[#1877F2] rounded-xl border border-white/10 hover:border-[#1877F2] transition-colors">
-              <svg class="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
+              <svg class="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
               </svg>
               <span class="text-[10px] text-gray-300 group-hover:text-white mt-1 font-medium">Facebook</span>
             </button>
             <!-- WhatsApp -->
             <button id="share-whatsapp" aria-label="Share on WhatsApp" class="group flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-[#25D366] rounded-xl border border-white/10 hover:border-[#25D366] transition-colors">
-              <svg class="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
+              <svg class="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
               </svg>
               <span class="text-[10px] text-gray-300 group-hover:text-white mt-1 font-medium">WhatsApp</span>
             </button>
             <!-- Instagram -->
             <button id="share-instagram" aria-label="Share on Instagram" class="group flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-gradient-to-br hover:from-[#833AB4] hover:via-[#E1306C] hover:to-[#F77737] rounded-xl border border-white/10 hover:border-[#E1306C] transition-colors">
-              <svg class="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
+              <svg class="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
               </svg>
               <span class="text-[10px] text-gray-300 group-hover:text-white mt-1 font-medium">Instagram</span>
             </button>
             <!-- Reddit -->
             <button id="share-reddit" aria-label="Share on Reddit" class="group flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-[#FF4500] rounded-xl border border-white/10 hover:border-[#FF4500] transition-colors">
-              <svg class="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
+              <svg class="w-6 h-6 text-gray-300 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/>
               </svg>
               <span class="text-[10px] text-gray-300 group-hover:text-white mt-1 font-medium">Reddit</span>
@@ -760,7 +760,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
               id="copy-url-button"
               class="px-4 py-3 bg-red-600 hover:bg-red-500 text-white transition-colors font-bold text-sm flex items-center gap-2 uppercase rounded-xl flex-shrink-0"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
               </svg>
               <span id="copy-btn-text">Copy</span>
@@ -774,7 +774,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           id="native-share-btn"
           class="hidden w-full py-3 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white transition-colors font-black text-sm uppercase rounded-xl items-center justify-center gap-2"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
           Share via Device
@@ -796,7 +796,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
   <div class="nyop-modal-backdrop absolute inset-0 bg-black/80" data-close-modal></div>
   <div class="nyop-modal-content relative bg-gray-900 rounded-xl p-6 max-w-sm w-full border border-gray-700 shadow-2xl">
     <button type="button" class="nyop-modal-close absolute top-3 right-3 text-gray-300 hover:text-white transition-colors" data-close-modal aria-label="Close">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
@@ -841,7 +841,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       id="nyop-modal-add-cart"
       class="w-full py-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-lg transition-colors flex items-center justify-center gap-2"
     >
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
       </svg>
       <span>Add to Cart</span>

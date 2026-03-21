@@ -1305,8 +1305,10 @@ function initNYOPSystem() {
       updateQuickPriceButtons(suggestedPrice);
 
       // Show modal
+      nyopPreviousFocus = document.activeElement;
       modal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
+      if (modalPrice) modalPrice.focus();
     });
   });
 
@@ -1314,11 +1316,39 @@ function initNYOPSystem() {
   if (nyopModalInitialized) return;
   nyopModalInitialized = true;
 
+  var nyopPreviousFocus: Element | null = null;
+
   function closeModal() {
     modal.classList.add('hidden');
     document.body.style.overflow = '';
     nyopCurrentReleaseData = null;
+    if (nyopPreviousFocus && typeof (nyopPreviousFocus as HTMLElement).focus === 'function') {
+      (nyopPreviousFocus as HTMLElement).focus();
+      nyopPreviousFocus = null;
+    }
   }
+
+  // Focus trap: Tab/Shift+Tab cycles within the modal
+  modal.addEventListener('keydown', function(e: KeyboardEvent) {
+    if (e.key !== 'Tab') return;
+    var focusableEls = modal.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusableEls.length === 0) return;
+    var firstEl = focusableEls[0] as HTMLElement;
+    var lastEl = focusableEls[focusableEls.length - 1] as HTMLElement;
+    if (e.shiftKey) {
+      if (document.activeElement === firstEl) {
+        e.preventDefault();
+        lastEl.focus();
+      }
+    } else {
+      if (document.activeElement === lastEl) {
+        e.preventDefault();
+        firstEl.focus();
+      }
+    }
+  });
 
   // Close modal
   modal.querySelectorAll('[data-close-modal]').forEach(function(el) {
