@@ -263,7 +263,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <p class="empty-text">New mixes coming soon!</p>
         </div>
       ) : (
-        <div class="mixes-list" id="mixes-list">
+        <div class="mixes-list" id="mixes-list" aria-live="polite">
           {mixes.map((mix, index) => (
             <article
               class="mix-card"

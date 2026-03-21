@@ -77,7 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {
-      return ApiErrors.notConfigured('Stripe');
+      return ApiErrors.serverError('Payment service temporarily unavailable');
     }
 
     const rawBody = await request.json();

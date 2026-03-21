@@ -43,9 +43,14 @@ export const GET: APIRoute = async ({ request }) => {
   log.info('[check-dj-eligibility] Checking eligibility for:', userId);
   
   try {
-    // First check if user is banned or on hold
-    const moderation = await getDocument('djModeration', userId);
+    // Parallelize the first 3 independent Firebase calls
+    const [moderation, bypass, userData] = await Promise.all([
+      getDocument('djModeration', userId),
+      getDocument('djLobbyBypass', userId),
+      getDocument('users', userId),
+    ]);
 
+    // Check if user is banned or on hold
     if (moderation) {
       if (moderation.status === 'banned') {
         log.info('[check-dj-eligibility] User is banned');
@@ -54,7 +59,7 @@ export const GET: APIRoute = async ({ request }) => {
           message: 'Your account has been suspended from streaming.',
           bannedReason: moderation.reason || null });
       }
-      
+
       if (moderation.status === 'hold') {
         log.info('[check-dj-eligibility] User is on hold');
         return successResponse({ eligible: false,
@@ -63,10 +68,8 @@ export const GET: APIRoute = async ({ request }) => {
           holdReason: moderation.reason || null });
       }
     }
-    
-    // Check if user has an admin-granted bypass (legacy collection)
-    const bypass = await getDocument('djLobbyBypass', userId);
 
+    // Check if user has an admin-granted bypass (legacy collection)
     if (bypass) {
       log.info('[check-dj-eligibility] User has admin bypass (djLobbyBypass collection)');
       return successResponse({ eligible: true,
@@ -74,9 +77,8 @@ export const GET: APIRoute = async ({ request }) => {
         reason: bypass.reason || null,
         message: 'Access granted by admin' });
     }
-    
+
     // Check if user has go-liveBypassed flag on their user document
-    const userData = await getDocument('users', userId);
     if (userData) {
       if (userData['go-liveBypassed'] === true) {
         log.info('[check-dj-eligibility] User has go-live bypass flag on user doc');
@@ -85,15 +87,20 @@ export const GET: APIRoute = async ({ request }) => {
           message: 'Access granted by admin' });
       }
     }
-    
-    // Check for pending bypass request
-    const bypassRequests = await queryCollection('bypassRequests', {
-      filters: [
-        { field: 'userId', op: 'EQUAL', value: userId },
-        { field: 'status', op: 'EQUAL', value: 'pending' }
-      ],
-      limit: 1
-    });
+
+    // Parallelize the remaining 2 Firebase calls
+    const [bypassRequests, mixes] = await Promise.all([
+      queryCollection('bypassRequests', {
+        filters: [
+          { field: 'userId', op: 'EQUAL', value: userId },
+          { field: 'status', op: 'EQUAL', value: 'pending' }
+        ],
+        limit: 1
+      }),
+      queryCollection('dj-mixes', {
+        filters: [{ field: 'userId', op: 'EQUAL', value: userId }]
+      }),
+    ]);
 
     let bypassRequest = null;
     if (bypassRequests.length > 0) {
@@ -104,11 +111,6 @@ export const GET: APIRoute = async ({ request }) => {
         denialReason: reqData.denialReason || null
       };
     }
-    
-    // Get all mixes for this user
-    const mixes = await queryCollection('dj-mixes', {
-      filters: [{ field: 'userId', op: 'EQUAL', value: userId }]
-    });
     log.info('[check-dj-eligibility] Found', mixes.length, 'mixes for user');
     
     // Check if they have any mixes

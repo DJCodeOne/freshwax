@@ -52,7 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!appId || !key || !secret) {
       log.error('Missing credentials');
-      return ApiErrors.notConfigured('Pusher');
+      return ApiErrors.serverError('Real-time service temporarily unavailable');
     }
 
     // Parse the request body (Pusher sends form data)

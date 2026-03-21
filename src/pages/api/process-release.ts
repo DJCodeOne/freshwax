@@ -64,7 +64,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
   if (!serviceAccountKey) {
-    return ApiErrors.notConfigured('Firebase service account');
+    return ApiErrors.serverError('Backend service temporarily unavailable');
   }
 
   // R2 public domain for CDN URLs

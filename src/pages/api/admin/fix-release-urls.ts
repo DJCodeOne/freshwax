@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   if (!serviceAccountKey) {
-    return ApiErrors.notConfigured('Service account (need FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY)');
+    return ApiErrors.serverError('Backend service temporarily unavailable');
   }
 
   try {

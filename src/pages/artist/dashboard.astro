@@ -344,7 +344,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     <!-- Loading state - shown while checking auth (hidden if already logged in server-side) -->
     <div id="loadingState" class="login-prompt" style={isLoggedIn ? 'display: none;' : ''}>
       <div class="login-card">
-        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" />
+        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" width="200" height="158" />
         <h1>Partner Dashboard</h1>
         <p>Checking authentication...</p>
         <div style="display: flex; justify-content: center; padding: 2rem;">
@@ -356,7 +356,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     <!-- Login prompt - shown if not logged in -->
     <div id="loginPrompt" class="login-prompt" style="display: none;">
       <div class="login-card">
-        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" />
+        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" width="200" height="158" />
         <h1>Partner Dashboard</h1>
         <p>Sign in to manage your releases, mixes, and sales.</p>
         <a href="/login/" class="btn-primary">Sign In</a>
@@ -371,7 +371,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div class="welcome-left">
             <div class="avatar">
               {partner.avatarUrl || partner.imageUrl || partner.photoURL ? (
-                <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt={partner.displayName || partner.artistName || 'Artist avatar'} data-fallback="show-next" />
+                <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt={partner.displayName || partner.artistName || 'Artist avatar'} data-fallback="show-next" width="80" height="80" />
                 <span style="display:none;">{(partner.displayName || partner.artistName)?.charAt(0).toUpperCase() || '?'}</span>
               ) : (
                 <span>{(partner.displayName || partner.artistName)?.charAt(0).toUpperCase() || '?'}</span>

@@ -21,7 +21,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
   const db = env?.DB;
   if (!db) {
-    return ApiErrors.notConfigured('D1');
+    return ApiErrors.serverError('Database service temporarily unavailable');
   }
 
   const url = new URL(request.url);

@@ -87,7 +87,7 @@ export async function GET({ request, locals }: APIContext) {
     const kv = getKV(locals);
     if (!kv) {
       log.error('[GlobalPlaylist] KV not available');
-      return ApiErrors.notConfigured('KV storage');
+      return ApiErrors.serverError('Storage service temporarily unavailable');
     }
 
     // Get playlist from KV

@@ -188,7 +188,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const r2Config = getR2Config(env);
   if (!r2Config.accessKeyId || !r2Config.secretAccessKey) {
-    return ApiErrors.notConfigured('R2');
+    return ApiErrors.serverError('Storage service temporarily unavailable');
   }
 
   const s3Client = createS3Client(r2Config);

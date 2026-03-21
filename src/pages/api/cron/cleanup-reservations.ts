@@ -45,6 +45,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
+    // cleanupExpiredReservations() uses firebase-rest globals (queryCollection, getDocument, etc.)
+    // which are initialized by middleware's initFirebaseEnv(runtime.env) on every request,
+    // including cron POST requests — no env parameter needed here.
     const cleaned = await cleanupExpiredReservations();
     const duration = Date.now() - startTime;
     log.info(`[Cleanup Reservations] Done. Cleaned: ${cleaned}, Duration: ${duration}ms`);
