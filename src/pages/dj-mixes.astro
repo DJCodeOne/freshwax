@@ -666,6 +666,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         loadChartData();
       }
     } catch (error) {
+      // Chart settings fetch failed — use defaults
     }
 
     // Toggle chart visibility

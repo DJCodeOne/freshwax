@@ -1655,7 +1655,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
               <div class="queue-item-title">${escapeHtml(title)}</div>
               <div class="queue-item-added">${escapeHtml(track.addedByName || 'Unknown')}</div>
             </div>
-            <button class="queue-item-remove" data-id="${safeId}" data-added-by="${safeAddedBy}" title="Remove from queue">×</button>
+            <button class="queue-item-remove" data-id="${safeId}" data-added-by="${safeAddedBy}" title="Remove from queue" aria-label="Remove from queue">×</button>
           </div>
         `;
       });

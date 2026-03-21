@@ -558,24 +558,24 @@ export function init() {
             <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="firstName" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">First Name *</label>
-                <input type="text" id="firstName" name="firstName" required aria-required="true" aria-describedby="firstName-error" autocomplete="given-name" placeholder="John" value="${firstName}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <input type="text" id="firstName" name="firstName" required aria-required="true" aria-describedby="firstName-error" autocomplete="given-name" placeholder="John" value="${escapeHtml(firstName)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                 <span id="firstName-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">First name is required</span>
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="lastName" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Last Name *</label>
-                <input type="text" id="lastName" name="lastName" required aria-required="true" aria-describedby="lastName-error" autocomplete="family-name" placeholder="Doe" value="${lastName}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <input type="text" id="lastName" name="lastName" required aria-required="true" aria-describedby="lastName-error" autocomplete="family-name" placeholder="Doe" value="${escapeHtml(lastName)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                 <span id="lastName-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Last name is required</span>
               </div>
             </div>
             <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="email" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Email Address *</label>
-                <input type="email" id="email" name="email" required aria-required="true" aria-describedby="email-error" autocomplete="email" placeholder="you@example.com" value="${email}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <input type="email" id="email" name="email" required aria-required="true" aria-describedby="email-error" autocomplete="email" placeholder="you@example.com" value="${escapeHtml(email)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                 <span id="email-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Valid email address is required</span>
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="phone" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Phone Number</label>
-                <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="+44 7XXX XXXXXX" value="${phone}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="+44 7XXX XXXXXX" value="${escapeHtml(phone)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
               </div>
             </div>
           </div>
@@ -593,7 +593,7 @@ export function init() {
             <div style="margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid #e5e7eb;">
               <label for="postcodeSearch" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.375rem;">Verify Your Postcode</label>
               <div class="postcode-lookup-row" style="display: flex; gap: 0.75rem;">
-                <input type="text" id="postcodeSearch" placeholder="Enter postcode (e.g. E1 6AN)" value="${postcode}" style="flex: 1; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
+                <input type="text" id="postcodeSearch" placeholder="Enter postcode (e.g. E1 6AN)" value="${escapeHtml(postcode)}" style="flex: 1; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
                 <button type="button" id="findAddressBtn" style="padding: 0.875rem 1.25rem; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
                   Verify
                 </button>
@@ -606,30 +606,30 @@ export function init() {
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="address1" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 1 *</label>
-                  <input type="text" id="address1" name="address1" required aria-required="true" aria-describedby="address1-error" autocomplete="address-line1" placeholder="123 Music Street" value="${address1}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <input type="text" id="address1" name="address1" required aria-required="true" aria-describedby="address1-error" autocomplete="address-line1" placeholder="123 Music Street" value="${escapeHtml(address1)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                   <span id="address1-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Address is required</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="address2" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 2</label>
-                  <input type="text" id="address2" name="address2" placeholder="Flat 4B" value="${address2}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <input type="text" id="address2" name="address2" placeholder="Flat 4B" value="${escapeHtml(address2)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                 </div>
               </div>
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="city" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">City *</label>
-                  <input type="text" id="city" name="city" required aria-required="true" aria-describedby="city-error" autocomplete="address-level2" placeholder="London" value="${city}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <input type="text" id="city" name="city" required aria-required="true" aria-describedby="city-error" autocomplete="address-level2" placeholder="London" value="${escapeHtml(city)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                   <span id="city-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">City is required</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="postcode" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Postcode *</label>
-                  <input type="text" id="postcode" name="postcode" required aria-required="true" aria-describedby="postcode-error" autocomplete="postal-code" placeholder="E1 6AN" value="${postcode}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
+                  <input type="text" id="postcode" name="postcode" required aria-required="true" aria-describedby="postcode-error" autocomplete="postal-code" placeholder="E1 6AN" value="${escapeHtml(postcode)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
                   <span id="postcode-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Postcode is required</span>
                 </div>
               </div>
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="county" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">County</label>
-                  <input type="text" id="county" name="county" placeholder="Greater London" value="${county}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <input type="text" id="county" name="county" placeholder="Greater London" value="${escapeHtml(county)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="country" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Country *</label>

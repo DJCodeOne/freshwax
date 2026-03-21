@@ -472,16 +472,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <tr data-id="${u.id}">
               <td>
                 <div class="user-cell">
-                  <div class="avatar">${u.avatarUrl ? `<img src="${u.avatarUrl}" alt="${escapeHtml(u.displayName || 'User')} avatar" data-fallback="show-next" /><span style="display:none;">${u.displayName.charAt(0).toUpperCase()}</span>` : u.displayName.charAt(0).toUpperCase()}</div>
+                  <div class="avatar">${u.avatarUrl ? `<img src="${escapeHtml(u.avatarUrl)}" alt="${escapeHtml(u.displayName || 'User')} avatar" data-fallback="show-next" /><span style="display:none;">${escapeHtml(u.displayName.charAt(0).toUpperCase())}</span>` : escapeHtml(u.displayName.charAt(0).toUpperCase())}</div>
                   <div>
-                    <div class="user-name">${u.displayName}</div>
-                    ${u.fullName && u.fullName !== u.displayName ? `<div class="text-muted text-sm">${u.fullName}</div>` : ''}
+                    <div class="user-name">${escapeHtml(u.displayName)}</div>
+                    ${u.fullName && u.fullName !== u.displayName ? `<div class="text-muted text-sm">${escapeHtml(u.fullName)}</div>` : ''}
                   </div>
                 </div>
               </td>
               <td>
-                <div>${u.email}</div>
-                ${u.phone ? `<div class="text-muted text-sm">${u.phone}</div>` : ''}
+                <div>${escapeHtml(u.email)}</div>
+                ${u.phone ? `<div class="text-muted text-sm">${escapeHtml(u.phone)}</div>` : ''}
               </td>
               <td>${roles.join(' ') || '<span class="text-muted">None</span>'}</td>
               <td class="text-center">${orderCount > 0 ? `<span class="badge badge-secondary">${orderCount}</span>` : '<span class="text-muted">0</span>'}</td>

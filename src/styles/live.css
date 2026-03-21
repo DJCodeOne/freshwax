@@ -1314,6 +1314,7 @@
     opacity: 0.7;
   }
   
+  .sidebar-card h2,
   .sidebar-card h3 {
     margin: 0 0 1rem 0;
     font-family: 'Bebas Neue', sans-serif;
@@ -1325,7 +1326,8 @@
     gap: 0.5rem;
     letter-spacing: 0.5px;
   }
-  
+
+  .sidebar-card h2 .red,
   .sidebar-card h3 .red { color: #dc2626; }
   
   .listener-badge {
@@ -7310,6 +7312,7 @@
       font-size: 1.75rem;
     }
 
+    .sidebar-card h2,
     .sidebar-card h3 {
       font-size: 1.25rem;
     }

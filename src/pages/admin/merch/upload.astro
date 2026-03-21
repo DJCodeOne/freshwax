@@ -863,7 +863,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <img src="${img.dataUrl}" alt="Product image ${idx + 1}" />
               ${idx === 0 ? '<div class="badge">PRIMARY</div>' : ''}
               <button type="button" class="edit-btn" data-action="edit-image" data-idx="${idx}">Edit</button>
-              <button type="button" class="remove-btn" data-action="remove-image" data-idx="${idx}">×</button>
+              <button type="button" class="remove-btn" data-action="remove-image" data-idx="${idx}" aria-label="Remove image">×</button>
             </div>
             ${hasColors ? `
               <div class="image-color-select">

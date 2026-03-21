@@ -110,7 +110,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="subscription-tier" id="subscriptionTier">
                 <span class="tier-badge free">Standard</span>
                 <span class="tier-name">Account</span>
-                <button class="tier-toggle-btn hidden" id="tierToggleBtn" title="Show Plus benefits">▼</button>
+                <button class="tier-toggle-btn hidden" id="tierToggleBtn" title="Show Plus benefits" aria-label="Toggle details">▼</button>
               </div>
               <div class="subscription-status" id="subscriptionStatus"></div>
             </div>
@@ -321,7 +321,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <div class="badge-header" id="badgeHeader">
               <h3>Plus Badge <span class="plus-only-tag">Plus Only</span></h3>
               <span class="current-badge" id="currentBadgePreview">👑</span>
-              <button type="button" class="badge-toggle-btn" id="badgeToggleBtn">▼</button>
+              <button type="button" class="badge-toggle-btn" id="badgeToggleBtn" aria-label="Toggle details">▼</button>
             </div>
             <div class="badge-content" id="badgeContent" style="display: none;">
               <p class="badge-hint">Choose your badge - displayed next to your name in chat and across the site.</p>
@@ -2291,17 +2291,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
     50% {
       text-shadow: 0 0 15px rgba(34, 197, 94, 0.8), 0 0 30px rgba(34, 197, 94, 0.6), 0 0 45px rgba(34, 197, 94, 0.4);
-    }
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(5px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
     }
   }
 

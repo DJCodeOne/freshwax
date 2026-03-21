@@ -1982,7 +1982,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             <div class="allowance-dj">${escapeHtml(a.djName) || escapeHtml(a.djId)}</div>
             <div class="allowance-details">${a.maxHoursPerDay || 2}h/day • ${a.weeklySlots || 1} slots/week${a.reason ? ` • ${escapeHtml(a.reason)}` : ''}</div>
           </div>
-          <button type="button" class="remove-allowance" data-action="removeAllowance" data-dj-id="${escapeHtml(a.djId)}">×</button>
+          <button type="button" class="remove-allowance" data-action="removeAllowance" data-dj-id="${escapeHtml(a.djId)}" aria-label="Remove allowance">×</button>
         </div>
       `).join('');
     }

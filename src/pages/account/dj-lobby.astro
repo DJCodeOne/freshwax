@@ -689,7 +689,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   <span class="source-label">PREVIEW</span>
                 </button>
                 <button type="button" class="panel-btn" id="calibrateBtn" title="Calibrate Meters">CAL</button>
-                <button type="button" class="panel-btn" id="panelMinimize" title="Minimize">−</button>
+                <button type="button" class="panel-btn" id="panelMinimize" title="Minimize" aria-label="Minimize panel">−</button>
               </div>
             </div>
             <!-- Calibration Panel (hidden by default) -->
@@ -1233,7 +1233,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <div id="relayChatSection" class="relay-chat-section hidden">
           <div class="relay-chat-header">
             <h3>📺 <span id="relayChatSourceName">Source Chat</span></h3>
-            <button id="toggleRelayChatBtn" class="toggle-relay-chat-btn" title="Toggle chat">−</button>
+            <button id="toggleRelayChatBtn" class="toggle-relay-chat-btn" title="Toggle chat" aria-label="Toggle relay chat">−</button>
           </div>
           <div id="relayChatContainer" class="relay-chat-container">
             <iframe id="relayChatFrame" class="relay-chat-frame" allow="autoplay" allowfullscreen></iframe>

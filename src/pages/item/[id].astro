@@ -668,7 +668,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                     </button>
 
                     <button
-                      class={`bio-button flex items-center gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 border-2 transition-colors font-black uppercase text-xs sm:text-sm md:text-base rounded-lg shadow-lg ${hasBio ? 'bg-gradient-to-r from-gray-700 to-gray-600 hover:from-red-600 hover:to-red-700 text-white border-gray-500 hover:border-red-400 cursor-pointer' : 'bg-gray-800 text-gray-500 border-gray-700 cursor-not-allowed opacity-50'}`}
+                      class={`bio-button flex items-center gap-1 md:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 border-2 transition-colors font-black uppercase text-xs sm:text-sm md:text-base rounded-lg shadow-lg ${hasBio ? 'bg-gradient-to-r from-gray-700 to-gray-600 hover:from-red-600 hover:to-red-700 text-white border-gray-500 hover:border-red-400 cursor-pointer' : 'bg-gray-800 text-gray-300 border-gray-700 cursor-not-allowed opacity-50'}`}
                       data-artist={artistName}
                       data-bio={artistBio || ''}
                       disabled={!hasBio}
@@ -903,7 +903,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                 <!-- GIF Preview -->
                 <div id="gif-preview-container" class="hidden mb-3 relative">
                   <img id="gif-preview" src="" alt="Selected GIF" class="max-h-24 rounded border-2 border-blue-500" decoding="async">
-                  <button type="button" id="remove-gif-btn" class="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-700">×</button>
+                  <button type="button" id="remove-gif-btn" class="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-700" aria-label="Remove GIF">×</button>
                 </div>
                 
                 <textarea 
@@ -1429,6 +1429,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           if (miniPauseIcon) miniPauseIcon.classList.add('hidden');
         }
       } catch (err) {
+        // Audio pause may fail if not playing
       }
 
       // 2. Pause shuffle widget if it's playing
@@ -1453,6 +1454,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           if (shuffleCtrlPause) shuffleCtrlPause.classList.add('hidden');
         }
       } catch (err) {
+        // Shuffle widget pause may fail if not playing
       }
     }
 

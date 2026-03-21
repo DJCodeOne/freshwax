@@ -185,11 +185,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               />
             </div>
             {post.publishedAt && (
-              <p class="text-xs text-gray-500">
+              <p class="text-xs text-gray-300">
                 Published: {new Date(post.publishedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
               </p>
             )}
-            <p class="text-xs text-gray-500">
+            <p class="text-xs text-gray-300">
               Views: {post.views || 0}
             </p>
           </div>
