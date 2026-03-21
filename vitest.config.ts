@@ -10,6 +10,12 @@ export default defineConfig({
       include: [
         'src/lib/**/*.ts',
       ],
+      thresholds: {
+        lines: 50,
+        functions: 50,
+        branches: 50,
+        statements: 50,
+      },
     },
   },
   resolve: {

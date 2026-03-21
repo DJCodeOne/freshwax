@@ -1,0 +1,85 @@
+import tseslint from '@typescript-eslint/eslint-plugin';
+import tsparser from '@typescript-eslint/parser';
+
+export default [
+  // Global ignores
+  {
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '.astro/**',
+      'workers/**',
+      'public/**',
+      'scripts/**',
+    ],
+  },
+
+  // TypeScript files in src/
+  {
+    files: ['src/**/*.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint,
+    },
+    rules: {
+      // --- ESLint core: catch real errors ---
+      'no-cond-assign': 'error',
+      'no-constant-condition': 'warn',
+      'no-dupe-args': 'error',
+      'no-dupe-keys': 'error',
+      'no-duplicate-case': 'error',
+      'no-empty': ['warn', { allowEmptyCatch: true }],
+      'no-ex-assign': 'error',
+      'no-extra-boolean-cast': 'warn',
+      'no-func-assign': 'error',
+      'no-inner-declarations': 'error',
+      'no-irregular-whitespace': 'error',
+      'no-loss-of-precision': 'error',
+      'no-obj-calls': 'error',
+      'no-prototype-builtins': 'warn',
+      'no-sparse-arrays': 'error',
+      'no-template-curly-in-string': 'warn',
+      'no-unreachable': 'error',
+      'no-unsafe-finally': 'error',
+      'no-unsafe-negation': 'error',
+      'use-isnan': 'error',
+      'valid-typeof': 'error',
+
+      // --- Best practices: prevent common bugs ---
+      'eqeqeq': ['warn', 'smart'],
+      'no-caller': 'error',
+      'no-eval': 'error',
+      'no-implied-eval': 'error',
+      'no-new-wrappers': 'error',
+      'no-self-assign': 'error',
+      'no-self-compare': 'error',
+      'no-throw-literal': 'error',
+      'no-unused-expressions': ['warn', { allowShortCircuit: true, allowTernary: true }],
+      'prefer-promise-reject-errors': 'warn',
+
+      // --- TypeScript-specific: catch type errors ---
+      // Disable base rules that conflict with TS versions
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      }],
+      'no-redeclare': 'off',
+      '@typescript-eslint/no-redeclare': 'error',
+      '@typescript-eslint/no-duplicate-enum-values': 'error',
+      '@typescript-eslint/no-extra-non-null-assertion': 'error',
+      '@typescript-eslint/no-misused-new': 'error',
+      '@typescript-eslint/no-namespace': 'warn',
+      '@typescript-eslint/no-non-null-asserted-optional-chain': 'warn',
+      '@typescript-eslint/no-this-alias': 'warn',
+      '@typescript-eslint/prefer-as-const': 'warn',
+    },
+  },
+];

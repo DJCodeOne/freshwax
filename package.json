@@ -13,8 +13,9 @@
     "test:e2e:headed": "playwright test --headed",
     "test:lighthouse": "lhci autorun --config=.github/lighthouse-ci.json",
     "test:lighthouse:prod": "lhci autorun --config=.github/lighthouse-ci-production.json",
+    "lint": "eslint src/",
     "typecheck": "astro check",
-    "validate": "npm run typecheck && npm run build && npm run test",
+    "validate": "npm run lint && npm run typecheck && npm run build && npm run test",
     "test:ci": "vitest run",
     "astro": "astro"
   },
@@ -43,7 +44,10 @@
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.58.2",
     "@types/adm-zip": "^0.5.7",
+    "@typescript-eslint/eslint-plugin": "^8.57.1",
+    "@typescript-eslint/parser": "^8.57.1",
     "@vitest/coverage-v8": "^4.0.16",
+    "eslint": "^10.1.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   }

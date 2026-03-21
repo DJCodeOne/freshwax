@@ -97,6 +97,10 @@ interface ImportMetaEnv {
   // ---- Livestream (WHIP / Browser Streaming) ----
   readonly WHIP_BASE_URL: string;
 
+  // ---- Livestream (Server Auth & YouTube) ----
+  readonly STREAM_SERVER_KEY: string;
+  readonly YOUTUBE_CHANNEL_ID: string;
+
   // ---- Playlist Server ----
   readonly PLAYLIST_ACCESS_TOKEN: string;
 
@@ -108,6 +112,7 @@ interface ImportMetaEnv {
 
   // ---- Analytics (GA4) ----
   readonly PUBLIC_GA4_ID: string;
+  readonly PUBLIC_GA4_MEASUREMENT_ID: string;
 }
 
 interface ImportMeta {
@@ -217,6 +222,10 @@ interface CloudflareEnv {
   RED5_WEBHOOK_SECRET: string;
   WHIP_BASE_URL: string;
 
+  // ---- Livestream (Server Auth & YouTube) ----
+  STREAM_SERVER_KEY: string;
+  YOUTUBE_CHANNEL_ID: string;
+
   // ---- Playlist Server ----
   PLAYLIST_ACCESS_TOKEN: string;
 
@@ -228,6 +237,7 @@ interface CloudflareEnv {
 
   // ---- Google Analytics ----
   PUBLIC_GA4_ID: string;
+  PUBLIC_GA4_MEASUREMENT_ID: string;
 }
 
 // ---------------------------------------------------------------------------

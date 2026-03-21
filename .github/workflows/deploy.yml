@@ -10,8 +10,11 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  build-test:
+  validate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -38,19 +41,59 @@ jobs:
         run: npm ci
 
       - name: Security audit
-        run: npm audit --omit=dev --audit-level=high || echo "::warning::npm audit found vulnerabilities"
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Test
+        run: npm run test:coverage
+
       - name: Build
         run: npm run build
 
-      - name: Test
-        run: npm run test
+      - name: Upload build artifact
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Get previous deployment ID
+        id: prev-deploy
+        run: |
+          npm install -g wrangler
+          PREV_ID=$(CLOUDFLARE_API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            wrangler pages deployment list \
+              --project-name=freshwax \
+              --environment=production \
+              --json 2>/dev/null \
+            | jq -r '.[0].id // empty')
+          echo "id=$PREV_ID" >> "$GITHUB_OUTPUT"
+          echo "Previous deployment: $PREV_ID"
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy to Cloudflare Pages
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -58,7 +101,43 @@ jobs:
           command: pages deploy dist --project-name=freshwax
 
       - name: Post-deploy health check
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: health
         run: |
+          echo "Waiting for deployment to propagate..."
           sleep 30
-          curl -sf https://freshwax.co.uk/api/health/public/ || exit 1
+
+          RETRIES=3
+          DELAY=10
+          for i in $(seq 1 $RETRIES); do
+            echo "Health check attempt $i/$RETRIES..."
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://freshwax.co.uk/api/health/public/)
+            if [ "$RESPONSE" = "200" ]; then
+              echo "Health check passed (HTTP $RESPONSE)"
+              exit 0
+            fi
+            echo "Health check failed (HTTP $RESPONSE)"
+            if [ "$i" -lt "$RETRIES" ]; then
+              echo "Retrying in ${DELAY}s..."
+              sleep $DELAY
+            fi
+          done
+          echo "Health check failed after $RETRIES attempts"
+          exit 1
+
+      - name: Rollback on failure
+        if: failure() && steps.health.outcome == 'failure' && steps.prev-deploy.outputs.id != ''
+        run: |
+          echo "::error::Health check failed — rolling back to deployment ${{ steps.prev-deploy.outputs.id }}"
+          curl -sf -X POST \
+            "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/freshwax/deployments/${{ steps.prev-deploy.outputs.id }}/rollback" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json"
+          echo "Rollback initiated. Verifying..."
+          sleep 30
+          curl -sf https://freshwax.co.uk/api/health/public/ || echo "::warning::Post-rollback health check also failed — manual intervention required"
+
+      - name: Rollback unavailable
+        if: failure() && steps.health.outcome == 'failure' && steps.prev-deploy.outputs.id == ''
+        run: |
+          echo "::error::Health check failed and no previous deployment ID available for rollback. Manual intervention required."
+          exit 1
