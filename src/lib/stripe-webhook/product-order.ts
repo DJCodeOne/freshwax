@@ -16,7 +16,7 @@ const log = createLogger('stripe-webhook-product-order');
 
 /** Context passed from the main webhook handler */
 export interface ProductOrderContext {
-  env: Record<string, unknown>;
+  env: CloudflareEnv;
   stripeSecretKey: string;
   requestUrl: string;
   startTime: number;

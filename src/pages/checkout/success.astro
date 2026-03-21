@@ -14,7 +14,7 @@ const nonce = Astro.locals.nonce || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
-<Layout title="Payment Processing" noindex={true}>
+<Layout title="Payment Processing" description="Your Fresh Wax payment is being verified. Please wait while we confirm your order." noindex={true}>
   <Header />
 
   <div style="padding: 4rem 1.5rem; min-height: 60vh; display: flex; align-items: center; justify-content: center;">
@@ -31,7 +31,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <path d="M20 6L9 17l-5-5"/>
           </svg>
         </div>
-        <h1 style="font-family: 'Inter', sans-serif; font-size: 1.75rem; font-weight: 700; color: #16a34a; margin-bottom: 0.5rem;">Payment Successful!</h1>
+        <h2 style="font-family: 'Inter', sans-serif; font-size: 1.75rem; font-weight: 700; color: #16a34a; margin-bottom: 0.5rem;">Payment Successful!</h2>
         <p style="color: #6b7280; font-size: 1rem; margin-bottom: 1.5rem;">Your order has been confirmed. Redirecting...</p>
       </div>
 

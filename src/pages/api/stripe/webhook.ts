@@ -155,7 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Shared context for handler functions
     const ctx = {
-      env: env as unknown as Record<string, unknown>,
+      env,
       stripeSecretKey,
       requestUrl: request.url,
       startTime,
@@ -300,7 +300,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Handle checkout.session.expired - release reserved stock + send recovery email
     if (event.type === 'checkout.session.expired') {
       const session = event.data.object;
-      await handleCheckoutExpired(session, env as unknown as Record<string, unknown>);
+      await handleCheckoutExpired(session, env);
     }
 
     // Handle refund - reverse artist transfers proportionally
@@ -308,7 +308,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const charge = event.data.object as Stripe.Charge;
       log.info('[Stripe Webhook] Refund processed:', charge.id, charge.amount_refunded / 100);
 
-      await handleRefund(charge, stripeSecretKey, env as unknown as Record<string, unknown>);
+      await handleRefund(charge, stripeSecretKey, env);
 
       logStripeEvent(event.type, event.id, true, {
         message: `Refund processed: ${formatPrice(charge.amount_refunded / 100)}`,

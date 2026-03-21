@@ -58,10 +58,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const query = `SELECT release_id, rating FROM user_ratings WHERE user_id = ? AND release_id IN (${placeholders})`;
         const params = [userId, ...limitedIds];
 
-        const result = await db.prepare(query).bind(...params).all();
+        const result = await db.prepare(query).bind(...params).all<D1RatingRow>();
 
         if (result?.results) {
-          for (const row of (result.results as unknown as D1RatingRow[])) {
+          for (const row of result.results) {
             userRatings[row.release_id] = row.rating;
           }
         }

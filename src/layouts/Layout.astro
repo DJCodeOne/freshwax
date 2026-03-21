@@ -26,8 +26,6 @@ interface Props {
   type?: 'website' | 'article' | 'product' | 'music.album' | 'video.other';
   noindex?: boolean;
   canonical?: string;
-  keywords?: string[];
-  
   // Product data (for releases, merch)
   product?: {
     price: number;
@@ -122,7 +120,6 @@ const {
   type,
   noindex,
   canonical,
-  keywords,
   product,
   music,
   audio,
@@ -199,7 +196,6 @@ const csrfToken = Astro.locals.csrfToken || '';
       type={type}
       noindex={noindex}
       canonical={canonical}
-      keywords={keywords}
       product={product}
       music={music}
       audio={audio}

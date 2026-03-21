@@ -109,8 +109,6 @@ interface Props {
     url: string;
   }[];
   
-  // Keywords for meta tag (supplementary)
-  keywords?: string[];
 }
 
 const {
@@ -132,7 +130,6 @@ const {
   faqs,
   itemList,
   breadcrumbs,
-  keywords = []
 } = Astro.props;
 
 const SITE = {
@@ -145,16 +142,6 @@ const SITE = {
   email: 'contact@freshwax.co.uk',
   foundingDate: '2024'
 };
-
-// Default keywords for music store
-const defaultKeywords = [
-  'jungle music', 'drum and bass', 'dnb vinyl', 'jungle vinyl',
-  'd&b records', 'breakbeat', 'UK underground music', 'DJ mixes',
-  'electronic music store', 'vinyl records UK', 'digital downloads',
-  'jungle record label', 'drum and bass label'
-];
-
-const allKeywords = [...new Set([...keywords, ...defaultKeywords])];
 
 const fullTitle = title === 'Home'
   ? `${SITE.tagline} | ${SITE.name}`
@@ -627,11 +614,6 @@ const articleSchema = article ? {
 <meta name="description" content={description} />
 {!noindex && <link rel="canonical" href={canonicalUrl} />}
 
-<!-- Keywords (still useful for some search engines) -->
-{allKeywords.length > 0 && (
-  <meta name="keywords" content={allKeywords.join(', ')} />
-)}
-
 <!-- Robots -->
 {noindex ? (
   <>
@@ -734,12 +716,10 @@ const articleSchema = article ? {
 <meta name="publisher" content={SITE.name} />
 <meta name="copyright" content={`© ${new Date().getFullYear()} ${SITE.name}`} />
 <meta name="color-scheme" content="dark light" />
-<meta http-equiv="x-ua-compatible" content="IE=edge" />
 
 <!-- Geographic SEO -->
 <meta name="geo.region" content="GB" />
 <meta name="geo.placename" content="United Kingdom" />
-<meta name="ICBM" content="51.5074, -0.1278" />
 
 <!-- Language/Content -->
 <meta http-equiv="content-language" content="en-GB" />

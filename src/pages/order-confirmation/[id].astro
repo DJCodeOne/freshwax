@@ -240,7 +240,7 @@ const physicalItems = enrichedItems.filter((item: Record<string, unknown>) =>
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
-<Layout title="Order Confirmed" noindex={true}>
+<Layout title="Order Confirmed" description="Your Fresh Wax order is confirmed. Download your digital purchases or track your physical shipment." noindex={true}>
   <Header />
   
   <div class="confirmation-main">

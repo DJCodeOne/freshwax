@@ -350,30 +350,6 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
 `;
   }
 
-  // ===========================================
-  // ARTIST FILTER PAGES
-  // ===========================================
-  // Get unique artists from releases for filtered browse pages
-  // Build a map of artist -> most recent release date for accurate lastmod
-  const artistLatest = new Map<string, string>();
-  for (const r of releases) {
-    const name = str(r.artistName || r.artist);
-    if (!name) continue;
-    const date = formatDate(r.updatedAt || r.releaseDate || r.createdAt);
-    const existing = artistLatest.get(name);
-    if (!existing || date > existing) artistLatest.set(name, date);
-  }
-  const artists = [...artistLatest.keys()];
-  for (const artist of artists.slice(0, 100)) { // Limit to 100 artists
-    xml += `  <url>
-    <loc>${SITE_URL}/releases/?artist=${encodeURIComponent(artist)}</loc>
-    <lastmod>${artistLatest.get(artist)}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-`;
-  }
-
   xml += `</urlset>`;
 
   return new Response(xml, {

@@ -54,7 +54,7 @@ export class EmbedPlayerManager {
   private youtubePlayerReady: boolean = false;
   private vimeoPlayer: VimeoPlayerInstance | null = null;
   private soundcloudWidget: SoundCloudWidgetInstance | null = null;
-  private directVideo: HTMLVideoElement | null = null;
+  private directVideo: HTMLMediaElement | null = null;
   private callbacks: PlayerCallbacks;
   private isSDKLoaded: { [key: string]: boolean } = {
     youtube: false,
@@ -412,7 +412,7 @@ export class EmbedPlayerManager {
       `;
       const audio = document.getElementById('direct-audio') as HTMLAudioElement;
       // Use the same property name for consistency
-      this.directVideo = audio as unknown as HTMLVideoElement;
+      this.directVideo = audio;
 
       audio.src = item.url;
       audio.play().catch((err: unknown) => {

@@ -32,7 +32,7 @@ export async function processArtistPayments(params: {
   orderSubtotal: number;
   artistShippingBreakdown?: Record<string, { artistId: string; artistName: string; amount: number }> | null;
   stripeSecretKey: string;
-  env: Record<string, unknown>;
+  env: CloudflareEnv;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal, artistShippingBreakdown, env } = params;
 
@@ -166,7 +166,7 @@ export async function processSupplierPayments(params: {
   totalItemCount: number;
   orderSubtotal: number;
   stripeSecretKey: string;
-  env: Record<string, unknown>;
+  env: CloudflareEnv;
 }) {
   const { orderId, orderNumber, items, env } = params;
 

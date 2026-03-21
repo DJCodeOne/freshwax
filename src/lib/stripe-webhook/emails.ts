@@ -13,7 +13,7 @@ export async function sendPendingEarningsEmail(
   artistEmail: string,
   artistName: string,
   amount: number,
-  env: Record<string, unknown>
+  env: CloudflareEnv
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
@@ -151,7 +151,7 @@ export async function sendPayoutCompletedEmail(
   artistName: string,
   amount: number,
   orderNumber: string,
-  env: Record<string, unknown>
+  env: CloudflareEnv
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
@@ -305,7 +305,7 @@ export async function sendRefundNotificationEmail(
   originalPayout: number,
   orderNumber: string,
   isFullRefund: boolean,
-  env: Record<string, unknown>
+  env: CloudflareEnv
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {

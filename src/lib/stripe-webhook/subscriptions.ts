@@ -11,7 +11,7 @@ const log = createLogger('stripe-webhook-subscriptions');
 
 /** Context passed from the main webhook handler */
 export interface SubscriptionContext {
-  env: Record<string, unknown>;
+  env: CloudflareEnv;
   requestUrl: string;
   startTime: number;
   eventType: string;

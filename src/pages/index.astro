@@ -62,10 +62,8 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
         <div class="hero-content">
           <h1 class="main-title" translate="no">
             FRESH <span class="text-red">WAX</span>
+            <span class="hero-h1-sub">Jungle & Drum and Bass Music Store</span>
           </h1>
-          <p class="hero-subtitle" data-animate="fade-up">
-            Jungle & Drum and Bass
-          </p>
           <div class="glass-panel nav-links-desktop" data-animate="fade-up">
             <a href="/crates/" class="nav-item">Vinyl</a>
             <span class="dot-separator" aria-hidden="true">●</span>
@@ -220,14 +218,19 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     z-index: 5;
   }
 
-  .hero-subtitle {
+  .hero-h1-sub {
+    display: block;
+    font-family: 'Inter', sans-serif;
     font-size: 0.875rem;
     color: #f9fafb;
     font-weight: 300;
     letter-spacing: 0.2em;
+    margin-top: 0.5rem;
     margin-bottom: 1.5rem;
     text-transform: uppercase;
     opacity: 0.9;
+    text-shadow: none;
+    line-height: 1.4;
   }
 
   @media (min-width: 375px) {
@@ -239,7 +242,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
       padding: 0 1.25rem;
     }
 
-    .hero-subtitle {
+    .hero-h1-sub {
       font-size: 1rem;
       letter-spacing: 0.25em;
       margin-bottom: 0.75rem;
@@ -255,7 +258,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
       padding: 0 1.5rem;
     }
 
-    .hero-subtitle {
+    .hero-h1-sub {
       font-size: 1.125rem;
       letter-spacing: 0.3em;
       margin-bottom: 2rem;
@@ -706,7 +709,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
       padding: 8px 20px;
     }
 
-    .hero-subtitle {
+    .hero-h1-sub {
       font-size: 0.75rem !important;
       margin-bottom: 1rem !important;
     }

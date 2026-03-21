@@ -12,7 +12,7 @@ const log = createLogger('stripe-webhook-abandoned-cart');
  */
 export async function handleCheckoutExpired(
   session: Stripe.Checkout.Session,
-  env: Record<string, unknown>
+  env: CloudflareEnv
 ): Promise<void> {
   log.info('[Stripe Webhook] Checkout session expired:', session.id);
 

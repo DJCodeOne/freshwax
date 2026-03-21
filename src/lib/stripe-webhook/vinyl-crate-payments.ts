@@ -16,7 +16,7 @@ export async function processVinylCrateSellerPayments(params: {
   totalItemCount: number;
   orderSubtotal: number;
   stripeSecretKey: string;
-  env: Record<string, unknown>;
+  env: CloudflareEnv;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });

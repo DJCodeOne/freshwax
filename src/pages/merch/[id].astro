@@ -65,8 +65,13 @@ try {
   error = 'Failed to load product';
 }
 
+const fallbackDescription = product
+  ? `Buy ${product.name} from Fresh Wax. Official jungle and drum & bass merchandise. Free UK shipping on orders over £50.`
+  : 'Product not found';
 const rawDescription = product
-  ? (product.description || `${product.name} - Official Fresh Wax merchandise. Shop jungle and drum & bass merch.`)
+  ? (product.description && product.description.length >= 50
+      ? product.description
+      : fallbackDescription)
   : 'Product not found';
 const pageDescription = product && rawDescription.length > 155
   ? rawDescription.slice(0, 155) + '...'

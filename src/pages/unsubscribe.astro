@@ -9,7 +9,7 @@ const email = Astro.url.searchParams.get('email') || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
-<Layout title="Unsubscribe" noindex={true}>
+<Layout title="Unsubscribe from Newsletter" description="Unsubscribe from Fresh Wax newsletter emails. You can resubscribe at any time from our website." noindex={true}>
   <div class="min-h-screen bg-black flex items-center justify-center px-4 py-20">
     <div class="max-w-md w-full">
       <div class="text-center mb-8">

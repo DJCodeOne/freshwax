@@ -9,7 +9,7 @@ import { sendRefundNotificationEmail } from './emails';
 const log = createLogger('stripe-webhook-refund');
 
 // Handle refund - reverse artist transfers proportionally
-export async function handleRefund(charge: Record<string, unknown>, stripeSecretKey: string, env: Record<string, unknown>) {
+export async function handleRefund(charge: Record<string, unknown>, stripeSecretKey: string, env: CloudflareEnv) {
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {

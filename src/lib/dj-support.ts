@@ -214,9 +214,9 @@ export async function scanTracklistForSupport(
     // Step 1: Load all published releases
     const { results } = await db.prepare(
       `SELECT id, title, artist_name FROM releases_v2 WHERE status = 'live'`
-    ).all();
+    ).all<D1ReleaseRow>();
 
-    const releases = (results ?? []) as unknown as D1ReleaseRow[];
+    const releases = results ?? [];
 
     if (releases.length === 0) {
       logger.info('No published releases found — skipping tracklist scan');
