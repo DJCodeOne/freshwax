@@ -215,6 +215,12 @@
     @apply border-b border-gray-200 last:border-b-0 hover:bg-gray-50;
   }
 
+  /* Skip rendering off-screen rows — rows beyond the first 20 are deferred */
+  .admin-table tbody tr:nth-child(n+20) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 50px;
+  }
+
   .admin-table td {
     @apply p-4 text-black;
   }

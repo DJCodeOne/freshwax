@@ -280,7 +280,7 @@
 
   .empty-state span { font-size: 4rem; }
   .empty-state h3 { font-size: 1.5rem; color: #fff; margin: 1rem 0 0.5rem; }
-  .empty-state p { color: #888; }
+  .empty-state p { color: #bbb; }
 
   /* Products Grid - 4 columns with spacing */
   .products-grid {
@@ -703,7 +703,7 @@
     background: none;
     border: none;
     font-size: 1.5rem;
-    color: #666;
+    color: #aaa;
     cursor: pointer;
     padding: 0;
     line-height: 1;
@@ -821,7 +821,7 @@
     display: block;
     text-align: center;
     margin-top: 1rem;
-    color: #888;
+    color: #bbb;
     font-size: 0.9rem;
     text-decoration: none;
   }

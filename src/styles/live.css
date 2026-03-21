@@ -172,7 +172,7 @@
     padding: 0.5rem 1rem;
     border-radius: 8px;
     box-shadow: none;
-    color: #888;
+    color: #bbb;
     font-weight: 700;
   }
   
@@ -347,7 +347,7 @@
     background: transparent;
     border: 2px solid #333;
     border-radius: 6px;
-    color: #888;
+    color: #bbb;
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
@@ -398,7 +398,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #666;
+    color: #aaa;
     text-align: center;
     padding: 2rem;
   }
@@ -501,7 +501,7 @@
   }
   @media (hover: hover) {
     .fs-reaction-btn:hover {
-      border-color: #666;
+      border-color: #aaa;
       transform: scale(1.1);
     }
 
@@ -511,7 +511,7 @@
   }
 
   .fs-reaction-btn.fs-anim-toggle {
-    color: #888;
+    color: #bbb;
   }
   
   .fs-reaction-btn.fs-anim-toggle.off {
@@ -578,7 +578,7 @@
   }
   
   .fs-volume-icon {
-    color: #888;
+    color: #bbb;
   }
   
   .fs-volume input[type="range"] {
@@ -959,7 +959,7 @@
     background: #111;
     border: 2px solid #222;
     border-radius: 10px;
-    color: #888;
+    color: #bbb;
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -1204,7 +1204,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #888;
+    color: #bbb;
     font-weight: 700;
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -1255,7 +1255,7 @@
   
   .live-dj-ends {
     display: block;
-    color: #888;
+    color: #bbb;
     font-size: 0.8125rem;
   }
   
@@ -1497,7 +1497,7 @@
   
   .cal-day-name {
     font-weight: 600;
-    color: #666;
+    color: #aaa;
     font-size: 0.5rem;
     text-transform: uppercase;
   }
@@ -1699,7 +1699,7 @@
 
   .schedule-duration-val {
     font-size: 0.75rem;
-    color: #666;
+    color: #aaa;
     font-weight: 500;
     margin-top: 0.125rem;
   }
@@ -1810,13 +1810,13 @@
   }
   
   .schedule-separator {
-    color: #999;
+    color: #ccc;
     font-size: 0.875rem;
   }
   
   .schedule-duration {
     font-size: 1rem;
-    color: #666;
+    color: #aaa;
   }
   
   .schedule-crew {
@@ -1885,7 +1885,7 @@
   }
   
   .empty-schedule {
-    color: #888;
+    color: #bbb;
     font-size: 0.875rem;
     text-align: center;
     padding: 1rem;
@@ -2040,7 +2040,7 @@
   .shoutout-label {
     font-size: 10px;
     font-weight: 700;
-    color: #666;
+    color: #aaa;
     text-transform: uppercase;
     letter-spacing: 1px;
     white-space: nowrap;
@@ -2133,7 +2133,7 @@
   }
   
   .shoutout-modal-content .modal-close {
-    color: #888;
+    color: #bbb;
   }
   
   .shoutout-modal-content .modal-close:hover {
@@ -2146,7 +2146,7 @@
   }
   
   .shoutout-hint {
-    color: #999;
+    color: #ccc;
     font-size: 1rem;
     text-align: center;
     margin: 0 0 1.25rem 0;
@@ -2170,7 +2170,7 @@
   }
 
   .shoutout-input-wrapper input::placeholder {
-    color: #666;
+    color: #aaa;
   }
   
   .shoutout-input-wrapper input:focus {
@@ -2189,7 +2189,7 @@
     top: 50%;
     transform: translateY(-50%);
     font-size: 0.875rem;
-    color: #666;
+    color: #aaa;
   }
   
   .shoutout-emoji-row {
@@ -2301,7 +2301,7 @@
     background: #333;
     border-radius: 8px;
     box-shadow: none;
-    color: #888;
+    color: #bbb;
     font-weight: 700;
     font-size: 0.875rem;
   }
@@ -2504,7 +2504,7 @@
   }
   
   .stream-genre {
-    color: #888;
+    color: #bbb;
     font-size: 0.8125rem;
     padding-left: 0.5rem;
     border-left: 1px solid #444;
@@ -2521,7 +2521,7 @@
 
   .stat-icon {
     font-size: 0.6875rem;
-    color: #888;
+    color: #bbb;
     text-transform: uppercase;
     letter-spacing: 0.02em;
   }
@@ -2609,7 +2609,7 @@
   .offline-text {
     font-family: 'Inter', sans-serif;
     font-size: 1.25rem;
-    color: #888;
+    color: #bbb;
     margin: 0 0 0.5rem 0;
     letter-spacing: 1px;
   }
@@ -2671,7 +2671,7 @@
   
   .countdown-timer .countdown-label {
     display: block;
-    color: #888;
+    color: #bbb;
     font-size: 0.875rem;
     margin-bottom: 0.25rem;
   }
@@ -2770,13 +2770,13 @@
   }
 
   .initializing-text {
-    color: #888;
+    color: #bbb;
     font-size: 0.95rem;
     margin: 0 0 0.5rem 0;
   }
 
   .initializing-subtext {
-    color: #666;
+    color: #aaa;
     font-size: 0.8rem;
     margin: 0 0 1.5rem 0;
     max-width: 280px;
@@ -3506,7 +3506,7 @@
     border-radius: 4px;
     padding: 4px;
     cursor: pointer;
-    color: #888;
+    color: #bbb;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3515,7 +3515,7 @@
   }
 
   .toggle-meters-btn:hover {
-    border-color: #666;
+    border-color: #aaa;
     color: #fff;
     background: #222;
   }
@@ -3538,7 +3538,7 @@
   .meter-label {
     font-size: 10px;
     font-weight: bold;
-    color: #666;
+    color: #aaa;
     width: 12px;
     text-align: center;
   }
@@ -3714,7 +3714,7 @@
   .dj-info-label {
     font-size: 10px;
     font-weight: 700;
-    color: #666;
+    color: #aaa;
     text-transform: uppercase;
     letter-spacing: 1px;
     flex-shrink: 0;
@@ -3749,7 +3749,7 @@
   }
 
   .inline-btn.save-btn {
-    color: #888;
+    color: #bbb;
     cursor: pointer;
     transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   }
@@ -3773,7 +3773,7 @@
   .dj-info-name {
     font-size: 16px;
     font-weight: 700;
-    color: #888;
+    color: #bbb;
     text-transform: uppercase;
     white-space: nowrap;
     overflow: hidden;
@@ -3782,7 +3782,7 @@
 
   .dj-info-bar .stream-genre {
     font-size: 12px;
-    color: #666;
+    color: #aaa;
     padding: 0.25rem 0.5rem;
     background: #222;
     border-radius: 4px;
@@ -3794,7 +3794,7 @@
 
   .dj-info-title {
     font-size: 14px;
-    color: #666;
+    color: #aaa;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3903,7 +3903,7 @@
     background: #222;
     border: 2px solid #444 !important;
     border-radius: 8px;
-    color: #888;
+    color: #bbb;
     cursor: pointer;
     transition: border-color 0.15s ease;
     overflow: hidden;
@@ -3911,7 +3911,7 @@
   }
   
   .inline-btn:hover {
-    border-color: #666;
+    border-color: #aaa;
   }
   
   .inline-btn.reaction-btn {
@@ -3919,7 +3919,7 @@
   }
   
   .inline-btn.reaction-btn:hover {
-    border-color: #888;
+    border-color: #bbb;
   }
   
   .inline-btn.reaction-btn:active {
@@ -3982,11 +3982,11 @@
   }
   
   .inline-btn.anim-toggle-btn {
-    color: #888;
+    color: #bbb;
   }
   
   .inline-btn.anim-toggle-btn:hover {
-    border-color: #666;
+    border-color: #aaa;
     color: #fff;
   }
   
@@ -4046,7 +4046,7 @@
     background: #222;
     border: 2px solid #444 !important;
     border-radius: 8px;
-    color: #888;
+    color: #bbb;
     font-size: 11px;
     font-weight: bold;
     cursor: pointer;
@@ -4140,7 +4140,7 @@
   .volume-icon {
     width: 16px;
     height: 16px;
-    color: #888;
+    color: #bbb;
   }
   
   #volumeSlider {
@@ -4263,7 +4263,7 @@
   }
   
   .rating-label {
-    color: #888;
+    color: #bbb;
     font-size: 0.8125rem;
   }
   
@@ -4321,7 +4321,7 @@
   }
   
   .chat-viewers {
-    color: #888;
+    color: #bbb;
     font-size: 0.8125rem;
   }
   
@@ -4417,7 +4417,7 @@
   .chat-system-message {
     text-align: center;
     padding: 1rem;
-    color: #666;
+    color: #aaa;
     font-size: 0.875rem;
     font-style: italic;
   }
@@ -4548,7 +4548,7 @@
     box-shadow: none;
     font-size: 0.875rem;
     cursor: pointer;
-    color: #888;
+    color: #bbb;
   }
   
   .emoji-cat:hover,
@@ -4603,7 +4603,7 @@
   .giphy-hint {
     grid-column: 1 / -1;
     text-align: center;
-    color: #666;
+    color: #aaa;
     padding: 2rem;
   }
   
@@ -4655,7 +4655,7 @@
     font-size: 0.875rem;
     cursor: pointer;
     background: transparent;
-    color: #666;
+    color: #aaa;
     transition: background 0.2s, color 0.2s;
   }
   
@@ -4716,7 +4716,7 @@
     text-align: center;
     font-weight: 600;
     font-size: 0.75rem;
-    color: #666;
+    color: #aaa;
     padding: 0.5rem 0;
   }
   
@@ -4805,7 +4805,7 @@
   .time-dropdown-label {
     display: block;
     font-size: 0.75rem;
-    color: #666;
+    color: #aaa;
     margin-bottom: 0.375rem;
     font-weight: 600;
   }
@@ -4890,7 +4890,7 @@
     display: flex;
     align-items: center;
     gap: 0.375rem;
-    color: #666;
+    color: #aaa;
   }
   
   .time-legend-dot {
@@ -5004,7 +5004,7 @@
   }
   
   .share-preview-info p {
-    color: #888;
+    color: #bbb;
     margin: 0;
     font-size: 0.875rem;
   }
@@ -5141,7 +5141,7 @@
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: #666;
+    color: #aaa;
     padding: 0.5rem;
     line-height: 1;
   }
@@ -5206,7 +5206,7 @@
   }
   
   .rtmp-info p {
-    color: #888;
+    color: #bbb;
     margin: 0 0 0.5rem 0;
     font-size: 0.875rem;
   }
@@ -5223,7 +5223,7 @@
   }
   
   .go-live-hint {
-    color: #666;
+    color: #aaa;
     font-size: 0.875rem;
     margin-top: 1rem;
   }
@@ -5301,7 +5301,7 @@
     display: block;
     text-align: right;
     font-size: 0.75rem;
-    color: #888;
+    color: #bbb;
     margin-top: 0.25rem;
   }
   
@@ -5393,7 +5393,7 @@
   }
   
   .stream-key-info p {
-    color: #888;
+    color: #bbb;
     margin: 0 0 0.5rem 0;
     font-size: 0.875rem;
   }
@@ -5427,7 +5427,7 @@
   }
   
   .lobby-note {
-    color: #666;
+    color: #aaa;
     font-size: 0.875rem;
     margin: 0;
   }
@@ -5465,7 +5465,7 @@
   }
   
   .lobby-label {
-    color: #888;
+    color: #bbb;
     font-size: 0.8125rem;
     display: block;
     margin-bottom: 0.25rem;
@@ -5486,7 +5486,7 @@
   }
   
   .lobby-countdown-big .countdown-label {
-    color: #888;
+    color: #bbb;
     font-size: 0.75rem;
     display: block;
     margin-bottom: 0.25rem;
@@ -5550,7 +5550,7 @@
   }
   
   .lobby-speed-test .speed-label {
-    color: #888;
+    color: #bbb;
     font-size: 0.8125rem;
   }
   
@@ -5736,7 +5736,7 @@
   
   #readyStatusText {
     font-size: 0.875rem;
-    color: #888;
+    color: #bbb;
   }
   
   .ready-indicator.is-ready #readyStatusText {
@@ -5804,7 +5804,7 @@
   
   .slot-available-alert .alert-text p {
     margin: 0;
-    color: #999;
+    color: #ccc;
     font-size: 0.875rem;
   }
   
@@ -5882,7 +5882,7 @@
     font-weight: 600;
   }
   .takeover-desc {
-    color: #888;
+    color: #bbb;
     font-size: 0.8125rem;
     margin: 0 0 1rem 0;
   }
@@ -6045,7 +6045,7 @@
     margin: 0.25rem 0;
   }
   .takeover-note {
-    color: #888;
+    color: #bbb;
     font-size: 0.8125rem;
     margin: 0;
   }
@@ -6115,7 +6115,7 @@
   }
   
   .incoming-takeover-dj span {
-    color: #666;
+    color: #aaa;
     font-size: 0.9rem;
   }
   
@@ -6683,7 +6683,7 @@
     padding: 0.75rem 0.5rem;
     background: transparent;
     border: none;
-    color: #666;
+    color: #aaa;
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -7804,7 +7804,7 @@
   }
 
   .eligibility-divider span {
-    color: #666;
+    color: #aaa;
     font-size: 0.8rem;
     font-weight: 600;
   }
@@ -8561,7 +8561,7 @@ body:has(.playlist-modal:not(.hidden)) .playlist-player {
 }
 
 .playlist-loading-text {
-  color: #999;
+  color: #ccc;
   font-size: 0.95rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;

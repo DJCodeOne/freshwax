@@ -1360,14 +1360,14 @@
   .loading-placeholder {
     padding: 1rem;
     text-align: center;
-    color: #999;
+    color: #ccc;
     font-size: 0.875rem;
   }
   
   .empty-downloads {
     padding: 1rem;
     text-align: center;
-    color: #999;
+    color: #ccc;
     font-size: 0.875rem;
   }
   
@@ -1896,7 +1896,7 @@
   .track-name .num {
     display: inline-block;
     width: 24px;
-    color: #999;
+    color: #ccc;
   }
   
   .dl-buttons {
@@ -2767,7 +2767,7 @@
   
   .pro-dashboard-btn.disabled {
     background: #374151;
-    color: #999;
+    color: #ccc;
     cursor: not-allowed;
     pointer-events: none;
   }
@@ -3328,7 +3328,7 @@
   .downloads-list .track-name .num {
     display: inline-block;
     width: 28px;
-    color: #999;
+    color: #ccc;
     font-weight: 600;
   }
   

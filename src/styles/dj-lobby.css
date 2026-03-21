@@ -307,7 +307,7 @@
   }
   
   .action-btn.secondary:hover {
-    border-color: #888;
+    border-color: #bbb;
     color: #fff;
   }
   
@@ -394,7 +394,7 @@
   .back-link:hover {
     color: #fff;
     background: #333;
-    border-color: #888;
+    border-color: #bbb;
   }
 
   /* Header Time Remaining - left side of header */
@@ -572,7 +572,7 @@
   
   .sign-out-btn:hover {
     background: #333;
-    border-color: #888;
+    border-color: #bbb;
     color: #fff;
   }
   
@@ -946,7 +946,7 @@
   .panel-title {
     font-size: 0.75rem;
     font-weight: 600;
-    color: #888;
+    color: #bbb;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -1011,7 +1011,7 @@
 
   .indicator-label {
     font-size: 0.65rem;
-    color: #666;
+    color: #aaa;
     text-transform: uppercase;
     font-weight: 500;
   }
@@ -1052,7 +1052,7 @@
 
   .player-panel .offline-state h3 {
     font-size: 0.85rem;
-    color: #666;
+    color: #aaa;
     margin: 0 0 0.2rem 0;
   }
 
@@ -1148,7 +1148,7 @@
 
   .player-control-btn:hover {
     background: rgba(255, 255, 255, 0.2);
-    border-color: #666;
+    border-color: #aaa;
   }
 
   .player-control-btn:active {
@@ -1203,7 +1203,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #666;
+    color: #aaa;
     text-align: center;
   }
 
@@ -1233,7 +1233,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #888;
+    color: #bbb;
   }
 
   .toggle-arrow {
@@ -1248,7 +1248,7 @@
   }
 
   .audio-toggle-btn:hover .toggle-arrow {
-    color: #666;
+    color: #aaa;
   }
 
   .audio-toggle-btn:hover .toggle-arrow.active {
@@ -1273,7 +1273,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #888;
+    color: #bbb;
     min-width: 50px;
   }
 
@@ -1451,7 +1451,7 @@
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 4px;
-    color: #888;
+    color: #bbb;
     padding: 0.2rem 0.5rem;
     font-size: 0.7rem;
     cursor: pointer;
@@ -1494,7 +1494,7 @@
 
   .cal-row label {
     font-size: 0.75rem;
-    color: #888;
+    color: #bbb;
     min-width: 100px;
   }
 
@@ -1615,7 +1615,7 @@
     padding: 0.6rem;
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-    color: #888;
+    color: #bbb;
   }
 
   .mute-btn-panel:hover {
@@ -1688,7 +1688,7 @@
   .fader-value {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.65rem;
-    color: #888;
+    color: #bbb;
     font-weight: 600;
   }
 
@@ -1737,7 +1737,7 @@
     font-family: 'JetBrains Mono', 'Consolas', monospace;
     font-size: 1.8rem;
     font-weight: 700;
-    color: #666;
+    color: #aaa;
     line-height: 1;
     font-variant-numeric: tabular-nums;
     transition: color 0.2s, text-shadow 0.2s;
@@ -1759,7 +1759,7 @@
   }
 
   .lufs-value.lufs-quiet {
-    color: #666;
+    color: #aaa;
     text-shadow: none;
   }
 
@@ -1798,7 +1798,7 @@
   }
 
   .lufs-val {
-    color: #999;
+    color: #ccc;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     min-width: 4ch;
@@ -1987,7 +1987,7 @@
   .meter-channel-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.55rem;
-    color: #666;
+    color: #aaa;
     font-weight: 600;
   }
 
@@ -2226,7 +2226,7 @@
     background: #222;
     border: 1px solid #444;
     border-radius: 4px;
-    color: #888;
+    color: #bbb;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -2821,7 +2821,7 @@
   
   .time-label {
     display: block;
-    color: #888;
+    color: #bbb;
     font-size: 0.7rem;
     text-transform: uppercase;
   }
@@ -3178,7 +3178,7 @@
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 6px;
-    color: #888;
+    color: #bbb;
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
@@ -3224,7 +3224,7 @@
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 8px;
-    color: #888;
+    color: #bbb;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
@@ -3274,7 +3274,7 @@
   .relay-label {
     font-size: 0.8rem;
     font-weight: 600;
-    color: #888;
+    color: #bbb;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -3347,7 +3347,7 @@
 
   .relay-station-genre {
     font-size: 0.75rem;
-    color: #888;
+    color: #bbb;
   }
 
   .relay-station-badge {
@@ -3370,7 +3370,7 @@
 
   .relay-hint-text {
     font-size: 0.75rem;
-    color: #666;
+    color: #aaa;
     margin-top: 0.75rem;
     text-align: center;
     font-style: italic;
@@ -3403,7 +3403,7 @@
   .setup-field label {
     display: block;
     font-size: 0.75rem;
-    color: #888;
+    color: #bbb;
     margin-bottom: 0.4rem;
     text-transform: uppercase;
     font-weight: 600;
@@ -3457,7 +3457,7 @@
     border-radius: 6px;
     border: 1px solid #333;
     background: #1a1a1a;
-    color: #888;
+    color: #bbb;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -3512,7 +3512,7 @@
   .cred-box-compact label {
     display: block;
     font-size: 0.75rem;
-    color: #888;
+    color: #bbb;
     margin-bottom: 0.4rem;
     text-transform: uppercase;
     font-weight: 600;
@@ -3548,12 +3548,12 @@
 
   /* No slot booked - key unavailable */
   .cred-value-compact code.key-unavailable {
-    color: #666;
+    color: #aaa;
     background: #1a1a1a;
   }
 
   .cred-value-compact code.key-unavailable .key-no-slot {
-    color: #888;
+    color: #bbb;
     font-style: italic;
     font-size: 0.85rem;
   }
@@ -3689,7 +3689,7 @@
 
   .multi-stream-toggle {
     margin-left: auto;
-    color: #666;
+    color: #aaa;
     transition: transform 0.3s ease;
   }
 
@@ -4159,7 +4159,7 @@
   .modal-close-btn {
     background: none;
     border: none;
-    color: #666;
+    color: #aaa;
     font-size: 1.5rem;
     cursor: pointer;
     padding: 0;
@@ -4179,7 +4179,7 @@
 
   .modal-hint {
     font-size: 0.8rem;
-    color: #888;
+    color: #bbb;
     margin: 0 0 1rem 0;
   }
 
@@ -4191,7 +4191,7 @@
 
   .loading-sources {
     text-align: center;
-    color: #666;
+    color: #aaa;
     padding: 2rem;
     display: flex;
     flex-direction: column;
@@ -4311,7 +4311,7 @@
 
   .relay-source-genre {
     font-size: 0.75rem;
-    color: #888;
+    color: #bbb;
   }
 
   .relay-source-status {
@@ -4361,17 +4361,17 @@
   .modal-btn.secondary {
     background: transparent;
     border: 1px solid #444;
-    color: #888;
+    color: #bbb;
   }
 
   .modal-btn.secondary:hover {
-    border-color: #666;
+    border-color: #aaa;
     color: #fff;
   }
 
   .no-sources-message {
     text-align: center;
-    color: #666;
+    color: #aaa;
     padding: 2rem;
     font-size: 0.9rem;
   }
@@ -4914,7 +4914,7 @@
   }
 
   .twitch-field input::placeholder {
-    color: #888;
+    color: #bbb;
     font-family: 'Inter', sans-serif;
   }
 
@@ -4953,7 +4953,7 @@
   }
 
   .stream-key-input-wrapper input::placeholder {
-    color: #888;
+    color: #bbb;
     font-family: 'Inter', sans-serif;
   }
 
@@ -5189,7 +5189,7 @@
   
   .lock-icon { font-size: 1.5rem; margin-bottom: 0.5rem; opacity: 0.5; }
   .key-not-available p { color: #d1d5db; margin-bottom: 0.25rem; font-size: 0.85rem; }
-  .next-slot-info { color: #999; font-size: 0.8rem; }
+  .next-slot-info { color: #ccc; font-size: 0.8rem; }
   
   .book-slot-link {
     display: inline-block;
@@ -5535,7 +5535,7 @@
     border-bottom: 1px solid #333;
     font-size: 0.75rem;
     font-weight: 600;
-    color: #888;
+    color: #bbb;
     text-transform: uppercase;
   }
 
@@ -6261,7 +6261,7 @@
   
   .dm-dj-list .empty-state {
     font-size: 1.125rem;
-    color: #888;
+    color: #bbb;
     font-style: italic;
     padding: 1rem;
   }
@@ -7339,7 +7339,7 @@
   .bypass-request-section { margin-top: 1rem; }
   .bypass-or-divider { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
   .bypass-or-divider::before, .bypass-or-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.25); }
-  .bypass-or-divider span { color: #999; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; }
+  .bypass-or-divider span { color: #ccc; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; }
   
   .bypass-form-card, .bypass-status-card { background: rgba(34, 197, 94, 0.1); border: 2px solid rgba(34, 197, 94, 0.4); border-radius: 16px; padding: 1.5rem 1.75rem; text-align: left; }
   .bypass-form-card:hover { border-color: rgba(34, 197, 94, 0.6); }
@@ -7424,7 +7424,7 @@
     outline-offset: 2px;
   }
   .quick-access-form input::placeholder {
-    color: #666;
+    color: #aaa;
     text-transform: none;
     letter-spacing: normal;
   }
@@ -8057,7 +8057,7 @@
     border: 1px solid #333;
     border-left: none;
     border-radius: 0 5px 5px 0;
-    color: #888;
+    color: #bbb;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -8120,7 +8120,7 @@
 
   .output-hint {
     font-size: 0.65rem;
-    color: #666;
+    color: #aaa;
     margin-top: 0.2rem;
   }
 
@@ -8141,7 +8141,7 @@
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 5px;
-    color: #888;
+    color: #bbb;
     font-size: 0.75rem;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
@@ -8227,7 +8227,7 @@
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 5px;
-    color: #666;
+    color: #aaa;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -8320,7 +8320,7 @@
   }
 
   .share-stream-genre {
-    color: #888;
+    color: #bbb;
     font-size: 0.75rem;
   }
 
@@ -8382,7 +8382,7 @@
     background: #1a1a1a;
     border: 1px solid #333;
     border-radius: 5px;
-    color: #888;
+    color: #bbb;
     font-size: 0.8rem;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
@@ -8419,7 +8419,7 @@
 
   .share-post-section label {
     display: block;
-    color: #888;
+    color: #bbb;
     font-size: 0.75rem;
     margin-bottom: 0.35rem;
   }
@@ -8502,7 +8502,7 @@
 
   .share-platform-btn.copy-link {
     background: #1a1a1a;
-    color: #888;
+    color: #bbb;
     border: 1px solid #333;
   }
 
@@ -8718,7 +8718,7 @@
 
   .butt-audio-preview .audio-show-title {
     font-size: 0.65rem;
-    color: #888;
+    color: #bbb;
     margin-bottom: 0.35rem;
   }
 
@@ -8938,7 +8938,7 @@
 
   #audioPreview .audio-show-title {
     font-size: 0.65rem;
-    color: #888;
+    color: #bbb;
     margin-bottom: 0.35rem;
   }
 
@@ -9623,7 +9623,7 @@
 
 .init-subtitle {
   font-size: 0.875rem;
-  color: #888;
+  color: #bbb;
   margin: 0;
 }
 
@@ -9675,7 +9675,7 @@
   display: block;
   text-align: center;
   font-size: 0.75rem;
-  color: #666;
+  color: #aaa;
   font-weight: 500;
 }
 
@@ -9710,7 +9710,7 @@
 }
 
 .init-check-item.disconnected {
-  border-color: #666;
+  border-color: #aaa;
   opacity: 0.7;
 }
 
@@ -9754,7 +9754,7 @@
 .init-check-item.disconnected .init-check-icon::after {
   content: '—';
   font-size: 1.25rem;
-  color: #666;
+  color: #aaa;
 }
 
 .init-check-item.error .init-check-icon::after {
@@ -9778,7 +9778,7 @@
 
 .init-check-status {
   font-size: 0.75rem;
-  color: #888;
+  color: #bbb;
 }
 
 .init-check-item.connected .init-check-status {
@@ -9870,7 +9870,7 @@
 .init-back-btn:disabled,
 .init-go-live-btn:disabled {
   background: #333;
-  color: #666;
+  color: #aaa;
   cursor: not-allowed;
   border-color: #333;
 }

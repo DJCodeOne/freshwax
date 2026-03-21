@@ -172,12 +172,18 @@ const csrfToken = Astro.locals.csrfToken || '';
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.freshwax.co.uk" crossorigin />
-    <!-- DNS prefetch for origins used on some pages -->
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://js.pusher.com" crossorigin />
+    <link rel="preconnect" href="https://api.stripe.com" crossorigin />
+    <link rel="preconnect" href="https://www.paypal.com" crossorigin />
+    <!-- DNS prefetch fallback for browsers that don't support preconnect -->
     <link rel="dns-prefetch" href="https://cdn.freshwax.co.uk" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
     <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
     <link rel="dns-prefetch" href="https://js.pusher.com" />
+    <link rel="dns-prefetch" href="https://api.stripe.com" />
+    <link rel="dns-prefetch" href="https://www.paypal.com" />
     <!-- Page-specific preconnects added via <link slot="head"> on pages that need them -->
 
     <!-- Google Fonts — async load to avoid render-blocking (display=swap prevents FOIT) -->
