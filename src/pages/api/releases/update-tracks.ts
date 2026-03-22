@@ -2,10 +2,23 @@
 // Updates release tracks with processed audio URLs (MP3, WAV, preview)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { getAdminKey, ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const updateTracksSchema = z.object({
+  releaseId: z.string().min(1),
+  tracks: z.array(z.object({
+    trackNumber: z.number(),
+    mp3Url: z.string().optional(),
+    wavUrl: z.string().optional(),
+    previewUrl: z.string().optional(),
+    mp3Size: z.number().optional(),
+    wavSize: z.number().optional(),
+  })),
+});
 
 export const prerender = false;
 
@@ -31,15 +44,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
 
     const body = await request.json();
-    const { releaseId, tracks } = body;
-
-    if (!releaseId) {
-      return ApiErrors.badRequest('releaseId is required');
+    const parseResult = updateTracksSchema.safeParse(body);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
-
-    if (!tracks || !Array.isArray(tracks)) {
-      return ApiErrors.badRequest('tracks array is required');
-    }
+    const { releaseId, tracks } = parseResult.data;
 
     // Get existing release
     const existingRelease = await getDocument('releases', releaseId);

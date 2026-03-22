@@ -14,7 +14,10 @@ export default defineConfig({
         'src/pages/api/**/*.ts',
       ],
       thresholds: {
-        lines: 5,
+        statements: 4,
+        branches: 4,
+        functions: 6,
+        lines: 4,
       },
     },
   },

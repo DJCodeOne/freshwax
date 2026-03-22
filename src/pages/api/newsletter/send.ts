@@ -1,11 +1,21 @@
 // src/pages/api/newsletter/send.ts
 // Send newsletter to selected subscribers via Resend
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, addDocument, updateDocument, atomicIncrement } from '../../../lib/firebase-rest';
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 import { escapeHtml, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const sendNewsletterSchema = z.object({
+  subject: z.string().min(1),
+  content: z.string().min(1),
+  subscriberIds: z.union([z.literal('all'), z.array(z.string())]),
+  previewEmail: z.string().email().optional(),
+  testEmail: z.string().email().optional(),
+  adminId: z.string().optional(),
+});
 
 const log = createLogger('newsletter/send');
 import { SITE_URL } from '../../../lib/constants';
@@ -38,7 +48,11 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   try {
     // Check admin auth via X-Admin-Key header or body
     const body = await request.json();
-    const authError = await requireAdminAuth(request, locals, body);
+    const parseResult = sendNewsletterSchema.safeParse(body);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const authError = await requireAdminAuth(request, locals, parseResult.data);
     if (authError) return authError;
 
     const {
@@ -47,11 +61,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       subscriberIds, // Array of subscriber IDs, or 'all' for everyone
       previewEmail, // Optional: send preview to this email first
       testEmail // Alias for previewEmail
-    } = body;
-
-    if (!subject || !content) {
-      return ApiErrors.badRequest('Subject and content are required');
-    }
+    } = parseResult.data;
 
     // Get subscribers
     let subscribers: Record<string, unknown>[] = [];

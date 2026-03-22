@@ -1,10 +1,26 @@
 // src/pages/api/livestream/relay-sources.ts
 // API for managing external radio relay sources
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const createSourceSchema = z.object({
+  name: z.string().min(1),
+  streamUrl: z.string().url(),
+  websiteUrl: z.string().optional().default(''),
+  logoUrl: z.string().optional().default(''),
+  genre: z.string().optional().default('Jungle / D&B'),
+  description: z.string().optional().default(''),
+  checkMethod: z.enum(['none', 'http', 'icecast']).optional().default('none'),
+  statusUrl: z.string().optional().default(''),
+});
+
+const updateSourceSchema = z.object({
+  id: z.string().min(1),
+}).catchall(z.unknown());
 
 const log = createLogger('livestream/relay-sources');
 
@@ -63,23 +79,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
   try {
     const data = await request.json();
-    
-    const { name, streamUrl, websiteUrl, logoUrl, genre, description, checkMethod, statusUrl } = data;
-    
-    if (!name || !streamUrl) {
-      return ApiErrors.badRequest('Name and stream URL are required');
+    const parseResult = createSourceSchema.safeParse(data);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
-    
+    const { name, streamUrl, websiteUrl, logoUrl, genre, description, checkMethod, statusUrl } = parseResult.data;
+
     const now = new Date().toISOString();
     const sourceData = {
       name,
       streamUrl,
-      websiteUrl: websiteUrl || '',
-      logoUrl: logoUrl || '',
-      genre: genre || 'Jungle / D&B',
-      description: description || '',
-      checkMethod: checkMethod || 'none', // 'none', 'http', 'icecast'
-      statusUrl: statusUrl || '',
+      websiteUrl,
+      logoUrl,
+      genre,
+      description,
+      checkMethod,
+      statusUrl,
       active: true,
       isCurrentlyLive: false,
       lastChecked: null,
@@ -114,11 +129,11 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
   try {
     const data = await request.json();
-    const { id, ...updates } = data;
-    
-    if (!id) {
-      return ApiErrors.badRequest('Source ID is required');
+    const parseResult = updateSourceSchema.safeParse(data);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const { id, ...updates } = parseResult.data;
     
     // Remove fields that shouldn't be updated directly
     delete updates.createdAt;

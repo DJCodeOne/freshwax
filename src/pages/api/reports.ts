@@ -1,15 +1,39 @@
 // src/pages/api/reports.ts
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, addDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse } from '../../lib/api-utils';
+
+const REPORT_CATEGORIES_ENUM = ['inappropriate_content', 'harassment', 'spam', 'copyright', 'hate_speech', 'impersonation', 'other'] as const;
+const REPORT_TYPES_ENUM = ['stream', 'artist', 'dj', 'user', 'release', 'mix', 'comment', 'chat', 'other'] as const;
+
+const createReportSchema = z.object({
+  type: z.enum(REPORT_TYPES_ENUM),
+  targetId: z.string().optional(),
+  targetName: z.string().optional(),
+  targetUrl: z.string().optional(),
+  category: z.enum(REPORT_CATEGORIES_ENUM),
+  description: z.string().min(10),
+  reporterId: z.string().optional(),
+  reporterName: z.string().optional(),
+  reporterEmail: z.string().email().optional(),
+});
+
+const updateReportSchema = z.object({
+  reportId: z.string().min(1),
+  status: z.enum(['pending', 'reviewing', 'resolved', 'dismissed']).optional(),
+  resolution: z.string().optional(),
+  adminNotes: z.string().optional(),
+  adminId: z.string().optional(),
+});
 
 const log = createLogger('[reports]');
 
 export const prerender = false;
 
-const REPORT_CATEGORIES = ['inappropriate_content', 'harassment', 'spam', 'copyright', 'hate_speech', 'impersonation', 'other'];
-const REPORT_TYPES = ['stream', 'artist', 'dj', 'user', 'release', 'mix', 'comment', 'chat', 'other'];
+const REPORT_CATEGORIES = [...REPORT_CATEGORIES_ENUM];
+const REPORT_TYPES = [...REPORT_TYPES_ENUM];
 
 export const GET: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute
@@ -95,17 +119,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { type, targetId, targetName, targetUrl, category, description, reporterId, reporterName, reporterEmail } = data;
-
-    if (!type || !REPORT_TYPES.includes(type)) {
-      return ApiErrors.badRequest('Invalid report type');
+    const parseResult = createReportSchema.safeParse(data);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
-    if (!category || !REPORT_CATEGORIES.includes(category)) {
-      return ApiErrors.badRequest('Please select a category');
-    }
-    if (!description || description.trim().length < 10) {
-      return ApiErrors.badRequest('Please provide a description (at least 10 characters)');
-    }
+    const { type, targetId, targetName, targetUrl, category, description, reporterId, reporterName, reporterEmail } = parseResult.data;
 
     if (reporterId && targetId) {
       // Check for existing reports in parallel
@@ -177,8 +195,11 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { reportId, status, resolution, adminNotes, adminId } = data;
-    if (!reportId) return ApiErrors.badRequest('Report ID required');
+    const putParseResult = updateReportSchema.safeParse(data);
+    if (!putParseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const { reportId, status, resolution, adminNotes, adminId } = putParseResult.data;
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (status) {

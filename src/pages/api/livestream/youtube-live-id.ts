@@ -3,9 +3,15 @@
 // and updates the livestream document with it
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
+
+const youtubePostSchema = z.object({
+  streamKey: z.string().optional(),
+  channelId: z.string().optional(),
+});
 
 const log = createLogger('[youtube-live-id]');
 
@@ -133,7 +139,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { streamKey, channelId } = body;
+    const parseResult = youtubePostSchema.safeParse(body);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const { streamKey, channelId } = parseResult.data;
 
     // Use provided channel ID or default to Fresh Wax
     const youtubeChannelId = channelId ||

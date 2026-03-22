@@ -56,7 +56,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
         poster="/videos/hero-turntable-poster.webp"
         width="1920"
         height="1080"
-        style="display:none"
+        style="display:none;aspect-ratio:16/9"
       ></video>
       <script is:inline nonce={nonce}>
       (function(){if(window.innerWidth>=768){var v=document.getElementById('hero-video');if(v){var s1=document.createElement('source');s1.src='/videos/hero-turntable.webm';s1.type='video/webm';var s2=document.createElement('source');s2.src='/videos/hero-turntable.mp4';s2.type='video/mp4';v.appendChild(s1);v.appendChild(s2);v.addEventListener('canplay',function(){v.style.display='';},{once:true});v.load()}}})();

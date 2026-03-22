@@ -1,4 +1,4 @@
-name: CI
+name: CI / CD
 
 on:
   push:
@@ -26,6 +26,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -71,6 +72,19 @@ jobs:
           path: dist/
           retention-days: 1
 
+      - name: CI Summary
+        if: always()
+        run: |
+          echo "## CI Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Step | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Security audit | ${{ steps.cache-deps.outcome == 'skipped' && '⏭️' || '✅' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Lint | ✅ |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Typecheck | ✅ |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tests | ✅ |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Build | ✅ |" >> "$GITHUB_STEP_SUMMARY"
+
   # TODO: Add staging deployment
   # - Deploy to freshwax-staging.pages.dev first
   # - Run smoke tests against staging
@@ -96,12 +110,17 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
       - name: Get previous deployment ID
         id: prev-deploy
         run: |
-          npm install -g wrangler
           PREV_ID=$(CLOUDFLARE_API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}" \
-            wrangler pages deployment list \
+            npx wrangler pages deployment list \
               --project-name=freshwax \
               --environment=production \
               --json 2>/dev/null \

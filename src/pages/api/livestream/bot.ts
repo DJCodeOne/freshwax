@@ -3,12 +3,23 @@
 // POST /api/livestream/bot/ - Send a bot message to a stream
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { addDocument, getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { BOT_USER, BOT_ANNOUNCEMENTS } from '../../../lib/chatbot';
 import { getAdminUids, initAdminEnv, requireAdminAuth } from '../../../lib/admin';
 import { triggerPusher } from '../../../lib/pusher';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, jsonResponse, successResponse } from '../../../lib/api-utils';
+
+const botSchema = z.object({
+  streamId: z.string().min(1),
+  message: z.string().optional(),
+  announcement: z.enum(['welcome', 'nextDj', 'streamEnding', 'milestone']).optional(),
+  adminId: z.string().optional(),
+  djName: z.string().optional(),
+  minutes: z.number().optional(),
+  viewers: z.number().optional(),
+});
 
 const log = createLogger('livestream/bot');
 
@@ -55,7 +66,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { streamId, message, announcement, adminId } = data;
+    const parseResult = botSchema.safeParse(data);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const { streamId, message, announcement, adminId } = parseResult.data;
 
     // SECURITY: Verify admin via proper auth — never trust client-submitted adminId
     // For internal/system calls, adminId='system' is allowed with server key
@@ -68,15 +83,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     } else {
       // Human admin calls must pass requireAdminAuth
-      const authError = await requireAdminAuth(request, locals, data);
+      const authError = await requireAdminAuth(request, locals, parseResult.data);
       if (authError) return authError;
     }
 
-    if (!streamId) {
-      return ApiErrors.badRequest('Stream ID is required');
-    }
-
     let messageText = message;
+    const validatedData = parseResult.data;
 
     // Handle pre-defined announcements
     if (announcement) {
@@ -86,16 +98,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           messageText = BOT_ANNOUNCEMENTS.welcome(stream?.djName || 'DJ');
           break;
         case 'nextDj':
-          messageText = BOT_ANNOUNCEMENTS.nextDj(data.djName || 'Next DJ', data.minutes || 5);
+          messageText = BOT_ANNOUNCEMENTS.nextDj(validatedData.djName || 'Next DJ', validatedData.minutes || 5);
           break;
         case 'streamEnding':
           messageText = BOT_ANNOUNCEMENTS.streamEnding();
           break;
         case 'milestone':
-          messageText = BOT_ANNOUNCEMENTS.milestone(data.viewers || 100);
+          messageText = BOT_ANNOUNCEMENTS.milestone(validatedData.viewers || 100);
           break;
-        default:
-          return ApiErrors.badRequest('Unknown announcement type');
       }
     }
 

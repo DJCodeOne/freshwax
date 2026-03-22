@@ -2,10 +2,25 @@
 // Manage DJ weekly booking allowances (admin overrides)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const postAllowanceSchema = z.object({
+  djId: z.string().min(1),
+  weeklySlots: z.union([z.string(), z.number()]).optional(),
+  maxHoursPerDay: z.union([z.string(), z.number()]).optional(),
+  reason: z.string().optional(),
+  djName: z.string().optional(),
+  adminId: z.string().optional(),
+});
+
+const deleteAllowanceSchema = z.object({
+  djId: z.string().min(1),
+  adminId: z.string().optional(),
+});
 
 const log = createLogger('livestream/allowances');
 
@@ -77,13 +92,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   initAdminEnv({ ADMIN_UIDS: postEnv?.ADMIN_UIDS, ADMIN_EMAILS: postEnv?.ADMIN_EMAILS });
   try {
     const body = await request.json();
-    const postAuthError = await requireAdminAuth(request, locals, body);
-    if (postAuthError) return postAuthError;
-    const { djId, weeklySlots, maxHoursPerDay, reason, djName } = body;
-
-    if (!djId) {
-      return ApiErrors.badRequest('DJ ID is required');
+    const parseResult = postAllowanceSchema.safeParse(body);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const postAuthError = await requireAdminAuth(request, locals, parseResult.data);
+    if (postAuthError) return postAuthError;
+    const { djId, weeklySlots, maxHoursPerDay, reason, djName } = parseResult.data;
 
     // Validate values
     const slots = Math.min(Math.max(parseInt(weeklySlots) || DEFAULT_WEEKLY_SLOTS, 1), 14);
@@ -149,13 +164,13 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   initAdminEnv({ ADMIN_UIDS: delEnv?.ADMIN_UIDS, ADMIN_EMAILS: delEnv?.ADMIN_EMAILS });
   try {
     const body = await request.json();
-    const delAuthError = await requireAdminAuth(request, locals, body);
-    if (delAuthError) return delAuthError;
-    const { djId } = body;
-
-    if (!djId) {
-      return ApiErrors.badRequest('DJ ID is required');
+    const delParseResult = deleteAllowanceSchema.safeParse(body);
+    if (!delParseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const delAuthError = await requireAdminAuth(request, locals, delParseResult.data);
+    if (delAuthError) return delAuthError;
+    const { djId } = delParseResult.data;
 
     const docId = djId.includes('@') ? djId.replace(/[.@]/g, '_') : djId;
     await deleteDocument('djAllowances', docId);

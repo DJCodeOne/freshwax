@@ -1,9 +1,14 @@
 // src/pages/api/dj-lobby/dm-cleanup.ts
 // Clean up DJ direct messages when a DM conversation is closed
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { deleteDocument, verifyUserToken } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const dmCleanupSchema = z.object({
+  channelId: z.string().min(1),
+});
 
 const log = createLogger('dj-lobby/dm-cleanup');
 
@@ -83,11 +88,11 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const data = await request.json();
-    const { channelId } = data;
-
-    if (!channelId) {
-      return ApiErrors.badRequest('Channel ID required');
+    const parseResult = dmCleanupSchema.safeParse(data);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const { channelId } = parseResult.data;
 
     // Verify the user is part of this DM channel
     // Channel IDs are formatted as sorted uid pair: "uid1_uid2"

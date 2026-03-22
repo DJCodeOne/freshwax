@@ -9,10 +9,25 @@
 // - 403 with { valid: false, reason: "..." } if stream is denied
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, validateStreamKeyTiming, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, jsonResponse } from '../../../lib/api-utils';
+
+const validateStreamSchema = z.object({
+  path: z.string().optional(),
+  key: z.string().optional(),
+  name: z.string().optional(),
+  streamKey: z.string().optional(),
+  action: z.string().optional(),
+  protocol: z.string().optional(),
+  ip: z.string().optional(),
+  user: z.string().optional(),
+  password: z.string().optional(),
+  id: z.string().optional(),
+  query: z.string().optional(),
+});
 
 const log = createLogger('[validate-stream]');
 
@@ -187,17 +202,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
+    const parseResult = validateStreamSchema.safeParse(data);
+    if (!parseResult.success) {
+      return jsonResponse({ valid: false, reason: 'Invalid request data' }, 400);
+    }
+    const validatedData = parseResult.data;
 
     // MediaMTX format: path contains the stream key
     // Path format: "streamKey" or "live/streamKey"
-    let streamKey = data.path || data.key || data.name || data.streamKey || '';
+    let streamKey = validatedData.path || validatedData.key || validatedData.name || validatedData.streamKey || '';
 
     // Remove leading slash and "live/" prefix if present
     streamKey = streamKey.replace(/^\/?(live\/)?/, '');
 
-    const action = data.action || 'publish';
-    const protocol = data.protocol || 'rtmp';
-    const clientIp = data.ip || '';
+    const action = validatedData.action || 'publish';
+    const protocol = validatedData.protocol || 'rtmp';
+    const clientIp = validatedData.ip || '';
 
     log.info('[validate-stream] MediaMTX auth:', { action, protocol, streamKey: streamKey?.substring(0, 20) + '...', ip: clientIp });
 

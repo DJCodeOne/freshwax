@@ -6,8 +6,28 @@
 // Rate limited. No user-specific data is stored or exposed.
 
 import type { APIContext } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse, errorResponse } from '../../../lib/api-utils';
+
+const postSchema = z.object({
+  item: z.object({
+    id: z.string().optional(),
+    url: z.string().url(),
+    platform: z.string(),
+    embedId: z.string().optional(),
+    title: z.string().optional(),
+    thumbnail: z.string().optional(),
+    addedBy: z.string().optional(),
+    addedByName: z.string().optional(),
+  }),
+});
+
+const deleteSchema = z.object({
+  url: z.string().url(),
+  embedId: z.string().optional(),
+  reason: z.string().optional(),
+});
 
 const log = createLogger('[playlist-history]');
 
@@ -77,11 +97,11 @@ export async function POST({ request, locals }: APIContext) {
     }
 
     const body = await request.json();
-    const { item } = body;
-
-    if (!item || !item.url) {
-      return ApiErrors.badRequest('Missing item or URL');
+    const parseResult = postSchema.safeParse(body);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const { item } = parseResult.data;
 
     // Get current history from KV
     let history: HistoryItem[] = [];
@@ -153,11 +173,11 @@ export async function DELETE({ request, locals }: APIContext) {
     }
 
     const body = await request.json();
-    const { url, embedId, reason } = body;
-
-    if (!url) {
-      return ApiErrors.badRequest('Missing URL');
+    const parseResult = deleteSchema.safeParse(body);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const { url, embedId, reason } = parseResult.data;
 
     log.info(`[PlaylistHistory] Removing blocked video: ${url} (reason: ${reason})`);
 

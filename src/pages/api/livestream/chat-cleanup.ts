@@ -1,10 +1,16 @@
 // src/pages/api/livestream/chat-cleanup.ts
 // API to schedule and execute chat cleanup after DJ session ends
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
+
+const chatCleanupSchema = z.object({
+  streamId: z.string().min(1),
+  action: z.enum(['schedule', 'cancel', 'execute']),
+});
 
 const log = createLogger('[chat-cleanup]');
 
@@ -27,11 +33,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }  try {
     const data = await request.json();
-    const { streamId, action } = data;
-    
-    if (!streamId) {
-      return ApiErrors.badRequest('Stream ID required');
+    const parseResult = chatCleanupSchema.safeParse(data);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const { streamId, action } = parseResult.data;
     
     if (action === 'schedule') {
       // Schedule cleanup for 30 minutes from now

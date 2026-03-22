@@ -3,9 +3,14 @@
 // D1 is PRIMARY - Firebase only used as last resort fallback
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+
+const getUserRatingsSchema = z.object({
+  releaseIds: z.array(z.string()).min(1),
+});
 
 interface D1RatingRow {
   release_id: string;
@@ -38,11 +43,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const { releaseIds } = body;
-
-    if (!releaseIds || !Array.isArray(releaseIds) || releaseIds.length === 0) {
-      return ApiErrors.badRequest('releaseIds array required');
+    const parseResult = getUserRatingsSchema.safeParse(body);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const { releaseIds } = parseResult.data;
 
     // Limit to 50 releases per request
     const limitedIds = releaseIds.slice(0, 50);

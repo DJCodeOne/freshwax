@@ -2,9 +2,18 @@
 // Update livestream slot title (for relay streams)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { saUpdateDocument, getServiceAccountToken } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const updateSlotSchema = z.object({
+  slotId: z.string().min(1),
+  title: z.string().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  adminKey: z.string().min(1),
+});
 
 const log = createLogger('livestream/update-slot-title');
 
@@ -29,16 +38,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { slotId, title, startTime, endTime, adminKey } = data;
+    const parseResult = updateSlotSchema.safeParse(data);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const { slotId, title, startTime, endTime, adminKey } = parseResult.data;
 
     // Require admin key for security (timing-safe comparison)
     const expectedAdminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
     if (!adminKey || !expectedAdminKey || !timingSafeEqual(adminKey, expectedAdminKey)) {
       return ApiErrors.unauthorized('Unauthorized');
-    }
-
-    if (!slotId) {
-      return ApiErrors.badRequest('slotId is required');
     }
 
     // Build service account key from env vars

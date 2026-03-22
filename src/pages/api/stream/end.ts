@@ -2,12 +2,20 @@
 // Admin endpoint to forcefully end a stream
 // Checks both livestreamSlots (current system) and livestreams (legacy) collections
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection, clearCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { invalidateStatusCache } from '../livestream/status';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
+
+const endStreamSchema = z.object({
+  streamId: z.string().min(1),
+  djId: z.string().optional(),
+  reason: z.string().optional(),
+  adminId: z.string().optional(),
+});
 
 const log = createLogger('[stream-end]');
 
@@ -25,15 +33,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { streamId, djId, reason } = data;
+    const parseResult = endStreamSchema.safeParse(data);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const { streamId, djId, reason } = parseResult.data;
 
     // SECURITY: Require admin authentication
-    const authError = await requireAdminAuth(request, locals, data);
+    const authError = await requireAdminAuth(request, locals, parseResult.data);
     if (authError) return authError;
-
-    if (!streamId) {
-      return ApiErrors.badRequest('Stream ID is required');
-    }
 
     const now = new Date().toISOString();
     let ended = false;

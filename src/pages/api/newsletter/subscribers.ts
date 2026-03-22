@@ -1,9 +1,28 @@
 // src/pages/api/newsletter/subscribers.ts
 // Get all subscribers for admin dashboard
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, deleteDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const addSubscriberSchema = z.object({
+  email: z.string().email(),
+  name: z.string().optional(),
+  source: z.string().optional(),
+  adminId: z.string().optional(),
+});
+
+const deleteSubscriberSchema = z.object({
+  subscriberId: z.string().min(1),
+  adminId: z.string().optional(),
+});
+
+const updateSubscriberSchema = z.object({
+  subscriberId: z.string().min(1),
+  status: z.enum(['active', 'unsubscribed']),
+  adminId: z.string().optional(),
+});
 
 const log = createLogger('newsletter/subscribers');
 
@@ -59,14 +78,14 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {  try {
 // Add subscriber manually
 export const POST: APIRoute = async ({ request, cookies, locals }) => {  try {
     const body = await request.json();
-    const authError = await requireAdminAuth(request, locals, body);
+    const parseResult = addSubscriberSchema.safeParse(body);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const authError = await requireAdminAuth(request, locals, parseResult.data);
     if (authError) return authError;
 
-    const { email, name, source } = body;
-
-    if (!email) {
-      return ApiErrors.badRequest('Email is required');
-    }
+    const { email, name, source } = parseResult.data;
 
     // Check if email already exists
     const existing = await queryCollection('subscribers', {
@@ -101,14 +120,14 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {  try {
 // Delete subscriber
 export const DELETE: APIRoute = async ({ request, cookies, locals }) => {  try {
     const body = await request.json();
-    const authError = await requireAdminAuth(request, locals, body);
+    const delParseResult = deleteSubscriberSchema.safeParse(body);
+    if (!delParseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const authError = await requireAdminAuth(request, locals, delParseResult.data);
     if (authError) return authError;
 
-    const { subscriberId } = body;
-
-    if (!subscriberId) {
-      return ApiErrors.badRequest('Subscriber ID required');
-    }
+    const { subscriberId } = delParseResult.data;
 
     await deleteDocument('subscribers', subscriberId);
 
@@ -123,18 +142,14 @@ export const DELETE: APIRoute = async ({ request, cookies, locals }) => {  try {
 // Update subscriber status (unsubscribe/resubscribe)
 export const PATCH: APIRoute = async ({ request, cookies, locals }) => {  try {
     const body = await request.json();
-    const authError = await requireAdminAuth(request, locals, body);
+    const patchParseResult = updateSubscriberSchema.safeParse(body);
+    if (!patchParseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const authError = await requireAdminAuth(request, locals, patchParseResult.data);
     if (authError) return authError;
 
-    const { subscriberId, status } = body;
-
-    if (!subscriberId || !status) {
-      return ApiErrors.badRequest('Subscriber ID and status required');
-    }
-
-    if (!['active', 'unsubscribed'].includes(status)) {
-      return ApiErrors.badRequest('Invalid status');
-    }
+    const { subscriberId, status } = patchParseResult.data;
 
     await updateDocument('subscribers', subscriberId, {
       status,

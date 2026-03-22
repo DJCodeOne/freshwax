@@ -3,10 +3,19 @@
 // Uses Cloudflare KV for fast, edge-cached listener tracking (no Firebase)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { initKVCache, kvGet, kvSet, kvDelete } from '../../../lib/kv-cache';
 import { triggerPusher } from '../../../lib/pusher';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const listenerSchema = z.object({
+  action: z.enum(['join', 'leave', 'heartbeat']).optional(),
+  streamId: z.string().min(1),
+  userId: z.string().optional(),
+  userName: z.string().optional(),
+  avatarUrl: z.string().optional(),
+});
 
 const log = createLogger('livestream/listeners');
 
@@ -187,11 +196,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    const { action, streamId, userId: bodyUserId, userName, avatarUrl } = body;
-
-    if (!streamId) {
-      return ApiErrors.badRequest('Stream ID required');
+    const parseResult = listenerSchema.safeParse(body);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const { action, streamId, userId: bodyUserId, userName, avatarUrl } = parseResult.data;
 
     // SECURITY: Verify userId from auth token when present, fall back to body for anonymous tracking
     let userId = bodyUserId;

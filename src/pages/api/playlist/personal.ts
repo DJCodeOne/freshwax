@@ -3,10 +3,16 @@
 // All users get cloud sync: Standard = 100 tracks, Plus = 1000 tracks
 
 import type { APIContext } from 'astro';
+import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, TIER_LIMITS } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
+
+const postSchema = z.object({
+  userId: z.string().min(1),
+  items: z.array(z.unknown()),
+});
 
 const log = createLogger('[personal-playlist]');
 
@@ -105,11 +111,11 @@ export async function POST({ request, locals }: APIContext) {
     const idToken = authHeader?.replace('Bearer ', '') || undefined;
 
     const body = await request.json();
-    const { userId, items } = body;
-
-    if (!userId) {
-      return ApiErrors.badRequest('Missing userId');
+    const parseResult = postSchema.safeParse(body);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const { userId, items } = parseResult.data;
 
     // Verify user token matches userId
     const { verifyUserToken } = await import('../../../lib/firebase-rest');
@@ -119,10 +125,6 @@ export async function POST({ request, locals }: APIContext) {
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {
       return ApiErrors.forbidden('You can only save your own playlist');
-    }
-
-    if (!Array.isArray(items)) {
-      return ApiErrors.badRequest('Items must be an array');
     }
 
     // Get user tier info and enforce track limit
