@@ -1039,7 +1039,7 @@ const merchItemList = {
         if (sizesArray && Array.isArray(sizesArray) && sizesArray.length > 0) {
           sizeSection.style.display = 'block';
           sizeOptions.innerHTML = sizesArray.map(function(s, i) {
-            return '<button class="opt-btn size-btn ' + (sizesArray.length === 1 ? 'selected' : '') + '" data-size="' + s + '" aria-label="Select size ' + escapeHtml(s) + '">' + s + '</button>';
+            return '<button class="opt-btn size-btn ' + (sizesArray.length === 1 ? 'selected' : '') + '" data-size="' + escapeHtml(s) + '" aria-label="Select size ' + escapeHtml(s) + '">' + escapeHtml(s) + '</button>';
           }).join('');
 
           // Auto-select if only one size

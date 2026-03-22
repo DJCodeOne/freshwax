@@ -205,7 +205,7 @@ if (notesText) {
 function linkifyText(text: string): string {
   if (!text) return '';
   // Escape HTML first
-  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   // Convert URLs to clickable links
   const urlRegex = /(https?:\/\/[^\s<]+)/gi;
   return escaped.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-red-400 hover:text-red-300 underline">$1</a>');

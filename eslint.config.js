@@ -62,6 +62,7 @@ export default [
       'no-throw-literal': 'error',
       'no-unused-expressions': ['warn', { allowShortCircuit: true, allowTernary: true }],
       'prefer-promise-reject-errors': 'warn',
+      'no-console': ['warn', { allow: ['error'] }],
 
       // --- TypeScript-specific: catch type errors ---
       // Disable base rules that conflict with TS versions
