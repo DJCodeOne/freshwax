@@ -105,12 +105,31 @@ export async function processVinylCratesOrders(
   const listingIds = [...new Set(cratesItems.map(item => item.id as string).filter(Boolean))];
   const sellerIds = [...new Set(cratesItems.map(item => item.sellerId as string).filter(Boolean))];
 
-  const [listingMap, vinylSellerMap, legacySellerMap, userMap] = await Promise.all([
-    listingIds.length > 0 ? getDocumentsBatch('vinylListings', listingIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
-    sellerIds.length > 0 ? getDocumentsBatch('vinylSellers', sellerIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
-    sellerIds.length > 0 ? getDocumentsBatch('vinyl-sellers', sellerIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
-    sellerIds.length > 0 ? getDocumentsBatch('users', sellerIds) : Promise.resolve(new Map<string, Record<string, unknown>>()),
+  // Use Promise.allSettled so one batch failure doesn't abort all vinyl crates processing
+  const emptyMap = new Map<string, Record<string, unknown>>();
+  const [listingResult, vinylSellerResult, legacySellerResult, userResult] = await Promise.allSettled([
+    listingIds.length > 0 ? getDocumentsBatch('vinylListings', listingIds) : Promise.resolve(emptyMap),
+    sellerIds.length > 0 ? getDocumentsBatch('vinylSellers', sellerIds) : Promise.resolve(emptyMap),
+    sellerIds.length > 0 ? getDocumentsBatch('vinyl-sellers', sellerIds) : Promise.resolve(emptyMap),
+    sellerIds.length > 0 ? getDocumentsBatch('users', sellerIds) : Promise.resolve(emptyMap),
   ]);
+
+  const listingMap = listingResult.status === 'fulfilled' ? listingResult.value : emptyMap;
+  const vinylSellerMap = vinylSellerResult.status === 'fulfilled' ? vinylSellerResult.value : emptyMap;
+  const legacySellerMap = legacySellerResult.status === 'fulfilled' ? legacySellerResult.value : emptyMap;
+  const userMap = userResult.status === 'fulfilled' ? userResult.value : emptyMap;
+
+  // Log any batch failures for debugging
+  if (listingResult.status === 'rejected') log.error('[order-utils] Failed to batch-fetch vinyl listings:', listingResult.reason);
+  if (vinylSellerResult.status === 'rejected') log.error('[order-utils] Failed to batch-fetch vinyl sellers:', vinylSellerResult.reason);
+  if (legacySellerResult.status === 'rejected') log.error('[order-utils] Failed to batch-fetch legacy sellers:', legacySellerResult.reason);
+  if (userResult.status === 'rejected') log.error('[order-utils] Failed to batch-fetch users:', userResult.reason);
+
+  // If ALL lookups failed, we can't process any crates items — bail early
+  if (listingResult.status === 'rejected' && vinylSellerResult.status === 'rejected' && legacySellerResult.status === 'rejected' && userResult.status === 'rejected') {
+    log.error('[order-utils] All batch fetches failed — cannot process vinyl crates orders');
+    return;
+  }
 
   for (const item of cratesItems) {
     try {

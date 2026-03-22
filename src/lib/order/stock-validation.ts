@@ -121,15 +121,34 @@ export async function validateAndGetPrices(
   }).map(i => i.releaseId || i.productId || i.id))];
   const listingIds = [...new Set(items.filter(i => (i.type || 'digital') === 'vinyl' && i.sellerId && !i.releaseId).map(i => i.id || i.productId).filter(Boolean))];
 
-  const [merchDocs, releaseDocs, listingDocs] = await Promise.all([
-    Promise.all(merchIds.map(id => getDocument('merch', id))),
-    Promise.all(releaseIds.map(id => getDocument('releases', id))),
-    Promise.all(listingIds.map(id => getDocument('vinylListings', id)))
+  // Use Promise.allSettled so a single Firestore failure doesn't crash entire price validation
+  const [merchResults, releaseResults, listingResults] = await Promise.allSettled([
+    Promise.allSettled(merchIds.map(id => getDocument('merch', id))),
+    Promise.allSettled(releaseIds.map(id => getDocument('releases', id))),
+    Promise.allSettled(listingIds.map(id => getDocument('vinylListings', id)))
   ]);
 
-  const merchMap = new Map(merchIds.map((id, i) => [id, merchDocs[i]]));
-  const releaseMap = new Map(releaseIds.map((id, i) => [id, releaseDocs[i]]));
-  const listingMap = new Map(listingIds.map((id, i) => [id, listingDocs[i]]));
+  // If an entire category of fetches failed, treat all its docs as empty settled arrays
+  const merchSettled = merchResults.status === 'fulfilled' ? merchResults.value : merchIds.map(() => ({ status: 'rejected' as const, reason: 'batch failed' }));
+  const releaseSettled = releaseResults.status === 'fulfilled' ? releaseResults.value : releaseIds.map(() => ({ status: 'rejected' as const, reason: 'batch failed' }));
+  const listingSettled = listingResults.status === 'fulfilled' ? listingResults.value : listingIds.map(() => ({ status: 'rejected' as const, reason: 'batch failed' }));
+
+  // Build lookup maps — rejected fetches map to null, falls through to client price
+  const merchMap = new Map(merchIds.map((id, i) => {
+    const r = merchSettled[i];
+    if (r.status === 'rejected') log.warn(prefix, 'Failed to fetch merch doc:', id, r.reason);
+    return [id, r.status === 'fulfilled' ? r.value : null];
+  }));
+  const releaseMap = new Map(releaseIds.map((id, i) => {
+    const r = releaseSettled[i];
+    if (r.status === 'rejected') log.warn(prefix, 'Failed to fetch release doc:', id, r.reason);
+    return [id, r.status === 'fulfilled' ? r.value : null];
+  }));
+  const listingMap = new Map(listingIds.map((id, i) => {
+    const r = listingSettled[i];
+    if (r.status === 'rejected') log.warn(prefix, 'Failed to fetch listing doc:', id, r.reason);
+    return [id, r.status === 'fulfilled' ? r.value : null];
+  }));
 
   // Pre-fetch artist docs for vinyl items needing shipping defaults
   const artistIdsNeeded: string[] = [];
@@ -145,8 +164,13 @@ export async function validateAndGetPrices(
     }
   }
   const uniqueArtistIds = [...new Set(artistIdsNeeded)];
-  const artistDocs = await Promise.all(uniqueArtistIds.map(id => getDocument('artists', id)));
-  const artistMap = new Map(uniqueArtistIds.map((id, i) => [id, artistDocs[i]]));
+  // Use Promise.allSettled so one artist lookup failure doesn't block all price validation
+  const artistSettled = await Promise.allSettled(uniqueArtistIds.map(id => getDocument('artists', id)));
+  const artistMap = new Map(uniqueArtistIds.map((id, i) => {
+    const r = artistSettled[i];
+    if (r.status === 'rejected') log.warn(prefix, 'Failed to fetch artist doc:', id, r.reason);
+    return [id, r.status === 'fulfilled' ? r.value : null];
+  }));
 
   for (const item of items) {
     let serverPrice = item.price;
@@ -228,8 +252,9 @@ export async function validateAndGetPrices(
 }
 
 // Process cart items to add download URLs
+// Uses Promise.allSettled so one failed download URL fetch doesn't reject all items
 export async function processItemsWithDownloads(items: CartItem[]): Promise<CartItem[]> {
-  return Promise.all(items.map(async (item: CartItem) => {
+  const results = await Promise.allSettled(items.map(async (item: CartItem) => {
     const releaseId = item.releaseId || item.productId || item.id;
 
     log.info('[order-utils] Processing item:', item.name, 'type:', item.type, 'releaseId:', releaseId);
@@ -348,4 +373,11 @@ export async function processItemsWithDownloads(items: CartItem[]): Promise<Cart
     }
     return { ...item, releaseId };
   }));
+
+  // Extract fulfilled results; for any rejected items, return the item without downloads
+  return results.map((r, i) => {
+    if (r.status === 'fulfilled') return r.value;
+    log.error('[order-utils] Download processing failed for item:', items[i]?.name, r.reason);
+    return { ...items[i], releaseId: items[i].releaseId || items[i].productId || items[i].id };
+  });
 }
