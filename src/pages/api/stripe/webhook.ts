@@ -174,7 +174,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return jsonResponse(result);
         } catch (err: unknown) {
           if (err instanceof IdempotencyError) {
-            return jsonResponse({ error: err.message }, 500);
+            log.warn('[Stripe Webhook] Plus subscription idempotency:', err.message);
+            return jsonResponse({ error: 'Payment already processed' }, 500);
           }
           throw err;
         }
@@ -191,7 +192,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
             return jsonResponse(result);
           } catch (err: unknown) {
             if (err instanceof IdempotencyError) {
-              return jsonResponse({ error: err.message }, 500);
+              log.warn('[Stripe Webhook] Plus promo idempotency:', err.message);
+              return jsonResponse({ error: 'Payment already processed' }, 500);
             }
             throw err;
           }
@@ -206,7 +208,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return jsonResponse(result);
         } catch (err: unknown) {
           if (err instanceof GiftCardIdempotencyError) {
-            return errorResponse(err.message, 500);
+            log.warn('[Stripe Webhook] Gift card idempotency:', err.message);
+            return errorResponse('Duplicate event', 500);
           }
           throw err;
         }
@@ -225,7 +228,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // result === null means success, fall through to final return
       } catch (err: unknown) {
         if (err instanceof OrderIdempotencyError) {
-          return jsonResponse({ error: err.message }, 500);
+          log.warn('[Stripe Webhook] Order idempotency:', err.message);
+          return jsonResponse({ error: 'Duplicate event' }, 500);
         }
         throw err;
       }

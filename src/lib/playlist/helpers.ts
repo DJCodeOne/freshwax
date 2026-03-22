@@ -282,6 +282,12 @@ export async function broadcastPlaylistUpdate(playlist: GlobalPlaylist, env?: Re
       body
     }, 5000);
 
+    if (!pusherResponse.ok) {
+      const pusherBody = await pusherResponse.text();
+      log.warn(`[GlobalPlaylist] Pusher broadcast failed (${pusherResponse.status}):`, pusherBody);
+      return;
+    }
+
     const pusherResult = await pusherResponse.text();
     // Playlist broadcast sent
   } catch (error: unknown) {
