@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('auth/verify-email-status');
 
@@ -39,7 +40,7 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken })
       },
-      10000
+      TIMEOUTS.API
     );
 
     if (!lookupResponse.ok) {

@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { createLogger, parseJsonBody, fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('[send-verification-email]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -62,7 +63,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           email: [email]
         })
       },
-      10000
+      TIMEOUTS.API
     );
 
     // Try to get user by sending password reset (which tells us if user exists)
@@ -79,7 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // So we'll generate a custom email instead
         })
       },
-      10000
+      TIMEOUTS.API
     );
 
     // Since we can't use Firebase's built-in email verification without user being signed in,
@@ -120,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         subject: 'Verify Your Email - Fresh Wax',
         html: emailHtml
       })
-    }, 10000);
+    }, TIMEOUTS.API);
 
     if (!resendResponse.ok) {
       const resendError = await resendResponse.json().catch(() => ({}));

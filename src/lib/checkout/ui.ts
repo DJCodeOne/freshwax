@@ -1,0 +1,543 @@
+/**
+ * Checkout UI — DOM updates, form rendering, credit display, postcode lookup.
+ */
+import { escapeHtml } from '../escape-html';
+import type { CheckoutState } from './state';
+import { calculateTotals, getCustomerIdFromCookie, removeDuplicatesFromCart } from './validation';
+
+// ============================================
+// CREDIT DISPLAY
+// ============================================
+
+export function toggleApplyCredit(state: CheckoutState, apply: boolean) {
+  const { total } = calculateTotals(state.cart);
+  if (apply && state.creditBalance >= total && total > 0) {
+    state.appliedCredit = total;
+  } else {
+    state.appliedCredit = 0;
+  }
+  updateCreditDisplay(state);
+}
+
+export function updateCreditDisplay(state: CheckoutState) {
+  const { total } = calculateTotals(state.cart);
+  const finalTotal = Math.max(0, total - state.appliedCredit);
+
+  const creditRow = document.getElementById('appliedCreditRow');
+  if (creditRow) {
+    if (state.appliedCredit > 0) {
+      creditRow.style.display = 'flex';
+      const amt = document.getElementById('appliedCreditAmount');
+      if (amt) amt.textContent = `-\u00a3${state.appliedCredit.toFixed(2)}`;
+    } else {
+      creditRow.style.display = 'none';
+    }
+  }
+
+  const totalDisplay = document.getElementById('orderTotal');
+  if (totalDisplay) {
+    totalDisplay.textContent = `\u00a3${finalTotal.toFixed(2)}`;
+  }
+
+  updatePaymentButtonText(finalTotal);
+}
+
+export function updatePaymentButtonText(finalTotal: number) {
+  const stripeBtn = document.getElementById('submitBtn');
+  const paypalBtn = document.getElementById('customPaypalBtn');
+  const freeSection = document.getElementById('freeOrderSection');
+  const paymentSection = document.getElementById('paymentMethodSection');
+
+  if (finalTotal === 0) {
+    if (paymentSection) paymentSection.style.display = 'none';
+    if (freeSection) freeSection.style.display = 'block';
+  } else {
+    if (paymentSection) paymentSection.style.display = 'block';
+    if (freeSection) freeSection.style.display = 'none';
+    if (stripeBtn) {
+      stripeBtn.textContent = `PAY WITH CARD \u2014 \u00a3${finalTotal.toFixed(2)}`;
+    }
+    if (paypalBtn) {
+      const priceSpan = paypalBtn.querySelector('.paypal-price');
+      if (priceSpan) priceSpan.textContent = `\u00a3${finalTotal.toFixed(2)}`;
+    }
+  }
+}
+
+// ============================================
+// BADGE STYLE HELPER
+// ============================================
+
+export function getBadgeStyle(type: string): string {
+  if (type === 'vinyl') return 'background: #000; color: #fff; border-color: #fff;';
+  if (type === 'merch') return 'background: #1e1b4b; color: #a5b4fc; border-color: #a5b4fc;';
+  return 'background: #052e16; color: #22c55e; border-color: #22c55e;';
+}
+
+// ============================================
+// POSTCODE LOOKUP
+// ============================================
+
+export async function lookupPostcode() {
+  const postcodeInput = document.getElementById('postcodeSearch') as HTMLInputElement;
+  const findBtn = document.getElementById('findAddressBtn') as HTMLButtonElement;
+  const manualEntry = document.getElementById('manualAddressFields') as HTMLElement;
+  const manualEntryLink = document.getElementById('manualEntryLink') as HTMLElement;
+  const lookupError = document.getElementById('lookupError') as HTMLElement;
+
+  const postcode = postcodeInput.value.trim();
+
+  if (!postcode) {
+    lookupError.textContent = 'Please enter a postcode';
+    lookupError.style.color = '#ff6b6b';
+    lookupError.style.display = 'block';
+    return;
+  }
+
+  findBtn.disabled = true;
+  findBtn.textContent = 'Validating...';
+  lookupError.style.display = 'none';
+
+  try {
+    const response = await fetch(`/api/postcode-lookup/?postcode=${encodeURIComponent(postcode)}`);
+    if (!response.ok) {
+      throw new Error('Postcode not found');
+    }
+    const data = await response.json();
+
+    (document.getElementById('postcode') as HTMLInputElement).value = data.postcode;
+    (document.getElementById('city') as HTMLInputElement).value = data.city || '';
+    (document.getElementById('county') as HTMLInputElement).value = data.county || '';
+
+    lookupError.textContent = '\u2713 Postcode verified! Please enter your street address below.';
+    lookupError.style.color = '#22c55e';
+    lookupError.style.display = 'block';
+
+    manualEntry.style.display = 'block';
+    if (manualEntryLink) manualEntryLink.style.display = 'none';
+
+    setTimeout(() => {
+      document.getElementById('address1')?.focus();
+    }, 100);
+
+  } catch (error: unknown) {
+    lookupError.textContent = (error instanceof Error ? error.message : null) || 'Failed to lookup postcode';
+    lookupError.style.color = '#ff6b6b';
+    lookupError.style.display = 'block';
+    manualEntry.style.display = 'block';
+    if (manualEntryLink) manualEntryLink.style.display = 'none';
+  } finally {
+    findBtn.disabled = false;
+    findBtn.textContent = 'Verify Postcode';
+  }
+}
+
+// ============================================
+// ACCESS DENIED VIEW
+// ============================================
+
+export function showAccessDenied() {
+  const container = document.getElementById('checkout-content');
+  if (!container) return;
+  container.innerHTML = `
+    <div style="text-align: center; padding: 4rem 2rem; background: #1a0a0a; border: 3px solid #dc2626; border-radius: 12px;">
+      <h2 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 2.5rem; margin-bottom: 0.75rem; color: #ff6b6b;">CUSTOMER ACCOUNT REQUIRED</h2>
+      <p style="font-size: 1.125rem; color: #888; margin-bottom: 1rem;">Only customer accounts can make purchases.</p>
+      <p style="font-size: 1rem; color: #666; margin-bottom: 2rem;">If you're an artist, please create a separate customer account to buy items from the store.</p>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/register/" style="display: inline-block; padding: 1rem 2.5rem; background: #dc2626; color: #fff; text-decoration: none; border-radius: 10px; font-size: 1.125rem; font-weight: 600;">Create Customer Account</a>
+        <a href="/" style="display: inline-block; padding: 1rem 2.5rem; background: #333; color: #fff; text-decoration: none; border-radius: 10px; font-size: 1.125rem; font-weight: 600;">Back to Store</a>
+      </div>
+    </div>
+  `;
+}
+
+// ============================================
+// RENDER CHECKOUT (main UI builder)
+// ============================================
+
+export function renderCheckout(
+  state: CheckoutState,
+  deps: {
+    handleSubmit: (e: Event) => void;
+    selectPaymentMethod: (method: string) => void;
+    setupPaymentMethods: () => void;
+    lookupPostcode: () => void;
+  }
+) {
+  const container = document.getElementById('checkout-content');
+  if (!container) return;
+
+  if (state.cart.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 4rem 2rem; background: #fff; border: 2px solid #d1d5db; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div style="font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.5;">&#x1F6D2;</div>
+        <h2 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 2rem; margin-bottom: 0.75rem; color: #dc2626;">YOUR CART IS EMPTY</h2>
+        <p style="font-size: 1rem; color: #6b7280; margin-bottom: 2rem;">Add some items before checking out.</p>
+        <a href="/" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.125rem; letter-spacing: 0.04em;">BROWSE STORE</a>
+      </div>
+    `;
+    return;
+  }
+
+  const { subtotal, shipping, hasPhysicalItems, total } = calculateTotals(state.cart);
+  const itemCount = state.cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
+
+  const cd = state.customerData || {};
+  const email = state.currentUser?.email || cd.email || '';
+  const firstName = cd.firstName || cd.name?.split(' ')[0] || '';
+  const lastName = cd.lastName || cd.name?.split(' ').slice(1).join(' ') || '';
+  const phone = cd.phone || '';
+  const address1 = cd.address1 || cd.addressLine1 || '';
+  const address2 = cd.address2 || cd.addressLine2 || '';
+  const city = cd.city || '';
+  const county = cd.county || '';
+  const postcode = cd.postcode || '';
+  const country = cd.country || 'United Kingdom';
+
+  const hasSavedAddress = address1 && city && postcode;
+
+  container.innerHTML = `
+    <form id="checkoutForm">
+      <!-- Order Items -->
+      <div style="background: #fff; border: 2px solid #d1d5db; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; background: linear-gradient(to right, #1f2937 0%, #374151 100%); border-bottom: 2px solid #dc2626;">
+          <h2 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.75rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR ORDER</h2>
+          <span style="font-size: 1.125rem; color: #d1d5db; font-weight: 500;">${itemCount} ${itemCount === 1 ? 'item' : 'items'}</span>
+        </div>
+        <div style="padding: 1.25rem;">
+          <div style="display: flex; flex-direction: column; gap: 0.875rem;">
+            ${state.cart.map((item: any) => {
+              const itemType = item.type || item.productType || 'digital';
+              const artistName = item.artist || '';
+              const labelName = item.labelName || '';
+              return `
+              <article class="checkout-item">
+                <div class="checkout-item-thumb">
+                  <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">
+                </div>
+                <div class="checkout-item-info">
+                  <h3 class="checkout-item-title">${escapeHtml(item.name)}</h3>
+                  <span class="checkout-item-badge" style="${getBadgeStyle(itemType)}">${escapeHtml(itemType)}</span>
+                  ${item.color ? `<span class="checkout-item-detail">Colour: ${escapeHtml((item.color && typeof item.color === 'object') ? item.color.name : item.color)}</span>` : ''}
+                  ${item.size ? `<span class="checkout-item-detail">Size: ${escapeHtml(item.size)}</span>` : ''}
+                  ${item.quantity > 1 ? `<span class="checkout-item-detail">Qty: ${item.quantity}</span>` : ''}
+                </div>
+                <div class="checkout-item-price">
+                  <span class="checkout-item-amount">\u00a3${(item.price * item.quantity).toFixed(2)}</span>
+                  ${item.quantity > 1 ? `<span class="checkout-item-each">\u00a3${item.price.toFixed(2)} each</span>` : ''}
+                </div>
+              </article>
+            `}).join('')}
+          </div>
+
+          <!-- Totals -->
+          <div style="display: flex; flex-direction: column; gap: 0.625rem; padding: 1.25rem; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin-top: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 1.125rem; color: #6b7280;">Subtotal</span>
+              <span style="font-size: 1.25rem; font-weight: 600; color: #111827;">\u00a3${subtotal.toFixed(2)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 1.125rem; color: #6b7280;">Shipping</span>
+              <span style="font-size: 1.25rem; font-weight: 600; color: #16a34a;">${hasPhysicalItems ? (shipping === 0 ? 'FREE' : '\u00a3' + shipping.toFixed(2)) : 'Digital'}</span>
+            </div>
+            <div id="appliedCreditRow" style="display: none; justify-content: space-between; align-items: center;">
+              <span style="font-size: 1.125rem; color: #22c55e;">Credit Applied</span>
+              <span id="appliedCreditAmount" style="font-size: 1.25rem; font-weight: 600; color: #22c55e;">-\u00a30.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; margin-top: 0.625rem; border-top: 2px solid #dc2626;">
+              <span style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: 0.04em; color: #111827;">TOTAL</span>
+              <span id="orderTotal" style="font-size: 1.875rem; font-weight: 700; color: #dc2626;">\u00a3${total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <!-- Credit Balance Section -->
+          ${state.creditBalance > 0 && state.creditBalance >= total && total > 0 ? `
+          <div id="creditSection" style="margin-top: 1rem; padding: 1rem 1.25rem; background: linear-gradient(to bottom, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                  <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+                <span style="font-size: 1rem; font-weight: 600; color: #166534;">Available Credit</span>
+              </div>
+              <span style="font-size: 1.25rem; font-weight: 700; color: #22c55e;">\u00a3${state.creditBalance.toFixed(2)}</span>
+            </div>
+            <label for="applyCreditCheckbox" style="display: flex; align-items: center; gap: 0.625rem; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="applyCreditCheckbox" style="width: 1.25rem; height: 1.25rem; accent-color: #22c55e; cursor: pointer;">
+              <span style="font-size: 0.9375rem; color: #374151;">Pay with \u00a3${total.toFixed(2)} credit (covers full order)</span>
+            </label>
+          </div>
+          ` : state.creditBalance > 0 && state.creditBalance < total ? `
+          <div style="margin-top: 1rem; padding: 0.75rem 1.25rem; background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 10px;">
+            <span style="font-size: 0.875rem; color: #166534;">You have \u00a3${state.creditBalance.toFixed(2)} credit. Credit can be used when it covers the full order amount.</span>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- Contact Details -->
+      <div style="background: #fff; border: 2px solid #d1d5db; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div style="padding: 1rem 1.25rem; background: linear-gradient(to right, #1f2937 0%, #374151 100%); border-bottom: 2px solid #dc2626;">
+          <h2 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">CONTACT DETAILS</h2>
+        </div>
+        <div style="padding: 1.25rem;">
+          <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+              <label for="firstName" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">First Name *</label>
+              <input type="text" id="firstName" name="firstName" required aria-required="true" aria-describedby="firstName-error" autocomplete="given-name" placeholder="John" value="${escapeHtml(firstName)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+              <span id="firstName-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">First name is required</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+              <label for="lastName" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Last Name *</label>
+              <input type="text" id="lastName" name="lastName" required aria-required="true" aria-describedby="lastName-error" autocomplete="family-name" placeholder="Doe" value="${escapeHtml(lastName)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+              <span id="lastName-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Last name is required</span>
+            </div>
+          </div>
+          <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+            <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+              <label for="email" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Email Address *</label>
+              <input type="email" id="email" name="email" required aria-required="true" aria-describedby="email-error" autocomplete="email" placeholder="you@example.com" value="${escapeHtml(email)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+              <span id="email-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Valid email address is required</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+              <label for="phone" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Phone Number</label>
+              <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="+44 7XXX XXXXXX" value="${escapeHtml(phone)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${hasPhysicalItems ? `
+      <!-- Postal Address -->
+      <div style="background: #fff; border: 2px solid #d1d5db; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div style="padding: 1rem 1.25rem; background: linear-gradient(to right, #1f2937 0%, #374151 100%); border-bottom: 2px solid #dc2626;">
+          <h2 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">POSTAL ADDRESS</h2>
+        </div>
+        <div style="padding: 1.25rem;">
+          <!-- Postcode Lookup -->
+          <div style="margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid #e5e7eb;">
+            <label for="postcodeSearch" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.375rem;">Verify Your Postcode</label>
+            <div class="postcode-lookup-row" style="display: flex; gap: 0.75rem;">
+              <input type="text" id="postcodeSearch" autocomplete="postal-code" placeholder="Enter postcode (e.g. E1 6AN)" value="${escapeHtml(postcode)}" style="flex: 1; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
+              <button type="button" id="findAddressBtn" style="padding: 0.875rem 1.25rem; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
+                Verify
+              </button>
+            </div>
+            <div id="lookupError" style="margin-top: 0.5rem; font-size: 0.8125rem; color: #dc2626; display: none;"></div>
+          </div>
+
+          <!-- Manual Address Fields -->
+          <div id="manualAddressFields" style="display: block;">
+            <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+                <label for="address1" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 1 *</label>
+                <input type="text" id="address1" name="address1" required aria-required="true" aria-describedby="address1-error" autocomplete="address-line1" placeholder="123 Music Street" value="${escapeHtml(address1)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <span id="address1-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Address is required</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+                <label for="address2" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 2</label>
+                <input type="text" id="address2" name="address2" autocomplete="address-line2" placeholder="Flat 4B" value="${escapeHtml(address2)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+              </div>
+            </div>
+            <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+                <label for="city" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">City *</label>
+                <input type="text" id="city" name="city" required aria-required="true" aria-describedby="city-error" autocomplete="address-level2" placeholder="London" value="${escapeHtml(city)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <span id="city-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">City is required</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+                <label for="postcode" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Postcode *</label>
+                <input type="text" id="postcode" name="postcode" required aria-required="true" aria-describedby="postcode-error" autocomplete="postal-code" placeholder="E1 6AN" value="${escapeHtml(postcode)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
+                <span id="postcode-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Postcode is required</span>
+              </div>
+            </div>
+            <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+              <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+                <label for="county" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">County</label>
+                <input type="text" id="county" name="county" autocomplete="address-level1" placeholder="Greater London" value="${escapeHtml(county)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.375rem;">
+                <label for="country" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Country *</label>
+                <select id="country" name="country" required aria-required="true" autocomplete="country-name" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; cursor: pointer;">
+                  <option value="United Kingdom" ${country === 'United Kingdom' ? 'selected' : ''}>United Kingdom</option>
+                  <option value="Ireland" ${country === 'Ireland' ? 'selected' : ''}>Ireland</option>
+                  <option value="Germany" ${country === 'Germany' ? 'selected' : ''}>Germany</option>
+                  <option value="France" ${country === 'France' ? 'selected' : ''}>France</option>
+                  <option value="Netherlands" ${country === 'Netherlands' ? 'selected' : ''}>Netherlands</option>
+                  <option value="Belgium" ${country === 'Belgium' ? 'selected' : ''}>Belgium</option>
+                  <option value="USA" ${country === 'USA' ? 'selected' : ''}>United States</option>
+                  <option value="Canada" ${country === 'Canada' ? 'selected' : ''}>Canada</option>
+                  <option value="Australia" ${country === 'Australia' ? 'selected' : ''}>Australia</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Enter Manually Link (hidden since fields always visible now) -->
+          <div id="manualEntryLink" style="display: none; margin-top: 0.75rem;">
+            <button type="button" id="manualEntryBtn" style="background: none; border: none; color: #60a5fa; font-size: 0.875rem; cursor: pointer; text-decoration: underline;">
+              Or enter address manually
+            </button>
+          </div>
+
+          ${state.currentUser ? `
+          <label for="saveDetails" style="display: flex; align-items: center; gap: 0.75rem; margin-top: 1.25rem; padding: 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; cursor: pointer;">
+            <input type="checkbox" id="saveDetails" name="saveDetails" style="width: 20px; height: 20px; accent-color: #dc2626; cursor: pointer;">
+            <span style="font-size: 0.875rem; color: #1e40af; font-weight: 500;">Save these details for faster checkout</span>
+          </label>
+          ` : ''}
+        </div>
+      </div>
+      ` : ''}
+
+      <!-- Payment / Complete Order Section -->
+      <div style="background: #fff; border: 2px solid #d1d5db; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div style="padding: 1rem 1.25rem; background: linear-gradient(to right, #1f2937 0%, #374151 100%); border-bottom: 2px solid #dc2626;">
+          <h2 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; font-weight: 400; letter-spacing: 0.04em; color: #fff; margin: 0;">${total === 0 ? 'COMPLETE ORDER' : 'PAYMENT METHOD'}</h2>
+        </div>
+        <div style="padding: 1.25rem;">
+          ${total === 0 ? `
+          <!-- Free Order - No Payment Required -->
+          <div style="text-align: center; margin-bottom: 1.25rem;">
+            <div style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; background: #dcfce7; border: 2px solid #16a34a; border-radius: 10px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span style="font-size: 1.125rem; font-weight: 700; color: #16a34a;">FREE ORDER - No Payment Required</span>
+            </div>
+          </div>
+          <button type="submit" id="submitBtn" style="width: 100%; padding: 1rem; background: #16a34a; color: #fff; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; letter-spacing: 0.06em; cursor: pointer; transition: background-color 0.2s, opacity 0.2s;">
+            COMPLETE FREE ORDER
+          </button>
+          ` : `
+          <!-- Payment Options -->
+          <fieldset style="border: 0; padding: 0; margin: 0;">
+            <legend style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;">Payment method</legend>
+          <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
+            <label for="payMethodStripe" style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;" id="stripeOption">
+              <input type="radio" id="payMethodStripe" name="paymentMethod" value="stripe" checked style="width: 20px; height: 20px; accent-color: #dc2626;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #111827; font-size: 1rem;">Credit / Debit Card</div>
+                <div style="font-size: 0.8125rem; color: #6b7280;">Visa, Mastercard, Amex</div>
+              </div>
+              <svg width="40" height="25" viewBox="0 0 40 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="40" height="25" rx="3" fill="#635BFF"/>
+                <path d="M17.5 16.5L19.5 8.5H22L20 16.5H17.5Z" fill="white"/>
+                <path d="M28.5 8.7C28 8.5 27.2 8.3 26.2 8.3C23.8 8.3 22.1 9.5 22.1 11.2C22.1 12.5 23.3 13.2 24.2 13.6C25.1 14 25.4 14.3 25.4 14.7C25.4 15.3 24.7 15.6 24 15.6C23 15.6 22.5 15.5 21.7 15.1L21.4 15L21.1 17C21.7 17.3 22.8 17.5 24 17.5C26.5 17.5 28.2 16.3 28.2 14.5C28.2 13.5 27.5 12.7 26.2 12.1C25.4 11.7 24.9 11.4 24.9 11C24.9 10.6 25.4 10.2 26.3 10.2C27.1 10.2 27.7 10.4 28.1 10.5L28.4 10.6L28.5 8.7Z" fill="white"/>
+                <path d="M32.5 8.5H30.5C29.9 8.5 29.4 8.7 29.2 9.3L25.7 16.5H28.2L28.7 15.1H31.7L32 16.5H34.2L32.5 8.5ZM29.4 13.3C29.6 12.8 30.5 10.5 30.5 10.5C30.5 10.5 30.7 10 30.8 9.6L31 10.4C31 10.4 31.5 12.6 31.6 13.3H29.4Z" fill="white"/>
+                <path d="M15.2 8.5L12.8 14L12.5 12.5C12 11.1 10.7 9.5 9.2 8.7L11.3 16.5H13.9L17.8 8.5H15.2Z" fill="white"/>
+                <path d="M11 8.5H7.1L7 8.7C10 9.5 12 11.5 12.5 13.5L11.9 9.4C11.8 8.7 11.4 8.5 11 8.5Z" fill="#FAA61A"/>
+              </svg>
+            </label>
+
+            <label for="payMethodPaypal" style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;" id="paypalOption">
+              <input type="radio" id="payMethodPaypal" name="paymentMethod" value="paypal" style="width: 20px; height: 20px; accent-color: #dc2626;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600; color: #111827; font-size: 1rem;">PayPal</div>
+                <div style="font-size: 0.8125rem; color: #6b7280;">Pay securely with PayPal</div>
+              </div>
+              <svg width="80" height="22" viewBox="0 0 101 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12.237 4.5H7.55c-.3 0-.56.217-.61.515L5.176 16.84c-.036.22.135.42.36.42h2.23c.3 0 .56-.217.61-.515l.48-3.07c.05-.298.31-.515.61-.515h1.4c2.92 0 4.6-1.412 5.04-4.212.2-1.225.008-2.188-.57-2.862-.63-.74-1.75-1.135-3.1-1.135zm.51 4.15c-.24 1.6-1.46 1.6-2.64 1.6h-.67l.47-2.99c.028-.18.18-.31.36-.31h.31c.8 0 1.56 0 1.95.456.23.273.3.678.22 1.244z" fill="#253B80"/>
+                <path d="M32.69 8.59h-2.24c-.18 0-.33.13-.36.31l-.1.61-.15-.22c-.47-.68-1.51-.91-2.55-.91-2.39 0-4.43 1.81-4.83 4.35-.21 1.27.09 2.48.82 3.33.67.78 1.62 1.1 2.76 1.1 1.95 0 3.03-1.25 3.03-1.25l-.1.6c-.04.22.13.42.36.42h2.01c.3 0 .56-.22.61-.52l1.2-7.6c.04-.22-.13-.42-.36-.42zm-3.05 4.21c-.21 1.24-1.2 2.08-2.46 2.08-.63 0-1.14-.2-1.46-.59-.32-.38-.44-.93-.34-1.53.2-1.23 1.21-2.09 2.45-2.09.62 0 1.12.21 1.45.6.34.4.47.95.36 1.53z" fill="#253B80"/>
+                <path d="M49.63 8.59h-2.25c-.2 0-.39.1-.5.27l-2.9 4.26-1.23-4.1c-.08-.26-.31-.43-.58-.43h-2.21c-.25 0-.42.24-.34.47l2.31 6.8-2.18 3.07c-.17.24 0 .57.29.57h2.24c.2 0 .38-.1.5-.26l6.98-10.08c.17-.24 0-.57-.28-.57z" fill="#253B80"/>
+                <path d="M59.49 4.5h-4.69c-.3 0-.56.217-.61.515l-1.76 11.825c-.04.22.13.42.36.42h2.42c.21 0 .39-.15.43-.36l.5-3.16c.05-.3.31-.52.61-.52h1.4c2.92 0 4.6-1.41 5.04-4.21.2-1.23.01-2.19-.57-2.87-.63-.74-1.75-1.13-3.1-1.13zm.51 4.15c-.24 1.6-1.46 1.6-2.64 1.6h-.67l.47-2.99c.03-.18.18-.31.36-.31h.31c.8 0 1.56 0 1.95.46.23.27.3.68.22 1.24z" fill="#179BD7"/>
+                <path d="M79.95 8.59h-2.24c-.18 0-.33.13-.36.31l-.1.61-.15-.22c-.47-.68-1.51-.91-2.55-.91-2.39 0-4.43 1.81-4.83 4.35-.21 1.27.09 2.48.82 3.33.67.78 1.62 1.1 2.76 1.1 1.95 0 3.03-1.25 3.03-1.25l-.1.6c-.04.22.13.42.36.42h2.01c.3 0 .56-.22.61-.52l1.2-7.6c.04-.22-.13-.42-.36-.42zm-3.05 4.21c-.21 1.24-1.2 2.08-2.46 2.08-.63 0-1.14-.2-1.46-.59-.32-.38-.44-.93-.34-1.53.2-1.23 1.21-2.09 2.45-2.09.62 0 1.12.21 1.45.6.34.4.47.95.36 1.53z" fill="#179BD7"/>
+                <path d="M88.45 4.96l-1.79 11.39c-.04.22.13.42.36.42h1.93c.3 0 .56-.22.61-.52l1.76-11.82c.04-.22-.13-.42-.36-.42h-2.15c-.18 0-.33.13-.36.31z" fill="#179BD7"/>
+              </svg>
+            </label>
+          </div>
+          </fieldset>
+
+          <!-- Stripe Payment Button (shown by default) -->
+          <div id="stripePaymentSection">
+            <button type="submit" id="submitBtn" style="width: 100%; padding: 1rem; background: #dc2626; color: #fff; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; font-weight: 400; letter-spacing: 0.06em; cursor: pointer; transition: background-color 0.2s, opacity 0.2s;">
+                PAY WITH CARD
+            </button>
+          </div>
+
+          <!-- PayPal Button Container (hidden by default) -->
+          <div id="paypalPaymentSection" style="display: none; width: 100%;">
+            <button type="button" id="customPaypalBtn" style="width: 100%; padding: 1rem; background: #FFC439; color: #003087; border: none; border-radius: 10px; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.375rem; cursor: pointer; transition: background-color 0.2s, opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; position: relative; -webkit-tap-highlight-color: rgba(0,0,0,0.1);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="pointer-events: none;">
+                  <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.217a.774.774 0 0 1 .763-.645h6.333c2.097 0 3.768.514 4.967 1.53 1.178 1.001 1.763 2.442 1.737 4.28-.023 1.596-.492 2.95-1.392 4.02-.888 1.054-2.118 1.808-3.654 2.24a15.42 15.42 0 0 1-4.108.52H7.7l-.625 6.175z" fill="#003087"/>
+                  <path d="M23.048 7.667c-.03 1.651-.523 3.033-1.463 4.108-.953 1.088-2.256 1.86-3.87 2.293-1.157.31-2.47.466-3.896.466h-1.76a.774.774 0 0 0-.764.645l-1.14 7.218a.641.641 0 0 1-.633.54H6.5l-.09.528a.641.641 0 0 0 .634.74h4.022a.774.774 0 0 0 .763-.645l.704-4.46.045-.232a.774.774 0 0 1 .764-.645h.481c3.114 0 5.553-1.265 6.266-4.925.298-1.53.143-2.807-.658-3.704a3.198 3.198 0 0 0-.383-.327z" fill="#0070E0"/>
+                  <path d="M21.754 7.151a7.12 7.12 0 0 0-.877-.19 11.24 11.24 0 0 0-1.79-.133h-5.276a.752.752 0 0 0-.741.632l-1.12 7.1-.032.207a.774.774 0 0 1 .764-.645h1.59c3.127 0 5.574-1.27 6.29-4.944.021-.109.04-.215.055-.318.213-1.143.001-1.921-.863-2.71z" fill="#003087"/>
+                </svg>
+                <span style="pointer-events: none;">PAY WITH PAYPAL</span>
+                <span class="paypal-price" style="pointer-events: none;">\u00a3${total.toFixed(2)}</span>
+            </button>
+            <p style="text-align: center; font-size: 0.8125rem; color: #6b7280; margin-top: 0.75rem;">
+              You'll be redirected to PayPal to complete payment
+            </p>
+          </div>
+          `}
+
+          <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1rem; font-size: 0.8125rem; color: #6b7280;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+            ${total === 0 ? 'Secure Checkout' : 'Secure, Encrypted Checkout'}
+          </div>
+        </div>
+      </div>
+    </form>
+  `;
+
+  // Show duplicate warning if any found
+  if (state.duplicatePurchases && state.duplicatePurchases.length > 0) {
+    const itemsList = state.duplicatePurchases.map((d: any) => `<li><strong>${escapeHtml(d.item.name)}</strong> - ${escapeHtml(d.reason)}</li>`).join('');
+
+    const warningHtml = `
+      <div id="duplicate-warning" style="background: #7f1d1d; border: 3px solid #dc2626; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: flex-start; gap: 1rem;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fca5a5" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <div style="flex: 1;">
+            <h3 style="color: #fca5a5; font-size: 1.125rem; font-weight: 700; margin: 0 0 0.5rem 0;">You Already Own Some Items</h3>
+            <p style="color: #fecaca; font-size: 0.9375rem; margin: 0 0 1rem 0;">The following items are already in your purchase history:</p>
+            <ul style="color: #fecaca; font-size: 0.875rem; margin: 0 0 1rem 0; padding-left: 1.25rem;">${itemsList}</ul>
+            <button type="button" id="removeDuplicatesBtn" style="background: #dc2626; color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9375rem;">
+              Remove These Items From Cart
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.insertAdjacentHTML('afterbegin', warningHtml);
+
+    document.getElementById('removeDuplicatesBtn')?.addEventListener('click', () => {
+      removeDuplicatesFromCart(state, state.duplicatePurchases);
+      document.getElementById('duplicate-warning')?.remove();
+      state.duplicatePurchases = [];
+      renderCheckout(state, deps);
+    });
+  }
+
+  // Attach event listeners
+  document.getElementById('findAddressBtn')?.addEventListener('click', deps.lookupPostcode);
+
+  document.getElementById('manualEntryBtn')?.addEventListener('click', () => {
+    const maf = document.getElementById('manualAddressFields');
+    if (maf) maf.style.display = 'block';
+    const mel = document.getElementById('manualEntryLink');
+    if (mel) mel.style.display = 'none';
+  });
+
+  document.getElementById('stripeOption')?.addEventListener('click', () => deps.selectPaymentMethod('stripe'));
+  document.getElementById('paypalOption')?.addEventListener('click', () => deps.selectPaymentMethod('paypal'));
+
+  document.getElementById('applyCreditCheckbox')?.addEventListener('change', function() {
+    toggleApplyCredit(state, (this as HTMLInputElement).checked);
+  });
+
+  const checkoutForm = document.getElementById('checkoutForm');
+  if (checkoutForm) {
+    checkoutForm.addEventListener('submit', deps.handleSubmit);
+  }
+
+  deps.setupPaymentMethods();
+}

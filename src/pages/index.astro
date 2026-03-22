@@ -53,6 +53,9 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
         preload="none"
         fetchpriority="low"
         aria-hidden="true"
+        poster="/videos/hero-turntable-poster.webp"
+        width="1920"
+        height="1080"
         style="display:none"
       ></video>
       <script is:inline nonce={nonce}>
@@ -200,6 +203,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     object-position: center;
     z-index: 1;
     pointer-events: none;
+    aspect-ratio: 16 / 9;
   }
 
   /* Dark overlay — keeps text readable over video */
@@ -629,7 +633,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   }
 
   .releases-title {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
     font-size: 2.5rem;
     font-weight: 400;
     color: #ffffff;

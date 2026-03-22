@@ -2,11 +2,18 @@
 // Admin API for managing vinyl listing approvals
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 
 import { saQueryCollection, saUpdateDocument, saGetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const VinylListingsPostSchema = z.object({
+  action: z.enum(['approve', 'reject']),
+  listingId: z.string().min(1),
+  adminKey: z.string().optional(),
+}).strip();
 
 const log = createLogger('[vinyl-listings]');
 
@@ -73,20 +80,16 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
   }
 
   try {
-    const body = await request.json();
+    const rawBody = await request.json();
     initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
-    const authError = await requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, rawBody);
     if (authError) return authError;
 
-    const { action, listingId } = body;
-
-    if (!listingId) {
-      return ApiErrors.badRequest('Listing ID required');
+    const parseResult = VinylListingsPostSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
-
-    if (!['approve', 'reject'].includes(action)) {
-      return ApiErrors.badRequest('Invalid action (approve or reject)');
-    }
+    const { action, listingId } = parseResult.data;
 
     const serviceAccountKey = getServiceAccountKey(env);
     const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';

@@ -3,11 +3,19 @@
 // Usage: POST { adminKey, testEmail?, execute? }
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saQueryCollection, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
+
+const PlusUpgradeAllSchema = z.object({
+  testEmail: z.string().email().optional(),
+  testName: z.string().optional(),
+  execute: z.boolean().optional(),
+  adminKey: z.string().optional(),
+}).strip();
 
 const log = createLogger('admin/plus-upgrade-all');
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
@@ -72,13 +80,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const env = locals.runtime.env;
-    const body = await request.json();
+    const rawBody = await request.json();
 
     // Admin auth
-    const authError = await requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, rawBody);
     if (authError) return authError;
 
-    const { testEmail, testName, execute } = body;
+    const parseResult = PlusUpgradeAllSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const { testEmail, testName, execute } = parseResult.data;
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {

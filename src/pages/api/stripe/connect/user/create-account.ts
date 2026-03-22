@@ -2,10 +2,16 @@
 // Creates a Stripe Connect Express account for a user (for crate selling)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../../../lib/firebase-rest';
 import { SITE_URL } from '../../../../../lib/constants';
 import { createLogger, ApiErrors, successResponse } from '../../../../../lib/api-utils';
+
+const UserCreateAccountSchema = z.object({
+  returnUrl: z.string().optional(),
+  refreshUrl: z.string().optional(),
+}).strip();
 
 const log = createLogger('[stripe-connect-user]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
@@ -36,8 +42,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const body = await request.json();
-    const { returnUrl, refreshUrl } = body;
+    const rawBody = await request.json();
+    const parseResult = UserCreateAccountSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const { returnUrl, refreshUrl } = parseResult.data;
 
     // Use authenticated user ID instead of trusting body
     const userId = authUserId;

@@ -122,7 +122,7 @@
 
   /* Hero Title - Mobile Base */
   .hero-title {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
     font-size: 3.5rem;
     font-weight: 400;
     margin-bottom: 0.5rem;
@@ -622,7 +622,7 @@
 
   /* Mix Title - Mobile Base */
   h3.mix-title {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
     font-size: 2.1rem;
     font-weight: 400;
     color: #dc2626;
@@ -638,7 +638,7 @@
 
   /* Mix DJ - Mobile Base */
   .mix-dj {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
     font-size: 1.5rem;
     font-weight: 400;
     color: #ffffff;

@@ -4,7 +4,7 @@
   box-sizing: border-box;
  }
  body.dj-lobby-page{
-  font-family: 'Inter', sans-serif !important;
+  font-family: 'Inter', 'Inter Fallback', sans-serif !important;
   background: linear-gradient(to bottom, #000, #111827, #1f2937) !important;
   color: #fff !important;
   min-height: 100vh !important;
@@ -1049,7 +1049,7 @@
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
  }
  .lufs-header{
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 0.75rem;
   color: #dc2626;
   letter-spacing: 2px;
@@ -1369,7 +1369,7 @@
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
  }
  .stereo-header{
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 0.75rem;
   color: #dc2626;
   letter-spacing: 2px;
@@ -1559,7 +1559,7 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 1.1rem;
   letter-spacing: 2px;
   opacity: 0.7;
@@ -3941,7 +3941,7 @@
   position: absolute;
   top: 0.5rem;
   right: 0.75rem;
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
  }
  .butt-audio-preview .audio-placeholder-branding .brand-fresh { color: #fff; }
  .butt-audio-preview .audio-placeholder-branding .brand-wax { color: #dc2626; }
@@ -3963,7 +3963,7 @@
   position: absolute;
   top: 0.5rem;
   right: 0.75rem;
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
  }
  #audioPreview .audio-placeholder-branding .brand-fresh { color: #fff; }
  #audioPreview .audio-placeholder-branding .brand-wax { color: #dc2626; }
@@ -4358,7 +4358,7 @@
  z-index: 2;
 }
 .mobile-offline-brand{
- font-family: 'Bebas Neue', sans-serif;
+ font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
  font-size: 2.5rem;
  letter-spacing: 3px;
  line-height: 1;
@@ -4594,7 +4594,7 @@
  min-height: calc(100vh - 120px);
 }
 .broadcast-chooser h2{
- font-family: 'Bebas Neue', sans-serif;
+ font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
  font-size: 1.8rem;
  letter-spacing: 0.05em;
  color: #f3f4f6;
@@ -4625,7 +4625,7 @@
 .chooser-btn:focus-visible{ outline: 2px solid #dc2626; outline-offset: 2px; }
 .chooser-icon{ font-size: 2rem; line-height: 1; }
 .chooser-label{
- font-family: 'Bebas Neue', sans-serif;
+ font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
  font-size: 1.3rem;
  letter-spacing: 0.05em;
  color: #f3f4f6;

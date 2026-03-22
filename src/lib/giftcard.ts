@@ -2,6 +2,7 @@
 // Gift Card System - Generate, validate, and redeem gift cards
 
 import { fetchWithTimeout, createLogger } from './api-utils';
+import { TIMEOUTS } from './timeouts';
 
 const log = createLogger('[giftcard]');
 import { SITE_URL } from './constants';
@@ -434,7 +435,7 @@ export async function createGiftCardAfterPayment(
             }
           })
         },
-        10000
+        TIMEOUTS.API
       );
       log.info(`Added purchase record to customer ${data.buyerUserId}`);
     } catch (e: unknown) {

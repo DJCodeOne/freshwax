@@ -298,18 +298,36 @@ const csrfToken = Astro.locals.csrfToken || '';
     </script>
 
     <style is:global>
+      /* Font fallback declarations — size-adjust reduces CLS from font swap */
+      @font-face {
+        font-family: 'Inter Fallback';
+        src: local('Segoe UI'), local('Roboto'), local('Helvetica Neue'), local('Arial');
+        size-adjust: 107%;
+        ascent-override: 90%;
+        descent-override: 22%;
+        line-gap-override: normal;
+      }
+      @font-face {
+        font-family: 'Bebas Fallback';
+        src: local('Arial Narrow'), local('Helvetica'), local('Arial');
+        size-adjust: 64%;
+        ascent-override: 118%;
+        descent-override: 22%;
+        line-gap-override: normal;
+      }
+
       /* Critical CSS inlined */
       body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Inter', 'Inter Fallback', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         background: #000000;
         color: #ffffff;
         min-width: 0;
       }
-      
+
       h1, h2, h3, h4, h5, h6 {
-        font-family: 'Inter', sans-serif; font-weight: 700;
+        font-family: 'Inter', 'Inter Fallback', sans-serif; font-weight: 700;
         letter-spacing: 0.02em;
       }
       

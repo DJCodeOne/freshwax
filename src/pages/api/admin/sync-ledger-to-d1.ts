@@ -2,11 +2,16 @@
 // One-time migration: Sync existing Firebase ledger entries to D1
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { d1InsertLedgerEntry, d1GetLedgerEntryById } from '../../../lib/d1-catalog';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
+
+const SyncLedgerSchema = z.object({
+  adminKey: z.string().optional(),
+}).strip();
 
 const log = createLogger('[sync-ledger]');
 
@@ -20,10 +25,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = locals.runtime.env;
 
-    const body = await request.json().catch(() => ({}));
+    const rawBody = await request.json().catch(() => ({}));
     initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
-    const authError = await requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, rawBody);
     if (authError) return authError;
+
+    const parseResult = SyncLedgerSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
     const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;

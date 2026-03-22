@@ -3,11 +3,18 @@
 // Allows admin to generate a key that gives DJs instant lobby access when redeemed
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const QuickAccessKeySchema = z.object({
+  action: z.enum(['generate', 'revoke', 'setExpiry']),
+  expiresAt: z.string().optional(),
+  adminKey: z.string().optional(),
+}).strip();
 
 const log = createLogger('[quick-access-key]');
 
@@ -69,12 +76,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const data = await request.json();
+    const rawBody = await request.json();
     initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
-    const postAuthError = await requireAdminAuth(request, locals, data);
+    const postAuthError = await requireAdminAuth(request, locals, rawBody);
     if (postAuthError) return postAuthError;
 
-    const { action, expiresAt } = data;
+    const parseResult = QuickAccessKeySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const { action, expiresAt } = parseResult.data;
 
     if (action === 'generate') {
       // Generate a new quick access key

@@ -1,9 +1,16 @@
 // src/pages/api/admin/clear-chat.ts
 // Admin endpoint to clear chat messages with rate limiting and batch safeguards
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
+
+const ClearChatSchema = z.object({
+  streamId: z.string().optional(),
+  limit: z.number().optional(),
+  adminKey: z.string().optional(),
+}).strip();
 
 const log = createLogger('admin/clear-chat');
 import {
@@ -34,13 +41,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const body = await request.json().catch(() => ({}));
+    const rawBody = await request.json().catch(() => ({}));
 
     // Check admin auth (pass body for adminKey check)
-    const authError = await requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, rawBody);
     if (authError) return authError;
 
-    const { streamId, limit } = body;
+    const parseResult = ClearChatSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
+    }
+    const { streamId, limit } = parseResult.data;
 
     // User can optionally specify a lower limit
     const requestLimit = Math.min(limit || MAX_MESSAGES_PER_REQUEST, MAX_MESSAGES_PER_REQUEST);

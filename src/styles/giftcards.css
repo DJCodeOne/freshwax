@@ -27,7 +27,7 @@
   }
   
   .hero h1 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
     font-size: clamp(3rem, 10vw, 5rem);
     font-weight: 400;
     letter-spacing: 0.04em;
@@ -62,7 +62,7 @@
   }
   
   .redeem-card h2 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
     font-size: 2rem;
     color: #111;
     margin: 0 0 0.5rem 0;
@@ -218,7 +218,7 @@
   
   .info-title {
     text-align: center;
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
     font-size: 2rem;
     font-weight: 400;
     color: #111;
@@ -282,7 +282,7 @@
   }
   
   .buy-container h2 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
     font-size: 3rem;
     color: #fff;
     margin: 0 0 0.5rem 0;
@@ -794,7 +794,7 @@
   }
   
   .how-it-works h2 {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
     font-size: 2.75rem;
     color: #111;
     text-align: center;

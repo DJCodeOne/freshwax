@@ -2,6 +2,7 @@
 // Update existing merch product details
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { createS3Client } from '../../lib/s3-client';
 import { getDocument, clearCache, clearAllMerchCache } from '../../lib/firebase-rest';
@@ -12,6 +13,22 @@ import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
+
+const UpdateMerchJsonSchema = z.object({
+  productId: z.string().min(1),
+  images: z.array(z.unknown()).optional(),
+  primaryImage: z.string().optional(),
+  colors: z.array(z.unknown()).optional(),
+  sizes: z.array(z.unknown()).optional(),
+  variantStock: z.unknown().optional(),
+  totalStock: z.union([z.number(), z.string()]).optional(),
+  hasColors: z.boolean().optional(),
+  hasSizes: z.boolean().optional(),
+  retailPrice: z.union([z.number(), z.string()]).optional(),
+  costPrice: z.union([z.number(), z.string()]).optional(),
+  salePrice: z.union([z.number(), z.string(), z.null()]).optional(),
+  onSale: z.boolean().optional(),
+}).strip();
 
 const log = createLogger('update-merch');
 
@@ -39,12 +56,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Handle JSON body for image-only updates
     if (contentType.includes('application/json')) {
-      const data = await request.json();
-      const { productId, images, primaryImage } = data;
-
-      if (!productId) {
-        return ApiErrors.badRequest('Product ID is required');
+      const rawData = await request.json();
+      const parseResult = UpdateMerchJsonSchema.safeParse(rawData);
+      if (!parseResult.success) {
+        return ApiErrors.badRequest('Invalid request data');
       }
+      const data = parseResult.data;
+      const { productId, images, primaryImage } = data;
 
       log.info('[update-merch] JSON update for product:', productId);
 

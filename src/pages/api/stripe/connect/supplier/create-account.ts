@@ -4,10 +4,16 @@
 // accounts. The accessCode is a shared secret given privately to each supplier.
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, updateDocument } from '../../../../../lib/firebase-rest';
 import { SITE_URL } from '../../../../../lib/constants';
 import { createLogger, ApiErrors, successResponse } from '../../../../../lib/api-utils';
+
+const SupplierCreateAccountSchema = z.object({
+  supplierId: z.string().optional(),
+  accessCode: z.string().min(1),
+}).strip();
 
 const log = createLogger('[stripe-connect-supplier]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
@@ -32,14 +38,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
-    const body = await request.json();
-    const { supplierId, accessCode } = body;
-
-    // SECURITY: Always require accessCode — it serves as the supplier's authentication.
-    // Knowing a supplierId alone is not sufficient.
-    if (!accessCode) {
-      return ApiErrors.unauthorized('Access code required');
+    const rawBody = await request.json();
+    const parseResult = SupplierCreateAccountSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const { supplierId, accessCode } = parseResult.data;
 
     // Get supplier - either by ID + code validation, or code lookup
     let supplier: Record<string, unknown> | null = null;

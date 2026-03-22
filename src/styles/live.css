@@ -197,7 +197,7 @@
   backdrop-filter: blur(4px);
  }
  .fs-offline-icon{
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 3.5rem;
   letter-spacing: 2px;
   opacity: 0.5;
@@ -662,7 +662,7 @@
  }
  .schedule-header h1,
  .schedule-header h2{
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 2.5rem;
   color: #fff;
   margin: 0;
@@ -750,7 +750,7 @@
  .sidebar-card h2,
  .sidebar-card h3{
   margin: 0 0 1rem 0;
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 1.5rem;
   font-weight: 400;
   color: #fff;
@@ -905,7 +905,7 @@
  .schedule-card .schedule-header h3,
  .schedule-card h3{
   margin: 0 !important;
-  font-family: 'Bebas Neue', sans-serif !important;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif !important;
   font-size: 1.25rem !important;
   font-weight: 400 !important;
   letter-spacing: 0.5px;
@@ -1449,7 +1449,7 @@
  .offline-overlay.hidden { display: none; }
  .offline-overlay-content{ text-align: center; padding: 2rem; }
  .offline-icon-large{
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 3rem;
   letter-spacing: 4px;
   margin-bottom: 1rem;
@@ -1512,7 +1512,7 @@
   margin-bottom: 0.25rem;
  }
  .countdown-timer .countdown-value{
-  font-family: 'Bebas Neue', monospace;
+  font-family: 'Bebas Neue', 'Bebas Fallback', monospace;
   font-size: 4rem;
   color: #dc2626;
   text-shadow: none;
@@ -1566,7 +1566,7 @@
   animation: spin 1s linear infinite;
  }
  .initializing-title{
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 2rem;
   color: #fff;
   letter-spacing: 4px;
@@ -1626,7 +1626,7 @@
   position: absolute;
   top: 1.5rem;
   right: 1.5rem;
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 2rem;
   letter-spacing: 3px;
  }
@@ -1671,7 +1671,7 @@
   position: absolute;
   top: 1rem;
   right: 1rem;
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 1.5rem;
   letter-spacing: 2px;
  }
@@ -2877,7 +2877,7 @@
  }
  .lobby-content { padding: 1.25rem; }
  .lobby-content h3{
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   color: #fff;
   margin: 0 0 1rem 0;
   font-size: 1.5rem;
@@ -2910,7 +2910,7 @@
   margin-bottom: 0.25rem;
  }
  #lobbyCountdownBig{
-  font-family: 'Bebas Neue', monospace;
+  font-family: 'Bebas Neue', 'Bebas Fallback', monospace;
   font-size: 2.5rem;
   color: #dc2626;
  }

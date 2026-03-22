@@ -8,9 +8,9 @@
    ============================================ */
 
 :root {
-  --font-display: 'Inter', sans-serif;
-  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Inter', 'Inter Fallback', sans-serif;
+  --font-heading: 'Inter', 'Inter Fallback', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', 'Inter Fallback', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
@@ -270,7 +270,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .main-title {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   font-size: 7rem;
   font-weight: 400;
   margin-bottom: 0.5rem;
@@ -1120,7 +1120,7 @@ button,
 
 /* Optional: Use Bebas Neue for logo-style text */
 .brand-logo {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
   letter-spacing: 1px;
 }
 

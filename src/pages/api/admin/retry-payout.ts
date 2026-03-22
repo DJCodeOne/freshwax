@@ -2,11 +2,17 @@
 // Admin endpoint to manually retry a failed payout
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
+
+const RetryPayoutSchema = z.object({
+  payoutId: z.string().min(1),
+  adminKey: z.string().optional(),
+}).strip();
 
 const log = createLogger('[retry-payout]');
 
@@ -26,17 +32,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 
   try {
-    const body = await request.json().catch(() => ({}));
+    const rawBody = await request.json().catch(() => ({}));
 
     // Require admin auth
-    const authError = await requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, rawBody);
     if (authError) return authError;
 
-    const { payoutId } = body;
-
-    if (!payoutId) {
-      return ApiErrors.badRequest('Payout ID required');
+    const parseResult = RetryPayoutSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request data');
     }
+    const { payoutId } = parseResult.data;
 
     // Get the pending payout
     const pendingPayout = await getDocument('pendingPayouts', payoutId);
