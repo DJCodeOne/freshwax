@@ -47,7 +47,7 @@ async function firestoreWrite(method: 'POST' | 'PATCH' | 'DELETE', path: string,
     return { success: true };
   }
 
-  return response.json();
+  return await response.json();
 }
 
 function convertToFirestoreValue(value: unknown): Record<string, unknown> {

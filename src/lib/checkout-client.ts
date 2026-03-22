@@ -596,7 +596,7 @@ export function init() {
             <div style="margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid #e5e7eb;">
               <label for="postcodeSearch" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.375rem;">Verify Your Postcode</label>
               <div class="postcode-lookup-row" style="display: flex; gap: 0.75rem;">
-                <input type="text" id="postcodeSearch" placeholder="Enter postcode (e.g. E1 6AN)" value="${escapeHtml(postcode)}" style="flex: 1; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
+                <input type="text" id="postcodeSearch" autocomplete="postal-code" placeholder="Enter postcode (e.g. E1 6AN)" value="${escapeHtml(postcode)}" style="flex: 1; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
                 <button type="button" id="findAddressBtn" style="padding: 0.875rem 1.25rem; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
                   Verify
                 </button>
@@ -614,7 +614,7 @@ export function init() {
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="address2" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 2</label>
-                  <input type="text" id="address2" name="address2" placeholder="Flat 4B" value="${escapeHtml(address2)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <input type="text" id="address2" name="address2" autocomplete="address-line2" placeholder="Flat 4B" value="${escapeHtml(address2)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                 </div>
               </div>
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
@@ -632,11 +632,11 @@ export function init() {
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="county" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">County</label>
-                  <input type="text" id="county" name="county" placeholder="Greater London" value="${escapeHtml(county)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <input type="text" id="county" name="county" autocomplete="address-level1" placeholder="Greater London" value="${escapeHtml(county)}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="country" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Country *</label>
-                  <select id="country" name="country" required aria-required="true" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; cursor: pointer;">
+                  <select id="country" name="country" required aria-required="true" autocomplete="country-name" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; cursor: pointer;">
                     <option value="United Kingdom" ${country === 'United Kingdom' ? 'selected' : ''}>United Kingdom</option>
                     <option value="Ireland" ${country === 'Ireland' ? 'selected' : ''}>Ireland</option>
                     <option value="Germany" ${country === 'Germany' ? 'selected' : ''}>Germany</option>

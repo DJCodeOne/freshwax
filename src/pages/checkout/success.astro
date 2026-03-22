@@ -109,6 +109,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         await new Promise(resolve => setTimeout(resolve, delay));
 
         const response = await fetch(`/api/stripe/verify-session/?session_id=${sessionId}`);
+        if (!response.ok) {
+          console.error('Verify session failed:', response.status);
+          continue;
+        }
         const result = await response.json();
 
         // Clear cart for any successful payment (both localStorage and KV)

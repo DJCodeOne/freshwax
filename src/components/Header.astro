@@ -112,7 +112,7 @@ const firebaseConfig = {
     </div>
 
     <!-- Mobile Slide-out Menu -->
-    <div id="mobileMenu" class="fwx-mobile-menu fwx-hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
+    <div id="mobileMenu" class="fwx-mobile-menu fwx-hidden" role="dialog" aria-modal="true" aria-label="Navigation menu" data-has-focus-trap="true">
       <div class="fwx-mobile-menu-header">
         <span class="fwx-menu-title">Menu</span>
         <button id="closeMenuBtn" class="fwx-close-btn" aria-label="Close menu">
@@ -781,7 +781,7 @@ const firebaseConfig = {
 
     // After widget is created, apply saved language by selecting it in the dropdown.
     var lang = null;
-    try { lang = localStorage.getItem('fw_translate_lang'); } catch (e){}
+    try { lang = localStorage.getItem('fw_translate_lang'); } catch (e){ /* Non-critical: storage may be unavailable in private browsing */ }
     if (lang) {
       waitForSelect(function(sel) {
         if (sel.value !== lang) {
@@ -833,11 +833,11 @@ const firebaseConfig = {
     document.documentElement.lang = (langCode && langCode !== 'en') ? langCode : 'en-GB';
 
     if (langCode && langCode !== 'en') {
-      try { localStorage.setItem('fw_translate_lang', langCode); } catch (e){}
+      try { localStorage.setItem('fw_translate_lang', langCode); } catch (e){ /* Non-critical: storage may be unavailable in private browsing */ }
       document.cookie = 'googtrans=/en/' + langCode + ';path=/;Secure;SameSite=Lax';
       if (domainCookie) document.cookie = 'googtrans=/en/' + langCode + ';path=/' + domainCookie + ';Secure;SameSite=Lax';
     } else {
-      try { localStorage.removeItem('fw_translate_lang'); } catch (e){}
+      try { localStorage.removeItem('fw_translate_lang'); } catch (e){ /* Non-critical: storage may be unavailable in private browsing */ }
       document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT;Secure;SameSite=Lax';
       if (domainCookie) document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT' + domainCookie + ';Secure;SameSite=Lax';
     }
@@ -881,7 +881,7 @@ const firebaseConfig = {
 
     // Highlight current language
     var current = 'en';
-    try { current = localStorage.getItem('fw_translate_lang') || 'en'; } catch (e){}
+    try { current = localStorage.getItem('fw_translate_lang') || 'en'; } catch (e){ /* Non-critical: storage may be unavailable in private browsing */ }
     updatePanelSelection(current);
 
     panel.hidden = false;
@@ -1032,7 +1032,7 @@ const firebaseConfig = {
 
   // On page load, if there's a saved language, set cookie and defer GT load
   var savedLang = null;
-  try { savedLang = localStorage.getItem('fw_translate_lang'); } catch (e){}
+  try { savedLang = localStorage.getItem('fw_translate_lang'); } catch (e){ /* Non-critical: storage may be unavailable in private browsing */ }
   if (savedLang) {
     // Set cookie on both path and domain for maximum compatibility
     document.cookie = 'googtrans=/en/' + savedLang + ';path=/;Secure;SameSite=Lax';
@@ -1733,7 +1733,7 @@ const firebaseConfig = {
       }
     } else {
       // User logged out - clear the auth cache and admin session cookie
-      try { sessionStorage.removeItem('fw_auth_cache'); } catch (e){}
+      try { sessionStorage.removeItem('fw_auth_cache'); } catch (e){ /* Non-critical: best-effort cleanup on logout */ }
       document.cookie = '__session=; path=/; max-age=0; SameSite=Lax; Secure';
     }
     // Update UI AFTER any fetch is complete

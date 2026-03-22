@@ -1343,7 +1343,7 @@ try {
         (async function() {
           var user = null;
           var cachedUid = null;
-          try { cachedUid = localStorage.getItem('fw_uid'); } catch (e2) {}
+          try { cachedUid = localStorage.getItem('fw_uid'); } catch (e2) { /* Non-critical: storage may be unavailable in private browsing */ }
           try {
             if (window.firebaseAuth && window.firebaseAuth.currentUser) { user = window.firebaseAuth.currentUser; }
             else if (window.authReady) { user = await window.authReady; }
@@ -1409,7 +1409,7 @@ try {
     var hiddenIcon = toggleBtn.querySelector('.meters-hidden-icon');
 
     var metersHidden = false;
-    try { metersHidden = localStorage.getItem('fw_meters_hidden') === 'true'; } catch (e) {}
+    try { metersHidden = localStorage.getItem('fw_meters_hidden') === 'true'; } catch (e) { /* Non-critical: storage may be unavailable in private browsing */ }
     if (metersHidden) {
       stereoMeters.classList.add('meters-hidden');
       toggleBtn.classList.add('meters-off');
@@ -1427,7 +1427,7 @@ try {
       toggleBtn.classList.toggle('meters-off', isHidden);
       if (visibleIcon) visibleIcon.classList.toggle('hidden', isHidden);
       if (hiddenIcon) hiddenIcon.classList.toggle('hidden', !isHidden);
-      try { localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false'); } catch (e2) {}
+      try { localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false'); } catch (e2) { /* Non-critical: storage may be unavailable in private browsing */ }
     });
   }
 

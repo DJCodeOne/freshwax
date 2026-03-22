@@ -281,6 +281,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   async function loadAnalytics() {
     try {
       const response = await fetch('/api/admin/giftcards/?type=analytics');
+      if (!response.ok) throw new Error('Load analytics failed: ' + response.status);
       const result = await response.json();
       
       if (result.success) {
@@ -305,6 +306,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     
     try {
       const response = await fetch('/api/admin/giftcards/?type=balances');
+      if (!response.ok) throw new Error('Load balances failed: ' + response.status);
       const result = await response.json();
       
       if (result.success && result.balances.length > 0) {

@@ -676,7 +676,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
   .original-price {
     font-size: 1.25rem;
-    color: #6b7280;
+    color: #d1d5db;
     text-decoration: line-through;
   }
 
@@ -720,7 +720,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
   .meta-label {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: #d1d5db;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 700;
@@ -783,7 +783,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
   .condition-type {
     font-size: 0.7rem;
-    color: #6b7280;
+    color: #d1d5db;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 500;
@@ -1065,6 +1065,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
     try {
       const res = await fetch(`${VINYL_API_URL}/listings/${listingId}`);
+      if (!res.ok) throw new Error('Listing fetch failed: ' + res.status);
       const data = await res.json();
 
       if (!data.success || !data.listing) {
@@ -1312,7 +1313,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       tracklistEl.innerHTML = listing.tracks.map((track, index) => `
         <div class="track-item" data-track-index="${index}">
           <span class="track-number">${index + 1}</span>
-          <button class="track-play-btn" data-track-index="${index}" data-audio-url="${escapeHtml(track.audioSampleUrl || '')}" data-track-name="${escapeHtml(track.name || 'Untitled')}" ${!track.audioSampleUrl ? 'disabled' : ''}>
+          <button class="track-play-btn" data-track-index="${index}" data-audio-url="${escapeHtml(track.audioSampleUrl || '')}" data-track-name="${escapeHtml(track.name || 'Untitled')}" aria-label="Play ${escapeHtml(track.name || 'Untitled')}" ${!track.audioSampleUrl ? 'disabled' : ''}>
             <svg class="play-icon" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z"/>
             </svg>
@@ -1570,7 +1571,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
       // Add to localStorage bag
       let bagRaw = '[]';
-      try { bagRaw = localStorage.getItem('freshwax_bag') || bagRaw; } catch (e) {}
+      try { bagRaw = localStorage.getItem('freshwax_bag') || bagRaw; } catch (e) { /* Non-critical: storage may be unavailable in private browsing */ }
       var bag;
       try {
         bag = JSON.parse(bagRaw);
@@ -1590,7 +1591,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       }
 
       bag.push(item);
-      try { localStorage.setItem('freshwax_bag', JSON.stringify(bag)); } catch (e) {}
+      try { localStorage.setItem('freshwax_bag', JSON.stringify(bag)); } catch (e) { /* Non-critical: storage may be unavailable in private browsing */ }
 
       // Update bag count in header if exists
       const bagCountEl = document.querySelector('.bag-count');

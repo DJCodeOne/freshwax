@@ -387,7 +387,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
           body: JSON.stringify({ code })
         });
-        
+
+        if (!response.ok) throw new Error('Redeem failed: ' + response.status);
         const result = await response.json();
         
         if (result.success) {
@@ -425,6 +426,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           'Authorization': `Bearer ${idToken}`
         }
       });
+      if (!response.ok) throw new Error('Balance fetch failed: ' + response.status);
       const result = await response.json();
 
       if (result.success) {
@@ -453,6 +455,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       const response = await fetch(`/api/get-user-type/?uid=${userId}`, {
         headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
       });
+      if (!response.ok) throw new Error('User name fetch failed: ' + response.status);
       const result = await response.json();
       if (result.success && result.displayName) {
         currentUserName = result.displayName;
@@ -476,6 +479,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       const response = await fetch('/api/giftcards/purchased/', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
+      if (!response.ok) throw new Error('Purchased cards fetch failed: ' + response.status);
       const result = await response.json();
 
       if (result.success && result.purchasedCards.length > 0) {
@@ -807,6 +811,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
           body: JSON.stringify(purchaseData)
         });
+        if (!response.ok) throw new Error('Stripe session failed: ' + response.status);
         const result = await response.json();
 
         if (result.success && result.checkoutUrl) {
@@ -826,6 +831,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
           body: JSON.stringify(purchaseData)
         });
+        if (!response.ok) throw new Error('PayPal order failed: ' + response.status);
         const result = await response.json();
 
         if (result.success && result.approvalUrl) {

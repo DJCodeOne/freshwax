@@ -71,7 +71,7 @@ async function writeToFirestore(collection: string, docId: string, data: Record<
     throw new Error('Failed to write to database');
   }
 
-  return response.json();
+  return await response.json();
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {

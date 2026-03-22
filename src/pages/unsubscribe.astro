@@ -94,7 +94,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
-      
+
+      if (!response.ok) throw new Error('Unsubscribe failed: ' + response.status);
       const data = await response.json();
       
       if (data.success) {

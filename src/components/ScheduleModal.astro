@@ -7,7 +7,7 @@ import DailySchedule from './DailySchedule.astro';
 ---
 
 <!-- Public Schedule Modal (Read-only) -->
-<div id="publicScheduleModal" class="schedule-modal-wrapper hidden" role="dialog" aria-modal="true" aria-labelledby="publicScheduleTitle">
+<div id="publicScheduleModal" class="schedule-modal-wrapper hidden" role="dialog" aria-modal="true" aria-labelledby="publicScheduleTitle" data-has-focus-trap="true">
   <div class="schedule-modal-overlay"></div>
   <div class="schedule-modal-container">
     <div class="schedule-modal-header">
@@ -22,7 +22,7 @@ import DailySchedule from './DailySchedule.astro';
 </div>
 
 <!-- Booking Schedule Modal (DJ Selection) -->
-<div id="bookingScheduleModal" class="schedule-modal-wrapper hidden" role="dialog" aria-modal="true" aria-labelledby="bookingScheduleTitle">
+<div id="bookingScheduleModal" class="schedule-modal-wrapper hidden" role="dialog" aria-modal="true" aria-labelledby="bookingScheduleTitle" data-has-focus-trap="true">
   <div class="schedule-modal-overlay"></div>
   <div class="schedule-modal-container booking-mode">
     <div class="schedule-modal-header">

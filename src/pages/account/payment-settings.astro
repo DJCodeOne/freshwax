@@ -208,6 +208,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         const userRes = await fetch(`/api/get-user-type/?uid=${user.uid}`, {
           headers: { 'Authorization': `Bearer ${_idToken}` }
         });
+        if (!userRes.ok) throw new Error('User type fetch failed: ' + userRes.status);
         const userTypeData = await userRes.json();
         // Determine vendor roles
         vendorRoles = [];
@@ -225,6 +226,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         // Get payment status - use unified endpoint
         const paymentRes = await fetch(`/api/payment/status/?userId=${user.uid}`);
+        if (!paymentRes.ok) throw new Error('Payment status fetch failed: ' + paymentRes.status);
         const paymentData = await paymentRes.json();
         // Store combined data
         userData = paymentData;
@@ -476,6 +478,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!res.ok) throw new Error('Stripe setup failed: ' + res.status);
       const data = await res.json();
 
       if (data.onboardingUrl) {
@@ -514,6 +517,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           paypalEmail: email
         })
       });
+      if (!res.ok) throw new Error('PayPal link failed: ' + res.status);
       const data = await res.json();
 
       if (data.success) {
@@ -547,6 +551,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           paypalEmail: newEmail
         })
       });
+      if (!res.ok) throw new Error('PayPal update failed: ' + res.status);
       const data = await res.json();
       if (data.success) window.location.reload();
       else alert(data.error || 'Failed to update');
@@ -566,6 +571,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           payoutMethod: method
         })
       });
+      if (!res.ok) throw new Error('Set payout method failed: ' + res.status);
       const data = await res.json();
       if (data.success) window.location.reload();
       else alert(data.error || 'Failed to set method');
@@ -1177,7 +1183,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }
 
   .payout-type {
-    color: #6b7280;
+    color: #d1d5db;
     font-size: 0.8rem;
     padding: 2px 6px;
     background: #262626;

@@ -501,6 +501,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       try {
         // First do a dry run
         const dryRunRes = await fetch('/api/admin/migrate-orders-to-ledger/?confirm=yes&dryRun=yes');
+        if (!dryRunRes.ok) throw new Error('Dry run failed: ' + dryRunRes.status);
         const dryRun = await dryRunRes.json();
 
         if (!confirm(`Dry run complete:\n- Would migrate: ${dryRun.results?.migrated || 0} orders\n- Skipped (already in ledger): ${dryRun.results?.skipped || 0}\n- Cancelled orders: ${dryRun.results?.cancelled || 0}\n\nProceed with actual migration?`)) {
@@ -511,6 +512,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
         // Run actual migration
         const res = await fetch('/api/admin/migrate-orders-to-ledger/?confirm=yes');
+        if (!res.ok) throw new Error('Migration failed: ' + res.status);
         const data = await res.json();
 
         if (data.success) {
@@ -555,6 +557,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       const response = await fetch('/api/admin/check-access/', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
+      if (!response.ok) return false;
       const data = await response.json();
       return data.success && data.isAdmin;
     } catch (e){

@@ -129,6 +129,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const response = await fetch(`/api/vinyl/orders/?sellerId=${encodeURIComponent(currentUser.uid)}`, {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
+      if (!response.ok) throw new Error('Orders fetch failed: ' + response.status);
       const result = await response.json();
 
       if (!result.success) {
@@ -321,6 +322,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!response.ok) throw new Error('Ship order failed: ' + response.status);
       const result = await response.json();
       if (!result.success) {
         throw new Error(result.error || 'Failed to update order');

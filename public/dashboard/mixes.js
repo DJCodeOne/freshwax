@@ -124,7 +124,7 @@ export async function fetchMixes(userId, forceRefresh) {
                   (chartPosition !== '-' ? '<span style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.9rem; font-weight: 600;">#' + escapeHtml(String(chartPosition)) + '</span>' : '') +
                 '</div>' +
                 '<p style="font-size: 1.25rem; color: #d1d5db; margin: 0; font-weight: 500;">by ' + escapeHtml(djName) + '</p>' +
-                '<p style="font-size: 1.125rem; color: #6b7280; margin: 0.5rem 0 0 0;">' + escapeHtml(genre) + (durationDisplay ? ' &bull; ' + durationDisplay : '') + '</p>' +
+                '<p style="font-size: 1.125rem; color: #d1d5db; margin: 0.5rem 0 0 0;">' + escapeHtml(genre) + (durationDisplay ? ' &bull; ' + durationDisplay : '') + '</p>' +
               '</div>' +
               '<div style="display: flex; gap: 1rem; flex-wrap: wrap; background: linear-gradient(to bottom, #374151, #1f2937); padding: 0.625rem 1rem; border-radius: 8px; align-items: center; border: 1px solid #4b5563;">' +
                 '<div style="text-align: center; min-width: 40px;">' +

@@ -234,7 +234,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     '<table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px;">' +
     '<tr><td style="background: #000000; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center;">' +
     '<div style="font-size: 28px; font-weight: 800; letter-spacing: 1px;"><span style="color: #ffffff;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>' +
-    '<div style="font-size: 12px; color: #9ca3af; margin-top: 4px; letter-spacing: 2px;">JUNGLE • DRUM AND BASS</div>' +
+    '<div style="font-size: 12px; color: #d1d5db; margin-top: 4px; letter-spacing: 2px;">JUNGLE • DRUM AND BASS</div>' +
     '</td></tr>' +
     '<tr><td style="background: #ffffff; padding: 32px 24px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
@@ -401,7 +401,7 @@ function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknow
   for (const item of digitalItems) {
     const typeLabel = item.type === 'track' ? 'Single Track' : 'Digital Release';
     itemsHtml += '<tr>' +
-      '<td style="padding: 12px; border-bottom: 1px solid #374151; color: #fff;">' + escapeHtml(item.name) + '<br><span style="font-size: 12px; color: #9ca3af;">' + typeLabel + '</span></td>' +
+      '<td style="padding: 12px; border-bottom: 1px solid #374151; color: #fff;">' + escapeHtml(item.name) + '<br><span style="font-size: 12px; color: #d1d5db;">' + typeLabel + '</span></td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: center; color: #fff;">' + item.quantity + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: right; font-weight: 600; color: #fff;">' + formatPrice(item.price * item.quantity) + '</td>' +
       '</tr>';
@@ -423,14 +423,14 @@ function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknow
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding-bottom: 20px; text-align: center;">' +
     '<div style="font-size: 18px; font-weight: 700; color: #16a34a;">Someone bought your music!</div>' +
-    '<div style="font-size: 14px; color: #9ca3af; margin-top: 4px;">Customer: ' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</div>' +
+    '<div style="font-size: 14px; color: #d1d5db; margin-top: 4px;">Customer: ' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</div>' +
     '</td></tr>' +
     '<tr><td>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #374151; border-radius: 8px; overflow: hidden; background: #1f2937;">' +
     '<tr style="background: #374151;">' +
-    '<th style="padding: 12px; text-align: left; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Item</th>' +
-    '<th style="padding: 12px; text-align: center; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Qty</th>' +
-    '<th style="padding: 12px; text-align: right; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Price</th>' +
+    '<th style="padding: 12px; text-align: left; font-size: 12px; color: #d1d5db; text-transform: uppercase;">Item</th>' +
+    '<th style="padding: 12px; text-align: center; font-size: 12px; color: #d1d5db; text-transform: uppercase;">Qty</th>' +
+    '<th style="padding: 12px; text-align: right; font-size: 12px; color: #d1d5db; text-transform: uppercase;">Price</th>' +
     '</tr>' +
     itemsHtml +
     '<tr style="background: #dc2626;">' +
@@ -439,19 +439,19 @@ function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknow
     '</tr></table></td></tr>' +
     '<tr><td style="padding-top: 20px;">' +
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
-    '<div style="font-weight: 700; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
+    '<div style="font-weight: 700; font-size: 12px; color: #d1d5db; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">' + formatPrice(artistNetEarnings) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Item Price:</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">' + formatPrice(digitalTotal) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee:</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">-' + formatPrice(processingFee) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Fee (1%):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">-' + formatPrice(freshWaxFee) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;">Item Price:</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">' + formatPrice(digitalTotal) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;">Processing Fee:</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">-' + formatPrice(processingFee) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Fee (1%):</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">-' + formatPrice(freshWaxFee) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
     '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table></div></td></tr>' +
     '</table></td></tr>' +
     '<tr><td align="center" style="padding: 24px 0;">' +
-    '<div style="color: #6b7280; font-size: 13px;">Automated notification from Fresh Wax</div>' +
+    '<div style="color: #d1d5db; font-size: 13px;">Automated notification from Fresh Wax</div>' +
     `<div style="margin-top: 8px;"><a href="${SITE_URL}" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>` +
     '</td></tr>' +
     '</table></td></tr></table></body></html>';
@@ -471,7 +471,7 @@ function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>
     itemsHtml += '<tr>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; color: #fff;">' +
       (item.image ? '<img src="' + escapeHtml(item.image) + '" width="50" height="50" style="border-radius: 4px; margin-right: 10px; vertical-align: middle;">' : '') +
-      escapeHtml(item.name) + (details ? '<br><span style="font-size: 12px; color: #9ca3af;">' + details + '</span>' : '') + '</td>' +
+      escapeHtml(item.name) + (details ? '<br><span style="font-size: 12px; color: #d1d5db;">' + details + '</span>' : '') + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: center; color: #fff;">' + item.quantity + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: right; font-weight: 600; color: #fff;">' + formatPrice(item.price * item.quantity) + '</td>' +
       '</tr>';
@@ -480,7 +480,7 @@ function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>
   const shippingHtml = order.shipping ?
     '<tr><td style="padding-top: 20px;">' +
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
-    '<div style="font-weight: 700; color: #9ca3af; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;">Ship To</div>' +
+    '<div style="font-weight: 700; color: #d1d5db; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;">Ship To</div>' +
     '<div style="color: #fff; line-height: 1.5; font-size: 14px;">' +
     escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '<br>' +
     escapeHtml(order.shipping.address1) + '<br>' +
@@ -505,14 +505,14 @@ function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding-bottom: 20px; text-align: center;">' +
     '<div style="font-size: 18px; font-weight: 700; color: #16a34a;">Someone bought your merch!</div>' +
-    '<div style="font-size: 14px; color: #9ca3af; margin-top: 4px;">Customer: ' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</div>' +
+    '<div style="font-size: 14px; color: #d1d5db; margin-top: 4px;">Customer: ' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</div>' +
     '</td></tr>' +
     '<tr><td>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #374151; border-radius: 8px; overflow: hidden; background: #1f2937;">' +
     '<tr style="background: #374151;">' +
-    '<th style="padding: 12px; text-align: left; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Item</th>' +
-    '<th style="padding: 12px; text-align: center; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Qty</th>' +
-    '<th style="padding: 12px; text-align: right; font-size: 12px; color: #9ca3af; text-transform: uppercase;">Price</th>' +
+    '<th style="padding: 12px; text-align: left; font-size: 12px; color: #d1d5db; text-transform: uppercase;">Item</th>' +
+    '<th style="padding: 12px; text-align: center; font-size: 12px; color: #d1d5db; text-transform: uppercase;">Qty</th>' +
+    '<th style="padding: 12px; text-align: right; font-size: 12px; color: #d1d5db; text-transform: uppercase;">Price</th>' +
     '</tr>' +
     itemsHtml +
     '<tr style="background: #dc2626;">' +
@@ -522,21 +522,21 @@ function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>
     shippingHtml +
     '<tr><td style="padding-top: 20px;">' +
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
-    '<div style="font-weight: 700; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
+    '<div style="font-weight: 700; font-size: 12px; color: #d1d5db; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Brand Royalty (10%):</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">' + formatPrice(brandRoyalty) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Sale Total:</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">' + formatPrice(merchTotal) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Share (90%):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">' + formatPrice(freshWaxShare) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;">Sale Total:</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">' + formatPrice(merchTotal) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Share (90%):</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">' + formatPrice(freshWaxShare) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
     '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table></div></td></tr>' +
     '<tr><td style="padding-top: 16px;">' +
-    '<div style="font-size: 12px; color: #9ca3af;">Customer email: <strong style="color: #fff;">' + escapeHtml(order.customer.email) + '</strong></div>' +
+    '<div style="font-size: 12px; color: #d1d5db;">Customer email: <strong style="color: #fff;">' + escapeHtml(order.customer.email) + '</strong></div>' +
     '</td></tr>' +
     '</table></td></tr>' +
     '<tr><td align="center" style="padding: 24px 0;">' +
-    '<div style="color: #6b7280; font-size: 13px;">Automated notification from Fresh Wax</div>' +
+    '<div style="color: #d1d5db; font-size: 13px;">Automated notification from Fresh Wax</div>' +
     `<div style="margin-top: 8px;"><a href="${SITE_URL}" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>` +
     '</td></tr>' +
     '</table></td></tr></table></body></html>';

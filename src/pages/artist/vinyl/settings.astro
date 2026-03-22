@@ -222,6 +222,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   async function loadSettings(userId) {
     try {
       const response = await fetch(`/api/vinyl/settings/?userId=${encodeURIComponent(userId)}`);
+      if (!response.ok) throw new Error('Settings fetch failed: ' + response.status);
       const result = await response.json();
 
       if (result.success && result.settings) {
@@ -311,6 +312,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         body: JSON.stringify(data)
       });
 
+      if (!response.ok) throw new Error('Settings save failed: ' + response.status);
       const result = await response.json();
 
       if (!result.success) {

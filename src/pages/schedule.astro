@@ -625,6 +625,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       end.setDate(end.getDate() + 14);
 
       const response = await fetch(`/api/livestream/slots/?start=${start.toISOString()}&end=${end.toISOString()}`);
+      if (!response.ok) throw new Error('Schedule fetch failed: ' + response.status);
       const data = await response.json();
 
       if (data.success) {

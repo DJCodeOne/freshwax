@@ -52,62 +52,62 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <div class="card-body p-0">
             <!-- Toolbar -->
             <div class="editor-toolbar flex flex-wrap gap-1 p-3 border-b border-white/10">
-              <button type="button" class="toolbar-btn" data-command="bold" title="Bold (Ctrl+B)">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" class="toolbar-btn" data-command="bold" title="Bold (Ctrl+B)" aria-label="Bold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4h8a4 4 0 014 4 4 4 0 01-4 4H6z"/>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 12h9a4 4 0 014 4 4 4 0 01-4 4H6z"/>
                 </svg>
               </button>
-              <button type="button" class="toolbar-btn" data-command="italic" title="Italic (Ctrl+I)">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" class="toolbar-btn" data-command="italic" title="Italic (Ctrl+I)" aria-label="Italic">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 4h4m-2 0v16m-4 0h4"/>
                 </svg>
               </button>
-              <button type="button" class="toolbar-btn" data-command="underline" title="Underline (Ctrl+U)">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" class="toolbar-btn" data-command="underline" title="Underline (Ctrl+U)" aria-label="Underline">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8v4a5 5 0 0010 0V8M5 20h14"/>
                 </svg>
               </button>
               <div class="w-px h-6 bg-white/10 mx-1"></div>
-              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="h2" title="Heading 2">
+              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="h2" title="Heading 2" aria-label="Heading 2">
                 <span class="font-bold text-sm">H2</span>
               </button>
-              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="h3" title="Heading 3">
+              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="h3" title="Heading 3" aria-label="Heading 3">
                 <span class="font-bold text-sm">H3</span>
               </button>
-              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="p" title="Paragraph">
+              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="p" title="Paragraph" aria-label="Paragraph">
                 <span class="text-sm">P</span>
               </button>
               <div class="w-px h-6 bg-white/10 mx-1"></div>
-              <button type="button" class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List" aria-label="Bullet list">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
               </button>
-              <button type="button" class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" class="toolbar-btn" data-command="insertOrderedList" title="Numbered List" aria-label="Numbered list">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20h14M7 12h14M7 4h14M3 20h.01M3 12h.01M3 4h.01"/>
                 </svg>
               </button>
               <div class="w-px h-6 bg-white/10 mx-1"></div>
-              <button type="button" class="toolbar-btn" id="link-btn" title="Insert Link">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" class="toolbar-btn" id="link-btn" title="Insert Link" aria-label="Insert link">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
                 </svg>
               </button>
-              <button type="button" class="toolbar-btn" id="image-btn" title="Insert Image">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" class="toolbar-btn" id="image-btn" title="Insert Image" aria-label="Insert image">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
               </button>
-              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="blockquote" title="Quote">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" class="toolbar-btn" data-command="formatBlock" data-value="blockquote" title="Quote" aria-label="Block quote">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
                 </svg>
               </button>
               <div class="w-px h-6 bg-white/10 mx-1"></div>
-              <button type="button" class="toolbar-btn" data-command="removeFormat" title="Clear Formatting">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" class="toolbar-btn" data-command="removeFormat" title="Clear Formatting" aria-label="Clear formatting">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
               </button>

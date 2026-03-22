@@ -400,6 +400,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
           try {
             const response = await fetch('/api/upload-r2-batch/', { method: 'POST', headers: authHeaders(), body: formData });
+            if (!response.ok) throw new Error('Metadata upload failed: ' + response.status);
             const result = await response.json();
             if (!result.success) throw new Error(result.error);
             log(`✓ Metadata: ${result.url}`, 'success');
@@ -464,6 +465,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
               try {
                 const response = await fetch('/api/upload-r2-batch/', { method: 'POST', headers: authHeaders(), body: formData });
+                if (!response.ok) throw new Error('Track upload failed: ' + response.status);
                 const result = await response.json();
                 if (!result.success) throw new Error(result.error);
 
@@ -530,11 +532,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
             try {
               const response = await fetch('/api/upload-r2-batch/', { method: 'POST', headers: authHeaders(), body: formData });
+              if (!response.ok) throw new Error('Preview upload failed: ' + response.status);
               const result = await response.json();
               if (!result.success) throw new Error(result.error);
 
               log(`✓ ${file.name} → ${result.url}`, 'success');
-              
+
               // IMPROVED: Match preview to track
               let trackIndex = -1;
               
@@ -603,11 +606,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
             try {
               const response = await fetch('/api/upload-r2-batch/', { method: 'POST', headers: authHeaders(), body: formData });
+              if (!response.ok) throw new Error('Artwork upload failed: ' + response.status);
               const result = await response.json();
               if (!result.success) throw new Error(result.error);
 
               log(`✓ ${file.name} → ${result.url}`, 'success');
-              
+
               standardRelease.coverUrl = result.url;
               standardRelease.artworkUrl = result.url;
 
@@ -687,6 +691,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           body: JSON.stringify({ release: newRelease })
         });
 
+        if (!response.ok) throw new Error('Firebase update failed: ' + response.status);
         const result = await response.json();
 
         if (!result.success) {

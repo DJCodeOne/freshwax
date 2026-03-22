@@ -401,7 +401,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <strong>Link PayPal Account</strong>
             <p>Enter your PayPal email to receive payouts via PayPal.</p>
             <div class="paypal-form">
-              <input type="email" id="paypal-email-input" placeholder="your@paypal-email.com" aria-label="PayPal email address" />
+              <input type="email" id="paypal-email-input" placeholder="your@paypal-email.com" aria-label="PayPal email address" autocomplete="email" />
               <button id="paypal-link-btn" class="btn btn-primary">Link PayPal</button>
             </div>
           </div>
@@ -427,6 +427,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         body: JSON.stringify({ userId: currentUserId })
       });
 
+      if (!res.ok) throw new Error('Stripe account creation failed: ' + res.status);
       const data = await res.json();
 
       if (data.onboardingUrl) {
@@ -463,6 +464,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ entityType: 'user', entityId: currentUserId, paypalEmail: email })
       });
+      if (!res.ok) throw new Error('PayPal link failed: ' + res.status);
       const data = await res.json();
 
       if (data.success) {
@@ -493,6 +495,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ entityType: 'user', entityId: currentUserId, paypalEmail: newEmail })
       });
+      if (!res.ok) throw new Error('PayPal update failed: ' + res.status);
       const data = await res.json();
       if (data.success) window.location.reload();
       else alert(data.error || 'Failed to update');
@@ -509,6 +512,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ entityType: 'user', entityId: currentUserId, payoutMethod: method })
       });
+      if (!res.ok) throw new Error('Set payout method failed: ' + res.status);
       const data = await res.json();
       if (data.success) window.location.reload();
       else alert(data.error || 'Failed to set method');

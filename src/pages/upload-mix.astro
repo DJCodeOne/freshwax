@@ -148,7 +148,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </div>
 
           <!-- Quick Drop Progress (hidden by default) -->
-          <div id="quick-drop-progress" class="hidden p-6 pt-0">
+          <div id="quick-drop-progress" class="hidden p-6 pt-0" aria-live="polite">
             <div class="bg-amber-50 rounded-lg p-4">
               <div class="flex items-center justify-between mb-2">
                 <p class="font-bold text-amber-800">Uploading...</p>
@@ -393,7 +393,7 @@ Artist - Track Title
           </div>
 
           <!-- Progress Bar (Hidden by default) -->
-          <div id="upload-progress-container" class="hidden">
+          <div id="upload-progress-container" class="hidden" aria-live="polite">
             <div class="bg-gradient-to-r from-gray-100 to-gray-50 rounded-lg border-2 border-gray-300 p-6">
               <div class="flex items-center justify-between mb-3">
                 <p class="font-bold text-gray-900">Uploading...</p>
@@ -1123,6 +1123,7 @@ Artist - Track Title
   async function loadUploadSettings() {
     try {
       const response = await fetch('/api/admin/update-settings/?action=load');
+      if (!response.ok) throw new Error('Settings fetch failed: ' + response.status);
       const result = await response.json();
       if (result.success && result.settings?.djMixes) {
         uploadSettings = { ...uploadSettings, ...result.settings.djMixes };
@@ -1414,6 +1415,7 @@ Artist - Track Title
       const limitCheck = await fetch(`/api/subscription/?userId=${user.uid}&action=canUploadMix`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
+      if (!limitCheck.ok) throw new Error('Subscription check failed: ' + limitCheck.status);
       const limitResult = await limitCheck.json();
 
       if (!limitResult.allowed) {
@@ -1696,6 +1698,7 @@ Artist - Track Title
       const limitCheck = await fetch(`/api/subscription/?userId=${user.uid}&action=canUploadMix`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       });
+      if (!limitCheck.ok) throw new Error('Subscription check failed: ' + limitCheck.status);
       const limitResult = await limitCheck.json();
 
       if (!limitResult.allowed) {

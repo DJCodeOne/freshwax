@@ -1256,7 +1256,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   .field-hint {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: #d1d5db;
     margin-top: 0.25rem;
   }
 
@@ -1396,7 +1396,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }
 
   .no-tracks-msg {
-    color: #6b7280;
+    color: #d1d5db;
     font-size: 0.875rem;
     text-align: center;
     padding: 1rem;
@@ -1663,6 +1663,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           body: JSON.stringify(data)
         });
 
+        if (!response.ok) throw new Error('Update release failed: ' + response.status);
         const result = await response.json();
 
         if (result.success) {
@@ -1765,6 +1766,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
+        if (!response.ok) throw new Error('Sale update failed: ' + response.status);
         const result = await response.json();
 
         if (result.success) {
@@ -1842,6 +1844,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!response.ok) throw new Error('Delete release failed: ' + response.status);
       const result = await response.json();
 
       if (result.success) {

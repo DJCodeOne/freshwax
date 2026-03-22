@@ -388,6 +388,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             headers: { 'X-Admin-Key': window.ADMIN_KEY }
           });
 
+          if (!response.ok) throw new Error('List users failed: ' + response.status);
           const data = await response.json();
 
           if (!data.success) {
@@ -673,6 +674,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             })
           });
 
+          if (!response.ok) throw new Error('Update user failed: ' + response.status);
           const result = await response.json();
 
           if (!result.success) {
@@ -745,6 +747,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             })
           });
 
+          if (!response.ok) throw new Error('Approve user failed: ' + response.status);
           const result = await response.json();
 
           if (!result.success) {
@@ -788,6 +791,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             body: JSON.stringify({ userId: currentUserId })
           });
 
+          if (!response.ok) throw new Error('Delete user failed: ' + response.status);
           const result = await response.json();
 
           if (!result.success) {

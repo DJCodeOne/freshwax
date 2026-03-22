@@ -575,7 +575,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   
   .label {
     font-size: 0.875rem;
-    color: #6b7280;
+    color: #d1d5db;
     margin: 0 0 1rem;
   }
   
@@ -665,7 +665,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   
   .price-label {
     font-size: 0.6875rem;
-    color: #6b7280;
+    color: #d1d5db;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -803,7 +803,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         
         // Check for customer login
         var customerId = null;
-        try { customerId = localStorage.getItem('fw_customer_id') || localStorage.getItem('fw_user_id'); } catch (e) {}
+        try { customerId = localStorage.getItem('fw_customer_id') || localStorage.getItem('fw_user_id'); } catch (e) { /* Non-critical: storage may be unavailable in private browsing */ }
         if (!customerId) {
           window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
           return;
@@ -858,7 +858,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         
         // Save cart
         cart.items = items;
-        try { localStorage.setItem('freshwax_cart', JSON.stringify(cart)); } catch (e) {}
+        try { localStorage.setItem('freshwax_cart', JSON.stringify(cart)); } catch (e) { /* Non-critical: storage may be unavailable in private browsing */ }
         
         // Update cart count in header
         var cartCountEl = document.querySelector('.cart-count');

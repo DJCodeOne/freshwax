@@ -1302,7 +1302,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }
   
   .profile-bio.empty {
-    color: #6b7280;
+    color: #d1d5db;
     font-style: italic;
     font-size: 0.9rem;
   }
@@ -1662,7 +1662,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   .activity-order {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: #d1d5db;
     margin-top: 0.25rem;
     font-family: monospace;
   }
@@ -2534,7 +2534,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   .small-text {
     font-size: 0.8125rem;
-    color: #6b7280;
+    color: #d1d5db;
     margin-top: 0.25rem;
   }
 
@@ -2804,7 +2804,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: partnerId, ...data })
       });
-      
+
+      if (!response.ok) throw new Error('Save profile failed: ' + response.status);
       const result = await response.json();
       
       if (result.success) {
@@ -2889,6 +2890,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) }
       });
 
+      if (!response.ok) throw new Error('Stripe connect failed: ' + response.status);
       const result = await response.json();
 
       if (result.success && result.onboardingUrl) {
@@ -2919,6 +2921,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) }
       });
 
+      if (!response.ok) throw new Error('Stripe refresh link failed: ' + response.status);
       const result = await response.json();
 
       if (result.success && result.onboardingUrl) {
@@ -3043,6 +3046,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!response.ok) throw new Error('PayPal link failed: ' + response.status);
       const result = await response.json();
       if (result.success) {
         window.location.reload();
@@ -3080,8 +3084,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         paypalEmail: newEmail
       })
     }))
-    .then(res => res.json())
-    .then(result => {
+    .then(function(res) { if (!res.ok) { console.error('PayPal update failed:', res.status); return null; } return res.json(); })
+    .then(function(result) {
+      if (!result) return;
       if (result.success) {
         window.location.reload();
       } else {
@@ -3090,7 +3095,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         paypalChangeBtn.disabled = false;
       }
     })
-    .catch(e => {
+    .catch(function(e) {
       console.error('PayPal update error:', e);
       alert('Failed to update. Please try again.');
       paypalChangeBtn.textContent = 'Change Email';
@@ -3118,6 +3123,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
+        if (!response.ok) throw new Error('Set payout method failed: ' + response.status);
         const result = await response.json();
 
         if (result.success) {
@@ -3160,6 +3166,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!response.ok) throw new Error('Save payout method failed: ' + response.status);
       const result = await response.json();
 
       if (result.success) {
@@ -3247,6 +3254,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!response.ok) throw new Error('Save shipping failed: ' + response.status);
       const result = await response.json();
 
       if (result.success) {

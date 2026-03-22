@@ -665,6 +665,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       // Fetch seller data
       try {
         const response = await fetch(`/api/admin/vinyl/seller/?id=${sellerId}`);
+        if (!response.ok) throw new Error('Load seller failed: ' + response.status);
         const data = await response.json();
 
         if (data.success && data.seller) {
@@ -710,6 +711,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         })
       });
 
+      if (!response.ok) throw new Error('Save seller failed: ' + response.status);
       const result = await response.json();
 
       if (result.success) {
@@ -737,6 +739,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           body: JSON.stringify({ action: 'suspend', sellerId })
         });
 
+        if (!response.ok) throw new Error('Suspend seller failed: ' + response.status);
         const result = await response.json();
 
         if (result.success) {
@@ -764,6 +767,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           body: JSON.stringify({ action: 'unsuspend', sellerId })
         });
 
+        if (!response.ok) throw new Error('Unsuspend seller failed: ' + response.status);
         const result = await response.json();
 
         if (result.success) {

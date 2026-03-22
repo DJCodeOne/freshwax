@@ -1747,6 +1747,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }, { once: true });
   </script>
 
+  <!-- Universal modal focus trap (a11y: Tab cycling, focus restore) -->
+  <script is:inline src="/modal-focus-trap.js"></script>
+
   <slot name="scripts" />
 </body>
 </html>

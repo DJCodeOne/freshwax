@@ -267,6 +267,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         const response = await fetch('/api/pro/dashboard-data/?type=overview', {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
+        if (!response.ok) return;
         const data = await response.json();
         if (!data.success) return;
 

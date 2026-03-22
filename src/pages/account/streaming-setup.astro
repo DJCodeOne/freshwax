@@ -1080,7 +1080,7 @@ const firebaseConfig = {
   }
 
   .form-row input::placeholder {
-    color: #6b7280;
+    color: #d1d5db;
   }
 
   .input-with-btn {
@@ -1394,6 +1394,7 @@ const firebaseConfig = {
       const response = await fetch(`/api/get-user-type/?uid=${user.uid}`, {
         headers: { 'Authorization': `Bearer ${_idToken}` }
       });
+      if (!response.ok) throw new Error('User type fetch failed: ' + response.status);
       const result = await response.json();
       
       const isDj = result.roles?.dj === true || result.roles?.artist === true;
@@ -1558,6 +1559,7 @@ const firebaseConfig = {
 
     try {
       const response = await fetch('/api/relay-sources/');
+      if (!response.ok) throw new Error('Relay sources fetch failed: ' + response.status);
       const data = await response.json();
 
       if (data.sources && data.sources.length > 0) {
@@ -1756,5 +1758,7 @@ const firebaseConfig = {
     }
   }
 </script>
+<!-- Universal modal focus trap (a11y: Tab cycling, focus restore) -->
+<script is:inline src="/modal-focus-trap.js"></script>
 </body>
 </html>

@@ -262,7 +262,7 @@ const merchItemList = {
 
         <button id="clearFilters" class="clear-btn">Clear</button>
 
-        <div class="products-count">
+        <div class="products-count" aria-live="polite" aria-atomic="true">
           <span id="visibleCount">{products.length}</span> / {products.length}
         </div>
 
@@ -379,7 +379,7 @@ const merchItemList = {
   </div>
 
   <!-- Quick View / Buy Modal -->
-  <div id="buyModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalName">
+  <div id="buyModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalName" data-has-focus-trap="true">
     <div class="modal-box">
       <button class="modal-close" aria-label="Close">&times;</button>
       

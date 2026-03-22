@@ -102,6 +102,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   async function loadListings() {
     try {
       const response = await fetch(`/api/vinyl/listing/?sellerId=${currentUser.uid}`);
+      if (!response.ok) throw new Error('Listings fetch failed: ' + response.status);
       const data = await response.json();
 
       if (!data.success) {
@@ -270,6 +271,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!response.ok) throw new Error('Publish failed: ' + response.status);
       const result = await response.json();
       if (!result.success) {
         throw new Error(result.error);
@@ -297,6 +299,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!response.ok) throw new Error('Unpublish failed: ' + response.status);
       const result = await response.json();
       if (!result.success) {
         throw new Error(result.error);
@@ -323,6 +326,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!response.ok) throw new Error('Delete listing failed: ' + response.status);
       const result = await response.json();
       if (!result.success) {
         throw new Error(result.error);

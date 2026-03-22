@@ -368,26 +368,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <div class="form-row">
               <div class="form-group">
                 <label for="firstName">First Name</label>
-                <input type="text" id="firstName" name="firstName" maxlength="30" required aria-required="true">
+                <input type="text" id="firstName" name="firstName" maxlength="30" required aria-required="true" autocomplete="given-name">
               </div>
               <div class="form-group">
                 <label for="lastName">Last Name</label>
-                <input type="text" id="lastName" name="lastName" maxlength="30" required aria-required="true">
+                <input type="text" id="lastName" name="lastName" maxlength="30" required aria-required="true" autocomplete="family-name">
               </div>
             </div>
             <div class="form-group">
               <label for="displayName">Display Name</label>
-              <input type="text" id="displayName" name="displayName" placeholder="How you appear on the site" maxlength="15" required aria-required="true">
+              <input type="text" id="displayName" name="displayName" placeholder="How you appear on the site" maxlength="15" required aria-required="true" autocomplete="nickname">
               <p class="field-hint">This is how you'll be known across <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span> (max 15 characters)</p>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" name="email" readonly required aria-required="true">
+                <input type="email" id="email" name="email" readonly required aria-required="true" autocomplete="email">
               </div>
               <div class="form-group">
                 <label for="phone">Phone</label>
-                <input type="tel" id="phone" name="phone" maxlength="20" required aria-required="true">
+                <input type="tel" id="phone" name="phone" maxlength="20" required aria-required="true" autocomplete="tel">
               </div>
             </div>
             
@@ -401,7 +401,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <div class="form-group" style="flex: 1; margin-bottom: 0;">
                   <label for="postcodeSearch">Find Address by Postcode</label>
                   <div style="display: flex; gap: 0.75rem;">
-                    <input type="text" id="postcodeSearch" placeholder="E1 6AN" style="max-width: 140px; text-transform: uppercase;" required aria-required="true" aria-describedby="lookupError lookupSuccess">
+                    <input type="text" id="postcodeSearch" placeholder="E1 6AN" style="max-width: 140px; text-transform: uppercase;" required aria-required="true" aria-describedby="lookupError lookupSuccess" autocomplete="postal-code">
                     <button type="button" id="lookupBtn" class="lookup-btn">Verify</button>
                   </div>
                   <div id="lookupError" class="lookup-error"></div>
@@ -413,30 +413,30 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <legend class="sr-only">Delivery Address</legend>
                 <div class="form-group" style="margin-bottom: 0.5rem;">
                   <label for="address1">Address Line 1</label>
-                  <input type="text" id="address1" name="address1" placeholder="Street address" maxlength="100" required aria-required="true">
+                  <input type="text" id="address1" name="address1" placeholder="Street address" maxlength="100" required aria-required="true" autocomplete="address-line1">
                 </div>
                 <div class="form-group">
                   <label for="address2">Address Line 2 (Optional)</label>
-                  <input type="text" id="address2" name="address2" placeholder="Flat, unit, building, etc." maxlength="100">
+                  <input type="text" id="address2" name="address2" placeholder="Flat, unit, building, etc." maxlength="100" autocomplete="address-line2">
                 </div>
                 <div class="form-row">
                   <div class="form-group">
                     <label for="city">City</label>
-                    <input type="text" id="city" name="city" maxlength="50" required aria-required="true">
+                    <input type="text" id="city" name="city" maxlength="50" required aria-required="true" autocomplete="address-level2">
                   </div>
                   <div class="form-group">
                     <label for="county">County</label>
-                    <input type="text" id="county" name="county" maxlength="50" required aria-required="true">
+                    <input type="text" id="county" name="county" maxlength="50" required aria-required="true" autocomplete="address-level1">
                   </div>
                 </div>
                 <div class="form-row">
                   <div class="form-group">
                     <label for="postcode">Postcode</label>
-                    <input type="text" id="postcode" name="postcode" style="text-transform: uppercase;" maxlength="10" required aria-required="true">
+                    <input type="text" id="postcode" name="postcode" style="text-transform: uppercase;" maxlength="10" required aria-required="true" autocomplete="postal-code">
                   </div>
                   <div class="form-group">
                     <label for="country">Country</label>
-                    <select id="country" name="country">
+                    <select id="country" name="country" autocomplete="country-name">
                       <option value="United Kingdom" selected>United Kingdom</option>
                       <option value="Ireland">Ireland</option>
                       <option value="United States">United States</option>
@@ -861,6 +861,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           'Authorization': `Bearer ${idToken}`
         }
       });
+      if (!response.ok) throw new Error('Profile fetch failed: ' + response.status);
       const result = await response.json();
 
       if (result.success && result.profile) {
@@ -1033,6 +1034,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           'Authorization': `Bearer ${idToken}`
         }
       });
+      if (!response.ok) throw new Error('Orders fetch failed: ' + response.status);
       const data = await response.json();
 
       if (data.success) {
@@ -1061,6 +1063,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const response = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(userId)}`, {
         headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
       });
+      if (!response.ok) throw new Error('User type fetch failed: ' + response.status);
       const data = await response.json();
 
       if (data.success) {
@@ -1747,7 +1750,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   .plus-modal .referral-note,
   .plus-modal .referral-expires {
-    color: #6b7280;
+    color: #d1d5db;
     font-size: 0.75rem;
     margin-top: 0.5rem;
     text-align: center;
@@ -1905,7 +1908,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   .goplus-secure {
     margin: 0.75rem 0 0;
     font-size: 0.75rem;
-    color: #6b7280;
+    color: #d1d5db;
   }
 
   /* Promo Code Section */
@@ -1996,7 +1999,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   .discounted-price .original-price {
     font-size: 1.1rem;
-    color: #6b7280;
+    color: #d1d5db;
     text-decoration: line-through;
   }
 
@@ -2771,7 +2774,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }
 
   .dl-status-filename {
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 0.8rem;
     margin: 0 0 0.5rem 0;
     word-break: break-all;

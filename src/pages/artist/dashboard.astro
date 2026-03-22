@@ -1145,7 +1145,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   .action-card.vinyl-card .card-body p {
     font-size: 0.8rem;
-    color: #6b7280;
+    color: #d1d5db;
   }
 
   .action-card.vinyl-card .card-arrow {
@@ -1260,7 +1260,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   
   .action-card.merch-card .card-body p {
     font-size: 0.8rem;
-    color: #6b7280;
+    color: #d1d5db;
   }
   
   .action-card.merch-card .card-arrow {
@@ -1330,7 +1330,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   .action-card.compact .card-body h3 { font-size: 1rem; }
   .action-card.compact .card-body p { font-size: 0.875rem; }
   
-  .card-arrow { font-size: 1.5rem; color: #6b7280; transition: transform 0.2s; }
+  .card-arrow { font-size: 1.5rem; color: #d1d5db; transition: transform 0.2s; }
   .action-card:hover .card-arrow { transform: translateX(4px); color: #fff; }
   .action-card.primary .card-arrow { color: #d1d5db; }
   .action-card.primary:hover .card-arrow { color: #fff; }
@@ -1472,6 +1472,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         const response = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(user.uid)}`, {
           headers: { 'Authorization': `Bearer ${_idToken}` }
         });
+        if (!response.ok) throw new Error('Profile fetch failed: ' + response.status);
         const profile = await response.json();
 
         // If they have any partner role, set the cookie and reload

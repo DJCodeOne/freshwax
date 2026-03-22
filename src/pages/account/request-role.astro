@@ -454,6 +454,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         const response = await fetch('/api/user/dashboard-access/', {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
+        if (!response.ok) throw new Error('Dashboard access failed: ' + response.status);
         const data = await response.json();
         if (!data.success) throw new Error(data.error || 'Failed to load user data');
 
@@ -596,6 +597,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         const response = await fetch(`/api/dj/eligibility/?action=checkEligibility&uid=${uid}`, {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
+        if (!response.ok) throw new Error('Eligibility check failed: ' + response.status);
         const data = await response.json();
 
         if (data.success) {
@@ -642,6 +644,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
+        if (!response.ok) throw new Error('Artist request failed: ' + response.status);
         const data = await response.json();
         if (data.success) {
           alert('Request submitted! We\'ll review it shortly.');
@@ -678,6 +681,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
+        if (!response.ok) throw new Error('Merch seller request failed: ' + response.status);
         const data = await response.json();
         if (data.success) {
           alert('Request submitted! We\'ll review it shortly.');
@@ -715,6 +719,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
+        if (!response.ok) throw new Error('Vinyl seller request failed: ' + response.status);
         const data = await response.json();
         if (data.success) {
           alert('Request submitted! We\'ll review it shortly.');
@@ -748,6 +753,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
+        if (!response.ok) throw new Error('Bypass request failed: ' + response.status);
         const data = await response.json();
         if (data.success) {
           alert('Bypass request submitted! We\'ll review it shortly.');

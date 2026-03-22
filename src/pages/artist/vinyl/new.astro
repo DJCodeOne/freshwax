@@ -435,6 +435,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const response = await fetch(`/api/get-user-type/?uid=${user.uid}`, {
         headers: { 'Authorization': `Bearer ${_idToken}` }
       });
+      if (!response.ok) throw new Error('User type fetch failed: ' + response.status);
       const data = await response.json();
       if (!data.isVinylSeller) {
         alert('You need to be an approved vinyl seller to list records.');
@@ -1130,6 +1131,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           body: imgData
         });
 
+        if (!response.ok) throw new Error('Image upload failed: ' + response.status);
         const result = await response.json();
         if (!result.success) {
           throw new Error(result.error || 'Failed to upload image');
@@ -1161,6 +1163,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             body: audioData
           });
 
+          if (!response.ok) throw new Error('Audio upload failed: ' + response.status);
           const result = await response.json();
           if (!result.success) {
             throw new Error(result.error || 'Failed to upload audio');
@@ -1210,6 +1213,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         body: JSON.stringify(listingData)
       });
 
+      if (!createResponse.ok) throw new Error('Create listing failed: ' + createResponse.status);
       const createResult = await createResponse.json();
       if (!createResult.success) {
         throw new Error(createResult.error || 'Failed to create listing');
@@ -1713,7 +1717,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }
 
   .sale-preview .original-price {
-    color: #6b7280;
+    color: #d1d5db;
     text-decoration: line-through;
     font-size: 1rem;
   }

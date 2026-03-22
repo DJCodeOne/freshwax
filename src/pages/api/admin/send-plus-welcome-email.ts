@@ -116,20 +116,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                       ${plusId ? `
                       <tr>
-                        <td style="color: #9ca3af; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;" class="text-muted border-subtle">Plus ID</td>
+                        <td style="color: #d1d5db; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;" class="text-muted border-subtle">Plus ID</td>
                         <td style="color: #ffffff; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151; text-align: right; font-family: monospace;" class="text-primary border-subtle">${esc(plusId)}</td>
                       </tr>
                       ` : ''}
                       <tr>
-                        <td style="color: #9ca3af; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;" class="text-muted border-subtle">Registered</td>
+                        <td style="color: #d1d5db; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;" class="text-muted border-subtle">Registered</td>
                         <td style="color: #ffffff; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151; text-align: right;" class="text-primary border-subtle">${subscribedDateStr} at ${subscribedTimeStr}</td>
                       </tr>
                       <tr>
-                        <td style="color: #9ca3af; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;" class="text-muted border-subtle">Valid Until</td>
+                        <td style="color: #d1d5db; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;" class="text-muted border-subtle">Valid Until</td>
                         <td style="color: #22c55e; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151; text-align: right; font-weight: 600;" class="border-subtle">${expiresDateStr}</td>
                       </tr>
                       <tr>
-                        <td style="color: #9ca3af; font-size: 14px; padding: 8px 0;" class="text-muted">Subscription</td>
+                        <td style="color: #d1d5db; font-size: 14px; padding: 8px 0;" class="text-muted">Subscription</td>
                         <td style="color: #f59e0b; font-size: 14px; padding: 8px 0; text-align: right; font-weight: 600;">Plus Annual (\u00a310/year)</td>
                       </tr>
                     </table>

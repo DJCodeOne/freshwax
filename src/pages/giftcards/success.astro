@@ -72,6 +72,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           body: JSON.stringify({ paypalOrderId })
         });
 
+        if (!response.ok) throw new Error('PayPal capture failed: ' + response.status);
         const result = await response.json();
         if (result.success) {
           loadingState.style.display = 'none';
@@ -113,6 +114,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         await new Promise(resolve => setTimeout(resolve, delay));
 
         const response = await fetch(`/api/giftcards/verify-session/?session_id=${sessionId}`);
+        if (!response.ok) {
+          console.error('Verify session failed:', response.status);
+          continue;
+        }
         const result = await response.json();
         if (result.success && result.giftCard) {
           loadingState.style.display = 'none';

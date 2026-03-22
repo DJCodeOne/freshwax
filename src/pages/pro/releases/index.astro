@@ -316,6 +316,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         const response = await fetch('/api/pro/dashboard-data/?type=releases', {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
+        if (!response.ok) throw new Error('Load releases failed: ' + response.status);
         const data = await response.json();
 
         if (!data.success) throw new Error(data.error || 'Failed to load releases');

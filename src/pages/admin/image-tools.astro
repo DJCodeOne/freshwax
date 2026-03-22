@@ -357,6 +357,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       if (showAllCheckbox.checked) params.set('showAll', 'true');
 
       const res = await fetch(`/api/admin/r2-image-scan/?${params}`);
+      if (!res.ok) throw new Error('Image scan failed: ' + res.status);
       const data = await res.json();
 
       if (!data.success) {
@@ -447,6 +448,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           body: JSON.stringify({ keys: batch, deleteOriginals }),
         });
 
+        if (!res.ok) { addLog('Batch ' + (b + 1) + ' HTTP error: ' + res.status, 'error'); continue; }
         const data = await res.json();
 
         if (!data.success) {
@@ -669,6 +671,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         }),
       });
 
+      if (!res.ok) throw new Error('Migration request failed: ' + res.status);
       const data = await res.json();
 
       if (!data.success) {

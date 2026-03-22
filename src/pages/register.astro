@@ -1182,6 +1182,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
+        if (!initResponse.ok) throw new Error('Google register failed: ' + initResponse.status);
         const initData = await initResponse.json();
 
         if (!initData.success) {
@@ -1396,6 +1397,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
+        if (!initResponse.ok) throw new Error('Registration init failed: ' + initResponse.status);
         const initData = await initResponse.json();
         if (!initData.success) {
           throw new Error(initData.error || 'Failed to create user profile');

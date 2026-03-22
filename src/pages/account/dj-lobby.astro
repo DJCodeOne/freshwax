@@ -2067,6 +2067,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     
     try {
       const response = await fetch(`/api/admin/bypass-requests/?action=status&userId=${userInfo.uid}`);
+      if (!response.ok) throw new Error('Bypass status fetch failed: ' + response.status);
       const result = await response.json();
       
       if (result.success) {
@@ -2150,7 +2151,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           bestMixLikes: currentBypassStatus?.bestMixLikes || 0
         })
       });
-      
+
+      if (!response.ok) throw new Error('Bypass request failed: ' + response.status);
       const result = await response.json();
       
       if (result.success) {
@@ -2183,6 +2185,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!response.ok) throw new Error('Cancel bypass failed: ' + response.status);
       const result = await response.json();
       if (result.success) {
         await checkBypassStatus(currentBypassStatus || {});
@@ -2253,6 +2256,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
 
+      if (!response.ok) throw new Error('Access code failed: ' + response.status);
       const result = await response.json();
 
       if (result.success) {
@@ -3155,6 +3159,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           isCurrentlyLive: !!currentStream
         })
       });
+      if (!response.ok) throw new Error('Chat cleanup failed: ' + response.status);
       const result = await response.json();
       if (result.cleaned) {
         log('Chat cleanup complete via API:', result.messagesDeleted, 'messages deleted');
@@ -3248,6 +3253,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const cacheBuster = Date.now();
       const freshParam = skipCache ? '&fresh=1' : '';
       const response = await fetch(`/api/livestream/status/?_t=${cacheBuster}${freshParam}`);
+      if (!response.ok) throw new Error('Stream status fetch failed: ' + response.status);
       const result = await response.json();
       
       const statusDot = document.querySelector('.status-dot');
@@ -3703,6 +3709,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       // Use listeners endpoint (Firebase/KV-backed) for accurate counts
       const response = await fetch(`/api/livestream/listeners/?streamId=${streamId}`);
+      if (!response.ok) throw new Error('Listeners fetch failed: ' + response.status);
       const result = await response.json();
 
       const newCount = result.count || 0;
@@ -4275,6 +4282,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
+        if (!response.ok) throw new Error('End stream failed: ' + response.status);
         const result = await response.json();
         if (result.success) {
           // Show countdown while stream terminates
@@ -5077,6 +5085,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (!existingSlotId) {
           // Fetch user's current bookings to check
           const checkResponse = await fetch(`/api/livestream/slots/?djId=${currentUser.uid}`);
+          if (!checkResponse.ok) throw new Error('Slots check failed: ' + checkResponse.status);
           const checkResult = await checkResponse.json();
 
           if (checkResult.success && checkResult.slots?.length > 0) {
@@ -5105,6 +5114,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             })
           });
 
+          if (!keyResponse.ok) throw new Error('Stream key fetch failed: ' + keyResponse.status);
           const keyResult = await keyResponse.json();
           if (keyResult.success && keyResult.streamKey) {
             if (mySlot) mySlot.streamKey = keyResult.streamKey;
@@ -5138,6 +5148,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             })
           });
 
+          if (!bookResponse.ok) throw new Error('Book slot failed: ' + bookResponse.status);
           const bookResult = await bookResponse.json();
 
           if (!bookResult.success) {
@@ -5243,6 +5254,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             })
           });
 
+          if (!bookResponse.ok) throw new Error('Auto-book slot failed: ' + bookResponse.status);
           const bookResult = await bookResponse.json();
 
           if (!bookResult.success) {
@@ -5395,6 +5407,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             targetDjName: currentStream.djName
           })
         });
+        if (!response.ok) throw new Error('Takeover request failed: ' + response.status);
         const result = await response.json();
         if (!result.success) throw new Error(result.error);
 
@@ -5471,6 +5484,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           const response = await fetch('/api/livestream/slots/?action=checkStreamKey&djId=' + currentUser.uid, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
+          if (!response.ok) throw new Error('Stream key check failed: ' + response.status);
           const result = await response.json();
           if (result.success && result.streamKey) {
             streamKeyToPass = result.streamKey;
@@ -5523,7 +5537,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ action: 'endStream', djId: currentUser.uid })
         });
-        
+
+        if (!response.ok) throw new Error('End stream failed: ' + response.status);
         const result = await response.json();
         if (result.success) {
           alert('Stream ended');
@@ -6147,6 +6162,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
+        if (!bookResponse.ok) throw new Error('Book slot failed: ' + bookResponse.status);
         var bookResult = await bookResponse.json();
         if (!bookResult.success) {
           throw new Error(bookResult.error || 'Failed to book slot');
@@ -6389,5 +6405,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
 <!-- HLS.js for video playback - loaded at end to prevent render blocking -->
 <script async is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
+<!-- Universal modal focus trap (a11y: Tab cycling, focus restore) -->
+<script is:inline src="/modal-focus-trap.js"></script>
 </body>
 </html>
