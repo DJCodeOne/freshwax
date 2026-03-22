@@ -16,6 +16,10 @@ let pageBreadcrumbName = 'Vinyl Details';
 let pageDescription = 'Browse vinyl records for sale on Fresh Wax Crates. Jungle, drum & bass, and breakbeat vinyl from independent sellers.';
 let pageImage: string | undefined;
 let productMeta: Record<string, unknown> | undefined = undefined;
+let vinylTitle = '';
+let vinylArtist = '';
+let vinylPrice = '';
+let hasServerData = false;
 
 try {
   const res = await fetch(`https://vinyl-api.davidhagon.workers.dev/listings/${id}`, {
@@ -25,13 +29,21 @@ try {
     const data = await res.json();
     if (data.success && data.listing) {
       const l = data.listing;
-      pageTitle = `${l.title || 'Vinyl'} by ${l.artist || 'Unknown Artist'} - Crates`;
-      pageBreadcrumbName = `${l.title || 'Vinyl'} by ${l.artist || 'Unknown Artist'}`;
-      pageDescription = `${l.title || 'Vinyl'} by ${l.artist || 'Unknown Artist'}`;
+      vinylTitle = l.title || 'Vinyl';
+      vinylArtist = l.artist || 'Unknown Artist';
+      hasServerData = true;
+      pageTitle = `${vinylTitle} by ${vinylArtist} - Crates`;
+      pageBreadcrumbName = `${vinylTitle} by ${vinylArtist}`;
+      pageDescription = `${vinylTitle} by ${vinylArtist}`;
       if (l.format) pageDescription += ` (${l.format})`;
       pageDescription += '. Available on Fresh Wax Crates.';
+      // Ensure description meets 50 character minimum
+      if (pageDescription.length < 50) {
+        pageDescription += ' Browse jungle, drum & bass, and breakbeat vinyl.';
+      }
       if (l.images?.[0]) pageImage = l.images[0];
       if (l.price) {
+        vinylPrice = `£${Number(l.price).toFixed(2)}`;
         productMeta = {
           price: l.price,
           currency: 'GBP',
@@ -80,8 +92,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         Back to Crates
       </a>
 
-      <!-- Loading State -->
-      <div id="loadingState" class="loading-state">
+      <!-- Loading State (hidden when server data is available) -->
+      <div id="loadingState" class="loading-state" style={hasServerData ? 'display: none;' : ''}>
         <div class="spinner"></div>
         <p>Loading vinyl details...</p>
       </div>
@@ -94,13 +106,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         <a href="/crates/" class="back-btn">Browse Crates</a>
       </div>
 
-      <!-- Content -->
-      <div id="vinylContent" class="vinyl-content" style="display: none;">
+      <!-- Content (shown immediately when server data is available) -->
+      <div id="vinylContent" class="vinyl-content" style={hasServerData ? '' : 'display: none;'}>
         <div class="vinyl-grid">
           <!-- LEFT: Images + Buy Button (like ReleasePlate) -->
           <div class="images-section">
             <div class="main-image" id="mainImage">
-              <img src="/place-holder.webp" alt={pageBreadcrumbName} id="mainImageImg" width="350" height="350" fetchpriority="high" decoding="async" />
+              <img src={pageImage || '/place-holder.webp'} alt={pageBreadcrumbName} id="mainImageImg" width="350" height="350" fetchpriority="high" decoding="async" />
               <div class="sale-badge" id="saleBadge" style="display: none;">SALE</div>
             </div>
             <div class="image-thumbnails" id="imageThumbnails"></div>
@@ -122,13 +134,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <!-- RIGHT: Details + Waveform (like ReleasePlate) -->
           <div class="details-section">
             <div class="listing-header">
-              <h1 id="vinylTitle">Loading...</h1>
-              <p class="vinyl-artist" id="vinylArtist">-</p>
+              <h1 id="vinylTitle">{hasServerData ? vinylTitle : 'Loading...'}</h1>
+              <p class="vinyl-artist" id="vinylArtist">{hasServerData ? vinylArtist : '-'}</p>
             </div>
 
             <div class="price-section">
               <div class="price-row">
-                <span class="current-price" id="currentPrice">£0.00</span>
+                <span class="current-price" id="currentPrice">{hasServerData && vinylPrice ? vinylPrice : '£0.00'}</span>
                 <span class="original-price" id="originalPrice" style="display: none;">£0.00</span>
                 <span class="discount-badge" id="discountBadge" style="display: none;">-0%</span>
               </div>
@@ -309,6 +321,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     background: linear-gradient(to bottom, #1f2937, #111827);
     border: 2px solid #fff;
     padding: 1.5rem;
+    contain: layout;
+    min-height: 400px;
   }
 
   @media (min-width: 768px) {
@@ -1047,7 +1061,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   }
 </style>
 
-<script is:inline define:vars={{ listingId: id }} nonce={nonce}>
+<script is:inline define:vars={{ listingId: id, serverDataLoaded: hasServerData }} nonce={nonce}>
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -1623,14 +1637,20 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   }
 
   // Reset states before loading
-  function resetStates() {
-    const loadingState = document.getElementById('loadingState');
-    const errorState = document.getElementById('errorState');
-    const content = document.getElementById('vinylContent');
+  function resetStates(skipLoadingFlash) {
+    var loadingState = document.getElementById('loadingState');
+    var errorState = document.getElementById('errorState');
+    var content = document.getElementById('vinylContent');
 
-    if (loadingState) loadingState.style.display = 'block';
+    if (skipLoadingFlash) {
+      // Server already rendered content — keep it visible, no spinner
+      if (loadingState) loadingState.style.display = 'none';
+      if (content) content.style.display = 'block';
+    } else {
+      if (loadingState) loadingState.style.display = 'block';
+      if (content) content.style.display = 'none';
+    }
     if (errorState) errorState.style.display = 'none';
-    if (content) content.style.display = 'none';
 
     // Stop any playing audio and clean up
     if (currentAudio) {
@@ -1661,7 +1681,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     if (!document.getElementById('vinylContent')) {
       return;
     }
-    resetStates();
+    resetStates(serverDataLoaded);
     loadListing();
   }
 
