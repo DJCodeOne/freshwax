@@ -39,6 +39,7 @@ try {
           condition: l.mediaCondition === 'M' || l.mediaCondition === 'NM' ? 'NewCondition' as const : 'UsedCondition' as const,
           brand: l.artist || 'Various',
           category: 'Vinyl Records',
+          priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         };
       }
     }
@@ -1161,6 +1162,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         'priceCurrency': 'GBP',
         'availability': 'https://schema.org/InStock',
         'itemCondition': 'https://schema.org/UsedCondition',
+        'priceValidUntil': new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         'seller': {
           '@type': 'Person',
           'name': l.sellerName || 'Independent Seller'

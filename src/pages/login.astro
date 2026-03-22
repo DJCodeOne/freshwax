@@ -38,6 +38,11 @@ const csrfToken = Astro.locals.csrfToken || '';
   <title>Login - Fresh Wax</title>
   <meta name="robots" content="noindex" />
   <meta name="description" content="Sign in to your Fresh Wax account to buy vinyl, stream mixes and access your dashboard" />
+  <meta property="og:title" content="Login - Fresh Wax" />
+  <meta property="og:description" content="Sign in to your Fresh Wax account to buy vinyl, stream mixes and access your dashboard" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={`${SITE_URL}/login/`} />
+  <meta property="og:site_name" content="Fresh Wax" />
   <link rel="canonical" href={`${SITE_URL}/login/`} />
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>

@@ -27,6 +27,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <title>Register | Fresh Wax</title>
   <meta name="robots" content="noindex" />
   <meta name="description" content="Create your Fresh Wax account to buy vinyl, stream live DJ sets and more" />
+  <meta property="og:title" content="Register | Fresh Wax" />
+  <meta property="og:description" content="Create your Fresh Wax account to buy vinyl, stream live DJ sets and more" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={`${SITE_URL}/register/`} />
+  <meta property="og:site_name" content="Fresh Wax" />
   <link rel="canonical" href={`${SITE_URL}/register/`} />
   <!-- reCAPTCHA v3 - loaded dynamically if site key is configured -->
 </head>
