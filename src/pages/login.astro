@@ -234,10 +234,8 @@ const csrfToken = Astro.locals.csrfToken || '';
           }
         });
         
-        // Clear stale cookies (will be reset on login)
-        document.cookie = 'userId=; path=/; max-age=0; SameSite=Lax; Secure';
-        document.cookie = 'customerId=; path=/; max-age=0; SameSite=Lax; Secure';
-        document.cookie = 'partnerId=; path=/; max-age=0; SameSite=Lax; Secure';
+        // Clear stale auth cookies (HttpOnly — must go via server API)
+        if (window.__setAuthCookies) window.__setAuthCookies({ action: 'logout' });
         
       } catch (_e) {
         // Cache clear is best-effort; failure is non-critical
@@ -321,10 +319,9 @@ const csrfToken = Astro.locals.csrfToken || '';
           throw new Error(initData.message || 'Failed to initialize user profile');
         }
 
-        // Set cookies
-        const cookieMaxAge = 2592000; // 30 days
-        document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
-        document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+        // Set auth cookies (HttpOnly via server API)
+        var socialToken = await user.getIdToken();
+        if (window.__setAuthCookies) await window.__setAuthCookies({ token: socialToken, action: 'login' });
 
         // Social login users are considered verified
         sessionStorage.removeItem('fw_email_unverified');
@@ -602,24 +599,22 @@ const csrfToken = Astro.locals.csrfToken || '';
             } catch (e) { /* Ignore cache errors */ }
           }
           
-          // Set partnerId cookie if they have any partner role (needed for artist dashboard)
-          if (profile.success && (profile.isPro || profile.roles?.artist || profile.roles?.dj || profile.roles?.merchSupplier || profile.roles?.vinylSeller)) {
-            document.cookie = `partnerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
-          }
-          
-          // Always set userId and customerId cookies
-          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
-          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+          // Set auth cookies (HttpOnly via server API)
+          var hasPartnerRole = profile.success && (profile.isPro || profile.roles?.artist || profile.roles?.dj || profile.roles?.merchSupplier || profile.roles?.vinylSeller);
+          if (window.__setAuthCookies) await window.__setAuthCookies({ token: _idToken, action: 'login', isPartner: !!hasPartnerRole });
 
           // If admin, redirect to admin dashboard (unless a specific redirect was requested)
           if (profile.success && profile.isAdmin && redirectTo === '/account/dashboard') {
             finalRedirect = '/admin';
           }
-          
+
         } catch (err) {
           console.error('[Login] Error fetching user profile:', err);
-          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
-          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+          // Fallback: set basic auth cookies even if profile fetch failed
+          try {
+            var fallbackToken = await user.getIdToken();
+            if (window.__setAuthCookies) await window.__setAuthCookies({ token: fallbackToken, action: 'login' });
+          } catch (_e2) { /* non-critical */ }
         }
         
         // Show success

@@ -450,6 +450,30 @@ const csrfToken = Astro.locals.csrfToken || '';
       })();
     </script>
 
+    <!-- Auth cookie helpers — sets HttpOnly cookies via server-side API -->
+    <script is:inline nonce={nonce}>
+      (function() {
+        /**
+         * Set auth cookies via server-side API (HttpOnly, not readable by JS).
+         * @param {Object} opts - { token, action, isPartner }
+         * action: "login" | "refresh" | "logout" | "set-partner"
+         * Returns a promise resolving to { success, userId } or null on error.
+         */
+        window.__setAuthCookies = function(opts) {
+          var body = {};
+          if (opts.token) body.token = opts.token;
+          if (opts.action) body.action = opts.action;
+          if (opts.isPartner) body.isPartner = true;
+          return fetch('/api/auth/set-session/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            credentials: 'same-origin'
+          }).then(function(r) { return r.json(); }).catch(function() { return null; });
+        };
+      })();
+    </script>
+
     <!-- Cart functionality -->
     <script is:inline src="/freshwax-cart.js" defer nonce={nonce}></script>
 

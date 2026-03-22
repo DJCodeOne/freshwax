@@ -58,6 +58,8 @@ const CSRF_SKIP = new Set([
   // Cron — authenticated via CRON_SECRET / requireAdminAuth
   '/api/cron/weekly-digest/',
   '/api/cron/backup-d1/',
+  // Auth session — sets HttpOnly cookies; validated via Firebase ID token verification
+  '/api/auth/set-session/',
 ]);
 
 /**

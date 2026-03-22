@@ -114,14 +114,16 @@ const nonce = Astro.locals.nonce || '';
 
     document.getElementById('uploadAnotherBtn')?.addEventListener('click', () => location.reload());
 
-    // Get auth token from __session cookie for API calls
-    function getSessionToken() {
-      const match = document.cookie.match(/(?:^|;\s*)__session=([^;]*)/);
-      return match ? match[1] : null;
+    // Get auth token from AdminLayout's Firebase auth (not cookie — __session is HttpOnly)
+    async function getSessionToken() {
+      if (window.getAdminToken) {
+        try { return await window.getAdminToken(); } catch (_e) { /* fall through */ }
+      }
+      return window.ADMIN_KEY || null;
     }
 
     function authHeaders() {
-      const token = getSessionToken();
+      const token = window.ADMIN_KEY || null;
       return token ? { 'Authorization': `Bearer ${token}` } : {};
     }
 

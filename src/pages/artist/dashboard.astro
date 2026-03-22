@@ -1440,26 +1440,25 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         hideAll();
         return;
       }
-      // No server dashboard and no client auth - show login prompt
-      document.cookie = 'partnerId=; path=/; max-age=0; SameSite=Lax; Secure';
+      // No server dashboard and no client auth - clear cookies and show login prompt
+      if (window.__setAuthCookies) window.__setAuthCookies({ action: 'logout' });
       showLogin();
       return;
     }
 
     // User is logged in
 
-    // Always ensure userId cookie is set
-    if (!hasCookie('userId')) {
-      document.cookie = `userId=${user.uid}; path=/; max-age=2592000; SameSite=Lax; Secure`;
-    }
+    // userId cookie is now HttpOnly (set during login via server API)
+    // No client-side set needed here
 
     // Check if partnerId cookie exists and is valid
     const hasPartnerCookie = hasCookie('partnerId');
 
     if (!hasPartnerCookie) {
-      // If server already rendered the dashboard, just set the cookie silently
+      // If server already rendered the dashboard, set the cookie silently via API
       if (serverRenderedDashboard) {
-        document.cookie = `partnerId=${user.uid}; path=/; max-age=2592000; SameSite=Lax; Secure`;
+        var _tok = await user.getIdToken();
+        if (window.__setAuthCookies) window.__setAuthCookies({ token: _tok, action: 'set-partner' });
         hideAll();
         return;
       }
@@ -1475,9 +1474,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (!response.ok) throw new Error('Profile fetch failed: ' + response.status);
         const profile = await response.json();
 
-        // If they have any partner role, set the cookie and reload
+        // If they have any partner role, set the cookie via API and reload
         if (profile.success && (profile.isPro || profile.roles?.artist || profile.roles?.dj || profile.roles?.merchSupplier || profile.roles?.vinylSeller)) {
-          document.cookie = `partnerId=${user.uid}; path=/; max-age=2592000; SameSite=Lax; Secure`;
+          if (window.__setAuthCookies) await window.__setAuthCookies({ token: _idToken, action: 'set-partner' });
           window.location.reload();
         } else {
           // They're logged in but not a partner - show login prompt with message

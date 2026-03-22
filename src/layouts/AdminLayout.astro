@@ -1532,6 +1532,24 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     })();
   </script>
 
+  <!-- Auth cookie helpers — sets HttpOnly cookies via server-side API -->
+  <script is:inline nonce={nonce}>
+    (function() {
+      window.__setAuthCookies = function(opts) {
+        var body = {};
+        if (opts.token) body.token = opts.token;
+        if (opts.action) body.action = opts.action;
+        if (opts.isPartner) body.isPartner = true;
+        return fetch('/api/auth/set-session/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          credentials: 'same-origin'
+        }).then(function(r) { return r.json(); }).catch(function() { return null; });
+      };
+    })();
+  </script>
+
   <!-- Top Navigation Bar -->
   <nav class="admin-topbar" aria-label="Admin navigation">
     <div class="topbar-container">
@@ -1677,8 +1695,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         try {
           const token = await user.getIdToken();
           window.ADMIN_KEY = token;
-          // Refresh __session cookie so SSR admin page auth (form POSTs) works
-          document.cookie = '__session=' + token + '; path=/; max-age=3600; SameSite=Lax; Secure';
+          // Refresh __session cookie so SSR admin page auth (form POSTs) works (HttpOnly)
+          if (window.__setAuthCookies) window.__setAuthCookies({ token: token, action: 'refresh' });
           // Refresh token before it expires (every 45 min)
           if (window._adminTokenRefreshInterval) {
             clearInterval(window._adminTokenRefreshInterval);
@@ -1687,7 +1705,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             if (window._firebaseUser) {
               var freshToken = await window._firebaseUser.getIdToken();
               window.ADMIN_KEY = freshToken;
-              document.cookie = '__session=' + freshToken + '; path=/; max-age=3600; SameSite=Lax; Secure';
+              if (window.__setAuthCookies) window.__setAuthCookies({ token: freshToken, action: 'refresh' });
             }
           }, 45 * 60 * 1000);
         } catch (e){

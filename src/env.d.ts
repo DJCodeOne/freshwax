@@ -640,5 +640,20 @@ declare global {
 
     // ---- YouTube IFrame API callback ----
     onYouTubeIframeAPIReady?: () => void;
+
+    // ---- Auth cookie helper (HttpOnly cookies via server API) ----
+    __setAuthCookies?: (opts: {
+      token?: string;
+      action?: 'login' | 'refresh' | 'logout' | 'set-partner';
+      isPartner?: boolean;
+    }) => Promise<{ success: boolean; userId?: string } | null>;
+
+    // ---- Admin layout auth ----
+    ADMIN_KEY?: string;
+    FIREBASE_CONFIG?: Record<string, string>;
+    _firebaseUser?: FirebaseAuthUser | null;
+    _adminTokenRefreshInterval?: ReturnType<typeof setInterval> | null;
+    getAdminToken?: () => Promise<string>;
+    adminFetch?: (url: string, options?: RequestInit) => Promise<Response>;
   }
 }
