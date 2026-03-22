@@ -8,13 +8,19 @@ export const prerender = false;
 
 import { getDocument } from '../../lib/firebase-rest';
 import { d1GetMerchBySupplierId, d1GetMerchBySupplierName } from '../../lib/d1-catalog';
+import { verifySessionMatch } from '../../lib/session-verify';
 
 // Get D1 database from Cloudflare runtime
 const env = Astro.locals.runtime.env;
 const db = env?.DB;
 
-// Get partner from session - check partnerId first, then userId
-const partnerId = Astro.cookies.get('partnerId')?.value || Astro.cookies.get('userId')?.value || '';
+// Get partner from session — verify cookie matches __session JWT to prevent IDOR
+const sessionCookie = Astro.cookies.get('__session')?.value;
+const rawPartnerId = Astro.cookies.get('partnerId')?.value || '';
+const rawUserId = Astro.cookies.get('userId')?.value || '';
+const partnerId = verifySessionMatch({ session: sessionCookie, partnerId: rawPartnerId })
+  || verifySessionMatch({ session: sessionCookie, userId: rawUserId })
+  || '';
 let partner: Record<string, unknown> | null = null;
 let products: Record<string, unknown>[] = [];
 

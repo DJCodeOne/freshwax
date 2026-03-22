@@ -7,8 +7,11 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { verifySessionMatch } from '../../lib/session-verify';
 
-const partnerId = Astro.cookies.get('partnerId')?.value || '';
+const rawPartnerId = Astro.cookies.get('partnerId')?.value || '';
+const sessionCookie = Astro.cookies.get('__session')?.value;
+const partnerId = verifySessionMatch({ session: sessionCookie, partnerId: rawPartnerId }) || '';
 let partner = null;
 let releases: Record<string, unknown>[] = [];
 

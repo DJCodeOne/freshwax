@@ -11,6 +11,7 @@ import { getDocument, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
 import { d1GetLedgerEntriesByArtist, d1GetMerchBySupplierId, d1GetMerchBySupplierName } from '../../lib/d1-catalog';
 import { getAdminUids } from '../../lib/admin';
+import { verifySessionMatch } from '../../lib/session-verify';
 
 // Service account for ledger queries
 const env = Astro.locals?.runtime?.env;
@@ -29,14 +30,19 @@ const serviceAccountKey = clientEmail && privateKey ? JSON.stringify({
 }) : null;
 
 // Check for partnerId cookie first, then fall back to userId or customerId
-let partnerId = Astro.cookies.get('partnerId')?.value || '';
+// Verify cookie value matches __session JWT to prevent IDOR
+const sessionCookie = Astro.cookies.get('__session')?.value;
+const rawPartnerId = Astro.cookies.get('partnerId')?.value || '';
+const rawUserId = Astro.cookies.get('userId')?.value || '';
+const rawCustomerId = Astro.cookies.get('customerId')?.value || '';
+let partnerId = verifySessionMatch({ session: sessionCookie, partnerId: rawPartnerId }) || '';
 if (!partnerId) {
   // Fallback to userId cookie
-  partnerId = Astro.cookies.get('userId')?.value || '';
+  partnerId = verifySessionMatch({ session: sessionCookie, userId: rawUserId }) || '';
 }
 if (!partnerId) {
   // Fallback to customerId cookie
-  partnerId = Astro.cookies.get('customerId')?.value || '';
+  partnerId = verifySessionMatch({ session: sessionCookie, customerId: rawCustomerId }) || '';
 }
 
 // Debug logging

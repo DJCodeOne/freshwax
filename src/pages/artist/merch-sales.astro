@@ -7,9 +7,12 @@
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
 import { d1GetLedgerEntriesByArtist } from '../../lib/d1-catalog';
+import { verifySessionMatch } from '../../lib/session-verify';
 
-// Get partner from session
-const partnerId = Astro.cookies.get('partnerId')?.value || '';
+// Get partner from session — verify cookie matches __session JWT to prevent IDOR
+const rawPartnerId = Astro.cookies.get('partnerId')?.value || '';
+const sessionCookie = Astro.cookies.get('__session')?.value;
+const partnerId = verifySessionMatch({ session: sessionCookie, partnerId: rawPartnerId }) || '';
 let partner = null;
 let sales: Record<string, unknown>[] = [];
 let products: Record<string, unknown>[] = [];
