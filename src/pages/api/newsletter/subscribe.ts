@@ -1,5 +1,6 @@
 // src/pages/api/newsletter/subscribe.ts
 // Newsletter subscription with GDPR-compliant double opt-in
+// AUTH: Intentionally public — newsletter signup must work for all visitors.
 // 1. Validates consent checkbox
 // 2. Creates subscriber as 'pending_confirmation'
 // 3. Sends confirmation email via Resend

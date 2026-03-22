@@ -1,5 +1,7 @@
 // src/pages/api/contact.ts
 // Contact form endpoint - sends email via Resend
+// AUTH: Intentionally public — contact form must be accessible to unauthenticated
+// visitors. Rate limited to 10 per 15 minutes.
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { Resend } from 'resend';

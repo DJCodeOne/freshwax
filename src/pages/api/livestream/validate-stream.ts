@@ -172,6 +172,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 };
 
 // POST endpoint for MediaMTX HTTP authentication
+// AUTH: Server-to-server auth — MediaMTX sends stream key as the path/password.
+// The stream key is validated against active livestream slots.
 // MediaMTX sends: { user, password, ip, action, path, protocol, id, query }
 // Returns 200 for allowed, non-200 for denied
 export const POST: APIRoute = async ({ request, locals }) => {

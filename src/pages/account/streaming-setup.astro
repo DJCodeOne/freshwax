@@ -27,7 +27,7 @@ const firebaseConfig = {
 </head>
 <body>
   <a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999;padding:8px 16px;background:#e53e3e;color:#fff;font-weight:600;text-decoration:none;border-radius:0 0 4px 0;" onfocus="this.style.cssText='position:fixed;left:0;top:0;z-index:9999;padding:8px 16px;background:#e53e3e;color:#fff;font-weight:600;text-decoration:none;border-radius:0 0 4px 0;'" onblur="this.style.cssText='position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;'">Skip to main content</a>
-  <script is:inline src="/csrf-protect.js"></script>
+  <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
   <main id="main-content">
   <!-- Auth Gate -->
   <div id="authGate" class="auth-gate">
@@ -1759,6 +1759,6 @@ const firebaseConfig = {
   }
 </script>
 <!-- Universal modal focus trap (a11y: Tab cycling, focus restore) -->
-<script is:inline src="/modal-focus-trap.js"></script>
+<script is:inline src="/modal-focus-trap.js" nonce={nonce}></script>
 </body>
 </html>

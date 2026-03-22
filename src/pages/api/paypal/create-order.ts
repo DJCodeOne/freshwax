@@ -1,5 +1,8 @@
 // src/pages/api/paypal/create-order.ts
 // Creates a PayPal order for checkout
+// AUTH: Intentionally public — guest checkout is a core e-commerce feature. The PayPal
+// order only reserves stock; actual payment capture happens via paypal/capture-order.ts
+// which validates payment with PayPal's API.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';

@@ -1,5 +1,8 @@
 // src/pages/api/track-mix-download.ts
 // Tracks DJ mix downloads using atomic increments
+// AUTH: Intentionally public (no auth required) — fire-and-forget analytics counter.
+// Download counts are non-sensitive aggregate metrics. The actual file download
+// (presign-download) requires auth. Rate limiting prevents abuse.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';

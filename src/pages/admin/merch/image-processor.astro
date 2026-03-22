@@ -10,6 +10,7 @@ if (authResult) return Astro.redirect('/login');
 export const prerender = false;
 const csrfToken = Astro.locals.csrfToken || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+const nonce = Astro.locals.nonce || '';
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -124,7 +125,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   </style>
 </head>
 <body>
-  <script is:inline src="/csrf-protect.js"></script>
+  <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
   <header class="header">
     <h1>Fresh <span>Wax</span> Image Processor</h1>
     <nav class="header-nav">

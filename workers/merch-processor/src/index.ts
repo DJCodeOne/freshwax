@@ -220,7 +220,8 @@ export default {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin');
     const ALLOWED = ['https://freshwax.co.uk', 'https://www.freshwax.co.uk', 'https://freshwax.pages.dev'];
-    const allowed = origin && (ALLOWED.includes(origin) || origin.endsWith('.freshwax.pages.dev'));
+    const PAGES_RE = /^https:\/\/[a-z0-9][a-z0-9-]{0,62}\.freshwax\.pages\.dev$/;
+    const allowed = origin && (ALLOWED.includes(origin) || PAGES_RE.test(origin));
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowed ? origin! : ALLOWED[0],
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',

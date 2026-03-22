@@ -193,17 +193,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.forbidden('User mismatch');
     }
 
-    // SECURITY: If credit is applied, verify balance covers the order
+    // SECURITY: Validate credit balance + stock availability in parallel (independent reads)
+    const [creditResult, stockCheck] = await Promise.all([
+      appliedCredit > 0
+        ? getDocument('userCredits', verifiedUserId)
+        : Promise.resolve(null),
+      validateStock(validatedItems)
+    ]);
+
     if (appliedCredit > 0) {
-      const creditData = await getDocument('userCredits', verifiedUserId);
-      const actualBalance = creditData?.balance || 0;
+      const actualBalance = creditResult?.balance || 0;
       if (actualBalance < validatedTotal) {
         return ApiErrors.badRequest('Insufficient credit balance');
       }
     }
 
-    // SECURITY: Validate stock availability before processing order
-    const stockCheck = await validateStock(validatedItems);
     if (!stockCheck.available) {
       return ApiErrors.badRequest('Some items are no longer available');
     }

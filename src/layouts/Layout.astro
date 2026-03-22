@@ -173,7 +173,7 @@ const csrfToken = Astro.locals.csrfToken || '';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.freshwax.co.uk" crossorigin />
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
-    <link rel="preconnect" href="https://js.pusher.com" crossorigin />
+    <!-- Pusher preconnect moved to pages that use it (live, dj-lobby) -->
     <link rel="preconnect" href="https://api.stripe.com" crossorigin />
     <link rel="preconnect" href="https://www.paypal.com" crossorigin />
     <!-- DNS prefetch fallback for browsers that don't support preconnect -->
@@ -1037,7 +1037,7 @@ const csrfToken = Astro.locals.csrfToken || '';
     </style>
 
     <!-- Universal modal focus trap (a11y: Tab cycling, focus restore) -->
-    <script is:inline src="/modal-focus-trap.js"></script>
+    <script is:inline src="/modal-focus-trap.js" nonce={nonce}></script>
 
     <!-- Analytics - moved to end of body to defer JS execution past paint -->
     <Analytics

@@ -158,6 +158,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 };
 
 // POST - Join, leave, or heartbeat as a listener
+// AUTH: Intentionally public — listener tracking counts both authenticated and anonymous
+// viewers. Auth is optional (verified users get their name displayed, anonymous generate anon IDs).
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute
   const clientId = getClientId(request);

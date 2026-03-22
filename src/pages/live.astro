@@ -573,7 +573,7 @@ try {
     </div>
   </div>
 
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     (function() {
       var toggle = document.getElementById('onlineUsersToggle');
       var list = document.getElementById('onlineUsersMobileList');
@@ -1033,7 +1033,7 @@ try {
   <PlaylistModal />
 </Layout>
 
-<script async is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
+<!-- HLS.js loaded dynamically by live-stream.js when stream playback starts -->
 
 <script is:inline type="module">
   import { initSpeedTest } from '/live/speed-test.js';
@@ -2345,6 +2345,7 @@ try {
   let isDjReady = false;
   let slotExpired = false;
   const GRACE_PERIOD_SECONDS = 180; // 3 minutes
+  let lobbyCountdownTimeout = null; // Track recursive setTimeout for cleanup
   
   function updateLobbyCountdown(slot) {
     const countdown = document.getElementById('lobbyCountdownBig');
@@ -2376,8 +2377,8 @@ try {
         } else {
           goLiveBtn.disabled = true;
         }
-        
-        setTimeout(update, 1000);
+
+        lobbyCountdownTimeout = setTimeout(update, 1000);
         return;
       }
       
@@ -2400,11 +2401,11 @@ try {
         
         // DJ can still press ready and go live
         goLiveBtn.disabled = !isDjReady;
-        
-        setTimeout(update, 1000);
+
+        lobbyCountdownTimeout = setTimeout(update, 1000);
         return;
       }
-      
+
       if (isDjReady) {
         // DJ is ready - can go live
         countdown.textContent = 'NOW!';
@@ -3577,6 +3578,10 @@ try {
     if (playlistFallbackTimer) {
       clearTimeout(playlistFallbackTimer);
       playlistFallbackTimer = null;
+    }
+    if (lobbyCountdownTimeout) {
+      clearTimeout(lobbyCountdownTimeout);
+      lobbyCountdownTimeout = null;
     }
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('schedule-updated', handleScheduleUpdated);

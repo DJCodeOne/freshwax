@@ -1,6 +1,7 @@
 ---
 // src/components/Footer.astro
 const currentYear = new Date().getFullYear();
+const nonce = Astro.locals.nonce || '';
 ---
 
 <footer class="bg-gray-900 text-gray-300 relative z-50" role="contentinfo">
@@ -163,4 +164,4 @@ const currentYear = new Date().getFullYear();
   }
 </style>
 
-<script is:inline src="/newsletter-form.js" defer></script>
+<script is:inline src="/newsletter-form.js" defer nonce={nonce}></script>

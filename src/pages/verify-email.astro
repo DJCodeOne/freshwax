@@ -26,7 +26,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     (function() {
       var originalFetch = window.fetch;
       window.fetch = function(input, init) {
@@ -60,7 +60,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     <div class="card">
       <a href="/" class="logo-link">
         <div class="logo-wrapper">
-          <img src="/logo.webp" alt="Fresh Wax" width="120" height="40" decoding="async">
+          <img src="/logo.webp" alt="Fresh Wax" width="120" height="40" loading="lazy" decoding="async">
         </div>
       </a>
 

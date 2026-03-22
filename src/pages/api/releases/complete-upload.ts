@@ -7,10 +7,11 @@ import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sd
 import { createS3Client } from '../../../lib/s3-client';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { getAdminDb } from '../../../lib/firebase-admin';
-import { setDocument, getDocument } from '../../../lib/firebase-rest';
+import { setDocument, getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
-import { errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
+import { errorResponse, successResponse, ApiErrors, createLogger, getR2Config, getAdminKey } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { verifyAdminKey } from '../../../lib/admin';
 import { z } from 'zod';
 
 const TrackSchema = z.object({
@@ -161,6 +162,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateLimit = checkRateLimit(`complete-upload:${clientId}`, RateLimiters.standard);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
+  // SECURITY: Require authentication — admin key or verified user
+  // This endpoint creates release documents in Firestore, so must be protected.
+  const adminKey = getAdminKey(request);
+  const isAdmin = adminKey ? verifyAdminKey(adminKey, locals) : false;
+
+  if (!isAdmin) {
+    const { userId, error: authError } = await verifyRequestUser(request);
+    if (authError || !userId) {
+      return ApiErrors.unauthorized(authError || 'Authentication required');
+    }
   }
 
   // Reject oversized JSON bodies before reading into memory

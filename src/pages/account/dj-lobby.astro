@@ -58,7 +58,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
 </head>
 <body class="dj-lobby-page">
-  <script is:inline src="/csrf-protect.js"></script>
+  <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
   <!-- Auth Gate -->
   <div id="authGate" class="auth-gate">
     <div class="auth-content">
@@ -1694,12 +1694,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     console.debug('[Test Mode] Using custom HLS base URL:', testHlsBase);
   }
   // Test preview function - can be triggered by button or URL param
-  function loadTestPreview() {
+  async function loadTestPreview() {
     console.debug('[Test Mode] Loading test video...');
-    const videoEl = document.getElementById('obsVideo');
-    const offlineState = document.getElementById('obsOfflineState');
-    const videoPreview = document.getElementById('obsVideoPreview');
-    const customUrlInput = document.getElementById('customHlsUrl');
+    var videoEl = document.getElementById('obsVideo');
+    var offlineState = document.getElementById('obsOfflineState');
+    var videoPreview = document.getElementById('obsVideoPreview');
+    var customUrlInput = document.getElementById('customHlsUrl');
 
     console.debug('[Test Mode] Elements:', { videoEl: !!videoEl, offlineState: !!offlineState, videoPreview: !!videoPreview });
 
@@ -1708,24 +1708,40 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       videoPreview.classList.remove('hidden');
 
       // Use custom URL if provided, otherwise use Big Buck Bunny test stream
-      const customUrl = customUrlInput?.value?.trim();
-      const testUrl = customUrl || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+      var customUrl = customUrlInput ? customUrlInput.value.trim() : '';
+      var testUrl = customUrl || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
       console.debug('[Test Mode] Loading URL:', testUrl, customUrl ? '(custom)' : '(default test)');
+
+      // Lazy-load HLS.js if not already available
+      if (typeof Hls === 'undefined') {
+        try {
+          await new Promise(function(resolve, reject) {
+            var s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js';
+            s.crossOrigin = 'anonymous';
+            s.onload = resolve;
+            s.onerror = function() { reject(new Error('Failed to load HLS.js')); };
+            document.head.appendChild(s);
+          });
+        } catch (err) {
+          console.warn('[Test Mode] HLS.js load failed, falling back to native:', err);
+        }
+      }
 
       if (typeof Hls !== 'undefined' && Hls.isSupported()) {
         console.debug('[Test Mode] Using HLS.js');
-        const hls = new Hls();
+        var hls = new Hls();
         hls.loadSource(testUrl);
         hls.attachMedia(videoEl);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
           console.debug('[Test Mode] HLS manifest parsed, playing...');
-          videoEl.play().catch(e => console.error('[Test Mode] Play error:', e));
+          videoEl.play().catch(function(e) { console.error('[Test Mode] Play error:', e); });
         });
-        hls.on(Hls.Events.ERROR, (e, data) => console.error('[Test Mode] HLS error:', data));
+        hls.on(Hls.Events.ERROR, function(e, data) { console.error('[Test Mode] HLS error:', data); });
       } else {
         console.debug('[Test Mode] Using native HLS');
         videoEl.src = testUrl;
-        videoEl.play().catch(e => console.error('[Test Mode] Play error:', e));
+        videoEl.play().catch(function(e) { console.error('[Test Mode] Play error:', e); });
       }
     } else {
       console.error('[Test Mode] Video elements not found!');
@@ -2574,10 +2590,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   let relayHlsPlayer = null;
 
-  function startRelayAudioPreview(stationUrl) {
-    const relayAudio = document.getElementById('relayAudio');
-    const relayDot = document.getElementById('relayDot');
-    const previewRelayDot = document.getElementById('previewRelayDot');
+  async function startRelayAudioPreview(stationUrl) {
+    var relayAudio = document.getElementById('relayAudio');
+    var relayDot = document.getElementById('relayDot');
+    var previewRelayDot = document.getElementById('previewRelayDot');
 
     console.debug('[RelayPreview] Starting relay audio preview:', stationUrl);
 
@@ -2637,6 +2653,21 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     // Check if it's an HLS stream
     if (stationUrl.includes('.m3u8')) {
       console.debug('[RelayPreview] Using HLS.js for m3u8 stream');
+      // Lazy-load HLS.js if not already available
+      if (typeof Hls === 'undefined') {
+        try {
+          await new Promise(function(resolve, reject) {
+            var s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js';
+            s.crossOrigin = 'anonymous';
+            s.onload = resolve;
+            s.onerror = function() { reject(new Error('Failed to load HLS.js')); };
+            document.head.appendChild(s);
+          });
+        } catch (err) {
+          console.warn('[RelayPreview] HLS.js load failed:', err);
+        }
+      }
       if (typeof Hls !== 'undefined' && Hls.isSupported()) {
         relayHlsPlayer = new Hls({
           enableWorker: true,
@@ -3121,6 +3152,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (initCheckInterval) clearInterval(initCheckInterval);
         if (bypassPollInterval) clearInterval(bypassPollInterval);
         if (takeoverTimeout) clearInterval(takeoverTimeout);
+        // Cancel requestAnimationFrame loops for audio meters
+        if (obsMeterAnimationId) cancelAnimationFrame(obsMeterAnimationId);
+        if (liveMeterAnimationId) cancelAnimationFrame(liveMeterAnimationId);
         icecastCheckInterval = null;
         obsPreviewCheckInterval = null;
         healthInterval = null;
@@ -3129,6 +3163,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         initCheckInterval = null;
         bypassPollInterval = null;
         takeoverTimeout = null;
+        obsMeterAnimationId = null;
+        liveMeterAnimationId = null;
 
         if (lobbyAudioPreviewObserver) {
           lobbyAudioPreviewObserver.disconnect();
@@ -6403,9 +6439,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   });
 </script>
 
-<!-- HLS.js for video playback - loaded at end to prevent render blocking -->
-<script async is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
+<!-- HLS.js loaded dynamically by live-stream.js when stream playback starts -->
 <!-- Universal modal focus trap (a11y: Tab cycling, focus restore) -->
-<script is:inline src="/modal-focus-trap.js"></script>
+<script is:inline src="/modal-focus-trap.js" nonce={nonce}></script>
 </body>
 </html>

@@ -19,6 +19,7 @@ interface Props {
 
 const { title, activeNav = '', showStats = false, stats = [] } = Astro.props;
 const csrfToken = Astro.locals.csrfToken || '';
+const nonce = Astro.locals.nonce || '';
 
 const firebaseConfig = {
   apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
@@ -1501,7 +1502,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 <body>
   <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- CSRF: Auto-inject X-CSRF-Token header on state-changing fetch() calls -->
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     (function() {
       var originalFetch = window.fetch;
       window.fetch = function(input, init) {
@@ -1606,7 +1607,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <slot name="modals" />
   
   <!-- Scripts -->
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     // Global toast function
     window.showToast = function(message, type = 'success') {
       const toast = document.getElementById('toast');
@@ -1650,11 +1651,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   </script>
   
   <!-- Firebase config for inline scripts -->
-  <script define:vars={{ firebaseConfig }}>
+  <script define:vars={{ firebaseConfig }} nonce={nonce}>
     window.FIREBASE_CONFIG = firebaseConfig;
   </script>
   <!-- Firebase Auth for admin token-based API authentication -->
-  <script type="module" is:inline>
+  <script type="module" is:inline nonce={nonce}>
     import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
@@ -1748,7 +1749,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   </script>
 
   <!-- Universal modal focus trap (a11y: Tab cycling, focus restore) -->
-  <script is:inline src="/modal-focus-trap.js"></script>
+  <script is:inline src="/modal-focus-trap.js" nonce={nonce}></script>
 
   <slot name="scripts" />
 </body>

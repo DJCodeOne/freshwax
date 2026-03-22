@@ -22,7 +22,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     <!-- Login Prompt (hidden by default) -->
     <div id="loginPrompt" class="login-prompt hidden">
       <div class="login-card">
-        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" width="67" height="53" />
+        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" width="67" height="53" loading="lazy" decoding="async" />
         <h2>My DJ Mixes</h2>
         <p>Sign in to manage your DJ mixes.</p>
         <a href="/login/?redirect=/account/mixes" class="btn-primary">Sign In</a>
@@ -93,7 +93,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <label>Cover Artwork</label>
             <div class="artwork-upload-area">
               <div class="current-artwork no-artwork" id="currentArtwork">
-                <img id="artworkPreview" src="/place-holder.webp" alt="Current artwork" width="200" height="200" decoding="async">
+                <img id="artworkPreview" src="/place-holder.webp" alt="Current artwork" width="200" height="200" loading="lazy" decoding="async">
               </div>
               <div class="artwork-controls">
                 <label for="artworkInput" class="sr-only">Upload cover artwork</label>

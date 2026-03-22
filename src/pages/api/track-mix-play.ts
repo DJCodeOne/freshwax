@@ -1,5 +1,8 @@
 // src/pages/api/track-mix-play.ts
 // Tracks DJ mix plays using atomic increments
+// AUTH: Intentionally public (no auth required) — fire-and-forget analytics counter.
+// Play counts are non-sensitive aggregate metrics. Requiring auth would block anonymous
+// listeners from being counted. Rate limiting prevents abuse.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';

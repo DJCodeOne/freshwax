@@ -1,12 +1,17 @@
 // src/pages/api/stripe/create-checkout-session.ts
 // Creates Stripe checkout session for product purchases
+// AUTH: Intentionally public — guest checkout is a core e-commerce feature. The Stripe
+// session only reserves stock; actual payment and order creation happen via the webhook
+// (stripe/webhook.ts) which verifies the Stripe signature.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { addDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
-import { fetchWithTimeout, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[stripe-checkout]');
 
 export const prerender = false;
 
@@ -91,25 +96,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const orderData = parseResult.data;
 
-    // SECURITY: Validate stock availability before allowing checkout
-    const stockCheck = await validateStock(orderData.items);
+    // SECURITY: Validate stock + prices in parallel (both are independent reads)
+    // Running these together saves a round trip before we reserve stock
+    const [stockCheck, priceValidation] = await Promise.all([
+      validateStock(orderData.items),
+      validateAndGetPrices(orderData.items, { logPrefix: '[Stripe]' })
+    ]);
+
     if (!stockCheck.available) {
       log.warn('[Stripe] Stock validation failed:', stockCheck.unavailableItems);
       return ApiErrors.badRequest('Some items are no longer available');
     }
 
-    // Reserve stock to prevent overselling
+    const { validatedItems, hasPriceMismatch, validationError } = priceValidation;
+
+    if (validationError) {
+      return ApiErrors.badRequest(validationError);
+    }
+
+    // Reserve stock to prevent overselling (must happen after validation passes)
     reservation = await reserveStock(orderData.items, 'stripe_' + Date.now().toString(36), orderData.customer?.userId);
     if (!reservation.success) {
       return ApiErrors.badRequest(reservation.error || 'Failed to reserve stock');
-    }
-
-    // SECURITY: Validate prices server-side to prevent manipulation
-    const { validatedItems, hasPriceMismatch, validationError } = await validateAndGetPrices(orderData.items, { logPrefix: '[Stripe]' });
-
-    if (validationError) {
-      if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
-      return ApiErrors.badRequest(validationError);
     }
 
     if (hasPriceMismatch) {

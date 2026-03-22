@@ -142,6 +142,7 @@ const mixesItemList = {
 };
 
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+const nonce = Astro.locals.nonce || '';
 ---
 
 <Layout title="DJ Mixes - Jungle & DnB Sets" description="Listen to DJ mixes on Fresh Wax with free streaming and download options. Jungle, drum & bass, and breakbeat sets from top DJs in the UK underground." itemList={mixesItemList}>
@@ -154,7 +155,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     <video class="bg-video-overlay" id="bgVideo" autoplay muted loop playsinline preload="none" aria-hidden="true">
       <source src="/videos/dj-bg.mp4?v=2" type="video/mp4" />
     </video>
-    <script is:inline>
+    <script is:inline nonce={nonce}>
       var bgV = document.getElementById('bgVideo');
       if (bgV) bgV.playbackRate = 1.25;
     </script>

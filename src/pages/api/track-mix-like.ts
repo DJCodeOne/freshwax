@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { getDocument, atomicIncrement, updateDocument, clearCache } from '../../lib/firebase-rest';
+import { getDocument, atomicIncrement, updateDocument, clearCache, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 import { logActivity } from '../../lib/activity-feed';
@@ -21,6 +21,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateLimit = checkRateLimit(`track-mix-like:${clientId}`, RateLimiters.standard);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
+  // Auth check — require verified Firebase auth to prevent anonymous like inflation
+  const { userId, error: authError } = await verifyRequestUser(request);
+  if (authError || !userId) {
+    return ApiErrors.unauthorized(authError || 'Authentication required');
   }
 
   const env = locals.runtime.env;

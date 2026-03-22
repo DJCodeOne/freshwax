@@ -37,7 +37,7 @@ const firebaseConfig = {
   </script>
 </head>
 <body>
-  <script is:inline src="/csrf-protect.js"></script>
+  <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
   <!-- Loading -->
   <div id="loadingGate" class="loading-gate">
     <div class="loader"></div>
@@ -1474,6 +1474,6 @@ const firebaseConfig = {
     }
   </script>
   <!-- Universal modal focus trap (a11y: Tab cycling, focus restore) -->
-  <script is:inline src="/modal-focus-trap.js"></script>
+  <script is:inline src="/modal-focus-trap.js" nonce={nonce}></script>
 </body>
 </html>

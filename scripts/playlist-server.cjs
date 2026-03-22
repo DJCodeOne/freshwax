@@ -23,10 +23,13 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
 ];
 
+// Cloudflare Pages preview URL pattern — only alphanumeric + hyphens in subdomain
+const PAGES_PREVIEW_RE = /^https:\/\/[a-z0-9][a-z0-9-]{0,62}\.freshwax\.pages\.dev$/;
+
 function getAllowedOrigin(req) {
   const origin = req.headers.origin || '';
   if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  if (origin.endsWith('.freshwax.pages.dev')) return origin;
+  if (PAGES_PREVIEW_RE.test(origin)) return origin;
   return null;
 }
 

@@ -125,12 +125,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               <a href={`/item/${release.id}/`} class="artwork-link">
                 <img
                   src={release.coverArtUrl || '/place-holder.webp'}
+                  srcset={release.thumbUrl && release.coverArtUrl ? `${release.thumbUrl.replace(/ /g, '%20')} 400w, ${release.coverArtUrl.replace(/ /g, '%20')} 800w` : undefined}
+                  sizes={release.thumbUrl && release.coverArtUrl ? "256px" : undefined}
                   alt={`${release.releaseName} by ${release.artistName}`}
                   class="artwork"
                   width="256"
                   height="256"
-                  loading="lazy"
-                  decoding="async"
+                  loading={index < 3 ? "eager" : "lazy"}
+                  fetchpriority={index === 0 ? "high" : undefined}
+                  decoding={index < 3 ? "auto" : "async"}
                 />
                 <div class="artwork-overlay">
                   <span class="view-text">View Details</span>

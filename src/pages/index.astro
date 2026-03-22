@@ -22,6 +22,7 @@ try {
 }
 
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+const nonce = Astro.locals.nonce || '';
 
 // Preload the first release cover image for faster LCP (with srcset for responsive)
 const firstArtwork = featuredReleases[0]?.coverArtUrl;
@@ -54,7 +55,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
         aria-hidden="true"
         style="display:none"
       ></video>
-      <script is:inline>
+      <script is:inline nonce={nonce}>
       (function(){if(window.innerWidth>=768){var v=document.getElementById('hero-video');if(v){var s1=document.createElement('source');s1.src='/videos/hero-turntable.webm';s1.type='video/webm';var s2=document.createElement('source');s2.src='/videos/hero-turntable.mp4';s2.type='video/mp4';v.appendChild(s1);v.appendChild(s2);v.addEventListener('canplay',function(){v.style.display='';},{once:true});v.load()}}})();
       </script>
 
@@ -88,7 +89,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
         </div>
       </div>
     </section>
-    <script is:inline>
+    <script is:inline nonce={nonce}>
     // Apply entrance animations AFTER LCP to avoid blocking Lighthouse LCP measurement
     requestAnimationFrame(function(){requestAnimationFrame(function(){
       var map={'fade-down':'animate-fade-down','fade-up':'animate-fade-up','fade-in':'animate-fade-in'};

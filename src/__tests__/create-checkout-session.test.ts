@@ -426,8 +426,8 @@ describe('Stripe Create Checkout Session', () => {
     // Stripe API should not have been called
     expect(mockFetchWithTimeout).not.toHaveBeenCalled();
 
-    // Reservation should have been released
-    expect(mockReleaseReservation).toHaveBeenCalledWith('res_test_123');
+    // Reservation was never created (price validation now runs before reserveStock)
+    expect(mockReserveStock).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------

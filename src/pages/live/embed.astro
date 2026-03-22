@@ -276,66 +276,66 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       )}
 
       <div class="branding">
-        <img src="/favicon-32x32.png" alt="Fresh Wax" width="32" height="32" decoding="async" />
+        <img src="/favicon-32x32.png" alt="Fresh Wax" width="32" height="32" loading="lazy" decoding="async" />
         <span>freshwax.co.uk</span>
       </div>
     </div>
   </div>
 
-  {isLive && hlsUrl && (
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12" is:inline async integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
-  )}
+  <!-- HLS.js loaded dynamically when stream is live -->
 
   <script is:inline define:vars={{ hlsUrl, isLive }} nonce={nonce}>
     if (isLive && hlsUrl) {
-      const video = document.getElementById('videoPlayer');
-      const overlay = document.getElementById('overlay');
-      const playBtn = document.getElementById('playBtn');
+      var video = document.getElementById('videoPlayer');
+      var overlay = document.getElementById('overlay');
+      var playBtn = document.getElementById('playBtn');
 
       function initPlayer() {
-        if (Hls.isSupported()) {
-          const hls = new Hls({
+        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+          var hls = new Hls({
             enableWorker: true,
             lowLatencyMode: true,
             backBufferLength: 30
           });
           hls.loadSource(hlsUrl);
           hls.attachMedia(video);
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          hls.on(Hls.Events.MANIFEST_PARSED, function() {
             overlay.classList.add('hidden');
-            video.play().catch(() => {
-              // Autoplay blocked, show play button
+            video.play().catch(function() {
               overlay.classList.remove('hidden');
             });
           });
-          hls.on(Hls.Events.ERROR, (event, data) => {
+          hls.on(Hls.Events.ERROR, function(event, data) {
             if (data.fatal) {
               overlay.classList.remove('hidden');
             }
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = hlsUrl;
-          video.addEventListener('loadedmetadata', () => {
+          video.addEventListener('loadedmetadata', function() {
             overlay.classList.add('hidden');
-            video.play().catch(() => {
+            video.play().catch(function() {
               overlay.classList.remove('hidden');
             });
           });
         }
       }
 
-      playBtn?.addEventListener('click', () => {
-        overlay.classList.add('hidden');
-        video.muted = false;
-        video.play();
-      });
-
-      // Auto-init for embeds
-      if (typeof Hls !== 'undefined') {
-        initPlayer();
-      } else {
-        window.addEventListener('load', initPlayer);
+      if (playBtn) {
+        playBtn.addEventListener('click', function() {
+          overlay.classList.add('hidden');
+          video.muted = false;
+          video.play();
+        });
       }
+
+      // Lazy-load HLS.js then init player
+      var hlsScript = document.createElement('script');
+      hlsScript.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js';
+      hlsScript.crossOrigin = 'anonymous';
+      hlsScript.onload = function() { initPlayer(); };
+      hlsScript.onerror = function() { initPlayer(); }; // fallback to native
+      document.head.appendChild(hlsScript);
     }
   </script>
 </body>

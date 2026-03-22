@@ -1,4 +1,5 @@
 // src/pages/api/cron/stock-alerts.ts
+// AUTH: No auth required — endpoint is DISABLED and returns immediately.
 // Cron: DISABLED (no cron trigger configured)
 // Dashboard: Cloudflare Pages > Settings > Cron Triggers
 //

@@ -1,6 +1,9 @@
 // src/pages/api/icecast-auth.ts
 // Icecast URL-based authentication for BUTT connections
 // Validates that the source password matches the current DJ's stream key
+// AUTH: Icecast server-to-server auth — the stream key IS the authentication.
+// Icecast sends the DJ's stream key as the password, which is validated against
+// active livestream slots. No user token auth (Icecast can't send Bearer tokens).
 
 import type { APIContext } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';

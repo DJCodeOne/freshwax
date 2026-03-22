@@ -12,6 +12,7 @@ export const prerender = false;
 
 const csrfToken = Astro.locals.csrfToken || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+const nonce = Astro.locals.nonce || '';
 ---
 <!DOCTYPE html>
 <html lang="en-GB">
@@ -27,7 +28,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 </head>
 </head>
 <body>
-  <script is:inline src="/csrf-protect.js"></script>
+  <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
   <header class="header">
     <h1>Fresh <span style="color: #dc2626;">Wax</span> Inventory</h1>
     <nav class="header-nav">
@@ -76,7 +77,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </div>
           
           <div class="selected-product" id="selectedProduct">
-            <img src="" alt="Selected product" id="selectedProductImage" width="50" height="50" decoding="async">
+            <img src="" alt="Selected product" id="selectedProductImage" width="50" height="50" loading="lazy" decoding="async">
             <div class="selected-product-info">
               <div class="selected-product-name" id="selectedProductName"></div>
               <div class="selected-product-sku" id="selectedProductSku"></div>
@@ -1280,7 +1281,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     window.clearSelectedProduct = clearSelectedProduct;
     window.saveStockTake = saveStockTake;
   </script>
-  <script is:inline>
+  <script is:inline nonce={nonce}>
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       var modals = document.querySelectorAll('[role="dialog"]:not(.hidden):not([style*="display: none"])');

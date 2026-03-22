@@ -54,25 +54,33 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
       return redirect('/checkout?error=config');
     }
 
-    // IDEMPOTENCY CHECK: If an order with this PayPal ID already exists, redirect to success
-    // Prevents duplicate orders from browser back-button or double-click
-    try {
-      const existingOrders = await queryCollection('orders', {
+    // IDEMPOTENCY CHECK + PENDING ORDER FETCH in parallel (independent reads)
+    // Both are guard checks that may short-circuit — running them together saves a round trip
+    const [idempotencySettled, pendingSettled] = await Promise.allSettled([
+      queryCollection('orders', {
         filters: [{ field: 'paypalOrderId', op: 'EQUAL', value: paypalOrderId }],
         limit: 1
-      }, true);
-      if (existingOrders && existingOrders.length > 0) {
-        log.info('[PayPal Redirect] Order already exists for paypalOrderId:', paypalOrderId);
-        return redirect(`${SITE_URL}/order-confirmation/${existingOrders[0].id}`);
-      }
-    } catch (idempotencyErr: unknown) {
-      log.error('[PayPal Redirect] Idempotency check failed (Firebase unreachable):', idempotencyErr);
+      }, true),
+      getDocument('pendingPayPalOrders', paypalOrderId)
+    ]);
+
+    // Check idempotency result first
+    if (idempotencySettled.status === 'rejected') {
+      log.error('[PayPal Redirect] Idempotency check failed (Firebase unreachable):', idempotencySettled.reason);
       // Don't proceed if we can't verify — customer can retry
       return redirect('/checkout?error=service_unavailable');
     }
+    if (idempotencySettled.value && idempotencySettled.value.length > 0) {
+      log.info('[PayPal Redirect] Order already exists for paypalOrderId:', paypalOrderId);
+      return redirect(`${SITE_URL}/order-confirmation/${idempotencySettled.value[0].id}`);
+    }
 
-    // Retrieve order data from Firebase (stored when order was created)
-    const pendingOrder = await getDocument('pendingPayPalOrders', paypalOrderId);
+    // Check pending order result
+    if (pendingSettled.status === 'rejected') {
+      log.error('[PayPal Redirect] Error fetching pending order:', pendingSettled.reason);
+      return redirect('/checkout?error=order_not_found');
+    }
+    const pendingOrder = pendingSettled.value;
     if (!pendingOrder) {
       log.error('[PayPal Redirect] No pending order found for:', paypalOrderId);
       return redirect('/checkout?error=order_not_found');
@@ -207,12 +215,14 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
             balanceAfter: newBalance
           };
 
-          // Atomic arrayUnion prevents lost transactions under concurrent writes
-          await arrayUnion('userCredits', userId, 'transactions', [transaction], {
-            lastUpdated: now
-          });
-
-          await atomicIncrement('users', userId, { creditBalance: -appliedCredit });
+          // Update userCredits transactions + users document in parallel (different documents)
+          await Promise.all([
+            // Atomic arrayUnion prevents lost transactions under concurrent writes
+            arrayUnion('userCredits', userId, 'transactions', [transaction], {
+              lastUpdated: now
+            }),
+            atomicIncrement('users', userId, { creditBalance: -appliedCredit })
+          ]);
 
           // Credit deducted atomically
         }

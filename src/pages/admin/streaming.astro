@@ -11,6 +11,7 @@ if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+const nonce = Astro.locals.nonce || '';
 ---
 
 <style is:global>
@@ -3443,7 +3444,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   }, { once: true });
 </script>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     var modals = document.querySelectorAll('[role="dialog"]:not(.hidden):not([style*="display: none"])');

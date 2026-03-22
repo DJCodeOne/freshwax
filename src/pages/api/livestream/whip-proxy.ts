@@ -2,6 +2,9 @@
 // WHIP signaling proxy — same-origin relay to avoid CORS with stream.freshwax.co.uk
 // POST ?key={streamKey}: Proxy SDP offer to MediaMTX, return SDP answer
 // DELETE ?resource={url}: Proxy DELETE to MediaMTX resource URL
+// AUTH: Stream key IS the authentication — POST validates the stream key against
+// active livestream slots before proxying. DELETE validates the resource URL points
+// to our WHIP server (domain whitelist).
 import type { APIRoute } from 'astro';
 import { ApiErrors, createLogger, fetchWithTimeout } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';

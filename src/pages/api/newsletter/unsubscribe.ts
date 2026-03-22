@@ -1,5 +1,6 @@
 // src/pages/api/newsletter/unsubscribe.ts
-// Public endpoint for users to unsubscribe from newsletter
+// AUTH: Intentionally public — unsubscribe must work from email links without login.
+// Returns success even for non-existent emails to prevent email enumeration.
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';

@@ -9,6 +9,7 @@ if (authResult) return Astro.redirect('/login');
 export const prerender = false;
 const csrfToken = Astro.locals.csrfToken || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+const nonce = Astro.locals.nonce || '';
 ---
 
 <!DOCTYPE html>
@@ -79,7 +80,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   </style>
 </head>
 <body>
-  <script is:inline src="/csrf-protect.js"></script>
+  <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
   <header class="header">
     <h1>Fresh <span>Wax</span> Royalty Ledger</h1>
     <nav class="header-nav">
@@ -126,7 +127,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     </div>
   </div>
 
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     (function() {
       var entries = [];
       var selectedIds = [];

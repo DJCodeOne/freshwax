@@ -49,10 +49,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <title>Edit Release - {release.releaseName} - Fresh Wax Admin</title>
 </head>
 <body>
-  <script is:inline src="/csrf-protect.js"></script>
+  <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
   <div class="container">
     <div class="header-bar">
-      <img src="/logo.webp" alt="Fresh Wax" class="logo" width="67" height="53" data-fallback="hide">
+      <img src="/logo.webp" alt="Fresh Wax" class="logo" width="67" height="53" loading="lazy" decoding="async" data-fallback="hide">
       <div style="display: flex; gap: 10px;">
         <button type="button" id="refreshBtn" class="back-btn" style="background: #16a34a; border-color: #16a34a;">
           🔄 Refresh

@@ -2698,7 +2698,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
 <script type="module" src="/item-page.js?v=20260123d"></script>
-<script is:inline>
+<script is:inline nonce={nonce}>
 // Focus trap for share-modal and bio-modal (augments item-page.js)
 (function() {
   function addFocusTrap(modalId) {

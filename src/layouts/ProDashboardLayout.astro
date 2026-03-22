@@ -12,6 +12,7 @@ interface Props {
 
 const { title, activeSection } = Astro.props;
 const csrfToken = Astro.locals.csrfToken || '';
+const nonce = Astro.locals.nonce || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 
 const firebaseConfig = {
@@ -32,7 +33,7 @@ const firebaseConfig = {
 <body data-active-section={activeSection || ''}>
   <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- CSRF: Auto-inject X-CSRF-Token header on state-changing fetch() calls -->
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     (function() {
       var originalFetch = window.fetch;
       window.fetch = function(input, init) {
@@ -502,10 +503,10 @@ const firebaseConfig = {
     }
   </style>
 
-  <script define:vars={{ firebaseConfig }}>
+  <script define:vars={{ firebaseConfig }} nonce={nonce}>
     window.FIREBASE_CONFIG = firebaseConfig;
   </script>
-  <script type="module" is:inline>
+  <script type="module" is:inline nonce={nonce}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
@@ -677,6 +678,6 @@ const firebaseConfig = {
     });
   </script>
   <!-- Universal modal focus trap (a11y: Tab cycling, focus restore) -->
-  <script is:inline src="/modal-focus-trap.js"></script>
+  <script is:inline src="/modal-focus-trap.js" nonce={nonce}></script>
 </body>
 </html>

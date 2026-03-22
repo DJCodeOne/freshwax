@@ -281,6 +281,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 // DELETE: Cleanup expired requests
+// AUTH: Intentionally unauthenticated — only deletes takeover requests with status
+// 'pending' that are older than 5 minutes. This is a housekeeping operation that
+// removes stale data. No user data is exposed or modified.
 export const DELETE: APIRoute = async ({ locals }) => {
   const env = locals.runtime.env;
 

@@ -111,6 +111,8 @@ function removeViewer(streamId: string, sessionId: string): number {
   return cleanupStaleSessions(streamId).length;
 }
 
+// AUTH: Intentionally public — viewer heartbeats count both authenticated and anonymous
+// viewers. Auth is optional (verified users get their name displayed, anonymous still counted).
 export const POST: APIRoute = async ({ request }) => {
   // Rate limit: standard API - 60 per minute
   const clientId = getClientId(request);

@@ -42,7 +42,7 @@ const csrfToken = Astro.locals.csrfToken || '';
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     (function() {
       var originalFetch = window.fetch;
       window.fetch = function(input, init) {
@@ -79,7 +79,7 @@ const csrfToken = Astro.locals.csrfToken || '';
       <div class="branding-content">
         <a href="/" class="logo-link">
           <div class="logo-container">
-            <img src="/logo.webp" alt="Fresh Wax Logo" class="logo-image" width="67" height="53" />
+            <img src="/logo.webp" alt="Fresh Wax Logo" class="logo-image" width="67" height="53" loading="lazy" decoding="async" />
           </div>
         </a>
         <h1 class="welcome-text">Welcome Back</h1>
@@ -121,7 +121,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         <!-- Mobile Logo -->
         <a href="/" class="mobile-logo">
           <div class="logo-container">
-            <img src="/logo.webp" alt="Fresh Wax" width="51" height="40" />
+            <img src="/logo.webp" alt="Fresh Wax" width="51" height="40" loading="lazy" decoding="async" />
           </div>
         </a>
 
@@ -235,9 +235,9 @@ const csrfToken = Astro.locals.csrfToken || '';
         });
         
         // Clear stale cookies (will be reset on login)
-        document.cookie = 'userId=; path=/; max-age=0; Secure';
-        document.cookie = 'customerId=; path=/; max-age=0; Secure';
-        document.cookie = 'partnerId=; path=/; max-age=0; Secure';
+        document.cookie = 'userId=; path=/; max-age=0; SameSite=Lax; Secure';
+        document.cookie = 'customerId=; path=/; max-age=0; SameSite=Lax; Secure';
+        document.cookie = 'partnerId=; path=/; max-age=0; SameSite=Lax; Secure';
         
       } catch (_e) {
         // Cache clear is best-effort; failure is non-critical

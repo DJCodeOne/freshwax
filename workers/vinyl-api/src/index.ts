@@ -22,8 +22,11 @@ const ALLOWED_ORIGINS = [
   'https://freshwax.pages.dev',
 ];
 
+// Cloudflare Pages preview URL pattern — only alphanumeric + hyphens in subdomain
+const PAGES_PREVIEW_RE = /^https:\/\/[a-z0-9][a-z0-9-]{0,62}\.freshwax\.pages\.dev$/;
+
 function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowed = origin && (ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.freshwax.pages.dev'));
+  const allowed = origin && (ALLOWED_ORIGINS.includes(origin) || PAGES_PREVIEW_RE.test(origin));
   return {
     'Access-Control-Allow-Origin': allowed ? origin! : ALLOWED_ORIGINS[0],
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',

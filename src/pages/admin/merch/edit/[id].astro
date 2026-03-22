@@ -517,7 +517,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     </div>
     <div class="image-editor-body">
       <div class="crop-container" id="cropContainer">
-        <img id="cropImage" src="" alt="Crop preview" width="400" height="400" decoding="async" />
+        <img id="cropImage" src="" alt="Crop preview" width="400" height="400" loading="lazy" decoding="async" />
         <div class="crop-grid"></div>
       </div>
       <div class="editor-controls">
@@ -1609,7 +1609,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   });
 </script>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   (function() {
     var brandSelect = document.querySelector('select[name="categoryName"]');
     var brandIdInput = document.querySelector('input[name="brandAccountId"]');

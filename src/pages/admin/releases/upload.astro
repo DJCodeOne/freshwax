@@ -78,7 +78,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 </div>
 </div></div>
 
-<script async is:inline src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"></script>
+<!-- JSZip loaded dynamically on first ZIP file process -->
 <script define:vars={{ AUDIO_PROCESSOR_URL }} nonce={nonce}>
   window.__AUDIO_PROCESSOR_URL = AUDIO_PROCESSOR_URL;
 </script>
@@ -116,7 +116,7 @@ function debug(msg) {
   debugLog.scrollTop = debugLog.scrollHeight;
 }
 
-debug("Page loaded, JSZip available: " + (typeof JSZip !== 'undefined'));
+debug("Page loaded, JSZip will be loaded on first use");
 
 // Extracted data
 let extractedData = null;
@@ -180,6 +180,20 @@ async function processZip(file) {
   status.innerHTML = "";
 
   try {
+    // Lazy-load JSZip if not already available
+    if (typeof JSZip === 'undefined') {
+      debug("Loading JSZip library...");
+      setProgress(0, "Loading ZIP library...");
+      await new Promise(function(resolve, reject) {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+        s.crossOrigin = 'anonymous';
+        s.onload = resolve;
+        s.onerror = function() { reject(new Error('Failed to load JSZip')); };
+        document.head.appendChild(s);
+      });
+      debug("JSZip loaded successfully");
+    }
     debug("Loading ZIP with JSZip...");
     const zip = await JSZip.loadAsync(file);
     debug("ZIP loaded successfully");

@@ -1,5 +1,7 @@
 // src/pages/api/stripe/connect/supplier/create-account.ts
 // Creates a Stripe Connect Express account for a supplier
+// AUTH: Supplier access code serves as authentication — suppliers don't have Firebase
+// accounts. The accessCode is a shared secret given privately to each supplier.
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
@@ -33,17 +35,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const { supplierId, accessCode } = body;
 
-    if (!supplierId && !accessCode) {
-      return ApiErrors.badRequest('Supplier ID or access code required');
+    // SECURITY: Always require accessCode — it serves as the supplier's authentication.
+    // Knowing a supplierId alone is not sufficient.
+    if (!accessCode) {
+      return ApiErrors.unauthorized('Access code required');
     }
 
-    // Get supplier - either by ID or access code
+    // Get supplier - either by ID + code validation, or code lookup
     let supplier: Record<string, unknown> | null = null;
     let supplierDocId = supplierId;
 
     if (supplierId) {
       supplier = await getDocument('merch-suppliers', supplierId);
-    } else if (accessCode) {
+      // Verify access code matches
+      if (supplier && supplier.accessCode !== accessCode) {
+        return ApiErrors.forbidden('Invalid access code');
+      }
+    } else {
       // Look up by access code
       const { queryCollection } = await import('../../../../../lib/firebase-rest');
       const suppliers = await queryCollection('merch-suppliers', { limit: 100 });

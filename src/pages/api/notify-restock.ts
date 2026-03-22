@@ -1,5 +1,7 @@
 // src/pages/api/notify-restock.ts
 // Back-in-stock notification system
+// AUTH: Intentionally public — restock notifications use email-based signup,
+// allowing unauthenticated visitors to subscribe. Rate limited.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';

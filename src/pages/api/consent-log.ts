@@ -1,6 +1,8 @@
 // src/pages/api/consent-log.ts
 // GDPR compliance: Server-side audit trail for cookie consent decisions
 // Logs consent choices with timestamp, IP, and categories to Firestore
+// AUTH: Intentionally public — GDPR consent must be logged for all visitors,
+// including unauthenticated users. Rate limited to 5/min.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';

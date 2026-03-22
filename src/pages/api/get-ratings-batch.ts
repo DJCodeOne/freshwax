@@ -1,6 +1,8 @@
 // src/pages/api/get-ratings-batch.ts
 // Batch fetch ratings for multiple releases in a single API call
 // Reduces Firebase reads significantly by batching and caching
+// AUTH: Intentionally public — ratings are public data displayed on listing pages.
+// Read-only endpoint, no mutations. Rate limited.
 
 import type { APIRoute } from 'astro';
 import { getDocumentsBatch, CACHE_TTL } from '../../lib/firebase-rest';

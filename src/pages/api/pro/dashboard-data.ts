@@ -219,21 +219,24 @@ async function handleOverview(userId: string) {
 
   const result: Record<string, unknown> = { success: true, roles };
 
-  // Artist stats
-  if (roles.artist) {
-    const releases = await queryCollection('releases', {
-      filters: [{ field: 'artistId', op: 'EQUAL', value: userId }]
-    });
-    // Query only this month's sales using date filter (avoids fetching all-time data)
+  // Fetch artist + merch stats in parallel where possible
+  const artistPromise = roles.artist ? (async () => {
+    // Releases and sales queries are independent — run in parallel
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const sales = await queryCollection('sales', {
-      filters: [
-        { field: 'artistId', op: 'EQUAL', value: userId },
-        { field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startOfMonth.toISOString() }
-      ],
-      orderBy: { field: 'createdAt', direction: 'DESCENDING' }
-    });
+
+    const [releases, sales] = await Promise.all([
+      queryCollection('releases', {
+        filters: [{ field: 'artistId', op: 'EQUAL', value: userId }]
+      }),
+      queryCollection('sales', {
+        filters: [
+          { field: 'artistId', op: 'EQUAL', value: userId },
+          { field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startOfMonth.toISOString() }
+        ],
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' }
+      })
+    ]);
 
     let pending = 0;
     (releases || []).forEach((r: Record<string, unknown>) => {
@@ -245,38 +248,45 @@ async function handleOverview(userId: string) {
       monthTotal += s.amount || s.price || 0;
     });
 
-    result.artist = {
+    return {
       totalReleases: (releases || []).length,
       pendingReleases: pending,
       totalSales: (sales || []).length,
       monthRevenue: monthTotal
     };
-  }
+  })() : null;
 
-  // Merch stats
-  if (roles.merchSeller) {
-    const products = await queryCollection('merch', {
-      filters: [{ field: 'sellerId', op: 'EQUAL', value: userId }]
-    });
-    const pendingOrders = await queryCollection('orders', {
-      filters: [
-        { field: 'sellerId', op: 'EQUAL', value: userId },
-        { field: 'status', op: 'EQUAL', value: 'pending' }
-      ]
-    });
+  const merchPromise = roles.merchSeller ? (async () => {
+    // Products and pending orders queries are independent — run in parallel
+    const [products, pendingOrders] = await Promise.all([
+      queryCollection('merch', {
+        filters: [{ field: 'sellerId', op: 'EQUAL', value: userId }]
+      }),
+      queryCollection('orders', {
+        filters: [
+          { field: 'sellerId', op: 'EQUAL', value: userId },
+          { field: 'status', op: 'EQUAL', value: 'pending' }
+        ]
+      })
+    ]);
 
     let lowStock = 0;
     (products || []).forEach((p: Record<string, unknown>) => {
       if ((p.stock || 0) < 5) lowStock++;
     });
 
-    result.merch = {
+    return {
       totalProducts: (products || []).length,
       lowStock,
       pendingOrders: (pendingOrders || []).length,
       monthRevenue: 0
     };
-  }
+  })() : null;
+
+  // Await both stat blocks in parallel (artist + merch are fully independent)
+  const [artistStats, merchStats] = await Promise.all([artistPromise, merchPromise]);
+  if (artistStats) result.artist = artistStats;
+  if (merchStats) result.merch = merchStats;
 
   return jsonResponse(result);
 }

@@ -44,13 +44,20 @@ const ALLOWED_ORIGINS = [
   'https://icecast.freshwax.co.uk',
 ];
 
+// Cloudflare Pages preview URL pattern: https://<hex-hash>.freshwax.pages.dev
+// Only alphanumeric + hyphens allowed in the subdomain portion.
+// SECURITY TRADE-OFF: Preview deployments are only created from the git repo
+// (push access required), so an attacker cannot mint arbitrary subdomains.
+// This is acceptable because: (1) Cloudflare controls the *.pages.dev namespace,
+// (2) only repo collaborators can trigger deployments, (3) preview URLs are
+// short-lived. Credentials mode IS enabled, so preview deploys CAN send
+// authenticated requests — this is intentional for testing auth flows.
+const PAGES_PREVIEW_RE = /^https:\/\/[a-z0-9][a-z0-9-]{0,62}\.freshwax\.pages\.dev$/;
+
 // Check if origin is allowed
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
-  // Allow any *.freshwax.pages.dev preview deployments.
-  // Cloudflare Pages creates unique preview URLs like abc123.freshwax.pages.dev
-  // for each branch/commit, so a subdomain wildcard is necessary here.
-  if (origin.endsWith('.freshwax.pages.dev')) return true;
+  if (PAGES_PREVIEW_RE.test(origin)) return true;
   return ALLOWED_ORIGINS.includes(origin);
 }
 
@@ -183,6 +190,11 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     initKVCache(runtime.env);
     initRateLimitKV(runtime.env?.CACHE || runtime.env?.KV);
   }
+
+  // --- CSP Nonce (generated per request for script-src) ---
+  const nonceBytes = crypto.getRandomValues(new Uint8Array(16));
+  const nonceStr = Array.from(nonceBytes, (b: number) => b.toString(16).padStart(2, '0')).join('');
+  locals.nonce = nonceStr;
 
   // --- CSRF Token (double-submit cookie pattern) ---
   // Reuse existing cookie token or generate a fresh one.
@@ -365,16 +377,17 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     for (const [key, value] of Object.entries(securityHeaders)) {
       newHeaders.set(key, value);
     }
-    // Build CSP — Astro's renderScript inlines small scripts as <script type="module">
-    // WITHOUT nonce attributes, so we cannot use nonce-based script-src (adding a nonce
-    // causes browsers to ignore 'unsafe-inline', breaking 79+ Astro-inlined scripts).
-    // XSS protection relies on: strict connect-src, frame-src, object-src 'none',
-    // server-side input sanitization (escapeHtml), and HttpOnly auth cookies.
+    // Build CSP with per-request nonce for script-src.
+    // 'strict-dynamic' allows nonce'd scripts to load additional scripts (e.g. Astro's
+    // Vite-processed <script> modules loaded via nonce'd parent scripts, GA4 gtag.js).
+    // 'unsafe-inline' is kept as a fallback for browsers that don't support nonces
+    // (modern browsers ignore 'unsafe-inline' when a nonce is present).
+    // https: is a fallback for browsers that don't support 'strict-dynamic'.
     // Add default Cache-Control for HTML if not already set by the page
     if (!newHeaders.has('Cache-Control')) {
       newHeaders.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     }
-    const csp = `default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://www.gstatic.com https://www.google.com https://apis.google.com https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com https://js.pusher.com https://cdn.jsdelivr.net https://unpkg.com https://www.googletagmanager.com https://www.google-analytics.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://www.paypal.com https://js.stripe.com https://checkout.stripe.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://translate.googleapis.com https://www.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' blob: https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.pusher.com wss://*.pusher.com https://api.stripe.com https://*.stripe.com https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.gstatic.com https://www.google.com https://cdn.jsdelivr.net https://unpkg.com https://*.trycloudflare.com https://stream.freshwax.co.uk https://stream.freshwax.co.uk:8889 https://stream.freshwax.co.uk:9997 https://rtmp.freshwax.co.uk https://icecast.freshwax.co.uk https://playlist.freshwax.co.uk https://cdn.freshwax.co.uk https://noembed.com https://api.giphy.com https://www.paypal.com https://*.paypal.com https://www.youtube.com https://vinyl-api.davidhagon.workers.dev https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://freshwax-uploader-9ge.pages.dev https://www.twitch.tv https://player.twitch.tv https://embed.twitch.tv https://www.paypal.com https://*.paypal.com https://www.google.com https://accounts.google.com https://freshwax-store.firebaseapp.com; media-src 'self' https: blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';`;
+    const csp = `default-src 'self'; script-src 'nonce-${nonceStr}' 'strict-dynamic' 'unsafe-inline' https:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://translate.googleapis.com https://www.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' blob: https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.pusher.com wss://*.pusher.com https://api.stripe.com https://*.stripe.com https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.gstatic.com https://www.google.com https://cdn.jsdelivr.net https://unpkg.com https://*.trycloudflare.com https://stream.freshwax.co.uk https://stream.freshwax.co.uk:8889 https://stream.freshwax.co.uk:9997 https://rtmp.freshwax.co.uk https://icecast.freshwax.co.uk https://playlist.freshwax.co.uk https://cdn.freshwax.co.uk https://noembed.com https://api.giphy.com https://www.paypal.com https://*.paypal.com https://www.youtube.com https://vinyl-api.davidhagon.workers.dev https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://freshwax-uploader-9ge.pages.dev https://www.twitch.tv https://player.twitch.tv https://embed.twitch.tv https://www.paypal.com https://*.paypal.com https://www.google.com https://accounts.google.com https://freshwax-store.firebaseapp.com; media-src 'self' https: blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';`;
     newHeaders.set('Content-Security-Policy', csp);
   }
 

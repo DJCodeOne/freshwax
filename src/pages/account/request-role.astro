@@ -4,6 +4,7 @@
 import '../../styles/global.css';
 const csrfToken = Astro.locals.csrfToken || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+const nonce = Astro.locals.nonce || '';
 ---
 <html lang="en-GB">
 <head>
@@ -14,7 +15,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <meta name="robots" content="noindex, nofollow" />
 </head>
 <body>
-  <script is:inline src="/csrf-protect.js"></script>
+  <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
   <div class="page-container">
     <header class="page-header">
       <a href="/account/dashboard/" class="back-link">← Back to Account</a>

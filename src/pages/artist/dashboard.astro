@@ -350,7 +350,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     <!-- Loading state - shown while checking auth (hidden if already logged in server-side) -->
     <div id="loadingState" class="login-prompt" style={isLoggedIn ? 'display: none;' : ''}>
       <div class="login-card">
-        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" width="200" height="158" />
+        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" width="200" height="158" loading="lazy" decoding="async" />
         <h1>Partner Dashboard</h1>
         <p>Checking authentication...</p>
         <div style="display: flex; justify-content: center; padding: 2rem;">
@@ -362,7 +362,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     <!-- Login prompt - shown if not logged in -->
     <div id="loginPrompt" class="login-prompt" style="display: none;">
       <div class="login-card">
-        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" width="200" height="158" />
+        <img src="/logo.webp" alt="Fresh Wax" class="login-logo" width="200" height="158" loading="lazy" decoding="async" />
         <h1>Partner Dashboard</h1>
         <p>Sign in to manage your releases, mixes, and sales.</p>
         <a href="/login/" class="btn-primary">Sign In</a>
@@ -1441,7 +1441,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         return;
       }
       // No server dashboard and no client auth - show login prompt
-      document.cookie = 'partnerId=; path=/; max-age=0; Secure';
+      document.cookie = 'partnerId=; path=/; max-age=0; SameSite=Lax; Secure';
       showLogin();
       return;
     }

@@ -31,7 +31,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <!-- reCAPTCHA v3 - loaded dynamically if site key is configured -->
 </head>
 <body>
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     (function() {
       var originalFetch = window.fetch;
       window.fetch = function(input, init) {
@@ -66,7 +66,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       <div class="auth-header">
         <a href="/" class="logo-link">
           <div class="logo-wrapper">
-            <img src="/logo.webp" alt="Fresh Wax" class="logo-img" width="67" height="53">
+            <img src="/logo.webp" alt="Fresh Wax" class="logo-img" width="67" height="53" loading="lazy" decoding="async">
           </div>
         </a>
         <h1 class="brand-title"><span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span></h1>

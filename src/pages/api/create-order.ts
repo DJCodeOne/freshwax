@@ -1,6 +1,9 @@
 // src/pages/api/create-order.ts
 // Creates order in Firebase and sends confirmation email
 // Orchestrator — price validation, stock updates, and emails are in src/lib/order/
+// AUTH: Called after Stripe/PayPal payment confirmation. Guest checkout is supported,
+// so no user auth is required. Server-side price validation prevents manipulation.
+// Payment is already captured by the payment provider before this endpoint runs.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';

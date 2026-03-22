@@ -1417,7 +1417,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         }
       }
     </script>
-    <script is:inline>
+    <script is:inline nonce={nonce}>
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
         var modals = document.querySelectorAll('[role="dialog"]:not(.hidden):not([style*="display: none"])');

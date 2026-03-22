@@ -1,5 +1,8 @@
 // src/pages/api/paypal/capture-order.ts
 // Captures a PayPal order after customer approval and creates the order in Firebase
+// AUTH: PayPal API serves as authentication — captures a payment that must exist in
+// PayPal's system. Also validates against a server-side pending order document.
+// Guest checkout is supported so no user auth is required.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
@@ -55,25 +58,50 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Capture PayPal order
 
-    // IDEMPOTENCY CHECK: Check if order with this PayPal ID already exists
-    // Uses throwOnError=true so Firebase outages return 503 instead of creating duplicates
-    try {
-      const existingOrders = await queryCollection('orders', {
+    // IDEMPOTENCY CHECK + PENDING ORDER FETCH in parallel (independent reads)
+    // Both are guard checks that may short-circuit — running them together saves a round trip
+    let idempotencyResult: { existingOrders: Record<string, unknown>[] | null; error: unknown } = { existingOrders: null, error: null };
+    let pendingOrderResult: { pendingOrder: Record<string, unknown> | null; error: unknown } = { pendingOrder: null, error: null };
+
+    const [idempotencySettled, pendingSettled] = await Promise.allSettled([
+      queryCollection('orders', {
         filters: [{ field: 'paypalOrderId', op: 'EQUAL', value: paypalOrderId }],
         limit: 1
-      }, true);
-      if (existingOrders && existingOrders.length > 0) {
-        const existingOrder = existingOrders[0];
-        // Order already exists (idempotent)
-        return successResponse({ orderId: existingOrder.id,
-          orderNumber: existingOrder.orderNumber,
-          message: 'Order already processed' });
-      }
-    } catch (idempotencyErr: unknown) {
-      log.error('[PayPal] Idempotency check failed (Firebase unreachable):', idempotencyErr);
+      }, true),
+      getDocument('pendingPayPalOrders', paypalOrderId)
+    ]);
+
+    if (idempotencySettled.status === 'fulfilled') {
+      idempotencyResult.existingOrders = idempotencySettled.value;
+    } else {
+      idempotencyResult.error = idempotencySettled.reason;
+    }
+
+    if (pendingSettled.status === 'fulfilled') {
+      pendingOrderResult.pendingOrder = pendingSettled.value;
+    } else {
+      pendingOrderResult.error = pendingSettled.reason;
+    }
+
+    // Check idempotency result first
+    if (idempotencyResult.error) {
+      log.error('[PayPal] Idempotency check failed (Firebase unreachable):', idempotencyResult.error);
       // Don't proceed - we can't verify if this order was already processed
       // Customer can retry when Firebase is back
       return errorResponse('Unable to verify order status. Please try again in a moment.', 503);
+    }
+    if (idempotencyResult.existingOrders && idempotencyResult.existingOrders.length > 0) {
+      const existingOrder = idempotencyResult.existingOrders[0];
+      // Order already exists (idempotent)
+      return successResponse({ orderId: existingOrder.id,
+        orderNumber: existingOrder.orderNumber,
+        message: 'Order already processed' });
+    }
+
+    // Check pending order result
+    if (pendingOrderResult.error) {
+      log.error('[PayPal] Error fetching pending order:', pendingOrderResult.error);
+      return ApiErrors.serverError('Could not verify order data. Please try again.');
     }
 
     // SECURITY: Retrieve order data from Firebase - never trust client-submitted data
@@ -81,37 +109,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let usedServerData = false;
     let paypalReservationId: string | null = null;
 
-    try {
-      const pendingOrder = await getDocument('pendingPayPalOrders', paypalOrderId);
-      if (pendingOrder) {
-        // Retrieved server-side order data
-        paypalReservationId = pendingOrder.reservationId || null;
-        orderData = {
-          customer: pendingOrder.customer,
-          shipping: pendingOrder.shipping,
-          items: pendingOrder.items,
-          totals: pendingOrder.totals,
-          hasPhysicalItems: pendingOrder.hasPhysicalItems,
-          appliedCredit: pendingOrder.appliedCredit || 0
-        };
-        usedServerData = true;
+    const pendingOrder = pendingOrderResult.pendingOrder;
+    if (pendingOrder) {
+      // Retrieved server-side order data
+      paypalReservationId = pendingOrder.reservationId || null;
+      orderData = {
+        customer: pendingOrder.customer,
+        shipping: pendingOrder.shipping,
+        items: pendingOrder.items,
+        totals: pendingOrder.totals,
+        hasPhysicalItems: pendingOrder.hasPhysicalItems,
+        appliedCredit: pendingOrder.appliedCredit || 0
+      };
+      usedServerData = true;
 
-        // Clean up pending order
-        try {
-          await deleteDocument('pendingPayPalOrders', paypalOrderId);
-          // Cleaned up pending order
-        } catch (delErr: unknown) {
-          log.warn('[PayPal] Could not delete pending order:', delErr);
-        }
-      } else {
-        // SECURITY: Reject if no server-side order exists.
-        // The pending order is created during create-order and must exist for a legitimate flow.
-        log.error('[PayPal] SECURITY: No pending order found for', paypalOrderId, '- rejecting capture');
-        return ApiErrors.badRequest('Order session expired or invalid. Please try again.');
+      // Clean up pending order
+      try {
+        await deleteDocument('pendingPayPalOrders', paypalOrderId);
+        // Cleaned up pending order
+      } catch (delErr: unknown) {
+        log.warn('[PayPal] Could not delete pending order:', delErr);
       }
-    } catch (fetchErr: unknown) {
-      log.error('[PayPal] Error fetching pending order:', fetchErr);
-      return ApiErrors.serverError('Could not verify order data. Please try again.');
+    } else {
+      // SECURITY: Reject if no server-side order exists.
+      // The pending order is created during create-order and must exist for a legitimate flow.
+      log.error('[PayPal] SECURITY: No pending order found for', paypalOrderId, '- rejecting capture');
+      return ApiErrors.badRequest('Order session expired or invalid. Please try again.');
     }
 
     // P0 FIX: Validate stock BEFORE capturing payment to prevent overselling
@@ -561,14 +584,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
             balanceAfter: newBalance
           };
 
-          // Atomic arrayUnion prevents lost transactions under concurrent writes
-          await arrayUnion('userCredits', userId, 'transactions', [transaction], {
-            lastUpdated: now
-          });
-
-          // Also update user document atomically
-          await atomicIncrement('users', userId, { creditBalance: -appliedCredit });
-          await updateDocument('users', userId, { creditUpdatedAt: now });
+          // Update userCredits transactions + users document in parallel (different documents)
+          await Promise.all([
+            // Atomic arrayUnion prevents lost transactions under concurrent writes
+            arrayUnion('userCredits', userId, 'transactions', [transaction], {
+              lastUpdated: now
+            }),
+            // Update user document — atomicIncrement + updateDocument must be sequential
+            // (same document) but can run in parallel with the arrayUnion above
+            atomicIncrement('users', userId, { creditBalance: -appliedCredit })
+              .then(() => updateDocument('users', userId, { creditUpdatedAt: now }))
+          ]);
 
           // Credit deducted atomically
         } else {

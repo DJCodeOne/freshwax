@@ -3,7 +3,7 @@
 // Replaces client-side Firebase listener with server-mediated Pusher events
 
 import type { APIRoute } from 'astro';
-import { updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
+import { updateDocument, setDocument, deleteDocument, queryCollection, verifyUserToken } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 import { simpleMd5 } from '../../../lib/pusher';
@@ -208,6 +208,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const data = parseResult.data;
     const { action, userId, name, avatar, avatarLetter, isReady } = data;
 
+    // SECURITY: Verify the token-authenticated user matches the userId in the body
+    // to prevent one user from impersonating another's presence
+    if (!idToken) {
+      return ApiErrors.unauthorized('Authentication required');
+    }
+    const tokenUserId = await verifyUserToken(idToken);
+    if (!tokenUserId || tokenUserId !== userId) {
+      return ApiErrors.forbidden('You can only update your own presence');
+    }
+
     const now = new Date();
 
     switch (action) {
@@ -309,6 +319,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 // DELETE: Cleanup stale presence entries (cron job endpoint)
+// AUTH: Intentionally unauthenticated — only deletes presence entries with lastSeen
+// older than 2 minutes. This is a housekeeping operation that removes stale data
+// from disconnected users. No user data is exposed or modified.
 export const DELETE: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute
   const deleteClientId = getClientId(request);

@@ -1,6 +1,9 @@
 // src/pages/api/playlist/history.ts
 // Server-side playlist history - shared across all users for auto-play
 // NOW USES CLOUDFLARE KV - NO MORE FIREBASE READS!
+// AUTH: Intentionally public — this is a shared global playlist history for the
+// livestream auto-play feature. All users (including anonymous) contribute to it.
+// Rate limited. No user-specific data is stored or exposed.
 
 import type { APIContext } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';

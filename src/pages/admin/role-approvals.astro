@@ -22,7 +22,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <title>Role Approvals | Admin | Fresh Wax</title>
 </head>
 <body>
-  <script is:inline src="/csrf-protect.js"></script>
+  <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
   <div class="admin-page">
     <header class="admin-header">
       <a href="/admin/" class="back-link">← Back to Admin</a>

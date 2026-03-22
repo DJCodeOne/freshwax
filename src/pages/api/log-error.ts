@@ -1,5 +1,7 @@
 // src/pages/api/log-error.ts
 // Receives client-side error reports and stores in D1
+// AUTH: Intentionally public — client-side error logging must work for all visitors,
+// including unauthenticated users. Rate limited to 10/min.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';

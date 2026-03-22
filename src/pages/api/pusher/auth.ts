@@ -22,10 +22,13 @@ const ALLOWED_ORIGINS = [
   ] : []),
 ];
 
+// Cloudflare Pages preview URL pattern — see middleware.ts for security rationale
+const PAGES_PREVIEW_RE = /^https:\/\/[a-z0-9][a-z0-9-]{0,62}\.freshwax\.pages\.dev$/;
+
 function getAllowedOrigin(request: Request): string | null {
   const origin = request.headers.get('origin');
   if (!origin) return null;
-  if (origin.endsWith('.freshwax.pages.dev')) return origin;
+  if (PAGES_PREVIEW_RE.test(origin)) return origin;
   return ALLOWED_ORIGINS.includes(origin) ? origin : null;
 }
 

@@ -1,6 +1,9 @@
 // src/pages/api/plus/validate-promo.ts
 // Validate referral codes for Plus membership - 50% off (£5 instead of £10)
 // Checks KV storage first (new system), then falls back to Firebase giftCards (legacy)
+// AUTH: Intentionally public — code validation is a read-only check that returns
+// whether a promo code is valid. No mutations. Strictly rate limited to prevent
+// brute-force code enumeration.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';

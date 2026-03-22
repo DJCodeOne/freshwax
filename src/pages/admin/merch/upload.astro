@@ -11,6 +11,7 @@ if (authResult) return Astro.redirect('/login');
 export const prerender = false;
 const csrfToken = Astro.locals.csrfToken || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+const nonce = Astro.locals.nonce || '';
 ---
 
 <!DOCTYPE html>
@@ -26,7 +27,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <script is:inline src="/csrf-protect.js"></script>
+  <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
   <header class="header">
     <h1>Fresh <span>Wax</span> Upload Merch</h1>
     <nav class="header-nav">
@@ -383,7 +384,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       </div>
       <div class="image-editor-body">
         <div class="crop-container" id="cropContainer">
-          <img id="cropImage" src="" alt="Crop preview" width="400" height="400" decoding="async" />
+          <img id="cropImage" src="" alt="Crop preview" width="400" height="400" loading="lazy" decoding="async" />
           <div class="crop-grid"></div>
         </div>
         <div class="editor-controls">
