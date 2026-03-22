@@ -163,7 +163,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               <button type="button" class="emoji-btn" data-emoji="✨">✨</button>
               <button type="button" class="emoji-btn" data-emoji="🚀">🚀</button>
             </div>
-            <textarea name="description" id="descriptionField" class="form-textarea" maxlength="500" rows="3" placeholder="Shout outs, track info, etc...">{mix.description || mix.shoutOuts || ''}</textarea>
+            <textarea name="description" id="descriptionField" class="form-textarea" maxlength="500" rows="3" placeholder="Shout outs, track info, etc..." aria-label="Mix description">{mix.description || mix.shoutOuts || ''}</textarea>
           </div>
         </div>
       </div>
@@ -176,7 +176,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <h2>🎶 Tracklist</h2>
         </div>
         <div class="card-body">
-          <textarea name="tracklist" class="form-textarea" rows="6" placeholder="One track per line...">{mix.tracklist || (mix.tracklistArray || []).join('\n')}</textarea>
+          <textarea name="tracklist" class="form-textarea" rows="6" placeholder="One track per line..." aria-label="Tracklist">{mix.tracklist || (mix.tracklistArray || []).join('\n')}</textarea>
           <span class="form-hint">Enter one track per line. Track numbers will be added automatically.</span>
         </div>
       </div>

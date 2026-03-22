@@ -122,7 +122,8 @@ async function networkFirstHTML(request) {
       cache.put(stripCacheBustParams(request), response.clone());
     }
     return response;
-  } catch {
+  } catch (_e) {
+    // non-critical: network request failed — serve from cache or offline page
     const cached = await caches.match(request);
     if (cached) return cached;
     return caches.match('/offline.html');
@@ -143,8 +144,8 @@ async function cacheFirst(request) {
       trimCache(DYNAMIC_CACHE, DYNAMIC_CACHE_LIMIT);
     }
     return response;
-  } catch {
-    // Static asset unavailable offline -- return nothing
+  } catch (_e) {
+    // non-critical: static asset unavailable offline — return 503
     return new Response('', { status: 503, statusText: 'Offline' });
   }
 }

@@ -133,7 +133,7 @@ function persistToKV(key: string, entry: RateLimitEntry, ttlMs: number): void {
     kvStore.put(`rl:${key}`, JSON.stringify(entry), {
       expirationTtl: Math.max(60, Math.ceil(ttlMs / 1000)) // min 60s TTL
     });
-  } catch { /* KV write failure is non-critical */ }
+  } catch (_e: unknown) { /* non-critical: KV write failure */ }
 }
 
 /**

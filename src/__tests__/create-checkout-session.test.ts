@@ -623,4 +623,273 @@ describe('Stripe Create Checkout Session', () => {
     // 9.99 * 100 = 999 cents (URL-encoded as part of nested key)
     expect(requestBody).toContain('unit_amount%5D=999');
   });
+
+  // -----------------------------------------------------------------------
+  // 15. Error: item with negative price -> Zod rejects
+  // -----------------------------------------------------------------------
+  it('returns 400 when an item has a negative price', async () => {
+    const payload = makeDigitalCheckoutPayload({
+      items: [
+        {
+          id: 'release_bad',
+          name: 'Bad Price EP',
+          type: 'digital',
+          price: -5.00,
+          quantity: 1,
+        },
+      ],
+    });
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain('Invalid request');
+    expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 16. Error: item missing name -> Zod rejects
+  // -----------------------------------------------------------------------
+  it('returns 400 when an item is missing a name', async () => {
+    const payload = makeDigitalCheckoutPayload({
+      items: [
+        {
+          id: 'release_noname',
+          name: '', // Empty name fails min(1)
+          type: 'digital',
+          price: 9.99,
+          quantity: 1,
+        },
+      ],
+    });
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain('Invalid request');
+    expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 17. Error: invalid email format
+  // -----------------------------------------------------------------------
+  it('returns 400 when customer email is not valid format', async () => {
+    const payload = makeDigitalCheckoutPayload();
+    (payload.customer as Record<string, unknown>).email = 'not-an-email';
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain('Invalid request');
+    expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 18. Free shipping for merch orders over £50
+  // -----------------------------------------------------------------------
+  it('applies free shipping for merch orders over £50', async () => {
+    const expensiveItems = [
+      {
+        productId: 'merch_1',
+        name: 'Expensive Hoodie',
+        type: 'merch',
+        price: 55.00,
+        quantity: 1,
+        size: 'L',
+        color: 'Black',
+      },
+    ];
+
+    mockValidateAndGetPrices.mockResolvedValue({
+      validatedItems: expensiveItems,
+      hasPriceMismatch: false,
+    });
+
+    const payload = makeMerchCheckoutPayload({
+      items: expensiveItems,
+      totals: { subtotal: 55.00, shipping: 0, total: 55.00 },
+    });
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // Check the Stripe request body contains free shipping
+    const stripeCall = mockFetchWithTimeout.mock.calls[0];
+    const requestBody = stripeCall[1].body as string;
+    // Shipping amount should be 0 (free) for merch over £50
+    expect(requestBody).toContain('shipping_options');
+    expect(requestBody).toContain('Free+Shipping');
+  });
+
+  // -----------------------------------------------------------------------
+  // 19. Stripe session creation with invalid JSON response
+  // -----------------------------------------------------------------------
+  it('returns 500 when Stripe returns non-JSON error response', async () => {
+    mockFetchWithTimeout.mockResolvedValue(
+      new Response('Internal Server Error', {
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' },
+      })
+    );
+
+    const request = makeRequest(makeDigitalCheckoutPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toContain('Failed to create checkout session');
+
+    // Reservation should be released on failure
+    expect(mockReleaseReservation).toHaveBeenCalledWith('res_test_123');
+  });
+
+  // -----------------------------------------------------------------------
+  // 20. Quantity over 99 is rejected by Zod
+  // -----------------------------------------------------------------------
+  it('returns 400 when item quantity exceeds maximum (99)', async () => {
+    const payload = makeDigitalCheckoutPayload({
+      items: [
+        {
+          id: 'release_1',
+          name: 'Jungle Massive EP',
+          type: 'digital',
+          price: 9.99,
+          quantity: 100,
+        },
+      ],
+    });
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain('Invalid request');
+    expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 21. Multiple items produce correct line items and totals
+  // -----------------------------------------------------------------------
+  it('handles multiple items with correct line items and total', async () => {
+    const multiItems = [
+      {
+        id: 'release_1',
+        releaseId: 'release_1',
+        name: 'Jungle EP',
+        type: 'digital',
+        price: 9.99,
+        quantity: 1,
+        artist: 'DJ One',
+        artistId: 'artist_1',
+      },
+      {
+        id: 'release_2',
+        releaseId: 'release_2',
+        name: 'DnB LP',
+        type: 'digital',
+        price: 14.99,
+        quantity: 2,
+        artist: 'DJ Two',
+        artistId: 'artist_2',
+      },
+    ];
+
+    mockValidateAndGetPrices.mockResolvedValue({
+      validatedItems: multiItems,
+      hasPriceMismatch: false,
+    });
+
+    const payload = makeDigitalCheckoutPayload({
+      items: multiItems,
+      totals: { subtotal: 39.97, shipping: 0, total: 39.97 },
+    });
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // Verify both items appear in Stripe request
+    const stripeCall = mockFetchWithTimeout.mock.calls[0];
+    const requestBody = stripeCall[1].body as string;
+    expect(requestBody).toContain('line_items%5B0%5D');
+    expect(requestBody).toContain('line_items%5B1%5D');
+    expect(requestBody).toContain('metadata%5Bitems_count%5D=2');
+  });
+
+  // -----------------------------------------------------------------------
+  // 22. Pending checkout storage failure is non-blocking
+  // -----------------------------------------------------------------------
+  it('continues to create Stripe session even when pendingCheckouts storage fails', async () => {
+    // Create items that will produce JSON > 500 chars
+    const longItems = Array.from({ length: 10 }, (_, i) => ({
+      id: `release_${i}`,
+      releaseId: `release_${i}`,
+      name: `Very Long Release Name That Takes Up Space Number ${i}`,
+      type: 'digital',
+      price: 9.99,
+      quantity: 1,
+      artist: `Artist With A Long Name ${i}`,
+      artistId: `artist_${i}`,
+    }));
+
+    mockValidateAndGetPrices.mockResolvedValue({
+      validatedItems: longItems,
+      hasPriceMismatch: false,
+    });
+
+    // Make addDocument fail
+    mockAddDocument.mockRejectedValue(new Error('Firebase unavailable'));
+
+    const payload = makeDigitalCheckoutPayload({ items: longItems });
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    // Should still succeed despite Firestore failure
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.sessionId).toBe('cs_test_session_123');
+  });
 });

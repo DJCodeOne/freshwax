@@ -1730,23 +1730,50 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             if (!data.success) {
               throw new Error(data.error || 'Booking failed');
             }
-            return data;
+            return { slot: slot, data: data };
           });
         });
 
-        await Promise.all(bookingPromises);
+        var results = await Promise.allSettled(bookingPromises);
 
-        // Success - clear selection, close modal and refresh
-        selectedSlots = [];
-        alert('Booking confirmed! Your slot has been reserved.');
-        window.closeScheduleModal?.();
+        // Tally successes and failures with per-slot detail
+        var succeeded = [];
+        var failed = [];
+        results.forEach(function(result, i) {
+          var slot = sortedSlots[i];
+          var label = formatHour(slot.hour);
+          if (result.status === 'fulfilled') {
+            succeeded.push(label);
+          } else {
+            var reason = result.reason && result.reason.message ? result.reason.message : 'Unknown error';
+            failed.push(label + ' (' + reason + ')');
+          }
+        });
 
-        // Trigger refresh on other instances
-        window.dispatchEvent(new CustomEvent('schedule-updated'));
+        if (failed.length === 0) {
+          // All succeeded
+          selectedSlots = [];
+          alert('Booking confirmed! ' + succeeded.length + ' slot' + (succeeded.length > 1 ? 's' : '') + ' reserved.');
+          window.closeScheduleModal?.();
+          window.dispatchEvent(new CustomEvent('schedule-updated'));
+        } else if (succeeded.length === 0) {
+          // All failed
+          alert('Booking failed for all slots:\n' + failed.join('\n'));
+        } else {
+          // Partial success
+          selectedSlots = [];
+          alert(
+            'Partial booking:\n\nBooked: ' + succeeded.join(', ') +
+            '\n\nFailed: ' + failed.join(', ') +
+            '\n\nPlease retry the failed slots.'
+          );
+          window.closeScheduleModal?.();
+          window.dispatchEvent(new CustomEvent('schedule-updated'));
+        }
 
       } catch (error) {
         console.error('[DailySchedule] Booking error:', error);
-        alert('Booking failed: ' + (error instanceof Error ? error.message : 'Unknown error. Please try again.'));
+        alert('Booking failed: ' + (error && error.message ? error.message : 'Unknown error. Please try again.'));
       } finally {
         if (saveBtn) {
           saveBtn.disabled = false;

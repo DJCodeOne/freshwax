@@ -1222,7 +1222,7 @@ function initPreorderSystem() {
     FreshWaxCart.updateBadge();
 
       // Show success state
-      var originalHTML = btn.innerHTML;
+      originalHTML = btn.innerHTML;
       btn.innerHTML = '<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added!</span>';
       btn.classList.remove('from-orange-500', 'to-red-500');
       btn.classList.add('from-green-500', 'to-green-600');

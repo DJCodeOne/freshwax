@@ -85,6 +85,7 @@ const {
   catalogNumber = '',
   genre = '',
   coverArtUrl = '/place-holder.webp',
+  thumbUrl: releaseThumbUrl = '',
   additionalArtwork = [],
   tracks = [],
   releaseDate = new Date().toISOString(),
@@ -116,6 +117,9 @@ const {
   nyopMinPrice = 0,
   nyopSuggestedPrice = 0
 } = release || {};
+
+// Derive thumbnail URL for srcset (400w responsive variant)
+const coverThumbUrl = releaseThumbUrl || (coverArtUrl.includes('/cover.webp') ? coverArtUrl.replace('/cover.webp', '/thumb.webp') : '');
 
 // Handle pricing - use explicit checks to avoid 0 being treated as falsy
 const actualTrackPrice = trackPrice !== undefined && trackPrice !== null ? trackPrice : 1.00;
@@ -189,7 +193,8 @@ if (notesText) {
         const urlObj = new URL(trimmed);
         const domain = urlObj.hostname.replace('www.', '');
         socialLinksTemp.push({ platform: domain, url: trimmed, icon: '🌐' });
-      } catch {
+      } catch (_e: unknown) {
+        // non-critical: URL constructor threw — treat as plain text line
         otherLinesTemp.push(trimmed);
       }
     } else {
@@ -353,7 +358,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     { name: `${releaseName} - ${artistName}`, url: `/item/${id}/` }
   ] : undefined}
 >
-  {coverArtUrl && coverArtUrl !== '/place-holder.webp' && <link rel="preload" href={coverArtUrl} as="image" slot="head" />}
+  {coverArtUrl && coverArtUrl !== '/place-holder.webp' && coverThumbUrl ? (
+    <link rel="preload" as="image" imagesrcset={`${coverThumbUrl.replace(/ /g, '%20')} 400w, ${coverArtUrl.replace(/ /g, '%20')} 800w`} imagesizes="(max-width: 600px) 400px, 600px" slot="head" />
+  ) : coverArtUrl && coverArtUrl !== '/place-holder.webp' ? (
+    <link rel="preload" href={coverArtUrl} as="image" slot="head" />
+  ) : null}
   <Header />
   
   {!release ? (
@@ -398,6 +407,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                 <div class="relative">
                   <img
                     src={coverArtUrl}
+                    srcset={coverThumbUrl ? `${coverThumbUrl.replace(/ /g, '%20')} 400w, ${coverArtUrl.replace(/ /g, '%20')} 800w` : undefined}
+                    sizes={coverThumbUrl ? "(max-width: 600px) 400px, 600px" : undefined}
                     alt={`${releaseName} by ${artistName}`}
                     class="w-full border-2 md:border-4 border-white shadow-2xl cover-art-glow"
                     width="600"
@@ -869,7 +880,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   placeholder="Login to comment" 
                   maxlength="30"
                   readonly
-                  aria-label="Write a comment"
+                  aria-label="Your name"
                   class="w-full px-3 py-2 border-2 border-gray-600 bg-gray-800 text-white placeholder-gray-400 focus:outline-none rounded cursor-not-allowed text-sm md:text-base shadow-inner mb-3 flex-shrink-0"
                 />
                 
@@ -1494,6 +1505,16 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 </script>
 
 <script is:inline define:vars={{ releaseId: id, firebaseApiKey: FIREBASE_API_KEY }} nonce={nonce}>
+
+  // Expose Firebase config to public scripts (e.g. item-page.js)
+  window.FIREBASE_CONFIG = {
+    apiKey: firebaseApiKey,
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store",
+    storageBucket: "freshwax-store.firebasestorage.app",
+    messagingSenderId: "675435782973",
+    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+  };
 
   function escapeHtml(str) {
     if (!str) return '';

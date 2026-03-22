@@ -72,8 +72,8 @@ export async function checkStationLive(station: RelayStation): Promise<StationSt
             serverTitle: data.servertitle || data.title || undefined
           };
         }
-      } catch {
-        // Not valid JSON, fall through to text parsing
+      } catch (_e: unknown) {
+        // non-critical: not valid JSON, fall through to text parsing
       }
     }
 
@@ -82,7 +82,8 @@ export async function checkStationLive(station: RelayStation): Promise<StationSt
     const isLive = nowPlaying && nowPlaying !== 'Unknown - Track';
 
     return { isLive, nowPlaying: isLive ? nowPlaying : undefined };
-  } catch {
+  } catch (_e: unknown) {
+    // non-critical: relay status check failed — assume offline
     return { isLive: false };
   }
 }

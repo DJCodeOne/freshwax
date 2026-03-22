@@ -301,7 +301,7 @@ const release = {
 };
 
 // Create document in Firestore
-const apiKey = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+const apiKey = process.env.PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 const projectId = 'freshwax-store';
 const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/releases?documentId=${releaseId}&key=${apiKey}`;
 

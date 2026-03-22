@@ -128,26 +128,18 @@ async function startServer(): Promise<{ success: boolean; message?: string; erro
 
 // Stop MediaMTX server
 async function stopServer(): Promise<{ success: boolean; message?: string; error?: string }> {
-  try {
-    return {
-      success: true,
-      message: 'Stop command sent. Note: Server processes must be stopped on the host machine.'
-    };
-  } catch (error: unknown) {
-    return { success: false, error: 'Failed to stop server' };
-  }
+  return {
+    success: true,
+    message: 'Stop command sent. Note: Server processes must be stopped on the host machine.'
+  };
 }
 
 // Restart MediaMTX server
 async function restartServer(): Promise<{ success: boolean; message?: string; error?: string }> {
-  try {
-    return {
-      success: true,
-      message: 'Restart command sent. Note: Server must be restarted on the host machine.'
-    };
-  } catch (error: unknown) {
-    return { success: false, error: 'Failed to restart server' };
-  }
+  return {
+    success: true,
+    message: 'Restart command sent. Note: Server must be restarted on the host machine.'
+  };
 }
 
 // Force end all active streams
@@ -276,15 +268,11 @@ async function clearCache(locals: App.Locals): Promise<{ success: boolean; messa
 
 // Sync data between services
 async function syncData(): Promise<{ success: boolean; message?: string; error?: string }> {
-  try {
-    // Trigger any sync operations
-    return {
-      success: true,
-      message: 'Data sync initiated. This may take a few moments.'
-    };
-  } catch (error: unknown) {
-    return { success: false, error: 'Failed to sync data' };
-  }
+  // Trigger any sync operations
+  return {
+    success: true,
+    message: 'Data sync initiated. This may take a few moments.'
+  };
 }
 
 // Database cleanup

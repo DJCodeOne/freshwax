@@ -1,6 +1,6 @@
 // Script to fetch actual YouTube titles and update playlist history
 const FIREBASE_PROJECT_ID = 'freshwax-store';
-const FIREBASE_API_KEY = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+const FIREBASE_API_KEY = process.env.PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
 async function getYouTubeTitle(videoId) {
   try {

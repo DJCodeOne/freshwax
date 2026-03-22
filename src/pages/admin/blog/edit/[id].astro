@@ -153,6 +153,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               id="post-excerpt"
               rows="3"
               placeholder="Brief summary for previews and SEO..."
+              aria-label="Post excerpt"
               class="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 resize-none"
             >{post.excerpt || ''}</textarea>
           </div>
@@ -168,14 +169,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           </div>
           <div class="card-body space-y-4">
             <div>
-              <label class="block text-sm text-gray-300 mb-2">Status</label>
+              <label for="post-status" class="block text-sm text-gray-300 mb-2">Status</label>
               <select id="post-status" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-red-500">
                 <option value="draft" selected={post.status === 'draft'}>Draft</option>
                 <option value="published" selected={post.status === 'published'}>Published</option>
               </select>
             </div>
             <div>
-              <label class="block text-sm text-gray-300 mb-2">URL Slug</label>
+              <label for="post-slug" class="block text-sm text-gray-300 mb-2">URL Slug</label>
               <input
                 type="text"
                 id="post-slug"
@@ -222,7 +223,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           </div>
           <div class="card-body space-y-4">
             <div>
-              <label class="block text-sm text-gray-300 mb-2">Category</label>
+              <label for="post-category" class="block text-sm text-gray-300 mb-2">Category</label>
               <select id="post-category" class="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-white focus:outline-none focus:border-red-500">
                 <option value="News" selected={post.category === 'News'}>News</option>
                 <option value="Releases" selected={post.category === 'Releases'}>Releases</option>
@@ -233,7 +234,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               </select>
             </div>
             <div>
-              <label class="block text-sm text-gray-300 mb-2">Tags</label>
+              <label for="post-tags" class="block text-sm text-gray-300 mb-2">Tags</label>
               <input
                 type="text"
                 id="post-tags"
@@ -252,7 +253,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           </div>
           <div class="card-body space-y-4">
             <div>
-              <label class="block text-sm text-gray-300 mb-2">SEO Title</label>
+              <label for="post-seo-title" class="block text-sm text-gray-300 mb-2">SEO Title</label>
               <input
                 type="text"
                 id="post-seo-title"
@@ -262,7 +263,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               />
             </div>
             <div>
-              <label class="block text-sm text-gray-300 mb-2">Meta Description</label>
+              <label for="post-seo-description" class="block text-sm text-gray-300 mb-2">Meta Description</label>
               <textarea
                 id="post-seo-description"
                 rows="3"

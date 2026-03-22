@@ -36,7 +36,8 @@ export function verifySessionMatch(cookies: {
     if (tokenUserId !== expectedId) return null;
 
     return tokenUserId;
-  } catch {
+  } catch (_e: unknown) {
+    // non-critical: JWT verification failed — treat as unauthenticated
     return null;
   }
 }

@@ -612,7 +612,7 @@ const articleSchema = article ? {
 <title>{fullTitle}</title>
 <meta name="title" content={fullTitle} />
 <meta name="description" content={description} />
-{!noindex && <link rel="canonical" href={canonicalUrl} />}
+<link rel="canonical" href={canonicalUrl} />
 
 <!-- Robots -->
 {noindex ? (
@@ -730,12 +730,6 @@ const articleSchema = article ? {
     <link rel="alternate" hreflang="x-default" href={canonicalUrl} />
   </>
 )}
-
-<!-- Security Headers -->
-<meta http-equiv="X-Content-Type-Options" content="nosniff" />
-<meta http-equiv="X-XSS-Protection" content="1; mode=block" />
-<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
-<meta http-equiv="Permissions-Policy" content="camera=(self), microphone=(self), geolocation=(), payment=(), interest-cohort=(), browsing-topics=(), usb=(), bluetooth=(), serial=(), hid=()" />
 
 <!-- Mobile / PWA -->
 <meta name="application-name" content={SITE.name} />

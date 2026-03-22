@@ -56,7 +56,8 @@ const formatDate = (dateValue: unknown) => {
       month: 'long',
       year: 'numeric'
     });
-  } catch {
+  } catch (_e: unknown) {
+    // non-critical: invalid date value — return empty string
     return '';
   }
 };
@@ -816,9 +817,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         var releaseDate = btn.getAttribute('data-release-date');
         
         // Get cart
-        var cartRaw = '{"items":[]}';
-        try { cartRaw = localStorage.getItem('freshwax_cart') || cartRaw; } catch (e) {}
-        var cart = JSON.parse(cartRaw);
+        var cart = {items: []};
+        try {
+          var cartRaw = localStorage.getItem('freshwax_cart');
+          if (cartRaw) { cart = JSON.parse(cartRaw); }
+        } catch (e) { cart = {items: []}; }
         var items = cart.items || [];
         
         // Check if already in cart

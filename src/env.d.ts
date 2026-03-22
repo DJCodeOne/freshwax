@@ -76,6 +76,7 @@ interface ImportMetaEnv {
   // ---- GIF / Media APIs ----
   readonly GIPHY_API_KEY: string;
   readonly YOUTUBE_API_KEY: string;
+  readonly PUBLIC_TENOR_API_KEY: string;
 
   // ---- reCAPTCHA ----
   readonly PUBLIC_RECAPTCHA_SITE_KEY: string;
@@ -202,6 +203,7 @@ interface CloudflareEnv {
   // ---- GIF / Media APIs ----
   GIPHY_API_KEY: string;
   YOUTUBE_API_KEY: string;
+  PUBLIC_TENOR_API_KEY: string;
 
   // ---- reCAPTCHA ----
   PUBLIC_RECAPTCHA_SITE_KEY: string;

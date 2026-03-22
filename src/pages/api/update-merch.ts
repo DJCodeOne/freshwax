@@ -233,7 +233,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         updates.sizes = JSON.parse(sizesJson as string);
         updates.hasSizes = updates.sizes.length > 0;
-      } catch {
+      } catch (_e: unknown) {
+        // non-critical: client sent malformed sizes JSON
         return ApiErrors.badRequest('Invalid sizes format');
       }
     }
@@ -243,7 +244,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         updates.colors = JSON.parse(colorsJson as string);
         updates.hasColors = updates.colors.length > 0;
-      } catch {
+      } catch (_e: unknown) {
+        // non-critical: client sent malformed colors JSON
         return ApiErrors.badRequest('Invalid colors format');
       }
     }
@@ -257,7 +259,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       let indexesToDelete: number[];
       try {
         indexesToDelete = JSON.parse(deleteImageIndexes as string) as number[];
-      } catch {
+      } catch (_e: unknown) {
+        // non-critical: client sent malformed deleteImages JSON
         return ApiErrors.badRequest('Invalid deleteImages format');
       }
 

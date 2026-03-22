@@ -3,7 +3,7 @@
 
 const { execSync } = require('child_process');
 
-const FIREBASE_API_KEY = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+const FIREBASE_API_KEY = process.env.PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 const PROJECT_ID = 'freshwax-store';
 
 async function fetchPlaylistsFromFirestore() {

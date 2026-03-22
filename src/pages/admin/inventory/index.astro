@@ -982,7 +982,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         html += `
           <div style="${sectionStyle}">
             <div style="${supplierHeaderStyle}">📦 ${escapeHtml(supplier)} (${products.length} products)</div>
-            <table style="${tableStyle}">
+            <table style="${tableStyle}" aria-label="Stock count for ${escapeHtml(supplier)}">
               <thead style="${theadStyle}">
                 <tr style="${trStyle}">
                   <th scope="col" style="${thStyle} width: 200px;">Product / Size</th>

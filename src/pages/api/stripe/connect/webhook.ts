@@ -67,7 +67,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       log.warn('⚠️ DEV MODE: Skipping signature verification');
       try {
         event = JSON.parse(body);
-      } catch {
+      } catch (_e: unknown) {
+        // non-critical: dev mode webhook body is not valid JSON
         log.error('Invalid JSON payload in dev mode');
         return new Response('Invalid JSON payload', { status: 400 });
       }

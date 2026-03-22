@@ -14,7 +14,7 @@ if (!slotId || !newTitle) {
 // Use Firebase REST API with API key (for public writes this may not work due to rules)
 // For now, directly call Firestore REST API
 const projectId = 'freshwax-store';
-const apiKey = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+const apiKey = process.env.PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
 const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/livestreamSlots/${slotId}?updateMask.fieldPaths=title&key=${apiKey}`;
 

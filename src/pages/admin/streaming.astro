@@ -2182,8 +2182,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <button class="kick-stream-btn" data-action="kickStream" data-path="${escapeHtml(path.name)}">Kick</button>
           </div>
         `).join('');
-      } catch {
-        // Stream server online but can't get paths (CORS or config issue)
+      } catch (_e: unknown) {
+        // non-critical: stream server online but can't get paths (CORS or config issue)
         const msg = streamSvc.message || 'Online';
         container.innerHTML = `<div class="empty-state">${escapeHtml(msg)}</div>`;
       }

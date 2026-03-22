@@ -207,7 +207,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       const data = await res.json();
       alert(`Deleted ${data.deleted} old error logs`);
       loadErrors();
-    } catch {
+    } catch (_e: unknown) {
+      // non-critical: error log cleanup request failed
       alert('Cleanup failed');
     }
     btn.disabled = false;

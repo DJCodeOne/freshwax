@@ -519,6 +519,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                       data-release-id={release.id}
                       placeholder="Describe your release..."
                       maxlength="500"
+                      aria-label="Release description"
                     >{release.releaseDescription || release.description || ''}</textarea>
                     <span class="char-count"><span class="current">{(release.releaseDescription || release.description || '').length}</span>/500</span>
                   </div>

@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/minify-public.cjs",
+    "minify-public": "node scripts/minify-public.cjs",
     "preview": "astro preview",
     "test": "vitest run",
     "test:watch": "vitest",

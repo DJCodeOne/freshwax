@@ -47,7 +47,9 @@ const ALLOWED_ORIGINS = [
 // Check if origin is allowed
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
-  // Allow any *.freshwax.pages.dev preview deployments
+  // Allow any *.freshwax.pages.dev preview deployments.
+  // Cloudflare Pages creates unique preview URLs like abc123.freshwax.pages.dev
+  // for each branch/commit, so a subdomain wildcard is necessary here.
   if (origin.endsWith('.freshwax.pages.dev')) return true;
   return ALLOWED_ORIGINS.includes(origin);
 }
@@ -286,8 +288,8 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
           if (typeof csrfField === 'string') {
             submittedToken = csrfField;
           }
-        } catch {
-          // Body parse failed — token stays null, validation will reject
+        } catch (_e: unknown) {
+          // non-critical: body parse failed — token stays null, validation will reject
         }
       }
     }

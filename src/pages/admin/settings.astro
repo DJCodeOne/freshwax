@@ -319,7 +319,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
             <div class="form-group" style="margin-top: 1rem;">
               <label>MP3 Bitrate (kbps)</label>
-              <select id="mp3Bitrate" class="form-select">
+              <select id="mp3Bitrate" class="form-select" aria-label="MP3 bitrate">
                 <option value="128">128 kbps (smaller files)</option>
                 <option value="192" selected>192 kbps (recommended)</option>
                 <option value="256">256 kbps (high quality)</option>
@@ -363,7 +363,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <div class="form-grid">
             <div class="form-group">
               <label>Default Release Status</label>
-              <select id="defaultReleaseStatus" class="form-select">
+              <select id="defaultReleaseStatus" class="form-select" aria-label="Default release status">
                 <option value="pending" selected>Pending Review</option>
                 <option value="draft">Draft</option>
                 <option value="live">Live (Auto-approve)</option>

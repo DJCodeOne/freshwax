@@ -469,7 +469,7 @@ export function initPlaylistModal() {
     try {
       const date = new Date(dateStr);
       return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch { /* intentional: invalid date string — return empty for graceful display */
+    } catch (_e: unknown) { /* non-critical: invalid date string — return empty for graceful display */
       return '';
     }
   }

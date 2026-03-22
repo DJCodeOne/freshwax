@@ -2,7 +2,7 @@
 // Registration page with role selection
 // All users get customer + DJ base access automatically
 // Artist and Merch Seller require admin approval
-import { FIREBASE_API_KEY } from '../lib/constants';
+import { FIREBASE_API_KEY, SITE_URL } from '../lib/constants';
 
 const firebaseConfig = {
   apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || FIREBASE_API_KEY,
@@ -27,6 +27,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <title>Register | Fresh Wax</title>
   <meta name="robots" content="noindex" />
   <meta name="description" content="Create your Fresh Wax account to buy vinyl, stream live DJ sets and more" />
+  <link rel="canonical" href={`${SITE_URL}/register/`} />
   <!-- reCAPTCHA v3 - loaded dynamically if site key is configured -->
 </head>
 <body>

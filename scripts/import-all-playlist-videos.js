@@ -2,7 +2,7 @@
 // Supports multiple playlists - just add more playlist IDs to the array
 
 const FIREBASE_PROJECT_ID = 'freshwax-store';
-const FIREBASE_API_KEY = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+const FIREBASE_API_KEY = process.env.PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
 // Add playlist IDs here to import multiple playlists
 const PLAYLIST_IDS = [

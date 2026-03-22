@@ -179,7 +179,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const text = await request.text();
       try {
         body = JSON.parse(text);
-      } catch {
+      } catch (_e: unknown) {
+        // non-critical: request body is not valid JSON
         return ApiErrors.badRequest('Invalid JSON body');
       }
     }

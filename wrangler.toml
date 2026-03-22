@@ -26,6 +26,7 @@ binding = "R2"
 bucket_name = "freshwax-releases"
 
 [vars]
+PUBLIC_FIREBASE_API_KEY = "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g"
 PUBLIC_RECAPTCHA_SITE_KEY = "6LfojkEsAAAAAJ9A6y9ZIzO-ZaRqdsWCGfXjU-sm"
 WHIP_BASE_URL = "https://stream.freshwax.co.uk"
 

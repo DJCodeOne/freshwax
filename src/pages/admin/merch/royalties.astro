@@ -214,7 +214,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           else brandTotals[bn].paid += (e.royalty_amount || 0);
         }
 
-        var html = '<table><thead><tr>' +
+        var html = '<table aria-label="Merch royalties"><thead><tr>' +
           '<th scope="col" class="check-col"><input type="checkbox" id="selectAll" aria-label="Select all" /></th>' +
           '<th scope="col">Date</th>' +
           '<th scope="col">Order</th>' +

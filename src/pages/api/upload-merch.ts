@@ -109,19 +109,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     try {
       sizes = JSON.parse(sizesJson);
-    } catch {
+    } catch (_e: unknown) {
+      // non-critical: client sent malformed sizes JSON
       return ApiErrors.badRequest('Invalid sizes format');
     }
 
     try {
       colors = JSON.parse(colorsJson);
-    } catch {
+    } catch (_e: unknown) {
+      // non-critical: client sent malformed colors JSON
       return ApiErrors.badRequest('Invalid colors format');
     }
 
     try {
       variants = JSON.parse(variantsJson);
-    } catch {
+    } catch (_e: unknown) {
+      // non-critical: client sent malformed variants JSON
       return ApiErrors.badRequest('Invalid variants format');
     }
 
@@ -163,7 +166,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (mapJson) {
       try {
         imageColorMap = JSON.parse(mapJson);
-      } catch {
+      } catch (_e: unknown) {
+        // non-critical: client sent malformed imageColorMap JSON
         return ApiErrors.badRequest('Invalid imageColorMap format');
       }
     }

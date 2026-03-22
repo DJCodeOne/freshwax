@@ -2750,7 +2750,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     try {
       const user = window.firebaseAuth?.currentUser;
       return user ? await user.getIdToken() : null;
-    } catch { return null; }
+    } catch (_e) { /* non-critical: auth token fetch failed */ return null; }
   }
 
   function initArtistAccount() {

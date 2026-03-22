@@ -2,7 +2,7 @@
 // Run with: node scripts/add-playlist-to-history.js
 
 const FIREBASE_PROJECT_ID = 'freshwax-store';
-const FIREBASE_API_KEY = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+const FIREBASE_API_KEY = process.env.PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
 async function fetchPlaylistVideos() {
   console.log('Fetching playlist videos...');

@@ -85,6 +85,35 @@ Deployed to Cloudflare Pages via `wrangler pages deploy`.
 - **Do not** change `compatibility_date` beyond `2025-02-13` (breaks `Response.body` in middleware)
 - Uses `nodejs_compat_v2` compatibility flag
 
+## CI/CD Pipeline
+
+The GitHub Actions workflow (`.github/workflows/deploy.yml`) runs on every push/PR to `main`:
+
+1. **Validate** -- Install, security audit (`npm audit --audit-level=high` blocks on HIGH/CRITICAL), lint, typecheck, test, build
+2. **Deploy** (main only) -- Downloads build artifact, captures previous deployment ID, deploys to Cloudflare Pages
+3. **Health check** -- Hits `/api/health/public/` with 3 retries (30s initial wait, 10s between retries)
+4. **Auto-rollback** -- If the health check fails and a previous deployment ID exists, rolls back via the Cloudflare API
+
+### Manual Rollback
+
+If automatic rollback fails or you need to rollback outside CI:
+
+```bash
+# List recent deployments (find the ID to rollback to)
+npx wrangler pages deployment list --project-name=freshwax
+
+# Rollback to a specific deployment by ID
+curl -X POST \
+  "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/pages/projects/freshwax/deployments/$DEPLOYMENT_ID/rollback" \
+  -H "Authorization: Bearer $CF_API_TOKEN" \
+  -H "Content-Type: application/json"
+
+# Verify the rollback
+curl -s https://freshwax.co.uk/api/health/public/
+```
+
+Alternatively, rollback from the Cloudflare dashboard: **Workers & Pages > freshwax > Deployments > (select deployment) > Rollback**.
+
 ## Cron Jobs
 
 Configured in Cloudflare Dashboard (Pages cron triggers, not wrangler.toml):

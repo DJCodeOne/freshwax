@@ -49,8 +49,16 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
+      - name: Test with coverage
         run: npm run test:coverage
+
+      - name: Upload coverage summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: coverage/coverage-summary.json
+          retention-days: 14
 
       - name: Build
         run: npm run build
@@ -63,6 +71,11 @@ jobs:
           path: dist/
           retention-days: 1
 
+  # TODO: Add staging deployment
+  # - Deploy to freshwax-staging.pages.dev first
+  # - Run smoke tests against staging
+  # - Then deploy to production
+  #
   # No staging environment — test changes locally with `npm run dev` before pushing.
   # Cloudflare Pages provides instant rollback via API if health checks fail post-deploy.
   # See rollback steps below for automatic recovery on deployment failures.

@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             .map((t: unknown) => String(t).trim())
             .filter((l: string) => l.length > 0);
         }
-      } catch { /* intentional: malformed data JSON in mix row — log warning and skip */
+      } catch (_e: unknown) { /* non-critical: malformed data JSON in mix row — log warning and skip */
         log.warn(`Mix ${mixId}: could not parse data JSON`);
         continue;
       }

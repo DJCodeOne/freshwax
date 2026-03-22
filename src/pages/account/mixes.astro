@@ -590,8 +590,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         
         const artworkResponseText = await artworkResponse.text();
         if (artworkResponse.ok) {
-          const artworkResult = JSON.parse(artworkResponseText);
-          artworkUrl = artworkResult.artworkUrl;
+          try {
+            const artworkResult = JSON.parse(artworkResponseText);
+            artworkUrl = artworkResult.artworkUrl;
+          } catch (e) {
+            throw new Error('Invalid response from artwork upload');
+          }
         } else {
           throw new Error(`Failed to upload artwork: ${artworkResponseText}`);
         }

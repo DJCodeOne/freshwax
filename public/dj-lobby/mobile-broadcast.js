@@ -234,14 +234,14 @@ export async function goLive(token, slotId, streamKey, djId, djName, djAvatar, t
       })
     });
   } catch (fetchErr) {
-    await whipDisconnect().catch(function() {});
+    await whipDisconnect().catch(function() { /* non-critical: WHIP cleanup on go-live failure */ });
     throw new Error('Could not reach go-live API. Check your connection.');
   }
 
   if (!goLiveResp.ok) {
     var goLiveErr = {};
     try { goLiveErr = await goLiveResp.json(); } catch (e) { /* ignore */ }
-    await whipDisconnect().catch(function() {});
+    await whipDisconnect().catch(function() { /* non-critical: WHIP cleanup on go-live error response */ });
     throw new Error(goLiveErr.error || 'Failed to go live');
   }
 
@@ -387,7 +387,7 @@ function startHeartbeat(token) {
     if (ctx && ctx.getCurrentUser) {
       var user = ctx.getCurrentUser();
       if (user && user.getIdToken) {
-        user.getIdToken().then(function(t) { authToken = t; }).catch(function() {});
+        user.getIdToken().then(function(t) { authToken = t; }).catch(function() { /* non-critical: token refresh for heartbeat */ });
       }
     }
     var headers = { 'Content-Type': 'application/json' };
@@ -456,7 +456,7 @@ function handleConnectionLost(token, whipUrl, timerEl, onStats) {
 
   if (shouldRetry && mediaStream) {
     // Attempt reconnection with exponential backoff
-    whipDisconnect().catch(function() {}).then(function() {
+    whipDisconnect().catch(function() { /* non-critical: WHIP cleanup before reconnect */ }).then(function() {
       return whipConnect(whipUrl, mediaStream, {
         onStateChange: function(state) {
           if (state === 'failed' || state === 'ice-failed') {

@@ -1,5 +1,6 @@
 // src/lib/playlist-manager.ts
 // Global playlist manager - synced across all viewers via Pusher
+// Core orchestration class — heavy logic extracted to ./playlist-manager/ sub-modules.
 
 import type { GlobalPlaylistItem, GlobalPlaylist } from './types';
 // EmbedPlayerManager and parseMediaUrl are dynamically imported to split the bundle.
@@ -8,62 +9,46 @@ import type { GlobalPlaylistItem, GlobalPlaylist } from './types';
 import type { EmbedPlayerManager } from './embed-player';
 import { createClientLogger } from './client-logger';
 
+// Sub-module imports
+import {
+  MAX_TRACK_DURATION_MS,
+  MAX_TRACK_DURATION_SECONDS,
+} from './playlist-manager/types';
+import type { PlaylistHistoryEntry, PersonalPlaylistItem } from './playlist-manager/types';
+import {
+  isPlaceholderTitle,
+  fetchMetadata,
+  fetchVideoDuration,
+} from './playlist-manager/metadata';
+import {
+  loadRecentlyPlayedFromStorage,
+  saveRecentlyPlayedToStorage,
+  wasPlayedRecently,
+  loadPlayHistoryFromStorage,
+  savePlayHistoryToStorage,
+  logToHistoryArray,
+} from './playlist-manager/history';
+import {
+  loadPersonalPlaylistFromStorage,
+  savePersonalPlaylistToStorage,
+  savePersonalPlaylistToServer,
+  loadPersonalPlaylistFromServer,
+  addToPersonalPlaylistItems,
+  removeFromPersonalPlaylistItems,
+} from './playlist-manager/personal-playlist';
+import {
+  enableEmojis,
+  disableEmojis,
+  stopPlaylistMeters,
+  startCountdown,
+  startElapsedTimer,
+  updateNowPlayingDisplay,
+  showVideoPlayer,
+  hidePlaylistLoadingOverlay,
+  showOfflineOverlay,
+} from './playlist-manager/ui';
+
 const log = createClientLogger('PlaylistManager');
-
-const PLAYLIST_HISTORY_KEY = 'freshwax_playlist_history';
-const RECENTLY_PLAYED_KEY = 'freshwax_recently_played';
-const PERSONAL_PLAYLIST_KEY = 'freshwax_personal_playlist';
-const MAX_HISTORY_SIZE = 100;
-const MAX_PERSONAL_PLAYLIST_SIZE = 500; // Increased from 50
-const TRACK_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour cooldown between same tracks
-const MAX_TRACK_DURATION_MS = 10 * 60 * 1000; // 10 minutes max per track
-const MAX_TRACK_DURATION_SECONDS = 10 * 60; // 10 minutes in seconds for validation
-
-// Local playlist server (H: drive MP3s via Cloudflare tunnel)
-const LOCAL_PLAYLIST_SERVER = 'https://playlist.freshwax.co.uk';
-
-// Fallback thumbnail for audio files without thumbnails
-const AUDIO_THUMBNAIL_FALLBACK = '/place-holder.webp';
-
-// Server history item from /api/playlist/history/ response
-interface ServerHistoryItem {
-  url: string;
-  platform: string;
-  embedId?: string;
-  title?: string;
-  thumbnail?: string;
-}
-
-// Server file item from /api/playlist/server-list/ response
-interface ServerFileItem {
-  url: string;
-  name: string;
-  thumbnail?: string;
-  duration?: number;
-}
-
-// History entry for offline playlist creation
-interface PlaylistHistoryEntry {
-  id: string;
-  url: string;
-  platform: string;
-  embedId?: string;
-  title?: string;
-  thumbnail?: string;
-  playedAt: string;
-  duration?: number;
-}
-
-// Personal playlist item (user's saved tracks)
-interface PersonalPlaylistItem {
-  id: string;
-  url: string;
-  platform: string;
-  embedId?: string;
-  title?: string;
-  thumbnail?: string;
-  addedAt: string;
-}
 
 export class PlaylistManager {
   private userId: string | null = null;
@@ -104,9 +89,9 @@ export class PlaylistManager {
     // The player is created by ensurePlayer() when playback is needed.
 
     // Load play history, recently played, and personal playlist
-    this.loadPlayHistory();
-    this.loadRecentlyPlayed();
-    this.loadPersonalPlaylist();
+    this.playHistory = loadPlayHistoryFromStorage();
+    this.recentlyPlayed = loadRecentlyPlayedFromStorage();
+    this.personalPlaylist = loadPersonalPlaylistFromStorage();
   }
 
   /**
@@ -134,75 +119,20 @@ export class PlaylistManager {
     return this.playerPromise;
   }
 
-  /**
-   * Load recently played URLs from localStorage
-   */
-  private loadRecentlyPlayed(): void {
-    try {
-      const stored = localStorage.getItem(RECENTLY_PLAYED_KEY);
-      if (stored) {
-        const data = JSON.parse(stored);
-        const now = Date.now();
-        // Only keep entries within cooldown period
-        for (const [url, timestamp] of Object.entries(data)) {
-          if (now - (timestamp as number) < TRACK_COOLDOWN_MS) {
-            this.recentlyPlayed.set(url, timestamp as number);
-          }
-        }
-      }
-    } catch (error: unknown) {
-      log.error('Error loading recently played:', error);
-    }
-  }
+  // ============================================
+  // RECENTLY PLAYED (thin wrappers)
+  // ============================================
 
-  /**
-   * Save recently played URLs to localStorage
-   */
-  private saveRecentlyPlayed(): void {
-    try {
-      const data: Record<string, number> = {};
-      const now = Date.now();
-      // Only save entries within cooldown period
-      for (const [url, timestamp] of this.recentlyPlayed.entries()) {
-        if (now - timestamp < TRACK_COOLDOWN_MS) {
-          data[url] = timestamp;
-        }
-      }
-      localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(data));
-    } catch (error: unknown) {
-      log.error('Error saving recently played:', error);
-    }
-  }
-
-  /**
-   * Check if a URL was played recently (within cooldown period)
-   */
-  private wasPlayedRecently(url: string): { recent: boolean; minutesRemaining?: number } {
-    const timestamp = this.recentlyPlayed.get(url);
-    if (!timestamp) return { recent: false };
-
-    const elapsed = Date.now() - timestamp;
-    if (elapsed >= TRACK_COOLDOWN_MS) {
-      this.recentlyPlayed.delete(url);
-      return { recent: false };
-    }
-
-    const minutesRemaining = Math.ceil((TRACK_COOLDOWN_MS - elapsed) / 60000);
-    return { recent: true, minutesRemaining };
-  }
-
-  /**
-   * Mark a URL as recently played
-   */
   private markAsPlayed(url: string): void {
     this.lastPlayedUrl = url; // Track for immediate repeat prevention
     this.recentlyPlayed.set(url, Date.now());
-    this.saveRecentlyPlayed();
+    saveRecentlyPlayedToStorage(this.recentlyPlayed);
   }
 
-  /**
-   * Start timer to auto-skip after max duration
-   */
+  // ============================================
+  // TRACK TIMER
+  // ============================================
+
   private startTrackTimer(): void {
     this.clearTrackTimer();
     this.trackTimer = window.setTimeout(() => {
@@ -210,9 +140,6 @@ export class PlaylistManager {
     }, MAX_TRACK_DURATION_MS);
   }
 
-  /**
-   * Clear the track timer
-   */
   private clearTrackTimer(): void {
     if (this.trackTimer) {
       clearTimeout(this.trackTimer);
@@ -220,10 +147,10 @@ export class PlaylistManager {
     }
   }
 
+  // ============================================
+  // INITIALIZE
+  // ============================================
 
-  /**
-   * Initialize playlist manager with global sync
-   */
   async initialize(userId?: string, userName?: string): Promise<void> {
     this.userId = userId || null;
     this.userName = userName || null;
@@ -234,7 +161,13 @@ export class PlaylistManager {
 
     // Load personal playlist from D1 if authenticated
     if (this.isAuthenticated && this.userId) {
-      await this.loadPersonalPlaylistFromServer();
+      const result = await loadPersonalPlaylistFromServer(this.userId, this.personalPlaylist);
+      if (result.changed) {
+        this.personalPlaylist = result.items;
+        // Save merged list back to both localStorage and D1
+        savePersonalPlaylistToStorage(this.personalPlaylist);
+        savePersonalPlaylistToServer(this.personalPlaylist, this.userId);
+      }
     }
 
     // Subscribe to Pusher for real-time updates
@@ -252,9 +185,10 @@ export class PlaylistManager {
     this.renderUI();
   }
 
-  /**
-   * Subscribe to Pusher for real-time playlist updates
-   */
+  // ============================================
+  // PUSHER SYNC
+  // ============================================
+
   private async subscribeToPusher(): Promise<void> {
     if (this.isSubscribed) return;
 
@@ -302,9 +236,6 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Handle remote playlist update from Pusher
-   */
   private async handleRemoteUpdate(newPlaylist: GlobalPlaylist & { recentlyPlayed?: Record<string, unknown>[] }): Promise<void> {
     // If live stream is active, ignore "isPlaying" from remote updates
     const liveStreamActive = window.isLiveStreamActive;
@@ -330,7 +261,7 @@ export class PlaylistManager {
     // Preserve better titles from local queue (prevents Pusher from overwriting fetched titles)
     this.playlist.queue = this.playlist.queue.map(item => {
       const oldItem = oldQueue.find(old => old.id === item.id);
-      if (oldItem && !this.isPlaceholderTitle(oldItem.title) && this.isPlaceholderTitle(item.title)) {
+      if (oldItem && !isPlaceholderTitle(oldItem.title) && isPlaceholderTitle(item.title)) {
         // Local has real title, remote has placeholder - keep local title
         return { ...item, title: oldItem.title };
       }
@@ -345,9 +276,9 @@ export class PlaylistManager {
       this.clearTrackTimer();
       this.stopCountdown();
       if (this.player) await this.player.destroy();
-      this.disableEmojis();
-      this.updateNowPlayingDisplay(null);
-      this.showOfflineOverlay();
+      disableEmojis();
+      updateNowPlayingDisplay(null);
+      showOfflineOverlay();
       this.renderUI();
       return;
     }
@@ -374,16 +305,17 @@ export class PlaylistManager {
       // Playlist was paused remotely
       this.stopCountdown();
       if (this.player) await this.player.pause();
-      this.disableEmojis();
+      disableEmojis();
     }
     // If just adding items to queue while playing, do nothing - let current track continue
 
     this.renderUI();
   }
 
-  /**
-   * Add item to global queue (requires authentication)
-   */
+  // ============================================
+  // ADD / REMOVE ITEMS
+  // ============================================
+
   async addItem(url: string): Promise<{ success: boolean; message?: string; error?: string }> {
     if (!url || !url.trim()) {
       return { success: false, error: 'Please enter a URL' };
@@ -394,7 +326,7 @@ export class PlaylistManager {
     }
 
     // Check if URL was played recently (within 1 hour)
-    const recentCheck = this.wasPlayedRecently(url.trim());
+    const recentCheck = wasPlayedRecently(this.recentlyPlayed, url.trim());
     if (recentCheck.recent) {
       return {
         success: false,
@@ -425,7 +357,7 @@ export class PlaylistManager {
 
       // Check duration for YouTube videos before adding
       if (parsed.platform === 'youtube' && parsed.embedId) {
-        const duration = await this.fetchVideoDuration(url.trim(), parsed.platform, parsed.embedId);
+        const duration = await fetchVideoDuration(url.trim(), parsed.platform, parsed.embedId);
         if (duration && duration > MAX_TRACK_DURATION_SECONDS) {
           const mins = Math.floor(duration / 60);
           const secs = Math.floor(duration % 60);
@@ -437,7 +369,7 @@ export class PlaylistManager {
       }
 
       // Fetch metadata for thumbnail/title
-      const metadata = await this.fetchMetadata(url.trim());
+      const metadata = await fetchMetadata(url.trim());
 
       // Get thumbnail - prefer oEmbed, fallback to YouTube direct
       let thumbnail = metadata.thumbnail;
@@ -511,9 +443,6 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Remove item from queue (only own items)
-   */
   async removeItem(itemId: string): Promise<void> {
     if (!this.isAuthenticated || !this.userId) {
       log.warn('Must be authenticated to remove items');
@@ -551,9 +480,9 @@ export class PlaylistManager {
         // If queue is empty, cleanup
         if (this.playlist.queue.length === 0) {
           if (this.player) await this.player.destroy();
-          this.disableEmojis();
-          this.updateNowPlayingDisplay(null);
-          this.showOfflineOverlay();
+          disableEmojis();
+          updateNowPlayingDisplay(null);
+          showOfflineOverlay();
         }
       }
 
@@ -563,9 +492,10 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Play playlist (viewer action - syncs to all)
-   */
+  // ============================================
+  // PLAY / PAUSE / RESUME
+  // ============================================
+
   async play(): Promise<void> {
     // Don't play if live stream is active
     if (window.isLiveStreamActive) {
@@ -581,21 +511,15 @@ export class PlaylistManager {
     await this.sendControlAction('play');
   }
 
-  /**
-   * Pause playlist (LOCAL ONLY - doesn't affect other users)
-   */
   async pause(): Promise<void> {
     this.isPausedLocally = true; // Set local pause flag
     this.clearTrackTimer();
     this.stopCountdown();
     if (this.player) await this.player.pause();
-    this.stopPlaylistMeters();
-    this.disableEmojis();
+    stopPlaylistMeters();
+    disableEmojis();
   }
 
-  /**
-   * Resume playback (LOCAL ONLY - syncs to current global position)
-   */
   async resume(): Promise<void> {
     if (this.playlist.queue.length === 0) return;
 
@@ -618,8 +542,7 @@ export class PlaylistManager {
     // Resume and sync to current global position
     const player = await this.ensurePlayer();
     await player.play();
-    this.enableEmojis();
-    this.startPlaylistMeters();
+    enableEmojis();
 
     // Seek to current global position
     const syncPosition = this.calculateSyncPosition();
@@ -632,17 +555,11 @@ export class PlaylistManager {
 
   }
 
-  /**
-   * Play next track
-   */
   async playNext(): Promise<void> {
     if (this.playlist.queue.length === 0) return;
     await this.sendControlAction('next');
   }
 
-  /**
-   * Skip current track (admin only) - triggered by !skip command
-   */
   async skipTrack(): Promise<void> {
     if (this.playlist.queue.length === 0) {
       log.warn('Cannot skip - queue is empty');
@@ -651,11 +568,10 @@ export class PlaylistManager {
     await this.handleTrackEnded();
   }
 
-  /**
-   * Start auto-play from history when queue is empty and no live stream
-   * Called by live-stream.js when going offline with empty queue
-   * IMPORTANT: Uses server to pick track so all clients play the same thing
-   */
+  // ============================================
+  // AUTO-PLAY
+  // ============================================
+
   async startAutoPlay(): Promise<boolean> {
     // Don't start if live stream is active
     if (window.isLiveStreamActive) {
@@ -706,9 +622,10 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Send control action to server
-   */
+  // ============================================
+  // CONTROL ACTIONS
+  // ============================================
+
   private async sendControlAction(action: string): Promise<void> {
     try {
       const response = await fetch('/api/playlist/global/', {
@@ -732,7 +649,7 @@ export class PlaylistManager {
           await this.playCurrent();
         } else if (action === 'pause') {
           if (this.player) await this.player.pause();
-          this.disableEmojis();
+          disableEmojis();
         }
 
         this.renderUI();
@@ -742,9 +659,6 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Clear entire queue (admin only in future)
-   */
   async clearQueue(): Promise<void> {
     // For now, just clear locally
     this.playlist.queue = [];
@@ -752,15 +666,16 @@ export class PlaylistManager {
     this.playlist.isPlaying = false;
 
     if (this.player) await this.player.destroy();
-    this.disableEmojis();
-    this.updateNowPlayingDisplay(null);
-    this.showOfflineOverlay();
+    disableEmojis();
+    updateNowPlayingDisplay(null);
+    showOfflineOverlay();
     this.renderUI();
   }
 
-  /**
-   * Calculate sync position based on trackStartedAt timestamp
-   */
+  // ============================================
+  // SYNC POSITION
+  // ============================================
+
   private calculateSyncPosition(): number {
     if (!this.playlist.trackStartedAt) {
       return 0;
@@ -775,9 +690,10 @@ export class PlaylistManager {
     return Math.min(Math.max(0, elapsedSeconds), maxSeconds);
   }
 
-  /**
-   * Play current track (with lock to prevent race conditions)
-   */
+  // ============================================
+  // PLAY CURRENT (core orchestration)
+  // ============================================
+
   private async playCurrent(): Promise<void> {
     // Don't play if live stream is active
     if (window.isLiveStreamActive) {
@@ -809,7 +725,7 @@ export class PlaylistManager {
 
     try {
       // Show video player and hide overlays
-      this.showVideoPlayer();
+      showVideoPlayer(() => this.hidePlaylistLoadingOverlay());
 
       // Log to local play history only (server history updated when track ENDS)
       this.logToHistory(currentItem);
@@ -821,10 +737,10 @@ export class PlaylistManager {
       this.startTrackTimer();
 
       // Enable emoji reactions
-      this.enableEmojis();
+      enableEmojis();
 
       // Update NOW PLAYING display
-      this.updateNowPlayingDisplay(currentItem);
+      updateNowPlayingDisplay(currentItem);
 
       // Lazy-load embed player on first playback
       const player = await this.ensurePlayer();
@@ -872,350 +788,124 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Log item to play history for offline playlist creation
-   * Prevents duplicate URLs - each URL only appears once in history
-   */
+  // ============================================
+  // HISTORY (thin wrappers around extracted functions)
+  // ============================================
+
   private logToHistory(item: GlobalPlaylistItem): void {
-    // Check if URL already exists in history - no duplicates allowed
-    const existingIndex = this.playHistory.findIndex(entry => entry.url === item.url);
-    if (existingIndex >= 0) {
-      // URL already in history - update playedAt timestamp and move to front
-      const existing = this.playHistory.splice(existingIndex, 1)[0];
-      existing.playedAt = new Date().toISOString();
-      // Update other fields in case they've changed
-      existing.title = item.title || existing.title;
-      existing.thumbnail = item.thumbnail || existing.thumbnail;
-      this.playHistory.unshift(existing);
-      this.savePlayHistory();
-      return;
-    }
-
-    const historyEntry: PlaylistHistoryEntry = {
-      id: item.id,
-      url: item.url,
-      platform: item.platform,
-      embedId: item.embedId,
-      title: item.title,
-      thumbnail: item.thumbnail,
-      playedAt: new Date().toISOString()
-    };
-
-    // Add to beginning of history
-    this.playHistory.unshift(historyEntry);
-
-    // Trim to max size
-    if (this.playHistory.length > MAX_HISTORY_SIZE) {
-      this.playHistory = this.playHistory.slice(0, MAX_HISTORY_SIZE);
-    }
-
-    // Save to localStorage
-    this.savePlayHistory();
+    this.playHistory = logToHistoryArray(this.playHistory, item);
+    savePlayHistoryToStorage(this.playHistory);
   }
 
-  /**
-   * Log item to server-side master history (for auto-play across all users)
-   */
-  private async logToServerHistory(item: GlobalPlaylistItem): Promise<void> {
+  getPlayHistory(): PlaylistHistoryEntry[] {
+    return [...this.playHistory];
+  }
+
+  clearPlayHistory(): void {
+    this.playHistory = [];
+    savePlayHistoryToStorage(this.playHistory);
+  }
+
+  // ============================================
+  // PERSONAL PLAYLIST (thin wrappers)
+  // ============================================
+
+  async addToPersonalPlaylist(url: string, providedTitle?: string, providedThumbnail?: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    if (!url || !url.trim()) {
+      return { success: false, error: 'Please enter a URL' };
+    }
+
     try {
-      await fetch('/api/playlist/history/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          item: {
-            id: item.id,
-            url: item.url,
-            platform: item.platform,
-            embedId: item.embedId,
-            title: item.title,
-            thumbnail: item.thumbnail,
-            addedBy: item.addedBy,
-            addedByName: item.addedByName
-          }
-        })
-      });
+      // Parse URL (dynamically imported to reduce initial bundle)
+      const { parseMediaUrl } = await import('./url-parser');
+      const parsed = parseMediaUrl(url.trim());
+
+      if (!parsed.isValid) {
+        return { success: false, error: parsed.error || 'Invalid URL' };
+      }
+
+      // Use provided title/thumbnail or fetch metadata
+      let title = providedTitle;
+      let thumbnail = providedThumbnail;
+
+      if (!title || !thumbnail) {
+        const metadata = await fetchMetadata(url.trim());
+        title = title || metadata.title;
+        thumbnail = thumbnail || metadata.thumbnail;
+      }
+
+      // Fallback thumbnail for YouTube
+      if (!thumbnail && parsed.platform === 'youtube' && parsed.embedId) {
+        thumbnail = `https://img.youtube.com/vi/${parsed.embedId}/mqdefault.jpg`;
+      }
+
+      const newItem: PersonalPlaylistItem = {
+        id: this.generateId(),
+        url: url.trim(),
+        platform: parsed.platform,
+        embedId: parsed.embedId,
+        title: title || 'Untitled',
+        thumbnail,
+        addedAt: new Date().toISOString()
+      };
+
+      const result = addToPersonalPlaylistItems(this.personalPlaylist, newItem);
+      if (!result.added) {
+        return { success: false, error: result.error };
+      }
+
+      this.personalPlaylist = result.items;
+      savePersonalPlaylistToStorage(this.personalPlaylist);
+      if (this.userId) savePersonalPlaylistToServer(this.personalPlaylist, this.userId);
+      this.renderUI();
+
+      return { success: true, message: 'Added to your playlist' };
     } catch (error: unknown) {
-      log.error('Error logging to server history:', error);
+      log.error('Error adding to personal playlist:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to add to playlist' };
     }
   }
 
-  /**
-   * Enable emoji reactions, audio meters, and chat
-   */
-  private enableEmojis(): void {
-    window.emojiAnimationsEnabled = true;
-
-    const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction], .anim-toggle-btn, .fs-reaction-btn');
-    reactionButtons.forEach(btn => {
-      (btn as HTMLButtonElement).disabled = false;
-      btn.classList.remove('disabled', 'reactions-disabled');
-    });
-
-    // Hide "Sign in to chat" prompt and show chat input
-    const loginPrompt = document.getElementById('loginPrompt');
-    if (loginPrompt) {
-      loginPrompt.style.display = 'none';
-    }
-
-    // Enable chat for playlist mode
-    if (typeof window.setChatEnabled === 'function') {
-      window.setChatEnabled(true);
-    }
-
-    // Setup chat channel for playlist mode if not already done
-    if (typeof window.setupChat === 'function' && !window.playlistChatSetup) {
-      window.setupChat('playlist-global');
-      window.playlistChatSetup = true;
-    }
-
-    // Ensure stereo meters are visible for playlist (we use the same LED elements)
-    const stereoMeters = document.getElementById('stereoMeters');
-    const toggleMetersBtn = document.getElementById('toggleMetersBtn');
-    if (stereoMeters) {
-      stereoMeters.style.display = '';
-    }
-    // Hide toggle button since playlist meters are simulated (no audio context to toggle)
-    if (toggleMetersBtn) {
-      toggleMetersBtn.style.display = 'none';
-    }
-
-    this.startPlaylistMeters();
-  }
-
-  /**
-   * Disable emoji reactions, audio meters, and chat (only if no live stream active)
-   */
-  private disableEmojis(): void {
-    // Check if a live stream is active - don't disable anything if so
-    const isLiveStreamActive = window.isLiveStreamActive;
-    const streamDetectedThisSession = window.streamDetectedThisSession;
-
-    if (isLiveStreamActive || streamDetectedThisSession) {
-      return;
-    }
-
-    window.emojiAnimationsEnabled = false;
-
-    const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction], .anim-toggle-btn, .fs-reaction-btn');
-    reactionButtons.forEach(btn => {
-      (btn as HTMLButtonElement).disabled = true;
-      btn.classList.add('disabled', 'reactions-disabled');
-    });
-    if (!isLiveStreamActive) {
-      if (typeof window.setChatEnabled === 'function') {
-        window.setChatEnabled(false);
-      }
-
-      // Reset playlist chat setup flag
-      window.playlistChatSetup = false;
-    }
-
-    this.stopPlaylistMeters();
-
-    // Show the main stereo meters and toggle button again when playlist stops
-    const stereoMeters = document.getElementById('stereoMeters');
-    const toggleMetersBtn = document.getElementById('toggleMetersBtn');
-    if (stereoMeters) {
-      stereoMeters.style.display = '';
-    }
-    if (toggleMetersBtn) {
-      toggleMetersBtn.style.display = '';
+  removeFromPersonalPlaylist(itemId: string): void {
+    const newItems = removeFromPersonalPlaylistItems(this.personalPlaylist, itemId);
+    if (newItems !== this.personalPlaylist) {
+      this.personalPlaylist = newItems;
+      savePersonalPlaylistToStorage(this.personalPlaylist);
+      if (this.userId) savePersonalPlaylistToServer(this.personalPlaylist, this.userId);
+      this.renderUI();
     }
   }
 
-  private playlistMeterAnimationId: number | null = null;
-  private meterState = {
-    leftLevel: 0,
-    rightLevel: 0,
-    targetLeft: 0,
-    targetRight: 0,
-    beatPhase: 0,
-    lastBeatTime: 0,
-    bpm: 140 + Math.random() * 40, // Random BPM between 140-180 for D&B feel
-  };
-
-  /**
-   * Start simulated audio meters for playlist playback
-   * Uses realistic decay, beat sync, and correlated stereo
-   */
-  private startPlaylistMeters(): void {
-    if (this.playlistMeterAnimationId) return;
-
-    const leftLeds = document.querySelectorAll('#leftMeter .led');
-    const rightLeds = document.querySelectorAll('#rightMeter .led');
-
-    if (leftLeds.length === 0 || rightLeds.length === 0) return;
-
-    // Reset state
-    this.meterState.leftLevel = 0;
-    this.meterState.rightLevel = 0;
-    this.meterState.lastBeatTime = performance.now();
-    this.meterState.bpm = 140 + Math.random() * 40;
-
-    const updateMeters = () => {
-      // Check if animation was cancelled (paused)
-      if (!this.playlistMeterAnimationId) {
-        return;
-      }
-
-      const now = performance.now();
-      const beatInterval = 60000 / this.meterState.bpm; // ms per beat
-      const timeSinceBeat = now - this.meterState.lastBeatTime;
-
-      // Check for beat hit
-      if (timeSinceBeat >= beatInterval) {
-        this.meterState.lastBeatTime = now;
-        // Strong beat - push levels up
-        const beatStrength = 0.7 + Math.random() * 0.3;
-        this.meterState.targetLeft = 8 + Math.random() * 6 * beatStrength;
-        this.meterState.targetRight = 8 + Math.random() * 6 * beatStrength;
-
-        // Occasional big peak (like a drop or snare hit)
-        if (Math.random() < 0.15) {
-          this.meterState.targetLeft = Math.min(14, this.meterState.targetLeft + 3);
-          this.meterState.targetRight = Math.min(14, this.meterState.targetRight + 3);
-        }
-      } else {
-        // Between beats - decay with some variation
-        const decayProgress = timeSinceBeat / beatInterval;
-        const decay = 0.92 - decayProgress * 0.15; // Faster decay as we approach next beat
-
-        this.meterState.targetLeft *= decay;
-        this.meterState.targetRight *= decay;
-
-        // Add subtle random movement (hi-hats, cymbals)
-        if (Math.random() < 0.3) {
-          this.meterState.targetLeft += Math.random() * 2;
-          this.meterState.targetRight += Math.random() * 2;
-        }
-      }
-
-      // Smooth interpolation toward target (attack/release)
-      const attackSpeed = 0.4;
-      const releaseSpeed = 0.15;
-
-      if (this.meterState.targetLeft > this.meterState.leftLevel) {
-        this.meterState.leftLevel += (this.meterState.targetLeft - this.meterState.leftLevel) * attackSpeed;
-      } else {
-        this.meterState.leftLevel += (this.meterState.targetLeft - this.meterState.leftLevel) * releaseSpeed;
-      }
-
-      if (this.meterState.targetRight > this.meterState.rightLevel) {
-        this.meterState.rightLevel += (this.meterState.targetRight - this.meterState.rightLevel) * attackSpeed;
-      } else {
-        this.meterState.rightLevel += (this.meterState.targetRight - this.meterState.rightLevel) * releaseSpeed;
-      }
-
-      // Add slight stereo difference for realism
-      const stereoOffset = (Math.random() - 0.5) * 1.5;
-      const leftDisplay = Math.floor(Math.max(0, Math.min(14, this.meterState.leftLevel + stereoOffset)));
-      const rightDisplay = Math.floor(Math.max(0, Math.min(14, this.meterState.rightLevel - stereoOffset)));
-
-      // Update LED display
-      leftLeds.forEach((led, i) => led.classList.toggle('active', i < leftDisplay));
-      rightLeds.forEach((led, i) => led.classList.toggle('active', i < rightDisplay));
-
-      this.playlistMeterAnimationId = requestAnimationFrame(updateMeters);
-    };
-
-    this.playlistMeterAnimationId = requestAnimationFrame(updateMeters);
-  }
-
-  /**
-   * Stop simulated audio meters
-   */
-  private stopPlaylistMeters(): void {
-    if (this.playlistMeterAnimationId) {
-      cancelAnimationFrame(this.playlistMeterAnimationId);
-      this.playlistMeterAnimationId = null;
+  async addPersonalItemToQueue(itemId: string): Promise<{ success: boolean; message?: string; error?: string }> {
+    const item = this.personalPlaylist.find(i => i.id === itemId);
+    if (!item) {
+      return { success: false, error: 'Track not found in your playlist' };
     }
 
-    // Smooth fade out
-    const leftLeds = document.querySelectorAll('#leftMeter .led');
-    const rightLeds = document.querySelectorAll('#rightMeter .led');
+    // Use the existing addItem method which handles all validation
+    const result = await this.addItem(item.url);
 
-    leftLeds.forEach(led => led.classList.remove('active'));
-    rightLeds.forEach(led => led.classList.remove('active'));
+    // If successfully added to queue, optionally remove from personal playlist
+    // (keeping it for now - user can manually remove if they want)
 
-    // Reset state
-    this.meterState.leftLevel = 0;
-    this.meterState.rightLevel = 0;
+    return result;
   }
 
-  /**
-   * Format seconds as MM:SS or H:MM:SS
-   */
-  private formatDuration(seconds: number): string {
-    if (!seconds || seconds <= 0) return '--:--';
-
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-
-    if (hrs > 0) {
-      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  getPersonalPlaylist(): PersonalPlaylistItem[] {
+    return [...this.personalPlaylist];
   }
 
-  /**
-   * Update NOW PLAYING display at bottom of screen
-   */
-  private updateNowPlayingDisplay(item: GlobalPlaylistItem | null): void {
-    const djNameEl = document.getElementById('controlsDjName');
-    const djAvatarEl = document.getElementById('djAvatar') as HTMLImageElement;
-    const genreEl = document.getElementById('streamGenre');
-    const labelEl = document.querySelector('.dj-info-label');
-    const djInfoBar = document.querySelector('.dj-info-bar');
-
-    if (item) {
-      // Add playlist mode class for red text styling
-      if (djInfoBar) {
-        djInfoBar.classList.add('playlist-mode');
-      }
-      if (djNameEl) {
-        djNameEl.textContent = item.title || 'Untitled Video';
-      }
-      if (labelEl) {
-        labelEl.textContent = 'PLAYLIST';
-      }
-      if (djAvatarEl && item.thumbnail) {
-        djAvatarEl.src = item.thumbnail;
-      }
-      if (genreEl) {
-        // Show "Playlist" in genre, countdown goes in duration boxes
-        genreEl.textContent = 'Playlist';
-      }
-      // Fetch duration after player is ready (updates npDuration and bottomDuration)
-      this.updateDurationDisplay();
-    } else {
-      // Remove playlist mode class
-      if (djInfoBar) {
-        djInfoBar.classList.remove('playlist-mode');
-      }
-      // Only reset DJ name if no live stream is active (preserve relay/DJ name)
-      const isLiveStreamActive = window.isLiveStreamActive;
-      const streamDetectedThisSession = window.streamDetectedThisSession;
-      const currentStreamData = window.currentStreamData;
-      if (djNameEl && !isLiveStreamActive && !streamDetectedThisSession && !currentStreamData) {
-        djNameEl.textContent = '--';
-      }
-      if (labelEl) {
-        labelEl.textContent = 'NOW PLAYING';
-      }
-      // Only reset avatar if no live stream is active
-      if (djAvatarEl && !isLiveStreamActive && !streamDetectedThisSession && !currentStreamData) {
-        djAvatarEl.src = '/place-holder.webp';
-      }
-      if (genreEl) {
-        genreEl.textContent = 'Jungle / D&B';
-      }
-    }
+  clearPersonalPlaylist(): void {
+    this.personalPlaylist = [];
+    savePersonalPlaylistToStorage(this.personalPlaylist);
+    if (this.userId) savePersonalPlaylistToServer(this.personalPlaylist, this.userId);
+    this.renderUI();
   }
 
-  /**
-   * Update duration display after player is ready - shows countdown
-   */
+  // ============================================
+  // DURATION DISPLAY (orchestration that calls ui.ts helpers)
+  // ============================================
+
   private async updateDurationDisplay(): Promise<void> {
     const currentTrack = this.playlist.queue[this.playlist.currentIndex];
     const currentTrackId = currentTrack?.id;
@@ -1242,9 +932,12 @@ export class PlaylistManager {
       ? new Date(this.playlist.trackStartedAt).getTime()
       : null;
 
-    if (trackStartedAt && currentTrack?.duration) {
-      // We have server start time + stored duration — show countdown immediately
-      this.startCountdown(currentTrack.duration, trackStartedAt);
+    if (trackStartedAt && (currentTrack as GlobalPlaylistItem & { duration?: number })?.duration) {
+      // We have server start time + stored duration -- show countdown immediately
+      this.countdownInterval = startCountdown(
+        (currentTrack as GlobalPlaylistItem & { duration?: number }).duration!,
+        trackStartedAt
+      );
     }
 
     // Now fetch accurate duration from player metadata (may refine the countdown)
@@ -1259,8 +952,8 @@ export class PlaylistManager {
         duration = await player.getDuration();
       }
 
-      if (duration <= 0 && currentTrack?.duration) {
-        duration = currentTrack.duration;
+      if (duration <= 0 && (currentTrack as GlobalPlaylistItem & { duration?: number })?.duration) {
+        duration = (currentTrack as GlobalPlaylistItem & { duration?: number }).duration!;
       }
     } catch (error: unknown) {
       log.warn('Error getting duration:', error);
@@ -1272,68 +965,13 @@ export class PlaylistManager {
       // Restart countdown with accurate duration from player
       this.stopCountdown();
       this.countdownTrackId = currentTrackId || null;
-      this.startCountdown(duration, trackStartedAt);
+      this.countdownInterval = startCountdown(duration, trackStartedAt);
     } else if (!this.countdownInterval) {
-      // No duration from any source and no countdown running — show elapsed
-      this.startElapsedTimer();
+      // No duration from any source and no countdown running -- show elapsed
+      this.countdownInterval = startElapsedTimer(this.playlist.trackStartedAt);
     }
   }
 
-  /**
-   * Start countdown display using server's trackStartedAt for accuracy.
-   * Works correctly on page refresh because elapsed time is derived from the
-   * server timestamp, not from when this function was called.
-   */
-  private startCountdown(totalDuration: number, trackStartedAt: number | null): void {
-    const bottomDurationEl = document.getElementById('bottomDuration');
-    const previewDurationEl = document.getElementById('previewDuration');
-    const genreEl = document.getElementById('streamGenre');
-
-    if (genreEl) {
-      genreEl.textContent = 'Playlist';
-    }
-
-    // Use server trackStartedAt as the authoritative start time.
-    // This survives page refreshes — elapsed = now - serverStart.
-    const serverStart = trackStartedAt || Date.now();
-
-    const updateDisplay = () => {
-      const elapsedSeconds = (Date.now() - serverStart) / 1000;
-      const remaining = Math.max(0, totalDuration - elapsedSeconds);
-      const formattedTime = this.formatDuration(remaining);
-      if (bottomDurationEl) bottomDurationEl.textContent = formattedTime;
-      if (previewDurationEl) previewDurationEl.textContent = formattedTime;
-    };
-
-    updateDisplay();
-    this.countdownInterval = window.setInterval(updateDisplay, 1000);
-  }
-
-  /**
-   * Fallback: show elapsed time when duration is unknown
-   */
-  private startElapsedTimer(): void {
-    const bottomDurationEl = document.getElementById('bottomDuration');
-    const previewDurationEl = document.getElementById('previewDuration');
-
-    const serverStartTime = this.playlist.trackStartedAt
-      ? new Date(this.playlist.trackStartedAt).getTime()
-      : Date.now();
-
-    const updateDisplay = () => {
-      const elapsed = Math.floor((Date.now() - serverStartTime) / 1000);
-      const formattedTime = this.formatDuration(elapsed);
-      if (bottomDurationEl) bottomDurationEl.textContent = formattedTime;
-      if (previewDurationEl) previewDurationEl.textContent = formattedTime;
-    };
-
-    updateDisplay();
-    this.countdownInterval = window.setInterval(updateDisplay, 1000);
-  }
-
-  /**
-   * Stop countdown display
-   */
   private stopCountdown(): void {
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
@@ -1342,579 +980,18 @@ export class PlaylistManager {
     this.countdownTrackId = null;
   }
 
-  /**
-   * Load play history from localStorage
-   */
-  private loadPlayHistory(): void {
-    try {
-      const stored = localStorage.getItem(PLAYLIST_HISTORY_KEY);
-      if (stored) {
-        this.playHistory = JSON.parse(stored);
-      }
-    } catch (error: unknown) {
-      log.error('Error loading play history:', error);
-      this.playHistory = [];
-    }
-  }
-
-  /**
-   * Save play history to localStorage
-   */
-  private savePlayHistory(): void {
-    try {
-      localStorage.setItem(PLAYLIST_HISTORY_KEY, JSON.stringify(this.playHistory));
-    } catch (error: unknown) {
-      log.error('Error saving play history:', error);
-    }
-  }
-
-  /**
-   * Get play history for offline playlist creation
-   */
-  getPlayHistory(): PlaylistHistoryEntry[] {
-    return [...this.playHistory];
-  }
-
-  /**
-   * Pick a random track from history that hasn't been played recently
-   * Used for auto-play when queue is empty
-   * PRIORITY: Local server MP3s > YouTube history
-   * Uses 60-minute cooldown and never repeats the last played track
-   */
-  private async pickRandomFromHistory(): Promise<GlobalPlaylistItem | null> {
-    // First, try the local playlist server (H: drive MP3s) - more reliable, no bot issues
-    const localTrack = await this.pickRandomFromLocalServer();
-    if (localTrack) {
-      return localTrack;
-    }
-
-    // Fallback to server-side YouTube history if local server is unavailable
-    try {
-      const response = await fetch('/api/playlist/history/');
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-      }
-      const result = await response.json();
-      if (result.success && result.items && result.items.length > 0) {
-        const serverHistory = result.items as ServerHistoryItem[];
-
-        // Filter out recently played tracks and the last played track
-        const AUTO_PLAY_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
-        const now = Date.now();
-
-        const availableTracks = serverHistory.filter((entry) => {
-          // Never pick the track that just finished playing
-          if (entry.url === this.lastPlayedUrl) return false;
-
-          const timestamp = this.recentlyPlayed.get(entry.url);
-          if (!timestamp) return true; // Never played recently, available
-          const elapsed = now - timestamp;
-          return elapsed >= AUTO_PLAY_COOLDOWN_MS; // Available if 60+ minutes since last play
-        });
-
-        if (availableTracks.length === 0) {
-          // All tracks on cooldown - just pick a random one that isn't the last played
-          const fallbackTracks = serverHistory.filter((entry) => entry.url !== this.lastPlayedUrl);
-          if (fallbackTracks.length > 0) {
-            const randomIndex = Math.floor(Math.random() * fallbackTracks.length);
-            const selected = fallbackTracks[randomIndex];
-            // Fetch real title if placeholder
-            let title = selected.title;
-            if (this.isPlaceholderTitle(title) && selected.embedId) {
-              const realTitle = await this.fetchYouTubeTitle(selected.embedId);
-              if (realTitle) title = realTitle;
-            }
-
-            return {
-              id: this.generateId(),
-              url: selected.url,
-              platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
-              embedId: selected.embedId,
-              title: title,
-              thumbnail: selected.thumbnail,
-              addedAt: new Date().toISOString(),
-              addedBy: 'system',
-              addedByName: 'Auto-Play'
-            };
-          }
-        }
-
-        // Pick a random track from available tracks
-        const randomIndex = Math.floor(Math.random() * availableTracks.length);
-        const selected = availableTracks[randomIndex];
-
-        // Fetch real title if it's a placeholder (e.g., "Track 1234")
-        let title = selected.title;
-        if (this.isPlaceholderTitle(title) && selected.embedId) {
-          const realTitle = await this.fetchYouTubeTitle(selected.embedId);
-          if (realTitle) {
-            title = realTitle;
-          }
-        }
-
-        return {
-          id: this.generateId(),
-          url: selected.url,
-          platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
-          embedId: selected.embedId,
-          title: title,
-          thumbnail: selected.thumbnail,
-          addedAt: new Date().toISOString(),
-          addedBy: 'system',
-          addedByName: 'Auto-Play'
-        };
-      }
-    } catch (error: unknown) {
-      log.error('Error fetching server history:', error);
-    }
-
-    // Fallback to local history if server fails
-    if (this.playHistory.length > 0) {
-      const randomIndex = Math.floor(Math.random() * this.playHistory.length);
-      const selected = this.playHistory[randomIndex];
-
-      // Fetch real title if it's a placeholder
-      let title = selected.title;
-      if (this.isPlaceholderTitle(title) && selected.embedId) {
-        const realTitle = await this.fetchYouTubeTitle(selected.embedId);
-        if (realTitle) title = realTitle;
-      }
-
-      return {
-        id: this.generateId(),
-        url: selected.url,
-        platform: selected.platform as 'youtube' | 'vimeo' | 'soundcloud' | 'direct',
-        embedId: selected.embedId,
-        title: title,
-        thumbnail: selected.thumbnail,
-        addedAt: new Date().toISOString(),
-        addedBy: 'system',
-        addedByName: 'Auto-Play'
-      };
-    }
-
-    return null;
-  }
-
-  /**
-   * Pick a random track from the local playlist server (H: drive MP3s)
-   * Returns null if server is unavailable
-   */
-  private async pickRandomFromLocalServer(): Promise<GlobalPlaylistItem | null> {
-    try {
-      // Use authenticated proxy to prevent unauthenticated inventory disclosure
-      const currentUser = window.firebaseAuth?.currentUser;
-      const idToken = currentUser ? await currentUser.getIdToken() : null;
-
-      const fetchHeaders: Record<string, string> = {};
-      if (idToken) {
-        fetchHeaders['Authorization'] = `Bearer ${idToken}`;
-      }
-
-      const response = await fetch('/api/playlist/server-list/', {
-        headers: fetchHeaders,
-        signal: AbortSignal.timeout(5000)
-      });
-
-      if (!response.ok) {
-        log.warn('Local playlist server returned', response.status);
-        return null;
-      }
-
-      const data = await response.json();
-      if (!data.files || data.files.length === 0) {
-        log.warn('Local playlist server has no files');
-        return null;
-      }
-
-      // Filter out recently played tracks
-      const now = Date.now();
-      const availableTracks = (data.files as ServerFileItem[]).filter((file) => {
-        const url = `${LOCAL_PLAYLIST_SERVER}${file.url}`;
-        if (url === this.lastPlayedUrl) return false;
-        const timestamp = this.recentlyPlayed.get(url);
-        if (!timestamp) return true;
-        return (now - timestamp) >= TRACK_COOLDOWN_MS;
-      });
-
-      // Pick from available or all if all on cooldown
-      const tracksToPickFrom = availableTracks.length > 0
-        ? availableTracks
-        : (data.files as ServerFileItem[]).filter((f) => `${LOCAL_PLAYLIST_SERVER}${f.url}` !== this.lastPlayedUrl);
-
-      if (tracksToPickFrom.length === 0) {
-        log.warn('No local tracks available');
-        return null;
-      }
-
-      // Prefer tracks with thumbnails
-      const tracksWithThumbs = tracksToPickFrom.filter((f) => f.thumbnail);
-      const finalTracks = tracksWithThumbs.length > 0 ? tracksWithThumbs : tracksToPickFrom;
-
-      const randomIndex = Math.floor(Math.random() * finalTracks.length);
-      const selected = finalTracks[randomIndex];
-      const url = `${LOCAL_PLAYLIST_SERVER}${selected.url}`;
-
-      // Use track's own thumbnail if available, otherwise fallback
-      const thumbnail = selected.thumbnail
-        ? `${LOCAL_PLAYLIST_SERVER}${selected.thumbnail}`
-        : AUDIO_THUMBNAIL_FALLBACK;
-
-      return {
-        id: this.generateId(),
-        url: url,
-        platform: 'direct',
-        title: selected.name,
-        thumbnail: thumbnail,
-        duration: selected.duration || undefined,
-        addedAt: new Date().toISOString(),
-        addedBy: 'system',
-        addedByName: 'Auto-Play'
-      };
-    } catch (error: unknown) {
-      log.warn('Local playlist server error:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Clear play history
-   */
-  clearPlayHistory(): void {
-    this.playHistory = [];
-    this.savePlayHistory();
-  }
-
   // ============================================
-  // PERSONAL PLAYLIST METHODS
+  // OVERLAYS (thin wrappers that delegate to ui.ts)
   // ============================================
 
-  /**
-   * Load personal playlist from localStorage (initial/fallback)
-   */
-  private loadPersonalPlaylist(): void {
-    try {
-      const stored = localStorage.getItem(PERSONAL_PLAYLIST_KEY);
-      if (stored) {
-        this.personalPlaylist = JSON.parse(stored);
-      }
-    } catch (error: unknown) {
-      log.error('Error loading personal playlist:', error);
-      this.personalPlaylist = [];
-    }
-  }
-
-  /**
-   * Load personal playlist from D1 (called when user authenticates)
-   * Cloud sync is Plus-only - Standard users only use localStorage
-   */
-  async loadPersonalPlaylistFromServer(): Promise<void> {
-    if (!this.userId) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/playlist/personal/?userId=${encodeURIComponent(this.userId)}`);
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-      }
-      const result = await response.json();
-
-      // Check if user has Plus for cloud sync
-      if (result.isPlus === false) {
-        // Store Plus status for later use
-        window.userHasCloudSync = false;
-        return;
-      }
-
-      window.userHasCloudSync = true;
-
-      if (result.success && Array.isArray(result.playlist)) {
-        // Merge with localStorage (D1 takes priority for duplicates)
-        const d1Items = result.playlist;
-        const localItems = this.personalPlaylist;
-
-        // Create a map of existing URLs from D1
-        const d1Urls = new Set(d1Items.map((item: PersonalPlaylistItem) => item.url));
-
-        // Add local items that aren't in D1
-        const mergedItems = [...d1Items];
-        for (const localItem of localItems) {
-          if (!d1Urls.has(localItem.url)) {
-            mergedItems.push(localItem);
-          }
-        }
-
-        this.personalPlaylist = mergedItems;
-        // Save merged list back to both localStorage and D1
-        this.savePersonalPlaylist();
-        this.savePersonalPlaylistToServer();
-      }
-    } catch (error: unknown) {
-      log.error('Error loading personal playlist from D1:', error);
-      // Keep using localStorage data
-    }
-  }
-
-  /**
-   * Save personal playlist to localStorage
-   */
-  private savePersonalPlaylist(): void {
-    try {
-      localStorage.setItem(PERSONAL_PLAYLIST_KEY, JSON.stringify(this.personalPlaylist));
-    } catch (error: unknown) {
-      log.error('Error saving personal playlist to localStorage:', error);
-    }
-  }
-
-  /**
-   * Save personal playlist to D1 (async, non-blocking)
-   * Only saves for Plus users - Standard users use local storage only
-   */
-  private async savePersonalPlaylistToServer(): Promise<void> {
-    if (!this.userId) return;
-
-    // Skip if user doesn't have cloud sync (not Plus)
-    if (window.userHasCloudSync === false) {
-      return;
-    }
-
-    try {
-      // Get Firebase auth token for authorization
-      const currentUser = window.firebaseAuth?.currentUser;
-      const idToken = currentUser ? await currentUser.getIdToken() : null;
-
-      if (!idToken) {
-        log.warn('No auth token, skipping cloud save');
-        return;
-      }
-
-      const response = await fetch('/api/playlist/personal/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          userId: this.userId,
-          items: this.personalPlaylist
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-      }
-      const result = await response.json();
-
-      if (result.isPlus === false) {
-        // User is not Plus - mark it and skip future saves
-        window.userHasCloudSync = false;
-        return;
-      }
-
-    } catch (error: unknown) {
-      log.error('Error saving personal playlist to D1:', error);
-    }
-  }
-
-  /**
-   * Add a track to personal playlist (for later use)
-   * Plus users: 1000 tracks with cloud sync
-   * Standard users: 100 tracks local only
-   * @param url - The media URL
-   * @param providedTitle - Optional title if already known (e.g., from queue)
-   * @param providedThumbnail - Optional thumbnail if already known
-   */
-  async addToPersonalPlaylist(url: string, providedTitle?: string, providedThumbnail?: string): Promise<{ success: boolean; message?: string; error?: string }> {
-    if (!url || !url.trim()) {
-      return { success: false, error: 'Please enter a URL' };
-    }
-
-    // Check if already in personal playlist
-    const alreadyInPlaylist = this.personalPlaylist.some(item => item.url === url.trim());
-    if (alreadyInPlaylist) {
-      return { success: false, error: 'This track is already in your playlist' };
-    }
-
-    // Determine max size based on subscription
-    const hasCloudSync = window.userHasCloudSync === true;
-    const maxSize = hasCloudSync ? 1000 : 100;
-
-    // Check max size
-    if (this.personalPlaylist.length >= maxSize) {
-      if (hasCloudSync) {
-        return { success: false, error: `Your cloud playlist is full (${maxSize} tracks max)` };
-      } else {
-        return { success: false, error: `Your playlist is full (${maxSize} tracks). Upgrade to Plus for 1,000 tracks with cloud sync!` };
-      }
-    }
-
-    try {
-      // Parse URL (dynamically imported to reduce initial bundle)
-      const { parseMediaUrl } = await import('./url-parser');
-      const parsed = parseMediaUrl(url.trim());
-
-      if (!parsed.isValid) {
-        return { success: false, error: parsed.error || 'Invalid URL' };
-      }
-
-      // Use provided title/thumbnail or fetch metadata
-      let title = providedTitle;
-      let thumbnail = providedThumbnail;
-
-      if (!title || !thumbnail) {
-        const metadata = await this.fetchMetadata(url.trim());
-        title = title || metadata.title;
-        thumbnail = thumbnail || metadata.thumbnail;
-      }
-
-      // Fallback thumbnail for YouTube
-      if (!thumbnail && parsed.platform === 'youtube' && parsed.embedId) {
-        thumbnail = `https://img.youtube.com/vi/${parsed.embedId}/mqdefault.jpg`;
-      }
-
-      const item: PersonalPlaylistItem = {
-        id: this.generateId(),
-        url: url.trim(),
-        platform: parsed.platform,
-        embedId: parsed.embedId,
-        title: title || 'Untitled',
-        thumbnail,
-        addedAt: new Date().toISOString()
-      };
-
-      this.personalPlaylist.push(item);
-      this.savePersonalPlaylist();
-      this.savePersonalPlaylistToServer(); // Save to D1 for persistence
-      this.renderUI();
-
-      return { success: true, message: 'Added to your playlist' };
-    } catch (error: unknown) {
-      log.error('Error adding to personal playlist:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to add to playlist' };
-    }
-  }
-
-  /**
-   * Remove a track from personal playlist
-   */
-  removeFromPersonalPlaylist(itemId: string): void {
-    const index = this.personalPlaylist.findIndex(item => item.id === itemId);
-    if (index >= 0) {
-      const removed = this.personalPlaylist.splice(index, 1)[0];
-      this.savePersonalPlaylist();
-      this.savePersonalPlaylistToServer(); // Save to D1 for persistence
-      this.renderUI();
-    }
-  }
-
-  /**
-   * Add a track from personal playlist to the main DJ queue
-   */
-  async addPersonalItemToQueue(itemId: string): Promise<{ success: boolean; message?: string; error?: string }> {
-    const item = this.personalPlaylist.find(i => i.id === itemId);
-    if (!item) {
-      return { success: false, error: 'Track not found in your playlist' };
-    }
-
-    // Use the existing addItem method which handles all validation
-    const result = await this.addItem(item.url);
-
-    // If successfully added to queue, optionally remove from personal playlist
-    // (keeping it for now - user can manually remove if they want)
-
-    return result;
-  }
-
-  /**
-   * Get personal playlist items
-   */
-  getPersonalPlaylist(): PersonalPlaylistItem[] {
-    return [...this.personalPlaylist];
-  }
-
-  /**
-   * Clear personal playlist
-   */
-  clearPersonalPlaylist(): void {
-    this.personalPlaylist = [];
-    this.savePersonalPlaylist();
-    this.savePersonalPlaylistToServer(); // Save to D1 for persistence
-    this.renderUI();
-  }
-
-  /**
-   * Show video player and hide overlays
-   */
-  private showVideoPlayer(): void {
-    const offlineOverlay = document.getElementById('offlineOverlay');
-    const audioPlayer = document.getElementById('audioPlayer');
-    const videoPlayer = document.getElementById('videoPlayer');
-    const playlistPlayer = document.getElementById('playlistPlayer');
-    const hlsVideo = document.getElementById('hlsVideoElement');
-
-    if (offlineOverlay) {
-      offlineOverlay.classList.add('hidden');
-      offlineOverlay.style.display = 'none';
-    }
-    if (audioPlayer) {
-      audioPlayer.classList.add('hidden');
-    }
-    if (hlsVideo) {
-      hlsVideo.classList.add('hidden');
-    }
-
-    // Show loading overlay while playlist embed loads
-    const loadingOverlay = document.getElementById('playlistLoadingOverlay');
-    if (loadingOverlay) {
-      loadingOverlay.classList.remove('hidden', 'fade-out');
-      // Safety: auto-hide after 15s in case playing event never fires
-      setTimeout(() => this.hidePlaylistLoadingOverlay(), 15000);
-    }
-
-    if (videoPlayer) {
-      videoPlayer.classList.remove('hidden');
-      videoPlayer.style.display = 'block';
-      videoPlayer.style.opacity = '1';
-    }
-    if (playlistPlayer) {
-      playlistPlayer.classList.remove('hidden');
-      playlistPlayer.style.display = 'block';
-    }
-
-  }
-
-  /** Hide the playlist loading overlay with a fade */
   public hidePlaylistLoadingOverlay(): void {
-    const loadingOverlay = document.getElementById('playlistLoadingOverlay');
-    if (loadingOverlay && !loadingOverlay.classList.contains('hidden')) {
-      loadingOverlay.classList.add('fade-out');
-      setTimeout(() => {
-        loadingOverlay.classList.add('hidden');
-      }, 500);
-    }
+    hidePlaylistLoadingOverlay();
   }
 
-  /**
-   * Show offline overlay
-   */
-  private showOfflineOverlay(): void {
-    const offlineOverlay = document.getElementById('offlineOverlay');
-    const videoPlayer = document.getElementById('videoPlayer');
+  // ============================================
+  // TRACK ENDED / PLAYBACK ERROR
+  // ============================================
 
-    if (offlineOverlay) {
-      offlineOverlay.classList.remove('hidden');
-      offlineOverlay.style.display = '';
-    }
-    if (videoPlayer) {
-      videoPlayer.classList.add('hidden');
-    }
-  }
-
-  /**
-   * Handle track ended - tell SERVER to pick next track
-   * Server is the source of truth to ensure all clients play the same track
-   */
   private async handleTrackEnded(): Promise<void> {
     // Clear all timers first
     this.clearTrackTimer();
@@ -1966,9 +1043,9 @@ export class PlaylistManager {
         } else {
           // No tracks - show offline state
           if (this.player) await this.player.destroy();
-          this.disableEmojis();
-          this.updateNowPlayingDisplay(null);
-          this.showOfflineOverlay();
+          disableEmojis();
+          updateNowPlayingDisplay(null);
+          showOfflineOverlay();
         }
       }
     } catch (error: unknown) {
@@ -1976,17 +1053,14 @@ export class PlaylistManager {
       // Fallback: just stop playback on error
       this.playlist.isPlaying = false;
       if (this.player) await this.player.destroy();
-      this.disableEmojis();
-      this.updateNowPlayingDisplay(null);
-      this.showOfflineOverlay();
+      disableEmojis();
+      updateNowPlayingDisplay(null);
+      showOfflineOverlay();
     }
 
     this.renderUI();
   }
 
-  /**
-   * Handle playback error
-   */
   private async handlePlaybackError(error: string): Promise<void> {
     log.error('Playback error:', error);
 
@@ -2040,10 +1114,6 @@ export class PlaylistManager {
     await this.handleTrackEnded();
   }
 
-  /**
-   * Mark a video as blocked/unavailable - removes it from server history
-   * so it won't be auto-played again
-   */
   private async markVideoAsBlocked(url: string, embedId?: string): Promise<void> {
     try {
       const response = await fetch('/api/playlist/history/', {
@@ -2061,6 +1131,7 @@ export class PlaylistManager {
       }
       const result = await response.json();
       if (result.success) {
+        // Successfully removed
       } else {
         log.warn('Failed to remove blocked video from history:', result.error);
       }
@@ -2069,17 +1140,15 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Handle player ready
-   */
+  // ============================================
+  // PLAYER EVENT HANDLERS
+  // ============================================
+
   private handlePlayerReady(): void {
     // Reset error counter on successful playback
     this.consecutiveErrors = 0;
   }
 
-  /**
-   * Handle state change
-   */
   private handleStateChange(state: string): void {
     // Track when playback actually started for stable play detection
     if (state === 'playing') {
@@ -2104,12 +1173,9 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Handle title update from player (e.g., YouTube video data)
-   */
   private handleTitleUpdate(title: string): void {
     const currentItem = this.playlist.queue[this.playlist.currentIndex];
-    if (currentItem && this.isPlaceholderTitle(currentItem.title)) {
+    if (currentItem && isPlaceholderTitle(currentItem.title)) {
       currentItem.title = title;
       // Update the UI with the new title
       this.renderUI();
@@ -2117,9 +1183,10 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Load playlist from server
-   */
+  // ============================================
+  // LOAD FROM SERVER
+  // ============================================
+
   private async loadFromServer(): Promise<void> {
     try {
       const response = await fetch('/api/playlist/global/');
@@ -2148,6 +1215,7 @@ export class PlaylistManager {
         // NOTE: Do NOT set trackStartedAt here - let the server be the source of truth
         // If server doesn't have it, the track will play from the beginning which is safer
         if (this.playlist.isPlaying && this.playlist.queue.length > 0 && !this.playlist.trackStartedAt) {
+          // intentionally empty - server is source of truth
         }
 
         // Case 3: trackStartedAt is more than 15 minutes old (track should have ended)
@@ -2171,9 +1239,6 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Clear stale playlist data from server
-   */
   private async clearStalePlaylist(): Promise<void> {
     try {
       // Reset to empty playlist
@@ -2182,7 +1247,7 @@ export class PlaylistManager {
         currentIndex: 0,
         isPlaying: false,
         lastUpdated: new Date().toISOString(),
-        trackStartedAt: null
+        trackStartedAt: undefined
       };
 
       // Sync empty state to server
@@ -2200,9 +1265,10 @@ export class PlaylistManager {
     }
   }
 
-  /**
-   * Render UI (dispatch event for components to update)
-   */
+  // ============================================
+  // RENDER UI
+  // ============================================
+
   private renderUI(): void {
     // Update reaction count display
     const reactionCount = this.playlist.reactionCount || 0;
@@ -2237,153 +1303,10 @@ export class PlaylistManager {
     window.dispatchEvent(event);
   }
 
-  /**
-   * Fetch video metadata using noembed.com with YouTube fallback
-   */
-  private async fetchMetadata(url: string): Promise<{ title?: string; thumbnail?: string; duration?: number }> {
-    try {
-      // Try noembed first
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      try {
-        const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, { signal: controller.signal });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.title) {
-            return {
-              title: data.title,
-              thumbnail: data.thumbnail_url || undefined,
-              duration: data.duration || undefined
-            };
-          }
-        }
-      } catch (err: unknown) {
-        if (err instanceof Error && err.name === 'AbortError') {
-          log.warn('noembed timed out');
-        } else {
-          throw err;
-        }
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    } catch (error: unknown) {
-      log.warn('noembed failed:', error);
-    }
+  // ============================================
+  // UTILITY
+  // ============================================
 
-    // Fallback: Try YouTube oEmbed directly for YouTube URLs
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      try {
-        const ytResponse = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, { signal: controller.signal });
-        if (ytResponse.ok) {
-          const ytData = await ytResponse.json();
-          return {
-            title: ytData.title || undefined,
-            thumbnail: ytData.thumbnail_url || undefined,
-            duration: undefined
-          };
-        }
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          log.warn('YouTube oEmbed timed out');
-        } else {
-          log.warn('YouTube oEmbed failed:', error);
-        }
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    }
-
-    // Fallback: Try SoundCloud oEmbed for SoundCloud URLs
-    if (url.includes('soundcloud.com')) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      try {
-        const scResponse = await fetch(`https://soundcloud.com/oembed?url=${encodeURIComponent(url)}&format=json`, { signal: controller.signal });
-        if (scResponse.ok) {
-          const scData = await scResponse.json();
-          return {
-            title: scData.title || undefined,
-            thumbnail: scData.thumbnail_url || undefined,
-            duration: undefined
-          };
-        }
-      } catch (error: unknown) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          log.warn('SoundCloud oEmbed timed out');
-        } else {
-          log.warn('SoundCloud oEmbed failed:', error);
-        }
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    }
-
-    log.warn('Could not fetch metadata for:', url);
-    return {};
-  }
-
-  /**
-   * Fetch YouTube video duration via YouTube Data API proxy or oEmbed
-   * Returns duration in seconds, or null if unknown
-   */
-  private async fetchVideoDuration(url: string, platform: string, embedId?: string): Promise<number | null> {
-    // For YouTube, try to get duration from a proxy endpoint
-    if (platform === 'youtube' && embedId) {
-      try {
-        // Try our API endpoint that can check duration
-        const response = await fetch(`/api/youtube/duration/?videoId=${embedId}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.duration) {
-            return data.duration;
-          }
-        }
-      } catch (error: unknown) {
-        log.warn('Could not fetch YouTube duration:', error);
-      }
-    }
-
-    // Duration check not available for this platform
-    return null;
-  }
-
-  /**
-   * Check if a title is a placeholder (e.g., "Track 1234")
-   */
-  private isPlaceholderTitle(title?: string): boolean {
-    if (!title) return true;
-    return /^Track \d+$/i.test(title);
-  }
-
-  /**
-   * Fetch actual YouTube title via oEmbed
-   */
-  private async fetchYouTubeTitle(videoId: string): Promise<string | null> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    try {
-      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, { signal: controller.signal });
-      if (response.ok) {
-        const data = await response.json();
-        return data.title || null;
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        log.warn('YouTube title fetch timed out');
-      } else {
-        log.warn('Could not fetch YouTube title:', error);
-      }
-    } finally {
-      clearTimeout(timeoutId);
-    }
-    return null;
-  }
-
-  /**
-   * Generate unique ID
-   */
   private generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
   }
@@ -2393,14 +1316,15 @@ export class PlaylistManager {
       const currentUser = window.firebaseAuth?.currentUser;
       return currentUser ? await currentUser.getIdToken() : null;
     } catch (_e: unknown) {
-      /* intentional: auth token retrieval failure returns null — unauthenticated fallback */
+      /* intentional: auth token retrieval failure returns null -- unauthenticated fallback */
       return null;
     }
   }
 
-  /**
-   * Get current playlist state
-   */
+  // ============================================
+  // GETTERS
+  // ============================================
+
   get queue(): GlobalPlaylistItem[] {
     return this.playlist.queue;
   }
@@ -2423,50 +1347,31 @@ export class PlaylistManager {
     return this.isAuthenticated;
   }
 
-  /**
-   * Check if audio is actually playing (not paused/blocked by browser)
-   */
   get isActuallyPlaying(): boolean {
     return this.player?.isActuallyPlaying() ?? false;
   }
 
-  /**
-   * Set volume (0-100)
-   */
   setVolume(volume: number): void {
     this.player?.setVolume(volume);
   }
 
-  /**
-   * Get user's position in the DJ waitlist (1-based)
-   * Returns null if user is not in the queue
-   */
   getUserQueuePosition(): number | null {
     if (!this.userId) return null;
     const index = this.playlist.queue.findIndex(item => item.addedBy === this.userId);
     return index >= 0 ? index + 1 : null;
   }
 
-  /**
-   * Get count of user's tracks currently in queue
-   */
   getUserTracksInQueue(): number {
     if (!this.userId) return 0;
     return this.playlist.queue.filter(item => item.addedBy === this.userId).length;
   }
 
-  /**
-   * Check if it's currently the user's turn (their track is playing)
-   */
   isUsersTurn(): boolean {
     if (!this.userId) return false;
     const currentItem = this.playlist.queue[0];
     return currentItem?.addedBy === this.userId;
   }
 
-  /**
-   * Get current DJ info (who's track is playing)
-   */
   getCurrentDj(): { userId: string; userName: string } | null {
     const currentItem = this.playlist.queue[0];
     if (!currentItem) return null;
@@ -2476,9 +1381,10 @@ export class PlaylistManager {
     };
   }
 
-  /**
-   * Cleanup on destroy
-   */
+  // ============================================
+  // CLEANUP
+  // ============================================
+
   destroy(): void {
     this.clearTrackTimer();
     this.stopCountdown();
@@ -2489,8 +1395,7 @@ export class PlaylistManager {
         pusher.unsubscribe('live-playlist');
       }
     }
-    this.stopPlaylistMeters();
+    stopPlaylistMeters();
     this.player?.destroy();
   }
 }
-

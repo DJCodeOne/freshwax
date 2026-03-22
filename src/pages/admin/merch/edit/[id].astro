@@ -8,7 +8,10 @@ import { getDocument, clearCache, clearAllMerchCache, queryCollection } from '..
 import { saUpdateDocument } from '../../../../lib/firebase-service-account';
 import { kvDelete, CACHE_CONFIG } from '../../../../lib/kv-cache';
 import { d1UpsertMerch } from '../../../../lib/d1-catalog';
+import { createLogger } from '../../../../lib/api-utils';
 import '../../../../styles/admin/merch/edit.css';
+
+const log = createLogger('admin-merch-edit');
 
 // Server-side admin auth check
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
@@ -102,9 +105,9 @@ if (Astro.request.method === 'POST') {
 
     successMessage = 'Product updated successfully!';
 
-  } catch (error) {
-    console.error('[MERCH EDIT] Error updating:', error);
-    errorMessage = error instanceof Error ? error.message : 'Failed to update product';
+  } catch (err: unknown) {
+    log.error('[MERCH EDIT] Error updating:', err);
+    errorMessage = err instanceof Error ? err.message : 'Failed to update product';
   }
 }
 
@@ -117,9 +120,9 @@ try {
   } else {
     errorMessage = 'Product not found';
   }
-} catch (error) {
-  console.error('[MERCH EDIT] Error loading product:', error);
-  errorMessage = error instanceof Error ? error.message : 'Unknown error';
+} catch (err: unknown) {
+  log.error('[MERCH EDIT] Error loading product:', err);
+  errorMessage = err instanceof Error ? err.message : 'Unknown error';
 }
 
 if (!product && !errorMessage) {
@@ -250,8 +253,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               </div>
               
               <div class="form-group">
-                <label class="form-label">Description</label>
-                <textarea name="description" class="form-textarea" rows="4">{product.description || ''}</textarea>
+                <label class="form-label" for="merchDescription">Description</label>
+                <textarea name="description" id="merchDescription" class="form-textarea" rows="4">{product.description || ''}</textarea>
               </div>
             </div>
           </div>
@@ -364,7 +367,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                     <div class="color-tag" data-index={idx} data-name={color.name} data-hex={color.hex}>
                       <span class="color-swatch-small" style={`background: ${color.hex};`}></span>
                       <span class="color-name">{color.name}</span>
-                      <button type="button" class="color-remove" data-action="remove-color" data-idx={idx}>&times;</button>
+                      <button type="button" class="color-remove" data-action="remove-color" data-idx={idx} aria-label="Remove colour">&times;</button>
                     </div>
                   ))}
                 </div>
@@ -510,7 +513,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   <div class="image-editor-modal">
     <div class="image-editor-header">
       <h3>Resize & Position Image</h3>
-      <button type="button" class="image-editor-close" data-action="close-editor">&times;</button>
+      <button type="button" class="image-editor-close" data-action="close-editor" aria-label="Close">&times;</button>
     </div>
     <div class="image-editor-body">
       <div class="crop-container" id="cropContainer">
@@ -718,7 +721,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="color-tag" data-index="${idx}">
         <span class="color-swatch-small" style="background: ${color.hex};"></span>
         <span class="color-name">${color.name}</span>
-        <button type="button" class="color-remove" data-action="remove-color" data-idx="${idx}">&times;</button>
+        <button type="button" class="color-remove" data-action="remove-color" data-idx="${idx}" aria-label="Remove colour">&times;</button>
       </div>
     `).join('');
 
@@ -831,7 +834,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
     section.style.display = 'block';
 
-    let html = `<table class="variant-table">
+    let html = `<table class="variant-table" aria-label="Variant stock matrix">
       <thead>
         <tr>
           <th scope="col"></th>

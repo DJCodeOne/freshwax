@@ -61,6 +61,7 @@ const {
   dj_name = 'Unknown DJ',
   genre = 'Jungle & Drum and Bass',
   artwork_url = '/place-holder.webp',
+  thumbUrl: mixThumbUrl = '',
   audio_url = '',
   upload_date = new Date().toISOString(),
   description = '',
@@ -73,6 +74,9 @@ const {
   userId: mixUserId = '',
   djName: mixDjName = ''
 } = mix || {};
+
+// Derive thumbnail URL for srcset (400w responsive variant)
+const artworkThumbUrl = mixThumbUrl || (artwork_url.includes('/artwork.webp') ? artwork_url.replace('/artwork.webp', '/thumb.webp') : '');
 
 // Get duration from various possible field names (in order of preference)
 function getDurationSeconds(mix: Record<string, unknown> | null): number | null {
@@ -344,6 +348,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               <div class="artwork-glow-wrap">
                 <img
                   src={artwork_url}
+                  srcset={artworkThumbUrl ? `${artworkThumbUrl.replace(/ /g, '%20')} 400w, ${artwork_url.replace(/ /g, '%20')} 800w` : undefined}
+                  sizes={artworkThumbUrl ? "(max-width: 600px) 280px, 320px" : undefined}
                   alt={`${title} by ${dj_name}`}
                   class="w-full max-w-[280px] sm:max-w-[320px] lg:w-72 xl:w-80 mx-auto lg:mx-0 border-2 sm:border-4 border-white shadow-2xl relative z-10"
                   width="400"
@@ -702,6 +708,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                 id="embed-code"
                 readonly
                 rows="3"
+                aria-label="Embed code"
                 class="w-full px-4 py-3 bg-white/5 border border-white/20 text-xs font-mono text-gray-300 rounded-xl focus:outline-none focus:border-red-500 resize-none"
               ></textarea>
               <button
@@ -756,6 +763,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <textarea
             id="edit-tracklist-textarea"
             rows="12"
+            aria-label="Edit tracklist"
             class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-[border-color,box-shadow] resize-none font-mono text-sm"
             placeholder="Artist - Track Title
 Artist - Track Title
@@ -1261,7 +1269,7 @@ Artist - Track Title
             var downloadsCount = document.getElementById('downloads-count');
             if (downloadsCount) downloadsCount.textContent = data.downloads;
           }
-        }).catch(function() {});
+        }).catch(function() { /* non-critical: fire-and-forget download count update */ });
       }
 
       // Show success in modal

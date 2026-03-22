@@ -9,9 +9,10 @@ import { invalidateReleasesCache, clearCache } from '../../lib/firebase-rest';
 import { createLogger, errorResponse, successResponse, ApiErrors } from '../../lib/api-utils';
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { invalidateReleasesKVCache } from '../../lib/kv-cache';
 import type { Track } from '../../lib/types';
+import { processReleaseArtwork } from '../../lib/release/artwork';
+import { buildTrackArray } from '../../lib/release/track-builder';
 
 const processReleaseSchema = z.object({
   submissionId: z.string().min(1, 'submissionId is required'),
@@ -215,99 +216,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let artworkUrl = `${publicDomain}/place-holder.webp`;
     let thumbUrl = artworkUrl;
     let originalArtworkUrl = '';
-    const MAX_ARTWORK_FOR_PROCESSING = 5 * 1024 * 1024; // 5MB — skip WASM processing for larger images
-    if (artworkKey) {
-      const artworkSize = fileSizes.get(artworkKey) || 0;
-      log.info(`Artwork: ${artworkKey} (${(artworkSize / 1024).toFixed(0)}KB)`);
 
-      if (artworkSize > MAX_ARTWORK_FOR_PROCESSING) {
-        // Large image — skip WASM processing, just copy original to avoid Worker timeout
-        log.info(`Artwork too large for WASM processing (${(artworkSize / (1024 * 1024)).toFixed(1)}MB), copying original`);
-        const artworkFilename = artworkKey.split('/').pop() || 'cover.webp';
-        const newArtworkKey = `${releaseFolder}/${artworkFilename}`;
-        const copied = await copyObject(artworkKey, newArtworkKey);
-        if (copied) {
-          copiedFiles.push({ oldKey: artworkKey, newKey: newArtworkKey });
-          artworkUrl = `${publicDomain}/${newArtworkKey}`;
-          originalArtworkUrl = artworkUrl;
-          thumbUrl = artworkUrl;
-        }
-      } else {
-        // Download artwork for validation and processing
-        const artworkObj = await r2.get(artworkKey);
-        if (artworkObj) {
-          const artworkBuffer = await artworkObj.arrayBuffer();
-          const artworkBytes = new Uint8Array(artworkBuffer);
+    const artworkResult = await processReleaseArtwork({
+      artworkKey,
+      artworkSize: artworkKey ? (fileSizes.get(artworkKey) || 0) : 0,
+      r2,
+      releaseFolder,
+      publicDomain,
+      copyObject,
+      log,
+    });
 
-          // Validate magic bytes
-          let magicValid = false;
-          if (artworkBytes[0] === 0xFF && artworkBytes[1] === 0xD8 && artworkBytes[2] === 0xFF) {
-            magicValid = true; // JPEG
-          } else if (artworkBytes[0] === 0x89 && artworkBytes[1] === 0x50 && artworkBytes[2] === 0x4E && artworkBytes[3] === 0x47) {
-            magicValid = true; // PNG
-          } else if (artworkBytes[0] === 0x52 && artworkBytes[1] === 0x49 && artworkBytes[2] === 0x46 && artworkBytes[3] === 0x46
-            && artworkBytes[8] === 0x57 && artworkBytes[9] === 0x45 && artworkBytes[10] === 0x42 && artworkBytes[11] === 0x50) {
-            magicValid = true; // WebP
-          } else if (artworkBytes[0] === 0x47 && artworkBytes[1] === 0x49 && artworkBytes[2] === 0x46 && artworkBytes[3] === 0x38) {
-            magicValid = true; // GIF
-          }
-          if (!magicValid) {
-            log.error(`Artwork file failed magic byte validation: ${artworkKey}`);
-            return ApiErrors.badRequest('Artwork file content does not match a valid image format (JPEG, PNG, WebP, GIF).');
-          }
-
-          // Process to WebP: 800x800 cover + 400x400 thumbnail (in parallel)
-          try {
-            const [cover, thumb] = await Promise.all([
-              processImageToSquareWebP(artworkBuffer, 800, 80),
-              processImageToSquareWebP(artworkBuffer, 400, 75),
-            ]);
-
-            // Upload cover + thumb + copy original in parallel
-            const coverKey = `${releaseFolder}/cover${imageExtension(cover.format)}`;
-            const thumbKey = `${releaseFolder}/thumb${imageExtension(thumb.format)}`;
-            const origExt = artworkKey.split('.').pop() || 'jpg';
-            const originalKey = `${releaseFolder}/original.${origExt}`;
-
-            const [, , origCopied] = await Promise.all([
-              r2.put(coverKey, cover.buffer, {
-                httpMetadata: { contentType: imageContentType(cover.format), cacheControl: 'public, max-age=31536000, immutable' },
-              }),
-              r2.put(thumbKey, thumb.buffer, {
-                httpMetadata: { contentType: imageContentType(thumb.format), cacheControl: 'public, max-age=31536000, immutable' },
-              }),
-              copyObject(artworkKey, originalKey),
-            ]);
-
-            artworkUrl = `${publicDomain}/${coverKey}`;
-            thumbUrl = `${publicDomain}/${thumbKey}`;
-            copiedFiles.push({ oldKey: artworkKey, newKey: coverKey });
-            copiedFiles.push({ oldKey: artworkKey, newKey: thumbKey });
-            log.info(`Created cover (${(cover.buffer.length / 1024).toFixed(0)}KB) + thumb (${(thumb.buffer.length / 1024).toFixed(0)}KB)`);
-
-            if (origCopied) {
-              originalArtworkUrl = `${publicDomain}/${originalKey}`;
-              copiedFiles.push({ oldKey: artworkKey, newKey: originalKey });
-              log.info(`Copied original artwork for downloads`);
-            }
-          } catch (imgErr: unknown) {
-            // Fallback: copy original if image processing fails
-            log.warn(`Image processing failed, copying original: ${imgErr}`);
-            const artworkFilename = artworkKey.split('/').pop() || 'cover.webp';
-            const newArtworkKey = `${releaseFolder}/${artworkFilename}`;
-            const copied = await copyObject(artworkKey, newArtworkKey);
-            if (copied) {
-              copiedFiles.push({ oldKey: artworkKey, newKey: newArtworkKey });
-              artworkUrl = `${publicDomain}/${newArtworkKey}`;
-              originalArtworkUrl = artworkUrl;
-              thumbUrl = artworkUrl;
-            }
-          }
-        } else {
-          log.warn(`Failed to download artwork: ${artworkKey}`);
-        }
-      }
+    // If processReleaseArtwork returned a Response, it's a validation error
+    if (artworkResult instanceof Response) {
+      return artworkResult;
     }
+
+    artworkUrl = artworkResult.artworkUrl;
+    thumbUrl = artworkResult.thumbUrl;
+    originalArtworkUrl = artworkResult.originalArtworkUrl;
+    copiedFiles.push(...artworkResult.copiedFiles);
 
     // Copy audio files in parallel and build new URLs
     let newAudioFiles: { oldKey: string; newKey: string; url: string }[] = [];
@@ -342,119 +270,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
     audioFiles = newAudioFiles.map(f => f.newKey);
 
     // Build tracks - match metadata tracks to audio files by name
-    const tracks: Record<string, unknown>[] = [];
-
-    // Parse tracks from metadata - try tracks array first, then trackListingJSON string
-    let metadataTracks: Record<string, unknown>[] = [];
-    if (metadata.tracks && Array.isArray(metadata.tracks)) {
-      metadataTracks = metadata.tracks;
-    } else if (metadata.trackListingJSON) {
-      try {
-        metadataTracks = JSON.parse(metadata.trackListingJSON);
-      } catch (e: unknown) {
-        log.warn('Failed to parse trackListingJSON:', e);
-      }
-    }
-
-    log.debug(`Metadata tracks (${metadataTracks.length}):`, metadataTracks);
-    log.debug(`Audio files:`, audioFiles);
-
-    // Helper to normalize names for matching (lowercase, remove special chars)
-    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-    // For each metadata track, find the matching audio file from newAudioFiles
-    for (let i = 0; i < metadataTracks.length; i++) {
-      const metaTrack = metadataTracks[i];
-      const trackName = metaTrack.title || metaTrack.trackName || '';
-      const normalizedTrackName = normalize(trackName);
-
-      log.debug(`Looking for audio file matching: "${trackName}"`);
-
-      // Find audio file that contains this track name (from copied files)
-      let matchedAudio = newAudioFiles.find(audioFile => {
-        const filename = audioFile.newKey.split('/').pop() || '';
-        const normalizedFilename = normalize(filename);
-        return normalizedFilename.includes(normalizedTrackName) && normalizedTrackName.length > 2;
-      });
-
-      // If no match found, use first remaining audio file as fallback
-      if (!matchedAudio && newAudioFiles.length > 0) {
-        matchedAudio = newAudioFiles[0];
-        log.debug(`No name match, using first remaining file: ${matchedAudio.newKey}`);
-      }
-
-      if (!matchedAudio) {
-        log.warn(`No audio file found for track ${i + 1}: ${trackName}`);
-        continue;
-      }
-
-      // Use the URL from the copied file (already in releases folder)
-      const audioUrl = matchedAudio.url;
-
-      log.debug(`Track ${i + 1}: "${trackName}" -> ${matchedAudio.newKey}`);
-
-      tracks.push({
-        trackNumber: metaTrack.trackNumber || i + 1,
-        title: trackName || `Track ${i + 1}`,
-        trackName: trackName || `Track ${i + 1}`,
-        mp3Url: audioUrl,
-        wavUrl: audioUrl,
-        previewUrl: audioUrl,
-        bpm: metaTrack.bpm || '',
-        key: metaTrack.key || '',
-        duration: metaTrack.duration || '',
-        trackISRC: metaTrack.trackISRC || '',
-        featured: metaTrack.featured || '',
-        remixer: metaTrack.remixer || '',
-        storage: 'r2'
-      });
-
-      // Remove matched file from list to prevent duplicates
-      newAudioFiles = newAudioFiles.filter(f => f !== matchedAudio);
-    }
-
-    // Add any remaining unmatched audio files
-    for (let i = 0; i < newAudioFiles.length; i++) {
-      const audioFile = newAudioFiles[i];
-      const filename = audioFile.newKey.split('/').pop() || '';
-      const trackNameFromFile = filename
-        .replace(/\.(wav|mp3|flac)$/i, '')
-        .replace(/^\d+[\s._-]+/, '')
-        .trim();
-
-      const audioUrl = audioFile.url;
-
-      log.debug(`Unmatched track: "${trackNameFromFile}" -> ${filename}`);
-
-      tracks.push({
-        trackNumber: tracks.length + 1,
-        title: trackNameFromFile || `Track ${tracks.length + 1}`,
-        trackName: trackNameFromFile || `Track ${tracks.length + 1}`,
-        mp3Url: audioUrl,
-        wavUrl: audioUrl,
-        previewUrl: audioUrl,
-        bpm: '',
-        key: '',
-        duration: '',
-        trackISRC: '',
-        featured: '',
-        remixer: '',
-        storage: 'r2'
-      });
-    }
+    const { tracks } = buildTrackArray({ metadata, newAudioFiles, log });
 
     log.info(`Built ${tracks.length} tracks`);
 
+    // Parse metadata tracks count for validation (same logic as buildTrackArray)
+    let metadataTrackCount = 0;
+    if (metadata.tracks && Array.isArray(metadata.tracks)) {
+      metadataTrackCount = metadata.tracks.length;
+    } else if (metadata.trackListingJSON) {
+      try {
+        metadataTrackCount = JSON.parse(metadata.trackListingJSON as string).length;
+      } catch (e: unknown) {
+        // Already logged in buildTrackArray
+      }
+    }
+
     // Validate: if metadata has tracks but we found none, fail
-    if (metadataTracks.length > 0 && tracks.length === 0) {
-      log.error(`Track mismatch: metadata has ${metadataTracks.length} tracks but no audio files were found/matched`);
-      return ApiErrors.badRequest(`No audio files found for ${metadataTracks.length} track(s). Please ensure audio files are uploaded with the submission.`);
+    if (metadataTrackCount > 0 && tracks.length === 0) {
+      log.error(`Track mismatch: metadata has ${metadataTrackCount} tracks but no audio files were found/matched`);
+      return ApiErrors.badRequest(`No audio files found for ${metadataTrackCount} track(s). Please ensure audio files are uploaded with the submission.`);
     }
 
     // Warn if metadata track count doesn't match audio files found
-    const trackCountMismatch = metadataTracks.length > 0 && metadataTracks.length !== tracks.length;
+    const trackCountMismatch = metadataTrackCount > 0 && metadataTrackCount !== tracks.length;
     if (trackCountMismatch) {
-      log.warn(`Track count mismatch: metadata has ${metadataTracks.length} tracks, found ${tracks.length} audio files`);
+      log.warn(`Track count mismatch: metadata has ${metadataTrackCount} tracks, found ${tracks.length} audio files`);
     }
 
     const now = new Date().toISOString();
@@ -576,7 +417,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Delete submission files after successful processing (but keep if track count mismatch)
     if (trackCountMismatch) {
-      log.warn(`Keeping submission files due to track count mismatch (metadata: ${metadataTracks.length}, actual: ${tracks.length})`);
+      log.warn(`Keeping submission files due to track count mismatch (metadata: ${metadataTrackCount}, actual: ${tracks.length})`);
     } else {
       try {
         log.info(`Deleting submission files from ${submissionPrefix}/`);
@@ -594,7 +435,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       title: metadata.releaseName,
       tracks: tracks.length,
       coverUrl: artworkUrl,
-      ...(trackCountMismatch ? { warning: `Track count mismatch: metadata has ${metadataTracks.length} tracks but only ${tracks.length} audio file(s) were found. Submission files kept for re-processing.` } : {})
+      ...(trackCountMismatch ? { warning: `Track count mismatch: metadata has ${metadataTrackCount} tracks but only ${tracks.length} audio file(s) were found. Submission files kept for re-processing.` } : {})
     });
 
   } catch (error: unknown) {

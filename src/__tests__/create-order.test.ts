@@ -678,4 +678,336 @@ describe('Create Order', () => {
     const totals = savedOrder.totals as Record<string, unknown>;
     expect(totals.merchShipping).toBe(4.99);
   });
+
+  // -----------------------------------------------------------------------
+  // 18. Free merch shipping for orders over £50
+  // -----------------------------------------------------------------------
+  it('applies free merch shipping for orders totalling £50+', async () => {
+    mockGetDocument.mockImplementation(async (collection: string, id: string) => {
+      if (collection === 'merch' && id === 'merch_expensive') {
+        return {
+          retailPrice: 55.00,
+          variantStock: { 'l_black': { stock: 10, sold: 0 } },
+          totalStock: 10,
+          _updateTime: '2026-01-01T00:00:00Z',
+        };
+      }
+      if (collection === 'users') return { email: 'buyer@test.com', displayName: 'Test Buyer' };
+      if (collection === 'artists') return null;
+      return null;
+    });
+
+    const expensiveMerchPayload = {
+      customer: {
+        email: 'buyer@test.com',
+        firstName: 'Test',
+        lastName: 'Buyer',
+        userId: 'user_123',
+      },
+      items: [
+        {
+          productId: 'merch_expensive',
+          name: 'Premium Hoodie',
+          type: 'merch',
+          price: 55.00,
+          quantity: 1,
+          size: 'L',
+          color: 'Black',
+        },
+      ],
+      shipping: {
+        address1: '123 Test St',
+        city: 'London',
+        postcode: 'SW1A 1AA',
+        country: 'GB',
+      },
+      totals: {
+        subtotal: 55.00,
+        shipping: 0,
+        total: 55.00,
+      },
+      hasPhysicalItems: true,
+    };
+
+    const request = makeRequest(expensiveMerchPayload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // Check the order saved to Firebase has free shipping
+    const orderCall = mockAddDocument.mock.calls.find(
+      (call: unknown[]) => call[0] === 'orders'
+    );
+    expect(orderCall).toBeDefined();
+    const savedOrder = orderCall![1] as Record<string, unknown>;
+    const totals = savedOrder.totals as Record<string, unknown>;
+    expect(totals.merchShipping).toBe(0);
+  });
+
+  // -----------------------------------------------------------------------
+  // 19. Email sending throws -> order still succeeds
+  // -----------------------------------------------------------------------
+  it('returns 200 even when email sending throws an exception', async () => {
+    // Make all fetchWithTimeout calls throw (email sending will fail)
+    mockFetchWithTimeout.mockRejectedValue(new Error('Email service completely down'));
+
+    const request = makeRequest(makeDigitalOrderPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    // Order should still succeed — email failure is non-blocking
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.orderId).toBe('order_abc123');
+  });
+
+  // -----------------------------------------------------------------------
+  // 20. Merch stock update uses optimistic concurrency (_updateTime)
+  // -----------------------------------------------------------------------
+  it('uses optimistic concurrency when updating merch stock', async () => {
+    const request = makeRequest(makeMerchOrderPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // updateDocumentConditional should use the _updateTime from the original doc
+    expect(mockUpdateDocumentConditional).toHaveBeenCalledWith(
+      'merch',
+      'merch_1',
+      expect.objectContaining({
+        variantStock: expect.any(Object),
+      }),
+      '2026-01-01T00:00:00Z' // _updateTime from mock
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // 21. Customer order count update failure is non-blocking
+  // -----------------------------------------------------------------------
+  it('returns 200 even when customer order count update fails', async () => {
+    mockAtomicIncrement.mockRejectedValue(new Error('Firestore write failed'));
+
+    const request = makeRequest(makeDigitalOrderPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    // Order should still succeed — customer update failure is non-blocking
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+  });
+
+  // -----------------------------------------------------------------------
+  // 22. Pre-order items set correct order status
+  // -----------------------------------------------------------------------
+  it('sets order status to awaiting_release for pre-order items', async () => {
+    mockGetDocument.mockImplementation(async (collection: string, id: string) => {
+      if (collection === 'releases' && id === 'release_preorder') {
+        return {
+          price: 12.99,
+          digitalPrice: 12.99,
+          releaseName: 'Future EP',
+          artistName: 'DJ Future',
+          tracks: [],
+          coverArtUrl: 'https://r2.test/cover.webp',
+        };
+      }
+      if (collection === 'users') return { email: 'buyer@test.com', displayName: 'Test Buyer' };
+      if (collection === 'artists') return null;
+      return null;
+    });
+
+    const preOrderPayload = {
+      customer: {
+        email: 'buyer@test.com',
+        firstName: 'Test',
+        lastName: 'Buyer',
+        userId: 'user_123',
+      },
+      items: [
+        {
+          id: 'release_preorder',
+          releaseId: 'release_preorder',
+          name: 'Future EP',
+          type: 'digital',
+          price: 12.99,
+          quantity: 1,
+          isPreOrder: true,
+          releaseDate: '2026-06-01T00:00:00Z',
+        },
+      ],
+      totals: {
+        subtotal: 12.99,
+        shipping: 0,
+        total: 12.99,
+      },
+      hasPhysicalItems: false,
+    };
+
+    const request = makeRequest(preOrderPayload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // Check the order was saved with pre-order status
+    const orderCall = mockAddDocument.mock.calls.find(
+      (call: unknown[]) => call[0] === 'orders'
+    );
+    expect(orderCall).toBeDefined();
+    const savedOrder = orderCall![1] as Record<string, unknown>;
+    expect(savedOrder.status).toBe('awaiting_release');
+    expect(savedOrder.hasPreOrderItems).toBe(true);
+    expect(savedOrder.preOrderDeliveryDate).toBe('2026-06-01T00:00:00.000Z');
+  });
+
+  // -----------------------------------------------------------------------
+  // 23. Price validation prevents underpaying (server total > client total by > 5%)
+  // -----------------------------------------------------------------------
+  it('rejects when client total is more than 5% below server-calculated total', async () => {
+    // Server price is 9.99, client submits 5.00 (>5% below)
+    const payload = makeDigitalOrderPayload({
+      totals: { subtotal: 5.00, shipping: 0, total: 5.00 },
+    });
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain('Price validation failed');
+    expect(mockAddDocument).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 24. Price validation allows client total within 5% tolerance
+  // -----------------------------------------------------------------------
+  it('accepts when client total is within 5% of server-calculated total', async () => {
+    // Server price is 9.99, client submits 9.60 (within 5%)
+    const payload = makeDigitalOrderPayload({
+      totals: { subtotal: 9.60, shipping: 0, total: 9.60 },
+    });
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    // Should succeed since 9.60 >= 9.99 * 0.95 = 9.4905
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+  });
+
+  // -----------------------------------------------------------------------
+  // 25. Items over 50 are rejected by Zod max
+  // -----------------------------------------------------------------------
+  it('returns 400 when more than 50 items are submitted', async () => {
+    const manyItems = Array.from({ length: 51 }, (_, i) => ({
+      id: `release_${i}`,
+      releaseId: `release_${i}`,
+      name: `Release ${i}`,
+      type: 'digital',
+      price: 1.00,
+      quantity: 1,
+    }));
+
+    const payload = makeDigitalOrderPayload({
+      items: manyItems,
+      totals: { subtotal: 51.00, shipping: 0, total: 51.00 },
+    });
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain('Invalid request');
+    expect(mockAddDocument).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 26. Order includes download URLs for digital items
+  // -----------------------------------------------------------------------
+  it('enriches digital items with download URLs from Firebase release', async () => {
+    const request = makeRequest(makeDigitalOrderPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // Check the order was saved with download information
+    const orderCall = mockAddDocument.mock.calls.find(
+      (call: unknown[]) => call[0] === 'orders'
+    );
+    expect(orderCall).toBeDefined();
+    const savedOrder = orderCall![1] as Record<string, unknown>;
+    const items = savedOrder.items as Record<string, unknown>[];
+    expect(items[0]).toHaveProperty('downloads');
+    const downloads = items[0].downloads as Record<string, unknown>;
+    expect(downloads.artistName).toBe('Test Artist');
+    expect(downloads.releaseName).toBe('Jungle Massive EP');
+    expect(downloads.artworkUrl).toBe('https://r2.test/cover.webp');
+    // Track download URLs should be stripped from pending orders (security)
+    const tracks = downloads.tracks as Record<string, unknown>[];
+    expect(tracks[0]).not.toHaveProperty('mp3Url');
+    expect(tracks[0]).not.toHaveProperty('wavUrl');
+  });
+
+  // -----------------------------------------------------------------------
+  // 27. Merch stock movement is recorded after stock update
+  // -----------------------------------------------------------------------
+  it('records stock movement document when merch stock is updated', async () => {
+    const request = makeRequest(makeMerchOrderPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // Check stock movement was recorded
+    const stockMovementCall = mockAddDocument.mock.calls.find(
+      (call: unknown[]) => call[0] === 'merch-stock-movements'
+    );
+    expect(stockMovementCall).toBeDefined();
+    const movement = stockMovementCall![1] as Record<string, unknown>;
+    expect(movement.productId).toBe('merch_1');
+    expect(movement.type).toBe('sell');
+    expect(movement.quantity).toBe(1);
+    expect(movement.previousStock).toBe(10);
+    expect(movement.newStock).toBe(9);
+  });
 });

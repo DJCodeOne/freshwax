@@ -2,4 +2,9 @@
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist"]
+  // NOTE: This project uses relative import paths (e.g. '../../lib/firebase-rest')
+  // rather than tsconfig path aliases (e.g. '@lib/firebase-rest'). This is the
+  // established convention across 260+ files and 1000+ imports. Adding a path alias
+  // like "@lib" -> "src/lib" would require touching most files in the codebase and
+  // risks breaking the Cloudflare Workers runtime. Keep using relative imports.
 }

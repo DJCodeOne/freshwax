@@ -213,13 +213,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             
             <form id="dashboardRedeemForm" class="redeem-form">
               <div class="code-input-group">
-                <input 
-                  type="text" 
-                  id="dashboardGiftCode" 
-                  placeholder="FWGC-XXXX-XXXX-XXXX" 
+                <input
+                  type="text"
+                  id="dashboardGiftCode"
+                  placeholder="FWGC-XXXX-XXXX-XXXX"
                   maxlength="19"
                   autocomplete="off"
                   spellcheck="false"
+                  aria-label="Gift card code"
                 />
                 <button type="submit" id="dashboardRedeemBtn" class="redeem-btn">
                   <span class="btn-text">Redeem</span>
@@ -1012,7 +1013,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     var btn = document.getElementById('loadMoreActivity');
     if (btn) {
       btn.addEventListener('click', function() {
-        if (currentUser) loadActivityFeed(currentUser).catch(function() {});
+        if (currentUser) loadActivityFeed(currentUser).catch(function() { /* non-critical: activity feed load on button click */ });
       });
     }
   })();
@@ -1452,7 +1453,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           downloadsModule.initZipModal();
 
           // Load activity feed (non-blocking)
-          loadActivityFeed(user).catch(function() {});
+          loadActivityFeed(user).catch(function() { /* non-critical: activity feed initial load */ });
 
         } catch (error) {
           console.error('[Dashboard] Error loading dashboard:', error);

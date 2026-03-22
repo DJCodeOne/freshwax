@@ -103,7 +103,7 @@ export function parseMediaUrl(url: string): ParsedUrl {
       isValid: false,
       error: 'Unsupported media format. Please use YouTube, SoundCloud, or direct media links (.mp3, .mp4, .webm, .m3u8)'
     };
-  } catch { /* intentional: URL constructor threw — input is not a valid URL */
+  } catch (_e: unknown) { /* non-critical: URL constructor threw — input is not a valid URL */
     return {
       platform: 'direct',
       url: trimmedUrl,

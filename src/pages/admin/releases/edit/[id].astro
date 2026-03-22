@@ -160,25 +160,25 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </div>
 
             <div class="form-group">
-              <label class="form-label">Release Description</label>
-              <textarea name="releaseDescription" class="form-textarea" placeholder="Description...">{release.releaseDescription || ''}</textarea>
+              <label class="form-label" for="releaseDescription">Release Description</label>
+              <textarea name="releaseDescription" id="releaseDescription" class="form-textarea" placeholder="Description...">{release.releaseDescription || ''}</textarea>
             </div>
 
             <div class="field-group-title">Admin Notes <span style="font-weight: 400; text-transform: none;">(metadata.notes - internal)</span></div>
 
             <div class="form-group">
-              <label class="form-label">Artist Social Links <span class="hint">(SoundCloud, Facebook, Instagram, etc.)</span></label>
-              <textarea name="artistSocialLinks" class="form-textarea" style="min-height: 80px;" placeholder="One link per line..."></textarea>
+              <label class="form-label" for="artistSocialLinks">Artist Social Links <span class="hint">(SoundCloud, Facebook, Instagram, etc.)</span></label>
+              <textarea name="artistSocialLinks" id="artistSocialLinks" class="form-textarea" style="min-height: 80px;" placeholder="One link per line..."></textarea>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Other Notes <span class="hint">(General internal notes)</span></label>
-              <textarea name="otherNotes" class="form-textarea" style="min-height: 60px;" placeholder="Any other internal notes..."></textarea>
+              <label class="form-label" for="otherNotes">Other Notes <span class="hint">(General internal notes)</span></label>
+              <textarea name="otherNotes" id="otherNotes" class="form-textarea" style="min-height: 60px;" placeholder="Any other internal notes..."></textarea>
             </div>
 
             <div class="form-group">
-              <label class="form-label">Track Listing <span class="hint">(Plain text backup)</span></label>
-              <textarea name="trackListing" class="form-textarea" style="min-height: 60px;" placeholder="Track names separated by newlines...">{release.trackListing || ''}</textarea>
+              <label class="form-label" for="trackListing">Track Listing <span class="hint">(Plain text backup)</span></label>
+              <textarea name="trackListing" id="trackListing" class="form-textarea" style="min-height: 60px;" placeholder="Track names separated by newlines...">{release.trackListing || ''}</textarea>
             </div>
           </div>
 
@@ -348,8 +348,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 </div>
 
                 <div class="form-group">
-                  <label class="form-label">Details</label>
-                  <textarea name="limitedEditionDetails" class="form-textarea" style="min-height: 60px;">{release.limitedEditionDetails || release.vinyl?.limitedEdition?.details || ''}</textarea>
+                  <label class="form-label" for="limitedEditionDetails">Details</label>
+                  <textarea name="limitedEditionDetails" id="limitedEditionDetails" class="form-textarea" style="min-height: 60px;">{release.limitedEditionDetails || release.vinyl?.limitedEdition?.details || ''}</textarea>
                 </div>
               </div>
             </div>

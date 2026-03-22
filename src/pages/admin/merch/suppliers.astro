@@ -174,7 +174,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </div>
             
             <div class="form-group">
-              <label class="form-label">Notes</label>
+              <label class="form-label" for="supplierNotes">Notes</label>
               <textarea class="form-textarea" id="supplierNotes" placeholder="Any additional notes..."></textarea>
             </div>
             
@@ -209,7 +209,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     <div style="background: #fff; border: 3px solid #000; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
       <div style="background: #000; color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
         <h3 style="font-size: 16px; font-weight: 900; text-transform: uppercase;">Edit Supplier</h3>
-        <button id="closeEditModal" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer;">&times;</button>
+        <button id="closeEditModal" style="background: none; border: none; color: #fff; font-size: 24px; cursor: pointer;" aria-label="Close">&times;</button>
       </div>
       <form id="editForm" style="padding: 20px;">
         <input type="hidden" id="editSupplierId">

@@ -2,7 +2,7 @@
 // DJ Lobby - Book a Slot
 // Compact 24-hour booking grid with stream key generation
 import '../../styles/global.css';
-import { FIREBASE_API_KEY } from '../../lib/constants';
+import { FIREBASE_API_KEY, SITE_URL } from '../../lib/constants';
 export const prerender = false;
 
 // Prevent caching to ensure fresh script execution
@@ -28,6 +28,7 @@ const firebaseConfig = {
   <meta http-equiv="Pragma" content="no-cache">
   <title>Book a Slot | Fresh Wax</title>
   <meta name="robots" content="noindex, nofollow" />
+  <link rel="canonical" href={`${SITE_URL}/dj-lobby/book/`} />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

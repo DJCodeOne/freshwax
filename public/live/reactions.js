@@ -346,7 +346,7 @@ function setupReactionButtons() {
               emoji: '\u2764\uFE0F,\uD83D\uDC96,\uD83D\uDC97,\uD83D\uDC93,\uD83D\uDC95',
               emojiType: 'like'
             })
-          }).catch(function() {});
+          }).catch(function() { /* non-critical: fire-and-forget Pusher reaction event */ });
 
           // Increment like count in database
           var response = await fetch('/api/livestream/react/', {

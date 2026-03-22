@@ -73,7 +73,8 @@ const formatDate = (dateValue: unknown) => {
     const date = toDate(dateValue);
     if (!date) return '';
     return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  } catch {
+  } catch (_e: unknown) {
+    // non-critical: invalid date value — return empty string
     return '';
   }
 };

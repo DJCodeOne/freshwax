@@ -1,7 +1,7 @@
 ---
 // src/pages/login.astro
 // Unified Login - One login for everyone
-import { FIREBASE_API_KEY } from '../lib/constants';
+import { FIREBASE_API_KEY, SITE_URL } from '../lib/constants';
 
 export const prerender = false;
 
@@ -38,6 +38,7 @@ const csrfToken = Astro.locals.csrfToken || '';
   <title>Login - Fresh Wax</title>
   <meta name="robots" content="noindex" />
   <meta name="description" content="Sign in to your Fresh Wax account to buy vinyl, stream mixes and access your dashboard" />
+  <link rel="canonical" href={`${SITE_URL}/login/`} />
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>

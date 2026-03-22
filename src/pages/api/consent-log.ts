@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { addDocument } from '../../lib/firebase-rest';
-import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { checkRateLimit, getClientId, rateLimitResponse } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse, errorResponse } from '../../lib/api-utils';
 
 const log = createLogger('consent-log');
@@ -20,8 +20,13 @@ const ConsentLogSchema = z.object({
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Tight rate limit: consent changes are rare — 5 per minute per client
   const clientId = getClientId(request);
-  const rateCheck = checkRateLimit(`consent-log:${clientId}`, RateLimiters.standard);
+  const rateCheck = checkRateLimit(`consent-log:${clientId}`, {
+    maxRequests: 5,
+    windowMs: 60_000,
+    blockDurationMs: 60_000,
+  });
   if (!rateCheck.allowed) {
     return rateLimitResponse(rateCheck.retryAfter!);
   }

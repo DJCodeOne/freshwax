@@ -98,18 +98,26 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
       }
 
       if (stockUpdated) {
+        // Single post-update fetch — used for stock movement, D1 sync, and supplier stats
+        let updatedProduct: Record<string, unknown> | null = null;
+        try {
+          clearCache(`doc:merch:${item.productId}`);
+          updatedProduct = await getDocument('merch', item.productId);
+        } catch (fetchErr: unknown) {
+          log.error('[order-utils] Post-update fetch failed for:', item.productId, fetchErr);
+        }
+
         // Record stock movement
         try {
-          const productData = await getDocument('merch', item.productId);
           const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
           const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
           const variantKey = size + '_' + color;
-          const variant = productData?.variantStock?.[variantKey];
+          const variant = updatedProduct?.variantStock?.[variantKey];
 
           await addDocument('merch-stock-movements', {
             productId: item.productId,
             productName: item.name,
-            sku: productData?.sku,
+            sku: updatedProduct?.sku,
             variantKey: variantKey,
             variantSku: variant?.sku,
             type: 'sell',
@@ -129,14 +137,10 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
 
         // Sync to D1
         const db = env?.DB;
-        if (db) {
+        if (db && updatedProduct) {
           try {
-            clearCache(`doc:merch:${item.productId}`);
-            const updatedProduct = await getDocument('merch', item.productId);
-            if (updatedProduct) {
-              await d1UpsertMerch(db, item.productId, updatedProduct);
-              log.info('[order-utils] ✓ D1 synced for:', item.name);
-            }
+            await d1UpsertMerch(db, item.productId, updatedProduct);
+            log.info('[order-utils] ✓ D1 synced for:', item.name);
           } catch (d1Error: unknown) {
             log.error('[order-utils] D1 sync failed (non-critical):', d1Error);
           }
@@ -144,10 +148,9 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
 
         // Update supplier stats atomically
         try {
-          const productData = await getDocument('merch', item.productId);
-          if (productData?.supplierId) {
-            const supplierRevenue = (productData.retailPrice || item.price) * item.quantity * ((productData.supplierCut || 0) / 100);
-            await atomicIncrement('merch-suppliers', productData.supplierId, {
+          if (updatedProduct?.supplierId) {
+            const supplierRevenue = (updatedProduct.retailPrice || item.price) * item.quantity * ((updatedProduct.supplierCut || 0) / 100);
+            await atomicIncrement('merch-suppliers', updatedProduct.supplierId, {
               totalStock: -item.quantity,
               totalSold: item.quantity,
               totalRevenue: supplierRevenue

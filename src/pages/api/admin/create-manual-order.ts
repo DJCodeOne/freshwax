@@ -119,7 +119,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const serviceFees = orderData.totals?.serviceFees ?? (freshWaxFee + stripeFee);
 
     // Process items - fetch download URLs from releases
-    const processedItems = await Promise.all(orderData.items.map(async (item: Record<string, unknown>) => {
+    // Use Promise.allSettled so a single failed enrichment doesn't block the entire order
+    const itemSettled = await Promise.allSettled(orderData.items.map(async (item: Record<string, unknown>) => {
       const releaseId = item.releaseId || item.id;
       let downloads = null;
 
@@ -161,6 +162,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
         downloads
       };
     }));
+    const processedItems = itemSettled.map((result, i) => {
+      if (result.status === 'fulfilled') return result.value;
+      const item = orderData.items[i];
+      log.error('[admin] Item enrichment failed:', item.id || item.releaseId, result.reason);
+      return {
+        id: item.id || item.releaseId,
+        releaseId: item.releaseId || item.id,
+        productId: item.productId,
+        trackId: item.trackId,
+        name: item.name || 'Item',
+        type: item.type || 'digital',
+        price: item.price || 0,
+        quantity: item.quantity || 1,
+        size: item.size || null,
+        color: item.color || null,
+        image: item.image || item.artwork || null,
+        artwork: item.artwork || item.image || null,
+        artist: item.artist || null,
+        artistId: item.artistId || null,
+        downloads: null
+      };
+    });
 
     // Build order document
     const order = {

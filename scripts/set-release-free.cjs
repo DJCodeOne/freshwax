@@ -5,7 +5,7 @@
 const https = require('https');
 
 const releaseId = 'code_one_FW-1765803666207';
-const apiKey = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+const apiKey = process.env.PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 const projectId = 'freshwax-store';
 
 // Build the update request

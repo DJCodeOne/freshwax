@@ -788,4 +788,199 @@ describe('PayPal Capture Order', () => {
     const body = await response.json();
     expect(body.error).toContain('Invalid request');
   });
+
+  // -----------------------------------------------------------------------
+  // 23. PayPal access token request fails -> 500
+  // -----------------------------------------------------------------------
+  it('returns 500 when PayPal access token request fails', async () => {
+    mockGetPayPalAccessToken.mockRejectedValue(new Error('PayPal auth service down'));
+
+    const request = makeRequest({ paypalOrderId: 'PAYPAL-ORDER-TOKEN-FAIL' });
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toBeDefined();
+
+    // Order should NOT have been created
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 24. PayPal capture network timeout -> 500
+  // -----------------------------------------------------------------------
+  it('returns 500 when PayPal capture request times out', async () => {
+    mockFetchWithTimeout.mockRejectedValue(new Error('AbortError: Request timed out'));
+
+    const request = makeRequest({ paypalOrderId: 'PAYPAL-ORDER-TIMEOUT' });
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toBeDefined();
+
+    // Order should NOT have been created since capture failed
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 25. Applied credit with no userCredits document -> graceful degradation
+  // -----------------------------------------------------------------------
+  it('handles applied credit deduction when userCredits document is missing', async () => {
+    const pendingWithCredit = makePendingOrder({ appliedCredit: 3.00 });
+
+    mockGetDocument.mockImplementation(async (collection: string) => {
+      if (collection === 'pendingPayPalOrders') return pendingWithCredit;
+      if (collection === 'userCredits') return null; // No credit doc exists
+      return null;
+    });
+
+    const request = makeRequest({ paypalOrderId: 'PAYPAL-ORDER-NO-CREDIT-DOC' });
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    // Order should still succeed
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.orderId).toBe('order_test_123');
+
+    // atomicIncrement for credit should NOT have been called (no credit doc)
+    expect(mockAtomicIncrement).not.toHaveBeenCalledWith(
+      'userCredits',
+      expect.anything(),
+      expect.objectContaining({ balance: expect.any(Number) })
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // 26. Concurrent order creation race condition — both succeed
+  // -----------------------------------------------------------------------
+  it('detects duplicate orders after successful creation (race condition)', async () => {
+    // Post-creation duplicate check finds 2 orders
+    mockQueryCollection
+      .mockResolvedValueOnce([]) // initial idempotency check
+      .mockResolvedValueOnce([   // post-creation dup check finds 2 orders
+        { id: 'order_first', orderNumber: 'FW-FIRST', createdAt: '2026-01-01T00:00:00Z' },
+        { id: 'order_second', orderNumber: 'FW-SECOND', createdAt: '2026-01-01T00:00:01Z' },
+      ]);
+
+    const request = makeRequest({ paypalOrderId: 'PAYPAL-ORDER-RACE-BOTH' });
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    // Should return the earliest created order
+    expect(body.orderId).toBe('order_first');
+    expect(body.orderNumber).toBe('FW-FIRST');
+    expect(body.message).toBe('Order already processed');
+  });
+
+  // -----------------------------------------------------------------------
+  // 27. Physical items with valid order data -> correct order structure
+  // -----------------------------------------------------------------------
+  it('creates order with correct physical item details', async () => {
+    const physicalPendingOrder = makePendingOrder({
+      items: [
+        {
+          id: 'vinyl_1',
+          name: 'Classic Breaks 12"',
+          price: 14.99,
+          quantity: 1,
+          type: 'vinyl',
+          artistId: 'artist_vinyl',
+        },
+      ],
+      hasPhysicalItems: true,
+      shipping: {
+        line1: '42 Vinyl St',
+        city: 'Manchester',
+        postcode: 'M1 1AA',
+        country: 'GB',
+      },
+      totals: {
+        subtotal: 14.99,
+        shipping: 4.99,
+        total: 19.98,
+        freshWaxFee: 0.15,
+      },
+    });
+
+    mockGetDocument.mockResolvedValue(physicalPendingOrder);
+
+    const request = makeRequest({ paypalOrderId: 'PAYPAL-ORDER-VINYL' });
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // createOrder should have been called with the correct physical order data
+    expect(mockCreateOrder).toHaveBeenCalledTimes(1);
+    const orderArgs = mockCreateOrder.mock.calls[0][0];
+    expect(orderArgs.orderData.hasPhysicalItems).toBe(true);
+    expect(orderArgs.orderData.shipping.city).toBe('Manchester');
+    expect(orderArgs.orderData.items[0].type).toBe('vinyl');
+  });
+
+  // -----------------------------------------------------------------------
+  // 28. Invalid JSON body -> 500
+  // -----------------------------------------------------------------------
+  it('returns 500 when request body is not valid JSON', async () => {
+    const request = new Request('https://freshwax.co.uk/api/paypal/capture-order/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: 'not valid json{{{',
+    });
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(500);
+    expect(mockCreateOrder).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 29. Ledger recording failure does not fail the order
+  // -----------------------------------------------------------------------
+  it('returns 200 even when sales ledger recording fails', async () => {
+    // Sales ledger is mocked to succeed by default (vi.mock at top),
+    // but let's make the Firebase getDocument fail for ledger enrichment
+    // while still succeeding for pendingPayPalOrders
+    mockGetDocument.mockImplementation(async (collection: string) => {
+      if (collection === 'pendingPayPalOrders') return makePendingOrder();
+      // All other getDocument calls (for ledger enrichment) throw
+      throw new Error('Firestore read failed');
+    });
+
+    const request = makeRequest({ paypalOrderId: 'PAYPAL-ORDER-LEDGER-FAIL' });
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    // Order should still succeed — ledger is supplementary
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.orderId).toBe('order_test_123');
+  });
 });

@@ -4,6 +4,9 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, getDocumentsBatch } from '../../lib/firebase-rest';
+import { createLogger } from '../../lib/api-utils';
+
+const log = createLogger('order-confirmation');
 
 export const prerender = false;
 
@@ -28,8 +31,8 @@ try {
       error = 'Order not found';
     }
   }
-} catch (e) {
-  console.error('Error fetching order:', e);
+} catch (e: unknown) {
+  log.error('Error fetching order:', e);
   error = 'Failed to load order';
 }
 

@@ -199,7 +199,7 @@ export function animateBroadcastMeters() {
 
     if (state.icecastAudioContext && state.icecastAudioContext.state === 'suspended') {
       console.debug('[BroadcastMeters] Resuming suspended icecastAudioContext');
-      state.icecastAudioContext.resume().catch(function() {});
+      state.icecastAudioContext.resume().catch(function() { /* non-critical: AudioContext resume may fail if not user-gesture */ });
     }
 
     broadcastMeterFrameCount++;

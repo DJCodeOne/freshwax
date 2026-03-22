@@ -1,5 +1,5 @@
 const https = require('https');
-const API_KEY = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+const API_KEY = process.env.PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 const PROJECT_ID = 'freshwax-store';
 
 https.get(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/customers?pageSize=100&key=${API_KEY}`, (res) => {
