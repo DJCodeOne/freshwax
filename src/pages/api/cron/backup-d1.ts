@@ -55,8 +55,8 @@ async function fetchAllRows(db: D1Database, table: string): Promise<Record<strin
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const { results: rows } = await db
-      .prepare(`SELECT * FROM \`${table}\` LIMIT ${PAGE_SIZE} OFFSET ?`)
-      .bind(offset)
+      .prepare(`SELECT * FROM \`${table}\` LIMIT ? OFFSET ?`)
+      .bind(PAGE_SIZE, offset)
       .all();
 
     const batch = (rows ?? []) as Record<string, unknown>[];
