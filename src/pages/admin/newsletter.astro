@@ -795,11 +795,17 @@ Stay fresh! 🎵
   
   function renderMarkdown(t) {
     if (!t) return '<p style="color:#666;">(No content)</p>';
-    return t.replace(/^## (.*$)/gm, '<h2 style="margin:1rem 0 0.5rem;">$1</h2>')
+    // Escape all HTML first to prevent XSS, then apply markdown formatting
+    return escapeHtml(t)
+      .replace(/^## (.*$)/gm, '<h2 style="margin:1rem 0 0.5rem;">$1</h2>')
       .replace(/^# (.*$)/gm, '<h1 style="margin:1rem 0 0.5rem;">$1</h1>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#2563eb;">$1</a>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(_, text, href) {
+        // Only allow safe protocols — block javascript:, data:, vbscript: etc.
+        if (!/^https?:|^mailto:/i.test(href)) return text;
+        return '<a href="' + href + '" style="color:#2563eb;">' + text + '</a>';
+      })
       .replace(/^- (.*$)/gm, '<li>$1</li>')
       .replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>');
   }

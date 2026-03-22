@@ -405,6 +405,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           if (addr.line2 || addr.address2) parts.push(escapeHtml(addr.line2 || addr.address2));
           const cityLine = [addr.city, addr.postcode || addr.postalCode].filter(Boolean).map(s => escapeHtml(s)).join(', ');
           if (cityLine) parts.push(cityLine);
+          if (addr.county || addr.state) parts.push(escapeHtml(addr.county || addr.state));
           if (addr.country) parts.push(escapeHtml(addr.country));
           return parts.join('<br>') || '<span style="color: #888;">No address</span>';
         };
