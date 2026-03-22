@@ -125,6 +125,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             {product.imageUrl ? (
               <img
                 src={product.imageUrl}
+                srcset={product.imageUrl ? `${product.imageUrl.replace(/ /g, '%20')} 400w, ${product.imageUrl.replace(/ /g, '%20')} 800w` : undefined}
+                sizes="(max-width: 600px) 100vw, 700px"
                 alt={product.name}
                 id="mainImage"
                 class="zoomable"

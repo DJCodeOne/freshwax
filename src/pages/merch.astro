@@ -307,6 +307,8 @@ const merchItemList = {
                   {product.imageUrl ? (
                     <img
                       src={product.imageUrl}
+                      srcset={product.imageUrl ? `${product.imageUrl.replace(/ /g, '%20')} 200w, ${product.imageUrl.replace(/ /g, '%20')} 400w` : undefined}
+                      sizes={product.imageUrl ? "(max-width: 640px) 50vw, 200px" : undefined}
                       alt={product.name}
                       width="400"
                       height="400"

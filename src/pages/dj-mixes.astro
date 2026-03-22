@@ -464,6 +464,12 @@ const nonce = Astro.locals.nonce || '';
                 </span>
                 <img
                   src={mix.thumbUrl || mix.imageUrl || mix.artworkUrl || mix.artwork_url || '/place-holder.webp'}
+                  srcset={(() => {
+                    const thumbSrc = mix.thumbUrl || mix.imageUrl || mix.artworkUrl || mix.artwork_url || '';
+                    const fullSrc = mix.artwork_url || mix.artworkUrl || thumbSrc;
+                    return thumbSrc ? `${thumbSrc.replace(/ /g, '%20')} 200w, ${fullSrc.replace(/ /g, '%20')} 400w` : undefined;
+                  })()}
+                  sizes="36px"
                   alt={`${mix.title} artwork`}
                   class="chart-artwork"
                   width="36"
