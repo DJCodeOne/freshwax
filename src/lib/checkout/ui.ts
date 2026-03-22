@@ -181,7 +181,7 @@ export function renderCheckout(
   }
 
   const { subtotal, shipping, hasPhysicalItems, total } = calculateTotals(state.cart);
-  const itemCount = state.cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  const itemCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const cd = state.customerData || {};
   const email = state.currentUser?.email || cd.email || '';
@@ -207,7 +207,7 @@ export function renderCheckout(
         </div>
         <div style="padding: 1.25rem;">
           <div style="display: flex; flex-direction: column; gap: 0.875rem;">
-            ${state.cart.map((item: any) => {
+            ${state.cart.map((item) => {
               const itemType = item.type || item.productType || 'digital';
               const artistName = item.artist || '';
               const labelName = item.labelName || '';
@@ -487,7 +487,7 @@ export function renderCheckout(
 
   // Show duplicate warning if any found
   if (state.duplicatePurchases && state.duplicatePurchases.length > 0) {
-    const itemsList = state.duplicatePurchases.map((d: any) => `<li><strong>${escapeHtml(d.item.name)}</strong> - ${escapeHtml(d.reason)}</li>`).join('');
+    const itemsList = state.duplicatePurchases.map((d) => `<li><strong>${escapeHtml(d.item.name)}</strong> - ${escapeHtml(d.reason)}</li>`).join('');
 
     const warningHtml = `
       <div id="duplicate-warning" style="background: #7f1d1d; border: 3px solid #dc2626; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">

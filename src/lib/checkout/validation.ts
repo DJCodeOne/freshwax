@@ -6,6 +6,29 @@ import type { CheckoutState } from './state';
 
 const logger = createClientLogger('Checkout');
 
+/**
+ * Type-safe form field value accessor.
+ * Retrieves the value of a named form element without `as any` casts.
+ */
+export function getFormFieldValue(form: HTMLFormElement, name: string): string {
+  const el = form.elements.namedItem(name);
+  if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
+    return el.value;
+  }
+  return '';
+}
+
+/**
+ * Type-safe form field checked accessor (for checkboxes).
+ */
+export function getFormFieldChecked(form: HTMLFormElement, name: string): boolean {
+  const el = form.elements.namedItem(name);
+  if (el instanceof HTMLInputElement) {
+    return el.checked;
+  }
+  return false;
+}
+
 // ============================================
 // FIELD VALIDATION
 // ============================================
@@ -85,7 +108,7 @@ export function getCustomerIdFromCookie(): string | null {
   return null;
 }
 
-export function loadCart(state: CheckoutState): any[] {
+export function loadCart(state: CheckoutState): CartItem[] {
   try {
     const customerId = getCustomerIdFromCookie();
     if (!customerId) {
@@ -108,9 +131,9 @@ export function loadCart(state: CheckoutState): any[] {
   return state.cart;
 }
 
-export function calculateTotals(cart: any[]) {
-  const subtotal = cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-  const hasPhysicalItems = cart.some((item: any) =>
+export function calculateTotals(cart: CartItem[]) {
+  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const hasPhysicalItems = cart.some((item) =>
     item.type === 'vinyl' || item.type === 'merch' || item.productType === 'vinyl' || item.productType === 'merch'
   );
 
@@ -173,11 +196,11 @@ export async function checkDuplicatePurchases(state: CheckoutState, userId: stri
   }
 }
 
-export function removeDuplicatesFromCart(state: CheckoutState, duplicates: any[]) {
+export function removeDuplicatesFromCart(state: CheckoutState, duplicates: DuplicatePurchase[]) {
   const customerId = getCustomerIdFromCookie();
   if (!customerId) return;
 
-  const duplicateKeys = new Set(duplicates.map((d: any) => {
+  const duplicateKeys = new Set(duplicates.map((d) => {
     const item = d.item;
     if (item.trackId) {
       return `${item.releaseId || item.productId || item.id}_${item.trackId}`;
@@ -185,7 +208,7 @@ export function removeDuplicatesFromCart(state: CheckoutState, duplicates: any[]
     return item.releaseId || item.productId || item.id;
   }));
 
-  state.cart = state.cart.filter((item: any) => {
+  state.cart = state.cart.filter((item) => {
     const key = item.trackId
       ? `${item.releaseId || item.productId || item.id}_${item.trackId}`
       : (item.releaseId || item.productId || item.id);
@@ -199,7 +222,7 @@ export function removeDuplicatesFromCart(state: CheckoutState, duplicates: any[]
     // localStorage may throw in Safari private browsing
   }
 
-  window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: state.cart.reduce((sum: number, item: any) => sum + item.quantity, 0) } }));
+  window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: state.cart.reduce((sum, item) => sum + item.quantity, 0) } }));
 }
 
 // ============================================
@@ -266,11 +289,11 @@ export async function loadCreditBalance(state: CheckoutState) {
       if (data.success) {
         state.creditBalance = data.balance || 0;
         if (data.transactions && data.transactions.length > 0) {
-          const activeTransactions = data.transactions.filter((t: any) =>
+          const activeTransactions = data.transactions.filter((t: CreditTransaction) =>
             t.expiresAt && new Date(t.expiresAt) > new Date()
           );
           if (activeTransactions.length > 0) {
-            state.creditExpiry = activeTransactions.reduce((earliest: Date | null, t: any) => {
+            state.creditExpiry = activeTransactions.reduce((earliest: Date | null, t: CreditTransaction) => {
               const expiry = new Date(t.expiresAt);
               return !earliest || expiry < earliest ? expiry : earliest;
             }, null as Date | null);

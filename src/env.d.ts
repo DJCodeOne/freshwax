@@ -427,6 +427,116 @@ declare const Hls: {
 // Window augmentation — eliminates `(window as any)` casts across the codebase
 // ---------------------------------------------------------------------------
 
+/**
+ * Cart item — shared shape for items stored in localStorage cart.
+ * Used by checkout, release-plate, and cart modules.
+ */
+interface CartItem {
+  id?: string | null;
+  productId?: string;
+  releaseId?: string | null;
+  trackId?: string | null;
+  name: string;
+  title?: string | null;
+  artist?: string | null;
+  labelName?: string | null;
+  type?: string;
+  productType?: string;
+  format?: string;
+  price: number;
+  quantity: number;
+  image?: string | null;
+  artwork?: string | null;
+  size?: string | null;
+  color?: string | { name: string } | null;
+  isPreOrder?: boolean;
+  releaseDate?: string | null;
+}
+
+/**
+ * Rating data shape returned from the ratings API.
+ */
+interface RatingData {
+  average: number;
+  count: number;
+}
+
+/**
+ * Duplicate purchase entry returned from duplicate-check API.
+ */
+interface DuplicatePurchase {
+  item: CartItem;
+  reason: string;
+}
+
+/**
+ * Unavailable item returned from stock check APIs.
+ */
+interface UnavailableItem {
+  name: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Customer data shape loaded from checkout-data API.
+ */
+interface CustomerData {
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  phone?: string;
+  address1?: string;
+  addressLine1?: string;
+  address2?: string;
+  addressLine2?: string;
+  city?: string;
+  county?: string;
+  postcode?: string;
+  country?: string;
+}
+
+/**
+ * Firebase auth user (minimal shape used across client-side code).
+ */
+interface FirebaseAuthUser {
+  uid: string;
+  email?: string | null;
+  displayName?: string | null;
+  getIdToken: () => Promise<string>;
+}
+
+/**
+ * Credit transaction from gift card balance API.
+ */
+interface CreditTransaction {
+  expiresAt?: string;
+  amount?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Wishlist entry from wishlist API.
+ */
+interface WishlistEntry {
+  id: string;
+  [key: string]: unknown;
+}
+
+/**
+ * NYOP (Name Your Own Price) release data stored during modal interaction.
+ */
+interface NyopReleaseData {
+  releaseId?: string;
+  title?: string;
+  artist?: string;
+  labelName?: string;
+  artwork?: string;
+  minPrice: number;
+  suggestedPrice: number;
+  isPreorder?: boolean;
+}
+
 interface FreshwaxUserInfo {
   loggedIn?: boolean;
   id?: string | null;
@@ -476,8 +586,57 @@ declare global {
     schedule_bookingSchedule?: { refresh: () => void; setUser: (userId: string, displayName: string) => void };
 
     // ---- Firebase auth (legacy) ----
-    firebaseAuth?: { currentUser?: { getIdToken: () => Promise<string> } };
+    firebaseAuth?: {
+      currentUser?: {
+        uid: string;
+        email?: string | null;
+        displayName?: string | null;
+        getIdToken: () => Promise<string>;
+      } | null;
+      onAuthStateChanged: (callback: (user: { uid: string; email?: string | null; displayName?: string | null; getIdToken: () => Promise<string> } | null) => void) => void;
+    };
     firebase?: { auth?: () => { currentUser?: { getIdToken: () => Promise<string> } } };
+    /** Promise that resolves with auth user when Firebase auth is ready */
+    authReady?: Promise<{ uid: string; email?: string | null; displayName?: string | null; getIdToken: () => Promise<string> } | null>;
+    /** Cached auth user (set by Header script) */
+    authUser?: { uid: string; email?: string | null; displayName?: string | null; getIdToken: () => Promise<string> } | null;
+
+    // ---- Cart ----
+    FreshWaxCart?: {
+      get: () => { items: CartItem[] };
+      save: (cart: { items: CartItem[] }) => void;
+      updateBadge: () => void;
+      isLoggedIn: () => boolean;
+    };
+    cartListenersAttached?: boolean;
+
+    // ---- PayPal SDK (loaded from PayPal CDN) ----
+    paypal?: {
+      Buttons: (config: Record<string, unknown>) => {
+        render: (selector: string) => Promise<void>;
+      };
+    };
+    pendingPayPalOrderData?: Record<string, unknown>;
+
+    // ---- Release plate share state ----
+    currentReleaseShareData?: {
+      title?: string | null;
+      artist?: string | null;
+      url?: string;
+      artwork?: string | null;
+    };
+
+    // ---- Wishlist init guard ----
+    _wishlistInitialized?: boolean;
+
+    // ---- Analytics ----
+    trackBeginCheckout?: (cart: CartItem[], total: number) => void;
+
+    // ---- Audio manager (GlobalAudioPlayer) ----
+    AudioManager?: {
+      onTracklistPreviewPlay: (audio: HTMLAudioElement) => void;
+      onTracklistPreviewStop: (audio: HTMLAudioElement) => void;
+    };
 
     // ---- YouTube IFrame API callback ----
     onYouTubeIframeAPIReady?: () => void;

@@ -10,7 +10,7 @@ const log = createClientLogger('ReleasePlate');
 // RATING SYSTEM
 // ============================================
 var ratingDebounce: Record<string, boolean> = {};
-var pendingRatingsRequest: Promise<any> | null = null;
+var pendingRatingsRequest: Promise<Record<string, RatingData>> | null = null;
 
 export function initRatingSystem() {
   var releaseCards = document.querySelectorAll('[data-release]');
@@ -61,7 +61,7 @@ export function initRatingSystem() {
   .then(function(data) {
     pendingRatingsRequest = null;
     if (data && data.success && data.ratings) {
-      FWCache.update('ratings', function(current: any) {
+      FWCache.update('ratings', function(current: Record<string, RatingData>) {
         return Object.assign({}, current, data.ratings);
       });
       return data.ratings;
@@ -85,7 +85,7 @@ export function initRatingSystem() {
   setupRatingClickHandlers();
 }
 
-function updateSingleRatingUI(card: Element, releaseId: string, ratingData: any) {
+function updateSingleRatingUI(card: Element, releaseId: string, ratingData: RatingData) {
   var average = ratingData.average || 0;
   var count = ratingData.count || 0;
 
@@ -121,8 +121,8 @@ function setupRatingClickHandlers() {
 
       var idToken: string | null = null;
       try {
-        if ((window as any).firebaseAuth && (window as any).firebaseAuth.currentUser) {
-          idToken = await (window as any).firebaseAuth.currentUser.getIdToken();
+        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+          idToken = await window.firebaseAuth.currentUser.getIdToken();
         }
       } catch (e: unknown) { /* Ignore token errors */ }
 
@@ -152,7 +152,7 @@ function setupRatingClickHandlers() {
       .then(function(response) { return response.ok ? response.json() : null; })
       .then(function(data) {
         if (data && data.success) {
-          FWCache.update('ratings', function(current: any) {
+          FWCache.update('ratings', function(current: Record<string, RatingData>) {
             current[releaseId] = { average: data.newRating, count: data.ratingsCount };
             return current;
           });
@@ -194,8 +194,8 @@ export async function fetchUserRatings() {
 
   var idToken: string | null = null;
   try {
-    if ((window as any).firebaseAuth && (window as any).firebaseAuth.currentUser) {
-      idToken = await (window as any).firebaseAuth.currentUser.getIdToken();
+    if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+      idToken = await window.firebaseAuth.currentUser.getIdToken();
     }
   } catch (e: unknown) { /* Ignore */ }
 
@@ -238,13 +238,13 @@ export async function fetchUserRatings() {
 // WISHLIST SYSTEM
 // ============================================
 export function initWishlistSystem() {
-  if ((window as any)._wishlistInitialized) return;
-  (window as any)._wishlistInitialized = true;
+  if (window._wishlistInitialized) return;
+  window._wishlistInitialized = true;
 
   var wishlistButtons = document.querySelectorAll('.wishlist-btn');
 
   async function fetchWishlistState() {
-    var user = (window as any).firebaseAuth?.currentUser;
+    var user = window.firebaseAuth?.currentUser;
     if (user && wishlistButtons.length > 0) {
       try {
         var token = await user.getIdToken();
@@ -254,7 +254,7 @@ export function initWishlistSystem() {
           .then(function(res) { return res.ok ? res.json() : null; })
           .then(function(data) {
             if (data && data.success && data.wishlist) {
-              var wishlistIds = data.wishlist.map(function(r: any) { return r.id; });
+              var wishlistIds = data.wishlist.map(function(r: WishlistEntry) { return r.id; });
               wishlistButtons.forEach(function(btn) {
                 var releaseId = btn.getAttribute('data-release-id');
                 if (wishlistIds.includes(releaseId)) {
@@ -272,12 +272,12 @@ export function initWishlistSystem() {
     }
   }
 
-  if ((window as any).authReady) {
-    (window as any).authReady.then(function(user: any) {
+  if (window.authReady) {
+    window.authReady.then(function(user: FirebaseAuthUser | null) {
       if (user) fetchWishlistState();
     });
-  } else if ((window as any).firebaseAuth) {
-    (window as any).firebaseAuth.onAuthStateChanged(function(user: any) {
+  } else if (window.firebaseAuth) {
+    window.firebaseAuth.onAuthStateChanged(function(user: FirebaseAuthUser | null) {
       if (user) fetchWishlistState();
     });
   }
@@ -289,11 +289,11 @@ export function initWishlistSystem() {
     e.preventDefault();
     e.stopPropagation();
 
-    var user = (window as any).firebaseAuth?.currentUser;
+    var user = window.firebaseAuth?.currentUser;
     var releaseId = btn.getAttribute('data-release-id');
 
     if (!user) {
-      (window as any).showToast?.('Please log in to add items to your wishlist');
+      window.showToast?.('Please log in to add items to your wishlist');
       return;
     }
 
@@ -322,22 +322,22 @@ export function initWishlistSystem() {
 
         if (data && data.success) {
           setWishlistState(btn!, data.inWishlist);
-          (window as any).showToast?.(data.inWishlist ? 'Added to wishlist!' : 'Removed from wishlist');
+          window.showToast?.(data.inWishlist ? 'Added to wishlist!' : 'Removed from wishlist');
         } else {
-          (window as any).showToast?.('Failed to update wishlist');
+          window.showToast?.('Failed to update wishlist');
         }
       })
       .catch(function(err: unknown) {
         btn!.style.opacity = '1';
         btn!.style.pointerEvents = 'auto';
         log.error('Wishlist error:', err);
-        (window as any).showToast?.('Failed to update wishlist');
+        window.showToast?.('Failed to update wishlist');
       });
     } catch (err: unknown) {
       btn.style.opacity = '1';
       btn.style.pointerEvents = 'auto';
       log.error('Auth error:', err);
-      (window as any).showToast?.('Authentication error');
+      window.showToast?.('Authentication error');
     }
   });
 }
@@ -370,7 +370,7 @@ export function initPreorderSystem() {
     btn.addEventListener('click', async function(e) {
       e.preventDefault();
 
-      if (!(window as any).FreshWaxCart || !(window as any).FreshWaxCart.isLoggedIn()) {
+      if (!window.FreshWaxCart || !window.FreshWaxCart.isLoggedIn()) {
         window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
@@ -382,7 +382,7 @@ export function initPreorderSystem() {
       var price = parseFloat((btn as HTMLElement).getAttribute('data-price') || '0');
       var releaseDate = (btn as HTMLElement).getAttribute('data-release-date');
 
-      var cart = (window as any).FreshWaxCart.get();
+      var cart = window.FreshWaxCart.get();
       var items = cart.items || [];
 
       var existingIndex = -1;
@@ -418,8 +418,8 @@ export function initPreorderSystem() {
         releaseDate: releaseDate
       });
 
-      (window as any).FreshWaxCart.save({ items: items });
-      (window as any).FreshWaxCart.updateBadge();
+      window.FreshWaxCart.save({ items: items });
+      window.FreshWaxCart.updateBadge();
 
       var originalHTML2 = btn.innerHTML;
       btn.innerHTML = '<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added!</span>';
@@ -439,7 +439,7 @@ export function initPreorderSystem() {
 // NYOP (Name Your Own Price) Modal System
 // ============================================
 var nyopModalInitialized = false;
-var nyopCurrentReleaseData: any = null;
+var nyopCurrentReleaseData: NyopReleaseData | null = null;
 
 export function initNYOPSystem() {
   var modal = document.getElementById('nyop-modal');

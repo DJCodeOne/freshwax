@@ -3,7 +3,7 @@
  */
 import { createClientLogger } from '../client-logger';
 import type { CheckoutState } from './state';
-import { calculateTotals, getCustomerIdFromCookie } from './validation';
+import { calculateTotals, getCustomerIdFromCookie, getFormFieldValue } from './validation';
 
 const logger = createClientLogger('Checkout');
 
@@ -56,21 +56,21 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
 
     const orderData = {
       customer: {
-        email: (form as any).email.value,
-        firstName: (form as any).firstName.value,
-        lastName: (form as any).lastName.value,
-        phone: (form as any).phone?.value || '',
+        email: getFormFieldValue(form, 'email'),
+        firstName: getFormFieldValue(form, 'firstName'),
+        lastName: getFormFieldValue(form, 'lastName'),
+        phone: getFormFieldValue(form, 'phone'),
         userId: state.currentUser?.uid || null
       },
       shipping: hasPhysicalItems ? {
-        address1: (form as any).address1.value,
-        address2: (form as any).address2?.value || '',
-        city: (form as any).city.value,
-        county: (form as any).county?.value || '',
-        postcode: (form as any).postcode.value,
-        country: (form as any).country.value
+        address1: getFormFieldValue(form, 'address1'),
+        address2: getFormFieldValue(form, 'address2'),
+        city: getFormFieldValue(form, 'city'),
+        county: getFormFieldValue(form, 'county'),
+        postcode: getFormFieldValue(form, 'postcode'),
+        country: getFormFieldValue(form, 'country')
       } : null,
-      items: state.cart.map((item: any) => ({
+      items: state.cart.map((item) => ({
         id: item.id || item.productId,
         productId: item.productId || item.id,
         releaseId: item.releaseId || item.productId || item.id,
@@ -113,7 +113,7 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
     if (!response.ok) {
       const result = await response.json();
       if (result.unavailableItems && result.unavailableItems.length > 0) {
-        const itemNames = result.unavailableItems.map((item: any) => item.name).join(', ');
+        const itemNames = result.unavailableItems.map((item: UnavailableItem) => item.name).join(', ');
         throw new Error(`Some items are no longer available: ${itemNames}. Please update your cart and try again.`);
       }
       throw new Error(result.error || 'Failed to create PayPal order');
@@ -151,7 +151,7 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
 }
 
 export function renderPayPalButtons(state: CheckoutState) {
-  if (state.paypalButtonsRendered || !(window as any).paypal) return;
+  if (state.paypalButtonsRendered || !window.paypal) return;
 
   const container = document.getElementById('paypal-button-container');
   if (!container) return;
@@ -159,7 +159,7 @@ export function renderPayPalButtons(state: CheckoutState) {
   state.paypalButtonsRendered = true;
   container.innerHTML = '';
 
-  (window as any).paypal.Buttons({
+  window.paypal.Buttons({
     style: {
       layout: 'vertical',
       color: 'gold',
@@ -169,7 +169,7 @@ export function renderPayPalButtons(state: CheckoutState) {
       tagline: false
     },
 
-    createOrder: async function(_data: any, _actions: any) {
+    createOrder: async function(_data: unknown, _actions: unknown) {
       const form = document.getElementById('checkoutForm') as HTMLFormElement;
       const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals(state.cart);
 
@@ -180,21 +180,21 @@ export function renderPayPalButtons(state: CheckoutState) {
 
       const orderData = {
         customer: {
-          email: (form as any).email.value,
-          firstName: (form as any).firstName.value,
-          lastName: (form as any).lastName.value,
-          phone: (form as any).phone?.value || '',
+          email: getFormFieldValue(form, 'email'),
+          firstName: getFormFieldValue(form, 'firstName'),
+          lastName: getFormFieldValue(form, 'lastName'),
+          phone: getFormFieldValue(form, 'phone'),
           userId: state.currentUser?.uid || null
         },
         shipping: hasPhysicalItems ? {
-          address1: (form as any).address1.value,
-          address2: (form as any).address2?.value || '',
-          city: (form as any).city.value,
-          county: (form as any).county?.value || '',
-          postcode: (form as any).postcode.value,
-          country: (form as any).country.value
+          address1: getFormFieldValue(form, 'address1'),
+          address2: getFormFieldValue(form, 'address2'),
+          city: getFormFieldValue(form, 'city'),
+          county: getFormFieldValue(form, 'county'),
+          postcode: getFormFieldValue(form, 'postcode'),
+          country: getFormFieldValue(form, 'country')
         } : null,
-        items: state.cart.map((item: any) => ({
+        items: state.cart.map((item) => ({
           id: item.id || item.productId,
           productId: item.productId || item.id,
           releaseId: item.releaseId || item.productId || item.id,
@@ -226,11 +226,11 @@ export function renderPayPalButtons(state: CheckoutState) {
         throw new Error(result.error || 'Failed to create PayPal order');
       }
 
-      (window as any).pendingPayPalOrderData = orderData;
+      window.pendingPayPalOrderData = orderData;
       return result.orderId;
     },
 
-    onApprove: async function(data: any, _actions: any) {
+    onApprove: async function(data: Record<string, unknown>, _actions: unknown) {
       const errorMsg = document.getElementById('error-message') as HTMLElement;
       errorMsg.style.display = 'none';
 
@@ -249,7 +249,7 @@ export function renderPayPalButtons(state: CheckoutState) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             paypalOrderId: data.orderID,
-            orderData: (window as any).pendingPayPalOrderData,
+            orderData: window.pendingPayPalOrderData,
             idToken
           })
         });

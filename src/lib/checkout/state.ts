@@ -3,9 +3,9 @@
  * All mutable state lives here so closure variables are not needed.
  */
 export interface CheckoutState {
-  currentUser: any;
-  customerData: any;
-  cart: any[];
+  currentUser: FirebaseAuthUser | null;
+  customerData: CustomerData | null;
+  cart: CartItem[];
   creditBalance: number;
   creditExpiry: Date | null;
   appliedCredit: number;
@@ -15,7 +15,7 @@ export interface CheckoutState {
   paypalSDKLoaded: boolean;
   userTypeChecked: boolean;
   isAllowedToBuy: boolean;
-  duplicatePurchases: any[];
+  duplicatePurchases: DuplicatePurchase[];
   authInitialized: boolean;
 }
 

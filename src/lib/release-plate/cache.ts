@@ -11,7 +11,7 @@ export var FWCache = {
     OWNERSHIP: 60 * 60 * 1000     // 1 hour
   },
 
-  get: function(key: string): any {
+  get: function(key: string): unknown {
     try {
       var cached = localStorage.getItem(this.PREFIX + key);
       if (!cached) return null;
@@ -25,7 +25,7 @@ export var FWCache = {
     } catch (e: unknown) { return null; }
   },
 
-  set: function(key: string, value: any, ttl?: number): void {
+  set: function(key: string, value: unknown, ttl?: number): void {
     try {
       localStorage.setItem(this.PREFIX + key, JSON.stringify({
         v: value,
@@ -37,8 +37,8 @@ export var FWCache = {
     }
   },
 
-  update: function(key: string, updateFn: (current: any) => any): any {
-    var current = this.get(key) || {};
+  update: function<T>(key: string, updateFn: (current: T) => T): T {
+    var current = (this.get(key) || {}) as T;
     var updated = updateFn(current);
     this.set(key, updated);
     return updated;
@@ -71,7 +71,7 @@ export var FWCache = {
 /**
  * Auth helper — wait for auth to be ready.
  */
-export async function getAuthUser(): Promise<any> {
+export async function getAuthUser(): Promise<{ uid: string; displayName?: string | null } | null> {
   // Check sessionStorage cache first for instant auth
   try {
     const cached = sessionStorage.getItem('fw_auth_cache');
@@ -86,17 +86,17 @@ export async function getAuthUser(): Promise<any> {
   } catch (e: unknown) { /* ignore cache errors */ }
 
   // If authReady promise exists (from Header), wait for it with timeout
-  if ((window as any).authReady) {
+  if (window.authReady) {
     try {
       await Promise.race([
-        (window as any).authReady,
+        window.authReady,
         new Promise((_, reject) => setTimeout(() => reject('timeout'), 3000))
       ]);
     } catch (e: unknown) {
       // Timeout - check cache again or Firebase directly
     }
   }
-  return (window as any).firebaseAuth?.currentUser || (window as any).authUser || null;
+  return window.firebaseAuth?.currentUser || window.authUser || null;
 }
 
 /**

@@ -36,7 +36,7 @@ export function initShareSystem() {
 
   var previousFocus: Element | null = null;
 
-  (window as any).currentReleaseShareData = {};
+  window.currentReleaseShareData = {};
 
   document.querySelectorAll('.share-button').forEach(function(button) {
     (button as HTMLElement).onclick = function() {
@@ -46,7 +46,7 @@ export function initShareSystem() {
       var artwork = button.getAttribute('data-artwork') || '/place-holder.webp';
       var url = window.location.origin + '/item/' + releaseId;
 
-      (window as any).currentReleaseShareData = { title: title, artist: artist, url: url, artwork: artwork };
+      window.currentReleaseShareData = { title: title, artist: artist, url: url, artwork: artwork };
 
       if (shareModalTitle) shareModalTitle.textContent = title;
       if (shareModalArtist) shareModalArtist.textContent = artist;
@@ -122,24 +122,24 @@ export function initShareSystem() {
 
   // Social share buttons
   document.getElementById('share-twitter')?.addEventListener('click', function() {
-    var d = (window as any).currentReleaseShareData || {};
+    var d = window.currentReleaseShareData || {};
     var text = 'Check out "' + d.title + '" by ' + d.artist + ' on Fresh Wax';
     window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(d.url), '_blank', 'noopener,noreferrer,width=550,height=420');
   });
 
   document.getElementById('share-facebook')?.addEventListener('click', function() {
-    var d = (window as any).currentReleaseShareData || {};
+    var d = window.currentReleaseShareData || {};
     window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(d.url), '_blank', 'noopener,noreferrer,width=550,height=420');
   });
 
   document.getElementById('share-whatsapp')?.addEventListener('click', function() {
-    var d = (window as any).currentReleaseShareData || {};
+    var d = window.currentReleaseShareData || {};
     var text = 'Check out "' + d.title + '" by ' + d.artist + ' on Fresh Wax ' + d.url;
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
   });
 
   document.getElementById('share-instagram')?.addEventListener('click', function() {
-    var d = (window as any).currentReleaseShareData || {};
+    var d = window.currentReleaseShareData || {};
     var text = d.url;
     navigator.clipboard.writeText(text).then(function() {
       alert('Link copied! Paste it in your Instagram story or bio.');
@@ -147,13 +147,13 @@ export function initShareSystem() {
   });
 
   document.getElementById('share-reddit')?.addEventListener('click', function() {
-    var d = (window as any).currentReleaseShareData || {};
+    var d = window.currentReleaseShareData || {};
     var title = d.title + ' by ' + d.artist + ' - Fresh Wax';
     window.open('https://www.reddit.com/submit?url=' + encodeURIComponent(d.url) + '&title=' + encodeURIComponent(title), '_blank', 'noopener,noreferrer,width=550,height=420');
   });
 
   document.getElementById('native-share-btn')?.addEventListener('click', async function() {
-    var d = (window as any).currentReleaseShareData || {};
+    var d = window.currentReleaseShareData || {};
     try {
       await navigator.share({
         title: d.title + ' by ' + d.artist,
@@ -176,8 +176,8 @@ export function initShareSystem() {
 // CART FUNCTIONALITY - EVENT DELEGATION
 // ============================================
 export function initCartListeners() {
-  if ((window as any).cartListenersAttached) return;
-  (window as any).cartListenersAttached = true;
+  if (window.cartListenersAttached) return;
+  window.cartListenersAttached = true;
 
   // Add to cart (digital/vinyl releases)
   document.addEventListener('click', async function(e) {
@@ -186,7 +186,7 @@ export function initCartListeners() {
 
     e.preventDefault();
 
-    if (!(window as any).FreshWaxCart || !(window as any).FreshWaxCart.isLoggedIn()) {
+    if (!window.FreshWaxCart || !window.FreshWaxCart.isLoggedIn()) {
       window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
       return;
     }
@@ -202,8 +202,8 @@ export function initCartListeners() {
     // Check if user already owns this release
     try {
       var userId: string | null = null;
-      if ((window as any).firebaseAuth && (window as any).firebaseAuth.currentUser) {
-        userId = (window as any).firebaseAuth.currentUser.uid;
+      if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+        userId = window.firebaseAuth.currentUser.uid;
       }
 
       if (userId) {
@@ -211,7 +211,7 @@ export function initCartListeners() {
         var cachedOwnership = ownershipCache[releaseId!];
 
         if (!cachedOwnership) {
-          var _token = (window as any).firebaseAuth?.currentUser ? await (window as any).firebaseAuth.currentUser.getIdToken() : null;
+          var _token = window.firebaseAuth?.currentUser ? await window.firebaseAuth.currentUser.getIdToken() : null;
           var _headers: Record<string, string> = _token ? { 'Authorization': 'Bearer ' + _token } : {};
           var checkRes = await fetch('/api/check-ownership/?userId=' + userId + '&releaseId=' + releaseId, { headers: _headers });
           if (!checkRes.ok) { cachedOwnership = {}; } else { cachedOwnership = await checkRes.json(); }
@@ -228,22 +228,22 @@ export function initCartListeners() {
       log.warn('Ownership check failed:', err);
     }
 
-    var cart = (window as any).FreshWaxCart.get();
+    var cart = window.FreshWaxCart.get();
     var items = cart.items || [];
 
     if (productType === 'vinyl') {
-      items = items.filter(function(item: any) {
+      items = items.filter(function(item: CartItem) {
         return !(item.id === releaseId && item.type === 'digital');
       });
     }
 
     if (productType === 'digital' || productType === 'vinyl') {
-      var removedTracks = items.filter(function(item: any) {
+      var removedTracks = items.filter(function(item: CartItem) {
         return item.id === releaseId && item.type === 'track';
       });
 
       if (removedTracks.length > 0) {
-        items = items.filter(function(item: any) {
+        items = items.filter(function(item: CartItem) {
           return !(item.id === releaseId && item.type === 'track');
         });
       }
@@ -276,8 +276,8 @@ export function initCartListeners() {
       });
     }
 
-    (window as any).FreshWaxCart.save({ items: items });
-    (window as any).FreshWaxCart.updateBadge();
+    window.FreshWaxCart.save({ items: items });
+    window.FreshWaxCart.updateBadge();
 
     var originalHTML = button.innerHTML;
     button.innerHTML = '<span>\u2713 Added!</span>';
@@ -296,7 +296,7 @@ export function initCartListeners() {
 
     e.preventDefault();
 
-    if (!(window as any).FreshWaxCart || !(window as any).FreshWaxCart.isLoggedIn()) {
+    if (!window.FreshWaxCart || !window.FreshWaxCart.isLoggedIn()) {
       window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
       return;
     }
@@ -308,10 +308,10 @@ export function initCartListeners() {
     var artist = button.getAttribute('data-artist');
     var artwork = button.getAttribute('data-artwork');
 
-    var cart = (window as any).FreshWaxCart.get();
+    var cart = window.FreshWaxCart.get();
     var items = cart.items || [];
 
-    var hasFullRelease = items.some(function(item: any) {
+    var hasFullRelease = items.some(function(item: CartItem) {
       return item.id === releaseId && (item.type === 'digital' || item.type === 'vinyl');
     });
 
@@ -320,7 +320,7 @@ export function initCartListeners() {
       return;
     }
 
-    var hasTrack = items.some(function(item: any) {
+    var hasTrack = items.some(function(item: CartItem) {
       return item.id === releaseId && item.trackId === trackId;
     });
 
@@ -332,8 +332,8 @@ export function initCartListeners() {
     // Check if user already owns this release or track
     try {
       var userId: string | null = null;
-      if ((window as any).firebaseAuth && (window as any).firebaseAuth.currentUser) {
-        userId = (window as any).firebaseAuth.currentUser.uid;
+      if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+        userId = window.firebaseAuth.currentUser.uid;
       }
 
       if (userId) {
@@ -341,7 +341,7 @@ export function initCartListeners() {
         var cachedOwnership = ownershipCache[releaseId!];
 
         if (!cachedOwnership) {
-          var _token2 = (window as any).firebaseAuth?.currentUser ? await (window as any).firebaseAuth.currentUser.getIdToken() : null;
+          var _token2 = window.firebaseAuth?.currentUser ? await window.firebaseAuth.currentUser.getIdToken() : null;
           var _headers2: Record<string, string> = _token2 ? { 'Authorization': 'Bearer ' + _token2 } : {};
           var checkRes = await fetch('/api/check-ownership/?userId=' + userId + '&releaseId=' + releaseId + '&trackId=' + trackId, { headers: _headers2 });
           if (!checkRes.ok) { cachedOwnership = {}; } else { cachedOwnership = await checkRes.json(); }
@@ -379,8 +379,8 @@ export function initCartListeners() {
       quantity: 1
     });
 
-    (window as any).FreshWaxCart.save({ items: items });
-    (window as any).FreshWaxCart.updateBadge();
+    window.FreshWaxCart.save({ items: items });
+    window.FreshWaxCart.updateBadge();
 
     var originalHTML = button.innerHTML;
     button.innerHTML = '\u2713';

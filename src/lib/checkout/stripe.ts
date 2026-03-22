@@ -3,7 +3,7 @@
  */
 import { createClientLogger } from '../client-logger';
 import type { CheckoutState } from './state';
-import { calculateTotals, getCustomerIdFromCookie } from './validation';
+import { calculateTotals, getCustomerIdFromCookie, getFormFieldValue, getFormFieldChecked } from './validation';
 
 const logger = createClientLogger('Checkout');
 
@@ -27,7 +27,7 @@ export async function handleStripeSubmit(state: CheckoutState, form: HTMLFormEle
   }
 
   // Save details to customer account if checkbox is checked
-  const saveDetails = (form as any).saveDetails?.checked;
+  const saveDetails = getFormFieldChecked(form, 'saveDetails');
   if (saveDetails && state.currentUser) {
     try {
       const saveToken = await state.currentUser.getIdToken();
@@ -38,16 +38,16 @@ export async function handleStripeSubmit(state: CheckoutState, form: HTMLFormEle
           'Authorization': `Bearer ${saveToken}`
         },
         body: JSON.stringify({
-          firstName: form.firstName.value,
-          lastName: form.lastName.value,
-          email: form.email.value,
-          phone: (form as any).phone?.value || '',
-          address1: (form as any).address1?.value || '',
-          address2: (form as any).address2?.value || '',
-          city: (form as any).city?.value || '',
-          county: (form as any).county?.value || '',
-          postcode: (form as any).postcode?.value || '',
-          country: (form as any).country?.value || 'United Kingdom'
+          firstName: getFormFieldValue(form, 'firstName'),
+          lastName: getFormFieldValue(form, 'lastName'),
+          email: getFormFieldValue(form, 'email'),
+          phone: getFormFieldValue(form, 'phone'),
+          address1: getFormFieldValue(form, 'address1'),
+          address2: getFormFieldValue(form, 'address2'),
+          city: getFormFieldValue(form, 'city'),
+          county: getFormFieldValue(form, 'county'),
+          postcode: getFormFieldValue(form, 'postcode'),
+          country: getFormFieldValue(form, 'country') || 'United Kingdom'
         })
       });
     } catch (e: unknown) {
@@ -56,25 +56,25 @@ export async function handleStripeSubmit(state: CheckoutState, form: HTMLFormEle
   }
 
   // Track begin checkout event
-  (window as any).trackBeginCheckout?.(state.cart, total);
+  window.trackBeginCheckout?.(state.cart, total);
 
-  const orderData: any = {
+  const orderData: Record<string, unknown> = {
     customer: {
-      email: form.email.value,
-      firstName: form.firstName.value,
-      lastName: form.lastName.value,
-      phone: (form as any).phone?.value || '',
+      email: getFormFieldValue(form, 'email'),
+      firstName: getFormFieldValue(form, 'firstName'),
+      lastName: getFormFieldValue(form, 'lastName'),
+      phone: getFormFieldValue(form, 'phone'),
       userId: state.currentUser?.uid || null
     },
     shipping: hasPhysicalItems ? {
-      address1: form.address1.value,
-      address2: (form as any).address2?.value || '',
-      city: form.city.value,
-      county: (form as any).county?.value || '',
-      postcode: form.postcode.value,
-      country: form.country.value
+      address1: getFormFieldValue(form, 'address1'),
+      address2: getFormFieldValue(form, 'address2'),
+      city: getFormFieldValue(form, 'city'),
+      county: getFormFieldValue(form, 'county'),
+      postcode: getFormFieldValue(form, 'postcode'),
+      country: getFormFieldValue(form, 'country')
     } : null,
-    items: state.cart.filter((item: any) => item && item.name).map((item: any) => ({
+    items: state.cart.filter((item) => item && item.name).map((item) => ({
       id: item.id || item.productId,
       productId: item.productId || item.id,
       releaseId: item.releaseId || item.productId || item.id,
@@ -184,7 +184,7 @@ export async function handleStripeSubmit(state: CheckoutState, form: HTMLFormEle
       if (!response.ok) {
         const result = await response.json();
         if (result.unavailableItems && result.unavailableItems.length > 0) {
-          const itemNames = result.unavailableItems.map((item: any) => item.name).join(', ');
+          const itemNames = result.unavailableItems.map((item: UnavailableItem) => item.name).join(', ');
           throw new Error(`Some items are no longer available: ${itemNames}. Please update your cart and try again.`);
         }
         throw new Error(result.error || 'Server error. Please try again.');

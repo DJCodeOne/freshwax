@@ -111,7 +111,7 @@ export function initReleasePlayer() {
                 if (nowPlayingText) nowPlayingText.textContent = '90s preview ended';
                 drawWaveform(0, false);
                 showToast('90 second preview ended');
-                if ((window as any).AudioManager) (window as any).AudioManager.onTracklistPreviewStop(audio);
+                if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
                 return;
               }
 
@@ -142,12 +142,12 @@ export function initReleasePlayer() {
             if (pauseIcon) pauseIcon.classList.add('hidden');
             if (nowPlayingText) nowPlayingText.textContent = 'Track ended';
             drawWaveform(0, false);
-            if ((window as any).AudioManager) (window as any).AudioManager.onTracklistPreviewStop(audio);
+            if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
           };
 
           audio.onerror = function() {
             button.classList.remove('playing');
-            if ((window as any).AudioManager) (window as any).AudioManager.onTracklistPreviewStop(audio);
+            if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
           };
         }
 
@@ -156,11 +156,11 @@ export function initReleasePlayer() {
           button.classList.remove('playing');
           if (playIcon) playIcon.classList.remove('hidden');
           if (pauseIcon) pauseIcon.classList.add('hidden');
-          if ((window as any).AudioManager) (window as any).AudioManager.onTracklistPreviewStop(audio);
+          if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
           return;
         }
 
-        if ((window as any).AudioManager) (window as any).AudioManager.onTracklistPreviewPlay(audio);
+        if (window.AudioManager) window.AudioManager.onTracklistPreviewPlay(audio);
 
         releaseCard.querySelectorAll('.track-audio').forEach(function(a) {
           if (a !== audio && !(a as HTMLAudioElement).paused) {
@@ -218,7 +218,7 @@ export function initReleasePlayer() {
         }).catch(function(err: unknown) {
           audio!.volume = currentVolume;
           alert('Could not play preview. The file may be unavailable.');
-          if ((window as any).AudioManager) (window as any).AudioManager.onTracklistPreviewStop(audio);
+          if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
         });
       };
     });
