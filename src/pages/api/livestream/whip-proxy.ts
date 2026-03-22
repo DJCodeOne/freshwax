@@ -7,6 +7,7 @@
 // to our WHIP server (domain whitelist).
 import type { APIRoute } from 'astro';
 import { ApiErrors, createLogger, fetchWithTimeout } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { queryCollection } from '../../../lib/firebase-rest';
 
@@ -74,7 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/sdp' },
       body: sdpOffer,
-    }, 10000);
+    }, TIMEOUTS.API);
 
     if (!mtxResponse.ok) {
       const errText = await mtxResponse.text().catch(() => '');
@@ -125,7 +126,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     }
 
     // Forward DELETE to MediaMTX
-    await fetchWithTimeout(resourceUrl, { method: 'DELETE' }, 5000).catch(() => {
+    await fetchWithTimeout(resourceUrl, { method: 'DELETE' }, TIMEOUTS.SHORT).catch(() => {
       // Best effort — stream may already be gone
     });
 

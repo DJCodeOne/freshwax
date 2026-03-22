@@ -11,6 +11,7 @@ import {
   LOCAL_PLAYLIST_SERVER,
   AUDIO_THUMBNAIL_FALLBACK,
 } from './types';
+import { TIMEOUTS } from '../timeouts';
 import type {
   PlaylistHistoryEntry,
   ServerHistoryItem,
@@ -218,7 +219,7 @@ export async function pickRandomFromLocalServer(
 
     const response = await fetch('/api/playlist/server-list/', {
       headers: fetchHeaders,
-      signal: AbortSignal.timeout(5000)
+      signal: AbortSignal.timeout(TIMEOUTS.SHORT)
     });
 
     if (!response.ok) {

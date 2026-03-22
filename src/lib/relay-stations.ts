@@ -2,6 +2,8 @@
 // Hardcoded approved relay stations - no Firebase reads needed
 // Admin adds new stations by editing this file
 
+import { TIMEOUTS } from './timeouts';
+
 export interface RelayStation {
   id: string;
   name: string;
@@ -44,7 +46,7 @@ export async function checkStationLive(station: RelayStation): Promise<StationSt
 
   try {
     const response = await fetch(station.checkUrl, {
-      signal: AbortSignal.timeout(5000)
+      signal: AbortSignal.timeout(TIMEOUTS.SHORT)
     });
 
     if (!response.ok) {

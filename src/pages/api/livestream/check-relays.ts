@@ -5,6 +5,7 @@ import { updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 import { ApiErrors, fetchWithTimeout, createLogger, successResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('livestream/check-relays');
 
@@ -62,7 +63,7 @@ async function checkIcecastStream(url: string): Promise<{ isLive: boolean; nowPl
 // Check Icecast status page (JSON)
 async function checkIcecastStatus(statusUrl: string): Promise<{ isLive: boolean; nowPlaying: string; listeners: number | undefined }> {
   try {
-    const response = await fetchWithTimeout(statusUrl, {}, 5000);
+    const response = await fetchWithTimeout(statusUrl, {}, TIMEOUTS.SHORT);
     
     if (!response.ok) {
       return { isLive: false, nowPlaying: '', listeners: undefined };

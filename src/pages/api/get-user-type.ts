@@ -6,6 +6,7 @@ import { getAdminUids, getAdminEmails, initAdminEnv } from '../../lib/admin';
 import { createReferralGiftCard } from '../../lib/giftcard';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+import { TIMEOUTS } from '../../lib/timeouts';
 
 const log = createLogger('get-user-type');
 
@@ -206,7 +207,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const r2PublicUrl = env?.R2_PUBLIC_URL || import.meta.env.R2_PUBLIC_URL || 'https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev';
       const potentialAvatarUrl = `${r2PublicUrl}/avatars/${uid}.webp`;
       try {
-        const avatarCheck = await fetchWithTimeout(potentialAvatarUrl, { method: 'HEAD' }, 10000);
+        const avatarCheck = await fetchWithTimeout(potentialAvatarUrl, { method: 'HEAD' }, TIMEOUTS.API);
         if (avatarCheck.ok) {
           avatarUrl = `${potentialAvatarUrl}?t=${Date.now()}`;
         }

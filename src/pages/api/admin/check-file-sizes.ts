@@ -6,6 +6,7 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, jsonResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 export const prerender = false;
 
@@ -49,7 +50,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       // Check MP3 size
       if (track.mp3Url) {
         try {
-          const mp3Response = await fetchWithTimeout(track.mp3Url, { method: 'HEAD' }, 10000);
+          const mp3Response = await fetchWithTimeout(track.mp3Url, { method: 'HEAD' }, TIMEOUTS.API);
           if (mp3Response.ok) {
             const size = mp3Response.headers.get('content-length');
             if (size) {
@@ -67,7 +68,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       // Check WAV size
       if (track.wavUrl) {
         try {
-          const wavResponse = await fetchWithTimeout(track.wavUrl, { method: 'HEAD' }, 10000);
+          const wavResponse = await fetchWithTimeout(track.wavUrl, { method: 'HEAD' }, TIMEOUTS.API);
           if (wavResponse.ok) {
             const size = wavResponse.headers.get('content-length');
             if (size) {

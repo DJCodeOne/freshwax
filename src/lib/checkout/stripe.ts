@@ -100,7 +100,7 @@ export async function handleStripeSubmit(state: CheckoutState, form: HTMLFormEle
     if (state.currentUser) {
       try {
         const tokenPromise = state.currentUser.getIdToken();
-        const timeoutPromise = new Promise((_: any, reject: any) =>
+        const timeoutPromise = new Promise<never>((_resolve, reject) =>
           setTimeout(() => reject(new Error('Token timeout')), 5000)
         );
         orderData.idToken = await Promise.race([tokenPromise, timeoutPromise]);

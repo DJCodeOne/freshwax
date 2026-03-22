@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { jsonResponse, fetchWithTimeout } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 export const prerender = false;
 
@@ -50,7 +51,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const checkFirebase = async (): Promise<CheckResult> => {
     const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/releases?pageSize=1`;
     const start = Date.now();
-    const res = await fetchWithTimeout(firestoreUrl, {}, 5000);
+    const res = await fetchWithTimeout(firestoreUrl, {}, TIMEOUTS.SHORT);
     const latency = Date.now() - start;
     if (res.ok || res.status === 401 || res.status === 403) {
       // 401/403 means Firestore is reachable but auth required — connectivity is fine

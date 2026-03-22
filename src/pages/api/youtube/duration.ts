@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('youtube/duration');
 
@@ -46,7 +47,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 
     if (youtubeApiKey) {
       const apiUrl = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=${youtubeApiKey}`;
-      const apiResponse = await fetchWithTimeout(apiUrl, {}, 10000);
+      const apiResponse = await fetchWithTimeout(apiUrl, {}, TIMEOUTS.API);
 
       if (apiResponse.ok) {
         const data = await apiResponse.json();
@@ -66,7 +67,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     // Method 2: Try noembed.com (sometimes has duration)
     try {
       const noembedUrl = `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`;
-      const noembedResponse = await fetchWithTimeout(noembedUrl, {}, 5000);
+      const noembedResponse = await fetchWithTimeout(noembedUrl, {}, TIMEOUTS.SHORT);
 
       if (noembedResponse.ok) {
         const data = await noembedResponse.json();

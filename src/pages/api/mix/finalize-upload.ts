@@ -9,6 +9,7 @@ import { createS3Client } from '../../../lib/s3-client';
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('finalize-upload');
 import { d1UpsertMix } from '../../../lib/d1-catalog';
@@ -120,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         log.info(`[finalize-upload] Audio file verified via R2 binding: ${headResult.size} bytes`);
       } else {
         // Fallback to HTTP HEAD if R2 binding unavailable
-        const verifyResponse = await fetchWithTimeout(audioUrl, { method: 'HEAD' }, 10000);
+        const verifyResponse = await fetchWithTimeout(audioUrl, { method: 'HEAD' }, TIMEOUTS.API);
         if (!verifyResponse.ok) {
           log.error(`[finalize-upload] Audio file not found: ${audioUrl} (status: ${verifyResponse.status})`);
           return ApiErrors.badRequest('Audio file upload incomplete or failed. Please try uploading again.');

@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('admin/partner-applications');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -33,7 +34,7 @@ async function firestoreWrite(method: 'POST' | 'PATCH' | 'DELETE', path: string,
     options.body = JSON.stringify({ fields });
   }
 
-  const response = await fetchWithTimeout(url, options, 10000);
+  const response = await fetchWithTimeout(url, options, TIMEOUTS.API);
   
   if (!response.ok) {
     if (response.status === 404) {

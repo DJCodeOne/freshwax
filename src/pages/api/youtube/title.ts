@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, fetchWithTimeout, createLogger, successResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('youtube/title');
 
@@ -31,7 +32,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   try {
     // Use YouTube oEmbed API (no API key required)
     const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-    const response = await fetchWithTimeout(oembedUrl, {}, 5000);
+    const response = await fetchWithTimeout(oembedUrl, {}, TIMEOUTS.SHORT);
 
     if (response.ok) {
       const data = await response.json();

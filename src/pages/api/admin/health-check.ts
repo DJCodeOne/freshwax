@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, jsonResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 export const prerender = false;
 
@@ -122,7 +123,7 @@ async function checkPlaylist(): Promise<ServiceStatus> {
 async function checkIcecast(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
-    const response = await fetchWithTimeout('https://icecast.freshwax.co.uk/status-json.xsl', {}, 5000);
+    const response = await fetchWithTimeout('https://icecast.freshwax.co.uk/status-json.xsl', {}, TIMEOUTS.SHORT);
     const latency = Date.now() - start;
 
     if (response.ok) {

@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('giphy/search');
 
@@ -71,7 +72,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       ? `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=${limit}&offset=${offset}&rating=pg-13`
       : `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}&rating=pg-13`;
 
-    const response = await fetchWithTimeout(giphyUrl, {}, 10000);
+    const response = await fetchWithTimeout(giphyUrl, {}, TIMEOUTS.API);
 
     if (!response.ok) {
       throw new Error(`GIPHY API error: ${response.status}`);
