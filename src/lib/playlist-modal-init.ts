@@ -364,7 +364,14 @@ export function initPlaylistModal() {
   async function fetchVideoDuration(platform: string, embedId: string): Promise<number | null> {
     if (platform === 'youtube' && embedId) {
       try {
-        const response = await fetch(`/api/youtube/duration/?videoId=${embedId}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(`/api/youtube/duration/?videoId=${embedId}`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
         if (response.ok) {
           const data = await response.json();
           if (data.duration) {
@@ -1353,7 +1360,14 @@ export function initPlaylistModal() {
       }
 
       // Fetch from server API (global history)
-      const response = await fetch('/api/playlist/history/');
+      const historyController = new AbortController();
+      const historyTimeoutId = setTimeout(() => historyController.abort(), 15000);
+
+      const response = await fetch('/api/playlist/history/', {
+        signal: historyController.signal
+      });
+      clearTimeout(historyTimeoutId);
+
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
       }
@@ -1465,7 +1479,14 @@ export function initPlaylistModal() {
         if (videoId) {
           try {
             // Use our server-side endpoint to avoid CORS issues
-            const response = await fetch(`/api/youtube/title/?videoId=${videoId}`);
+            const titleController = new AbortController();
+            const titleTimeoutId = setTimeout(() => titleController.abort(), 15000);
+
+            const response = await fetch(`/api/youtube/title/?videoId=${videoId}`, {
+              signal: titleController.signal
+            });
+            clearTimeout(titleTimeoutId);
+
             if (response.ok) {
               const data = await response.json();
               if (data?.success && data.title) {

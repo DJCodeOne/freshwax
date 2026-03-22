@@ -314,16 +314,26 @@ export async function loadCreditBalance(state: CheckoutState) {
 export async function checkUserType(state: CheckoutState, uid: string) {
   try {
     const _token = await state.currentUser?.getIdToken();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     const response = await fetch('/api/get-user-type/?uid=' + uid, {
-      headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
+      headers: _token ? { 'Authorization': `Bearer ${_token}` } : {},
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       throw new Error('Failed to check user type');
     }
     const data = await response.json();
     return data;
   } catch (e: unknown) {
-    logger.error('Error checking user type:', e);
+    if (e instanceof Error && e.name === 'AbortError') {
+      logger.error('User type check timed out');
+    } else {
+      logger.error('Error checking user type:', e);
+    }
     return { isCustomer: false, isArtist: false };
   }
 }

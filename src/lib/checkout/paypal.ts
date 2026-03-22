@@ -211,11 +211,25 @@ export function renderPayPalButtons(state: CheckoutState) {
         hasPhysicalItems
       };
 
-      const response = await fetch('/api/paypal/create-order/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
+      const createController = new AbortController();
+      const createTimeoutId = setTimeout(() => createController.abort(), 30000);
+
+      let response: Response;
+      try {
+        response = await fetch('/api/paypal/create-order/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderData),
+          signal: createController.signal
+        });
+        clearTimeout(createTimeoutId);
+      } catch (fetchErr: unknown) {
+        clearTimeout(createTimeoutId);
+        if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+          throw new Error('Request timed out. Please try again.');
+        }
+        throw fetchErr;
+      }
 
       if (!response.ok) {
         throw new Error('Failed to create PayPal order');
@@ -244,15 +258,29 @@ export function renderPayPalButtons(state: CheckoutState) {
           }
         }
 
-        const response = await fetch('/api/paypal/capture-order/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            paypalOrderId: data.orderID,
-            orderData: window.pendingPayPalOrderData,
-            idToken
-          })
-        });
+        const captureController = new AbortController();
+        const captureTimeoutId = setTimeout(() => captureController.abort(), 30000);
+
+        let response: Response;
+        try {
+          response = await fetch('/api/paypal/capture-order/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paypalOrderId: data.orderID,
+              orderData: window.pendingPayPalOrderData,
+              idToken
+            }),
+            signal: captureController.signal
+          });
+          clearTimeout(captureTimeoutId);
+        } catch (fetchErr: unknown) {
+          clearTimeout(captureTimeoutId);
+          if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+            throw new Error('Payment capture timed out. Please check your order status.');
+          }
+          throw fetchErr;
+        }
 
         if (!response.ok) {
           throw new Error('Payment capture failed');

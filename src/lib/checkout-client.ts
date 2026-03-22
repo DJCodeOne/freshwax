@@ -396,7 +396,14 @@ export function init() {
     lookupError.style.display = 'none';
 
     try {
-      const response = await fetch(`/api/postcode-lookup/?postcode=${encodeURIComponent(postcode)}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(`/api/postcode-lookup/?postcode=${encodeURIComponent(postcode)}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         throw new Error('Postcode not found');
       }
@@ -1078,12 +1085,26 @@ export function init() {
           hasPhysicalItems
         };
 
-        // Create PayPal order
-        const response = await fetch('/api/paypal/create-order/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(orderData)
-        });
+        // Create PayPal order with timeout protection
+        const createController = new AbortController();
+        const createTimeoutId = setTimeout(() => createController.abort(), 30000);
+
+        let response;
+        try {
+          response = await fetch('/api/paypal/create-order/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(orderData),
+            signal: createController.signal
+          });
+          clearTimeout(createTimeoutId);
+        } catch (fetchErr: unknown) {
+          clearTimeout(createTimeoutId);
+          if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+            throw new Error('Request timed out. Please try again.');
+          }
+          throw fetchErr;
+        }
 
         if (!response.ok) {
           throw new Error('Failed to create PayPal order');
@@ -1115,16 +1136,30 @@ export function init() {
             }
           }
 
-          // Capture the payment
-          const response = await fetch('/api/paypal/capture-order/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              paypalOrderId: data.orderID,
-              orderData: window.pendingPayPalOrderData,
-              idToken
-            })
-          });
+          // Capture the payment with timeout protection
+          const captureController = new AbortController();
+          const captureTimeoutId = setTimeout(() => captureController.abort(), 30000);
+
+          let response;
+          try {
+            response = await fetch('/api/paypal/capture-order/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                paypalOrderId: data.orderID,
+                orderData: window.pendingPayPalOrderData,
+                idToken
+              }),
+              signal: captureController.signal
+            });
+            clearTimeout(captureTimeoutId);
+          } catch (fetchErr: unknown) {
+            clearTimeout(captureTimeoutId);
+            if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+              throw new Error('Payment capture timed out. Please check your order status.');
+            }
+            throw fetchErr;
+          }
 
           if (!response.ok) {
             throw new Error('Payment capture failed');
@@ -1226,6 +1261,9 @@ export function init() {
     if (saveDetails && currentUser) {
       try {
         const saveToken = await currentUser.getIdToken();
+        const saveController = new AbortController();
+        const saveTimeoutId = setTimeout(() => saveController.abort(), 15000);
+
         await fetch('/api/checkout-data/', {
           method: 'POST',
           headers: {
@@ -1243,8 +1281,10 @@ export function init() {
             county: form.county?.value || '',
             postcode: form.postcode?.value || '',
             country: form.country?.value || 'United Kingdom'
-          })
+          }),
+          signal: saveController.signal
         });
+        clearTimeout(saveTimeoutId);
       } catch (e: unknown){
         logger.error('Error saving customer details:', e);
       }
@@ -1427,16 +1467,26 @@ export function init() {
   async function checkUserType(uid) {
     try {
       const _token = await currentUser?.getIdToken();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch('/api/get-user-type/?uid=' + uid, {
-        headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
+        headers: _token ? { 'Authorization': `Bearer ${_token}` } : {},
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         throw new Error('Failed to check user type');
       }
       const data = await response.json();
       return data;
     } catch (e: unknown){
-      logger.error('Error checking user type:', e);
+      if (e instanceof Error && e.name === 'AbortError') {
+        logger.error('User type check timed out');
+      } else {
+        logger.error('Error checking user type:', e);
+      }
       return { isCustomer: false, isArtist: false };
     }
   }

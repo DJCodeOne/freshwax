@@ -31,6 +31,9 @@ export async function handleStripeSubmit(state: CheckoutState, form: HTMLFormEle
   if (saveDetails && state.currentUser) {
     try {
       const saveToken = await state.currentUser.getIdToken();
+      const saveController = new AbortController();
+      const saveTimeoutId = setTimeout(() => saveController.abort(), 15000);
+
       await fetch('/api/checkout-data/', {
         method: 'POST',
         headers: {
@@ -48,8 +51,10 @@ export async function handleStripeSubmit(state: CheckoutState, form: HTMLFormEle
           county: getFormFieldValue(form, 'county'),
           postcode: getFormFieldValue(form, 'postcode'),
           country: getFormFieldValue(form, 'country') || 'United Kingdom'
-        })
+        }),
+        signal: saveController.signal
       });
+      clearTimeout(saveTimeoutId);
     } catch (e: unknown) {
       logger.error('Error saving customer details:', e);
     }

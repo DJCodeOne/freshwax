@@ -392,6 +392,9 @@ export class PlaylistManager {
       const postHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
       if (idToken) postHeaders['Authorization'] = `Bearer ${idToken}`;
 
+      const addController = new AbortController();
+      const addTimeoutId = setTimeout(() => addController.abort(), 15000);
+
       const response = await fetch('/api/playlist/global/', {
         method: 'POST',
         headers: postHeaders,
@@ -399,8 +402,10 @@ export class PlaylistManager {
           item,
           userId: this.userId,
           userName: this.userName || 'Anonymous'
-        })
+        }),
+        signal: addController.signal
       });
+      clearTimeout(addTimeoutId);
 
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
@@ -454,14 +459,19 @@ export class PlaylistManager {
       const deleteHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
       if (idToken) deleteHeaders['Authorization'] = `Bearer ${idToken}`;
 
+      const removeController = new AbortController();
+      const removeTimeoutId = setTimeout(() => removeController.abort(), 15000);
+
       const response = await fetch('/api/playlist/global/', {
         method: 'DELETE',
         headers: deleteHeaders,
         body: JSON.stringify({
           itemId,
           userId: this.userId
-        })
+        }),
+        signal: removeController.signal
       });
+      clearTimeout(removeTimeoutId);
 
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
@@ -527,7 +537,14 @@ export class PlaylistManager {
 
     // Fetch latest playlist state to get current trackStartedAt
     try {
-      const response = await fetch('/api/playlist/global/');
+      const resumeController = new AbortController();
+      const resumeTimeoutId = setTimeout(() => resumeController.abort(), 15000);
+
+      const response = await fetch('/api/playlist/global/', {
+        signal: resumeController.signal
+      });
+      clearTimeout(resumeTimeoutId);
+
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
       }
@@ -592,13 +609,18 @@ export class PlaylistManager {
 
     // Ask SERVER to pick a track - ensures all clients get the same track
     try {
+      const autoPlayController = new AbortController();
+      const autoPlayTimeoutId = setTimeout(() => autoPlayController.abort(), 15000);
+
       const response = await fetch('/api/playlist/global/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'startAutoPlay'
-        })
+        }),
+        signal: autoPlayController.signal
       });
+      clearTimeout(autoPlayTimeoutId);
 
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
@@ -628,14 +650,19 @@ export class PlaylistManager {
 
   private async sendControlAction(action: string): Promise<void> {
     try {
+      const controlController = new AbortController();
+      const controlTimeoutId = setTimeout(() => controlController.abort(), 15000);
+
       const response = await fetch('/api/playlist/global/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action,
           userId: this.userId
-        })
+        }),
+        signal: controlController.signal
       });
+      clearTimeout(controlTimeoutId);
 
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
@@ -1019,6 +1046,9 @@ export class PlaylistManager {
     // Tell the SERVER to handle track end - it will pick the next track
     // This ensures all clients play the same track (server is source of truth)
     try {
+      const endedController = new AbortController();
+      const endedTimeoutId = setTimeout(() => endedController.abort(), 15000);
+
       const response = await fetch('/api/playlist/global/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1026,8 +1056,10 @@ export class PlaylistManager {
           action: 'trackEnded',
           trackId: finishedItem.id, // Prevent race conditions
           finishedTrackTitle: finishedItem.title // Send resolved title for recently played
-        })
+        }),
+        signal: endedController.signal
       });
+      clearTimeout(endedTimeoutId);
 
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
@@ -1116,6 +1148,9 @@ export class PlaylistManager {
 
   private async markVideoAsBlocked(url: string, embedId?: string): Promise<void> {
     try {
+      const blockedController = new AbortController();
+      const blockedTimeoutId = setTimeout(() => blockedController.abort(), 15000);
+
       const response = await fetch('/api/playlist/history/', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -1123,8 +1158,10 @@ export class PlaylistManager {
           url,
           embedId,
           reason: 'blocked'
-        })
+        }),
+        signal: blockedController.signal
       });
+      clearTimeout(blockedTimeoutId);
 
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
@@ -1189,7 +1226,14 @@ export class PlaylistManager {
 
   private async loadFromServer(): Promise<void> {
     try {
-      const response = await fetch('/api/playlist/global/');
+      const loadController = new AbortController();
+      const loadTimeoutId = setTimeout(() => loadController.abort(), 15000);
+
+      const response = await fetch('/api/playlist/global/', {
+        signal: loadController.signal
+      });
+      clearTimeout(loadTimeoutId);
+
       if (!response.ok) {
         throw new Error(`Request failed: ${response.status}`);
       }
@@ -1251,14 +1295,19 @@ export class PlaylistManager {
       };
 
       // Sync empty state to server
+      const staleController = new AbortController();
+      const staleTimeoutId = setTimeout(() => staleController.abort(), 15000);
+
       await fetch('/api/playlist/global/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'sync',
           playlist: this.playlist
-        })
+        }),
+        signal: staleController.signal
       });
+      clearTimeout(staleTimeoutId);
 
     } catch (error: unknown) {
       log.error('Error clearing stale playlist:', error);
