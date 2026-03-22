@@ -234,7 +234,7 @@
   }
 
   .admin-empty-row td {
-    @apply text-center py-12 text-gray-500 italic;
+    @apply text-center py-12 text-gray-600 italic;
   }
 
   .admin-table-img {
@@ -242,7 +242,7 @@
   }
 
   .admin-table-img-placeholder {
-    @apply w-16 h-16 bg-gray-100 border-2 border-black flex items-center justify-center text-gray-500;
+    @apply w-16 h-16 bg-gray-100 border-2 border-black flex items-center justify-center text-gray-600;
   }
 
   /* Status Badges */
