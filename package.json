@@ -23,7 +23,7 @@
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.5",
     "@aws-sdk/client-s3": "^3.995.0",
-    "@aws-sdk/s3-request-presigner": "^3.995.0",
+    "@aws-sdk/s3-request-presigner": "^3.1014.0",
     "@cf-wasm/photon": "^0.3.4",
     "@jsquash/webp": "^1.5.0",
     "@tailwindcss/vite": "^4.1.14",
