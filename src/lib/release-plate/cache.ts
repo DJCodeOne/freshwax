@@ -1,6 +1,8 @@
 /**
  * Release plate cache — unified localStorage cache with TTL.
  */
+import { TIMEOUTS } from '../timeouts';
+import { AUTH_CACHE_TTL } from '../constants/limits';
 
 export var FWCache = {
   PREFIX: 'fwx_',
@@ -78,7 +80,7 @@ export async function getAuthUser(): Promise<{ uid: string; displayName?: string
     if (cached) {
       const cachedAuth = JSON.parse(cached);
       if (cachedAuth && cachedAuth.id && cachedAuth.timestamp) {
-        if (Date.now() - cachedAuth.timestamp < 1800000) {
+        if (Date.now() - cachedAuth.timestamp < AUTH_CACHE_TTL) {
           return { uid: cachedAuth.id, displayName: cachedAuth.displayName || cachedAuth.name };
         }
       }
@@ -90,7 +92,7 @@ export async function getAuthUser(): Promise<{ uid: string; displayName?: string
     try {
       await Promise.race([
         window.authReady,
-        new Promise((_, reject) => setTimeout(() => reject('timeout'), 3000))
+        new Promise((_, reject) => setTimeout(() => reject('timeout'), TIMEOUTS.TOAST))
       ]);
     } catch (e: unknown) {
       // Timeout - check cache again or Firebase directly

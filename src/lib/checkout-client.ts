@@ -1,5 +1,6 @@
 import { escapeHtml } from './escape-html';
 import { createClientLogger } from './client-logger';
+import { TIMEOUTS } from './timeouts';
 
 const logger = createClientLogger('Checkout');
 
@@ -13,12 +14,12 @@ export function init() {
     if (errorMsg) {
       errorMsg.textContent = message;
       errorMsg.style.display = 'block';
-      // Auto-hide after 10 seconds for non-critical errors
+      // Auto-hide after standard API timeout duration for non-critical errors
       setTimeout(() => {
         if (errorMsg.textContent === message) {
           errorMsg.style.display = 'none';
         }
-      }, 10000);
+      }, TIMEOUTS.API);
       // Scroll to error message
       errorMsg.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
@@ -129,7 +130,7 @@ export function init() {
 
       // Add timeout to prevent hanging
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API);
 
       const response = await fetch('/api/giftcards/balance/', {
         headers: { 'Authorization': `Bearer ${idToken}` },
@@ -235,7 +236,7 @@ export function init() {
     try {
       // Add timeout protection
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API);
 
       const headers = { 'Content-Type': 'application/json' };
       if (currentUser && typeof currentUser.getIdToken === 'function') {
@@ -347,7 +348,7 @@ export function init() {
 
       // Add timeout protection
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API);
 
       const response = await fetch('/api/checkout-data/', {
         headers,
@@ -397,7 +398,7 @@ export function init() {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch(`/api/postcode-lookup/?postcode=${encodeURIComponent(postcode)}`, {
         signal: controller.signal
@@ -908,7 +909,7 @@ export function init() {
         const firstInvalid = form.querySelector(':invalid');
         if (firstInvalid) {
           firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          setTimeout(() => { try { firstInvalid.focus(); } catch(_e: unknown){ /* intentional: focus may fail if element is not focusable — non-critical */ } }, 300);
+          setTimeout(() => { try { firstInvalid.focus(); } catch(_e: unknown){ /* intentional: focus may fail if element is not focusable — non-critical */ } }, TIMEOUTS.DEBOUNCE);
         }
         errorMsg.textContent = 'Please fill in all required fields before paying';
         errorMsg.style.display = 'block';
@@ -959,7 +960,7 @@ export function init() {
 
       // Create PayPal order with timeout protection
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.LONG);
 
       let response;
       try {
@@ -1087,7 +1088,7 @@ export function init() {
 
         // Create PayPal order with timeout protection
         const createController = new AbortController();
-        const createTimeoutId = setTimeout(() => createController.abort(), 30000);
+        const createTimeoutId = setTimeout(() => createController.abort(), TIMEOUTS.LONG);
 
         let response;
         try {
@@ -1138,7 +1139,7 @@ export function init() {
 
           // Capture the payment with timeout protection
           const captureController = new AbortController();
-          const captureTimeoutId = setTimeout(() => captureController.abort(), 30000);
+          const captureTimeoutId = setTimeout(() => captureController.abort(), TIMEOUTS.LONG);
 
           let response;
           try {
@@ -1262,7 +1263,7 @@ export function init() {
       try {
         const saveToken = await currentUser.getIdToken();
         const saveController = new AbortController();
-        const saveTimeoutId = setTimeout(() => saveController.abort(), 15000);
+        const saveTimeoutId = setTimeout(() => saveController.abort(), TIMEOUTS.API_EXTENDED);
 
         await fetch('/api/checkout-data/', {
           method: 'POST',
@@ -1337,7 +1338,7 @@ export function init() {
           // Get Firebase ID token for auth
           const tokenPromise = currentUser.getIdToken();
           const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Token timeout')), 5000)
+            setTimeout(() => reject(new Error('Token timeout')), TIMEOUTS.SHORT)
           );
           orderData.idToken = await Promise.race([tokenPromise, timeoutPromise]);
           // Got ID token successfully
@@ -1355,9 +1356,9 @@ export function init() {
           freeOrderHeaders['Authorization'] = `Bearer ${orderData.idToken}`;
         }
 
-        // Add timeout protection (30 second max)
+        // Add timeout protection
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.LONG);
 
         let response;
         try {
@@ -1402,9 +1403,9 @@ export function init() {
       } else {
         // Create Stripe checkout session
 
-        // Add timeout protection (30 second max)
+        // Add timeout protection
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.LONG);
 
         let response;
         try {
@@ -1468,7 +1469,7 @@ export function init() {
     try {
       const _token = await currentUser?.getIdToken();
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch('/api/get-user-type/?uid=' + uid, {
         headers: _token ? { 'Authorization': `Bearer ${_token}` } : {},

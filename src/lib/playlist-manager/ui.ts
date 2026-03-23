@@ -3,6 +3,7 @@
 
 import type { GlobalPlaylistItem } from '../types';
 import { createClientLogger } from '../client-logger';
+import { TIMEOUTS } from '../timeouts';
 
 const log = createClientLogger('PlaylistUI');
 
@@ -269,7 +270,7 @@ export function startCountdown(
   };
 
   updateDisplay();
-  return window.setInterval(updateDisplay, 1000);
+  return window.setInterval(updateDisplay, TIMEOUTS.TICK);
 }
 
 /**
@@ -292,7 +293,7 @@ export function startElapsedTimer(trackStartedAt: string | undefined): number {
   };
 
   updateDisplay();
-  return window.setInterval(updateDisplay, 1000);
+  return window.setInterval(updateDisplay, TIMEOUTS.TICK);
 }
 
 // ============================================
@@ -383,8 +384,8 @@ export function showVideoPlayer(hideLoadingOverlayFn: () => void): number {
   let safetyTimeout = 0;
   if (loadingOverlay) {
     loadingOverlay.classList.remove('hidden', 'fade-out');
-    // Safety: auto-hide after 15s in case playing event never fires
-    safetyTimeout = window.setTimeout(() => hideLoadingOverlayFn(), 15000);
+    // Safety: auto-hide in case playing event never fires
+    safetyTimeout = window.setTimeout(() => hideLoadingOverlayFn(), TIMEOUTS.SAFETY_OVERLAY);
   }
 
   if (videoPlayer) {
@@ -407,7 +408,7 @@ export function hidePlaylistLoadingOverlay(): void {
     loadingOverlay.classList.add('fade-out');
     setTimeout(() => {
       loadingOverlay.classList.add('hidden');
-    }, 500);
+    }, TIMEOUTS.ANIMATION);
   }
 }
 

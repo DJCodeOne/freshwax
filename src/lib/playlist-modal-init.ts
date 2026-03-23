@@ -10,6 +10,16 @@
 import type { PlaylistManager } from './playlist-manager';
 import { escapeHtml } from './escape-html';
 import { createClientLogger } from './client-logger';
+import { TIMEOUTS } from './timeouts';
+import {
+  ITEMS_PER_PAGE,
+  MAX_PLAYLIST_ITEMS,
+  RECENTLY_PLAYED_CACHE_TTL,
+  AUTH_MAX_ATTEMPTS,
+  AUTH_POLL_INTERVAL,
+  AUTH_LATE_CHECK_INTERVAL,
+  AUTH_LATE_MAX_CHECKS,
+} from './constants/limits';
 
 const log = createClientLogger('PlaylistModal');
 
@@ -365,7 +375,7 @@ export function initPlaylistModal() {
     if (platform === 'youtube' && embedId) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API_EXTENDED);
 
         const response = await fetch(`/api/youtube/duration/?videoId=${embedId}`, {
           signal: controller.signal
@@ -443,9 +453,8 @@ export function initPlaylistModal() {
     if (durationEl) durationEl.textContent = '--:--';
   }
 
-  // Personal playlist pagination state
-  const ITEMS_PER_PAGE = 20;
-  const MAX_ITEMS = 500;
+  // Personal playlist pagination state (constants imported from limits.ts)
+  const MAX_ITEMS = MAX_PLAYLIST_ITEMS;
   let currentPlaylistPage = 1;
   let cachedPersonalItems: PlaylistItem[] = [];
   let cachedUserTracksInQueue = 0;
@@ -615,7 +624,7 @@ export function initPlaylistModal() {
 
     // Auth not ready yet, wait for it with shorter timeout
     let attempts = 0;
-    const maxAttempts = 30; // 3 seconds max wait (View Transitions should be fast)
+    const maxAttempts = AUTH_MAX_ATTEMPTS;
 
     function checkAuth() {
       attempts++;
@@ -638,7 +647,7 @@ export function initPlaylistModal() {
         updateAuthUI();
         initPlaylist();
 
-        // Keep checking for late auth updates (every 500ms for 10 more seconds)
+        // Keep checking for late auth updates
         let lateChecks = 0;
         const lateAuthCheck = setInterval(() => {
           lateChecks++;
@@ -650,15 +659,15 @@ export function initPlaylistModal() {
             saveAuthState();
             clearInterval(lateAuthCheck);
           }
-          if (lateChecks >= 20) { // Stop after 10 more seconds
+          if (lateChecks >= AUTH_LATE_MAX_CHECKS) {
             clearInterval(lateAuthCheck);
           }
-        }, 500);
+        }, AUTH_LATE_CHECK_INTERVAL);
         return;
       }
 
       // Keep checking
-      setTimeout(checkAuth, 100);
+      setTimeout(checkAuth, AUTH_POLL_INTERVAL);
     }
 
     checkAuth();
@@ -810,7 +819,7 @@ export function initPlaylistModal() {
           if (successDiv) {
             successDiv.textContent = result.message || 'Added to queue';
             successDiv.classList.remove('hidden');
-            setTimeout(() => successDiv.classList.add('hidden'), 3000);
+            setTimeout(() => successDiv.classList.add('hidden'), TIMEOUTS.TOAST);
           }
         } else {
           if (errorDiv) {
@@ -850,7 +859,7 @@ export function initPlaylistModal() {
           if (successDiv) {
             successDiv.textContent = result.message || 'Saved to your playlist';
             successDiv.classList.remove('hidden');
-            setTimeout(() => successDiv.classList.add('hidden'), 3000);
+            setTimeout(() => successDiv.classList.add('hidden'), TIMEOUTS.TOAST);
           }
         } else {
           if (errorDiv) {
@@ -890,7 +899,7 @@ export function initPlaylistModal() {
           if (errorDiv) {
             errorDiv.textContent = 'No tracks to export';
             errorDiv.classList.remove('hidden');
-            setTimeout(() => errorDiv.classList.add('hidden'), 3000);
+            setTimeout(() => errorDiv.classList.add('hidden'), TIMEOUTS.TOAST);
           }
           return;
         }
@@ -1082,7 +1091,7 @@ export function initPlaylistModal() {
               if (printWindow && !printWindow.closed) {
                 printWindow.print();
               }
-            }, 500);
+            }, TIMEOUTS.ANIMATION);
           }
 
           // Close modal and show success
@@ -1091,7 +1100,7 @@ export function initPlaylistModal() {
           if (successDivPdf) {
             successDivPdf.textContent = `Opened ${cachedPersonalItems.length} tracks for PDF export - use Print > Save as PDF`;
             successDivPdf.classList.remove('hidden');
-            setTimeout(() => successDivPdf.classList.add('hidden'), 4000);
+            setTimeout(() => successDivPdf.classList.add('hidden'), TIMEOUTS.TOAST_LONG);
           }
           return; // Early return since we handled this case differently
         }
@@ -1113,7 +1122,7 @@ export function initPlaylistModal() {
         if (successDiv) {
           successDiv.textContent = `Exported ${cachedPersonalItems.length} tracks as ${extension.toUpperCase()}`;
           successDiv.classList.remove('hidden');
-          setTimeout(() => successDiv.classList.add('hidden'), 3000);
+          setTimeout(() => successDiv.classList.add('hidden'), TIMEOUTS.TOAST);
         }
       });
     }
@@ -1339,7 +1348,7 @@ export function initPlaylistModal() {
   // Cache for global recently played to avoid excessive API calls
   let recentlyPlayedCache: PlaylistItem[] | null = null;
   let recentlyPlayedCacheTime = 0;
-  const CACHE_TTL = 30000; // 30 seconds cache
+  const CACHE_TTL = RECENTLY_PLAYED_CACHE_TTL;
 
   // Update Recently Played list from server (global history)
   async function updateRecentlyPlayed() {
@@ -1361,7 +1370,7 @@ export function initPlaylistModal() {
 
       // Fetch from server API (global history)
       const historyController = new AbortController();
-      const historyTimeoutId = setTimeout(() => historyController.abort(), 15000);
+      const historyTimeoutId = setTimeout(() => historyController.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch('/api/playlist/history/', {
         signal: historyController.signal
@@ -1480,7 +1489,7 @@ export function initPlaylistModal() {
           try {
             // Use our server-side endpoint to avoid CORS issues
             const titleController = new AbortController();
-            const titleTimeoutId = setTimeout(() => titleController.abort(), 15000);
+            const titleTimeoutId = setTimeout(() => titleController.abort(), TIMEOUTS.API_EXTENDED);
 
             const response = await fetch(`/api/youtube/title/?videoId=${videoId}`, {
               signal: titleController.signal
@@ -1542,7 +1551,7 @@ export function initPlaylistModal() {
   let recentlyPlayedTimeInterval: number | null = null;
   function startRecentlyPlayedTimeUpdates() {
     if (recentlyPlayedTimeInterval) return;
-    recentlyPlayedTimeInterval = window.setInterval(refreshRecentlyPlayedTimes, 60000);
+    recentlyPlayedTimeInterval = window.setInterval(refreshRecentlyPlayedTimes, TIMEOUTS.RECENTLY_PLAYED_REFRESH);
   }
 
   function stopRecentlyPlayedTimeUpdates() {
@@ -1601,7 +1610,7 @@ export function initPlaylistModal() {
       const videoId = getYouTubeIdForPreview(currentItem.url);
       if (videoId) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API);
         fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, { signal: controller.signal })
           .then(response => response.ok ? response.json() : null)
           .then(data => {
@@ -1807,7 +1816,7 @@ export function initPlaylistModal() {
             if (successDiv) {
               successDiv.textContent = result.message || 'Saved to your playlist!';
               successDiv.classList.remove('hidden');
-              setTimeout(() => successDiv.classList.add('hidden'), 3000);
+              setTimeout(() => successDiv.classList.add('hidden'), TIMEOUTS.TOAST);
             }
           } else {
             button.innerHTML = originalHTML;
@@ -1816,7 +1825,7 @@ export function initPlaylistModal() {
             if (errorDiv) {
               errorDiv.textContent = result.error || 'Failed to save';
               errorDiv.classList.remove('hidden');
-              setTimeout(() => errorDiv.classList.add('hidden'), 4000);
+              setTimeout(() => errorDiv.classList.add('hidden'), TIMEOUTS.TOAST_LONG);
             }
           }
         }
@@ -1985,14 +1994,14 @@ export function initPlaylistModal() {
             if (successDiv) {
               successDiv.textContent = result.message || 'Added to queue!';
               successDiv.classList.remove('hidden');
-              setTimeout(() => successDiv.classList.add('hidden'), 3000);
+              setTimeout(() => successDiv.classList.add('hidden'), TIMEOUTS.TOAST);
             }
           } else {
             const errorDiv = document.getElementById('playlistError');
             if (errorDiv) {
               errorDiv.textContent = result.error || 'Failed to add';
               errorDiv.classList.remove('hidden');
-              setTimeout(() => errorDiv.classList.add('hidden'), 4000);
+              setTimeout(() => errorDiv.classList.add('hidden'), TIMEOUTS.TOAST_LONG);
             }
             btn.disabled = false;
             btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Queue';
@@ -2027,7 +2036,7 @@ export function initPlaylistModal() {
             button.innerHTML = originalHTML;
             button.title = 'Remove from playlist';
           }
-        }, 3000);
+        }, TIMEOUTS.TOAST);
       });
     });
   }

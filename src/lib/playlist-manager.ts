@@ -8,6 +8,8 @@ import type { GlobalPlaylistItem, GlobalPlaylist } from './types';
 // url-parser.ts is only needed when adding items to the queue.
 import type { EmbedPlayerManager } from './embed-player';
 import { createClientLogger } from './client-logger';
+import { TIMEOUTS } from './timeouts';
+import { MAX_CONSECUTIVE_ERRORS } from './constants/limits';
 
 // Sub-module imports
 import {
@@ -179,7 +181,7 @@ export class PlaylistManager {
     } else if (this.playlist.queue.length === 0 && !window.isLiveStreamActive) {
       // Queue is empty and no live stream - try to auto-start playlist
       // Small delay to ensure page is ready
-      setTimeout(() => this.startAutoPlay(), 500);
+      setTimeout(() => this.startAutoPlay(), TIMEOUTS.ANIMATION);
     }
 
     this.renderUI();
@@ -193,7 +195,7 @@ export class PlaylistManager {
     if (this.isSubscribed) return;
 
     // Wait for Pusher to be available
-    const maxWait = 10000;
+    const maxWait = TIMEOUTS.API;
     const startTime = Date.now();
 
     while (!window.Pusher && Date.now() - startTime < maxWait) {
@@ -393,7 +395,7 @@ export class PlaylistManager {
       if (idToken) postHeaders['Authorization'] = `Bearer ${idToken}`;
 
       const addController = new AbortController();
-      const addTimeoutId = setTimeout(() => addController.abort(), 15000);
+      const addTimeoutId = setTimeout(() => addController.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch('/api/playlist/global/', {
         method: 'POST',
@@ -460,7 +462,7 @@ export class PlaylistManager {
       if (idToken) deleteHeaders['Authorization'] = `Bearer ${idToken}`;
 
       const removeController = new AbortController();
-      const removeTimeoutId = setTimeout(() => removeController.abort(), 15000);
+      const removeTimeoutId = setTimeout(() => removeController.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch('/api/playlist/global/', {
         method: 'DELETE',
@@ -538,7 +540,7 @@ export class PlaylistManager {
     // Fetch latest playlist state to get current trackStartedAt
     try {
       const resumeController = new AbortController();
-      const resumeTimeoutId = setTimeout(() => resumeController.abort(), 15000);
+      const resumeTimeoutId = setTimeout(() => resumeController.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch('/api/playlist/global/', {
         signal: resumeController.signal
@@ -610,7 +612,7 @@ export class PlaylistManager {
     // Ask SERVER to pick a track - ensures all clients get the same track
     try {
       const autoPlayController = new AbortController();
-      const autoPlayTimeoutId = setTimeout(() => autoPlayController.abort(), 15000);
+      const autoPlayTimeoutId = setTimeout(() => autoPlayController.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch('/api/playlist/global/', {
         method: 'PUT',
@@ -651,7 +653,7 @@ export class PlaylistManager {
   private async sendControlAction(action: string): Promise<void> {
     try {
       const controlController = new AbortController();
-      const controlTimeoutId = setTimeout(() => controlController.abort(), 15000);
+      const controlTimeoutId = setTimeout(() => controlController.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch('/api/playlist/global/', {
         method: 'PUT',
@@ -783,7 +785,7 @@ export class PlaylistManager {
       // Check duration after loading - skip if exceeds 10 minute limit
       try {
         // Wait a moment for player to have duration info
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.TICK));
         const duration = await player.getDuration();
 
         if (duration > MAX_TRACK_DURATION_SECONDS) {
@@ -975,7 +977,7 @@ export class PlaylistManager {
       duration = await player.waitForMetadata(10000);
 
       if (duration <= 0) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.ANIMATION));
         duration = await player.getDuration();
       }
 
@@ -1047,7 +1049,7 @@ export class PlaylistManager {
     // This ensures all clients play the same track (server is source of truth)
     try {
       const endedController = new AbortController();
-      const endedTimeoutId = setTimeout(() => endedController.abort(), 15000);
+      const endedTimeoutId = setTimeout(() => endedController.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch('/api/playlist/global/', {
         method: 'PUT',
@@ -1131,8 +1133,8 @@ export class PlaylistManager {
     // Regular error handling for non-blocked errors
     this.consecutiveErrors++;
 
-    // Prevent infinite loops - max 3 consecutive errors
-    if (this.consecutiveErrors >= 3) {
+    // Prevent infinite loops - max consecutive errors before stopping
+    if (this.consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
       log.warn('Too many consecutive errors, stopping playback');
       this.consecutiveErrors = 0;
       this.playlist.isPlaying = false;
@@ -1149,7 +1151,7 @@ export class PlaylistManager {
   private async markVideoAsBlocked(url: string, embedId?: string): Promise<void> {
     try {
       const blockedController = new AbortController();
-      const blockedTimeoutId = setTimeout(() => blockedController.abort(), 15000);
+      const blockedTimeoutId = setTimeout(() => blockedController.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch('/api/playlist/history/', {
         method: 'DELETE',
@@ -1227,7 +1229,7 @@ export class PlaylistManager {
   private async loadFromServer(): Promise<void> {
     try {
       const loadController = new AbortController();
-      const loadTimeoutId = setTimeout(() => loadController.abort(), 15000);
+      const loadTimeoutId = setTimeout(() => loadController.abort(), TIMEOUTS.API_EXTENDED);
 
       const response = await fetch('/api/playlist/global/', {
         signal: loadController.signal
@@ -1296,7 +1298,7 @@ export class PlaylistManager {
 
       // Sync empty state to server
       const staleController = new AbortController();
-      const staleTimeoutId = setTimeout(() => staleController.abort(), 15000);
+      const staleTimeoutId = setTimeout(() => staleController.abort(), TIMEOUTS.API_EXTENDED);
 
       await fetch('/api/playlist/global/', {
         method: 'PUT',
