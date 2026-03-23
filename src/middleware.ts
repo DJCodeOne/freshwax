@@ -378,17 +378,14 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     for (const [key, value] of Object.entries(securityHeaders)) {
       newHeaders.set(key, value);
     }
-    // Build CSP with per-request nonce for script-src.
-    // 'strict-dynamic' propagates trust from nonce'd scripts to their dynamically loaded
-    // children (e.g. Astro Vite-bundled module scripts loaded via nonce'd parent).
-    // 'unsafe-inline' is kept as a fallback for browsers that don't support nonces
-    // (modern browsers ignore 'unsafe-inline' when a nonce or 'strict-dynamic' is present).
-    // https: is kept as a fallback for browsers that don't support 'strict-dynamic'.
+    // CSP script-src uses 'unsafe-inline' because Astro's renderScript, define:vars,
+    // and is:inline blocks cannot reliably receive nonce attributes. Nonce-based CSP
+    // causes browsers to ignore 'unsafe-inline', breaking inline scripts site-wide.
     // Add default Cache-Control for HTML if not already set by the page
     if (!newHeaders.has('Cache-Control')) {
       newHeaders.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     }
-    const csp = `default-src 'self'; script-src 'nonce-${nonceStr}' 'strict-dynamic' 'unsafe-inline' https:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://translate.googleapis.com https://www.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' blob: https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.pusher.com wss://*.pusher.com https://api.stripe.com https://*.stripe.com https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.gstatic.com https://www.google.com https://cdn.jsdelivr.net https://unpkg.com https://*.trycloudflare.com https://stream.freshwax.co.uk https://stream.freshwax.co.uk:8889 https://stream.freshwax.co.uk:9997 https://rtmp.freshwax.co.uk https://icecast.freshwax.co.uk https://playlist.freshwax.co.uk https://cdn.freshwax.co.uk https://noembed.com https://api.giphy.com https://www.paypal.com https://*.paypal.com https://www.youtube.com https://vinyl-api.davidhagon.workers.dev https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://freshwax-uploader-9ge.pages.dev https://www.twitch.tv https://player.twitch.tv https://embed.twitch.tv https://www.paypal.com https://*.paypal.com https://www.google.com https://accounts.google.com https://freshwax-store.firebaseapp.com; media-src 'self' https: blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';`;
+    const csp = `default-src 'self'; script-src 'self' 'unsafe-inline' https:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://translate.googleapis.com https://www.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' blob: https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.pusher.com wss://*.pusher.com https://api.stripe.com https://*.stripe.com https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.gstatic.com https://www.google.com https://cdn.jsdelivr.net https://unpkg.com https://*.trycloudflare.com https://stream.freshwax.co.uk https://stream.freshwax.co.uk:8889 https://stream.freshwax.co.uk:9997 https://rtmp.freshwax.co.uk https://icecast.freshwax.co.uk https://playlist.freshwax.co.uk https://cdn.freshwax.co.uk https://noembed.com https://api.giphy.com https://www.paypal.com https://*.paypal.com https://www.youtube.com https://vinyl-api.davidhagon.workers.dev https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://freshwax-uploader-9ge.pages.dev https://www.twitch.tv https://player.twitch.tv https://embed.twitch.tv https://www.paypal.com https://*.paypal.com https://www.google.com https://accounts.google.com https://freshwax-store.firebaseapp.com; media-src 'self' https: blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';`;
     newHeaders.set('Content-Security-Policy', csp);
   }
 
@@ -399,23 +396,7 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   // Set CSRF cookie on every response (refresh token)
   newHeaders.append('Set-Cookie', buildCsrfCookie(csrfToken, isSecure));
 
-  // --- Inject nonce into all <script> tags in HTML responses ---
-  // Astro's Vite-processed <script> tags (hoisted modules) don't get nonce attributes
-  // automatically. This middleware rewrites the HTML to add nonce to ALL <script> tags
-  // that lack one, enabling 'unsafe-inline' removal from CSP script-src.
-  if (isHtml && response.body) {
-    const html = await response.text();
-    // Match <script tags that don't already have a nonce attribute
-    const nonceAttr = ` nonce="${nonceStr}"`;
-    const injected = html.replace(/<script(?![^>]*\bnonce\b)/gi, '<script' + nonceAttr);
-    return new Response(injected, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: newHeaders
-    });
-  }
-
-  // Return modified response (non-HTML or empty body)
+  // Return modified response
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
