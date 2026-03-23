@@ -1,9 +1,14 @@
 // src/lib/error-logger.ts
 // Lightweight error logging to D1 for monitoring
+// Includes fire-and-forget webhook alerting for error spikes
 
-/** Subset of CloudflareEnv needed for error logging */
+import { checkAndAlertErrorSpike } from './error-alerting';
+
+/** Subset of CloudflareEnv needed for error logging + alerting */
 interface ErrorLogEnv {
   DB?: import('@cloudflare/workers-types').D1Database;
+  CACHE?: import('@cloudflare/workers-types').KVNamespace;
+  ALERT_WEBHOOK_URL?: string;
 }
 
 interface ErrorLogEntry {
@@ -58,6 +63,10 @@ export async function logError(entry: ErrorLogEntry, env: ErrorLogEnv | undefine
       entry.metadata ? JSON.stringify(entry.metadata).slice(0, 2000) : null,
       fp
     ).run();
+
+    // Fire-and-forget: check if error count exceeds threshold and send webhook alert
+    // Non-blocking — doesn't delay the error logging response
+    checkAndAlertErrorSpike(env).catch(() => { /* swallow alert failures */ });
   } catch (_e: unknown) {
     /* intentional: error logging must never throw — swallow D1 write failures */
   }

@@ -76,7 +76,6 @@ interface ImportMetaEnv {
   // ---- GIF / Media APIs ----
   readonly GIPHY_API_KEY: string;
   readonly YOUTUBE_API_KEY: string;
-  readonly PUBLIC_TENOR_API_KEY: string;
 
   // ---- reCAPTCHA ----
   readonly PUBLIC_RECAPTCHA_SITE_KEY: string;
@@ -87,6 +86,9 @@ interface ImportMetaEnv {
   readonly ADMIN_EMAILS: string;
   readonly CRON_SECRET: string;
   readonly GIFTCARD_SYSTEM_KEY: string;
+
+  // ---- Monitoring ----
+  readonly ALERT_WEBHOOK_URL: string;
 
   // ---- Livestream (Red5) ----
   readonly RED5_RTMP_URL: string;
@@ -112,7 +114,6 @@ interface ImportMetaEnv {
 
   // ---- Analytics (GA4) ----
   readonly PUBLIC_GA4_ID: string;
-  readonly PUBLIC_GA4_MEASUREMENT_ID: string;
 }
 
 interface ImportMeta {
@@ -203,7 +204,6 @@ interface CloudflareEnv {
   // ---- GIF / Media APIs ----
   GIPHY_API_KEY: string;
   YOUTUBE_API_KEY: string;
-  PUBLIC_TENOR_API_KEY: string;
 
   // ---- reCAPTCHA ----
   PUBLIC_RECAPTCHA_SITE_KEY: string;
@@ -214,6 +214,9 @@ interface CloudflareEnv {
   ADMIN_EMAILS: string;
   CRON_SECRET: string;
   GIFTCARD_SYSTEM_KEY: string;
+
+  // ---- Monitoring ----
+  ALERT_WEBHOOK_URL: string;
 
   // ---- Livestream (Red5) ----
   RED5_RTMP_URL: string;
@@ -237,7 +240,6 @@ interface CloudflareEnv {
 
   // ---- Google Analytics ----
   PUBLIC_GA4_ID: string;
-  PUBLIC_GA4_MEASUREMENT_ID: string;
 }
 
 // ---------------------------------------------------------------------------
