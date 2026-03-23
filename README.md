@@ -127,6 +127,7 @@ Configured in Cloudflare Dashboard (Pages cron triggers, not wrangler.toml):
 | `0 3 * * *`    | `/api/cron/cleanup-d1`              | Purge old error logs, pending orders |
 | `0 4 * * *`    | `/api/cron/image-scan`              | Scan R2 for non-WebP images          |
 | `0 10 * * *`   | `/api/cron/verification-reminders`  | Remind unverified users              |
+| `0 10 * * SUN` | `/api/cron/weekly-digest`           | Weekly digest email to followers     |
 
 All cron endpoints require `Authorization: Bearer $CRON_SECRET`.
 
@@ -164,3 +165,19 @@ It is recommended to enable GitHub branch protection rules on the `main` branch:
 - **No client-side framework** -- Pure Astro with vanilla JS in `<script>` tags; no React/Vue/Svelte
 - **R2 native binding** -- Images and audio served via R2 binding in `wrangler.toml`; `@aws-sdk` kept only for presigned upload URLs
 - **Inline scripts limitation** -- `<script is:inline>` and `<script define:vars>` blocks are not processed by Vite; must be plain JS (no TypeScript syntax)
+- **`@xmldom/xmldom`** -- Required by `@aws-sdk` for XML parsing in Cloudflare Workers (no native `DOMParser`). Polyfilled in `src/lib/dom-polyfill.ts`.
+
+## D1 Migrations
+
+D1 schema changes use numbered SQL migrations in `database/migrations/` (e.g. `0001_create_tables.sql`, `0002_add_indexes.sql`).
+
+- **Apply locally**: `npx wrangler d1 migrations apply freshwax-db --local`
+- **Apply to production**: `npx wrangler d1 migrations apply freshwax-db --remote`
+- **Caveat**: If the production database was initially created outside the migration system, `wrangler d1 migrations apply` may replay all migrations and fail on existing tables. In that case, apply new DDL directly: `npx wrangler d1 execute freshwax-db --remote --command="CREATE TABLE IF NOT EXISTS ..."`
+- Migrations are tracked by Wrangler in a `d1_migrations` metadata table.
+
+## Uptime Monitoring
+
+The `/api/health/public/` endpoint returns a JSON health check (Firestore, D1, KV, R2 probes). The CI/CD pipeline hits this endpoint after every deployment with automatic rollback on failure.
+
+For external uptime monitoring, point a service (e.g. UptimeRobot, Cloudflare Health Checks, or Better Uptime) at `https://freshwax.co.uk/api/health/public/` with a 60-second interval. Alert on non-200 responses or response times exceeding 5 seconds.

@@ -62,7 +62,7 @@ const sharedRules = {
 
 // Type-aware rules (require parserOptions.project)
 const typeAwareRules = {
-  '@typescript-eslint/no-floating-promises': 'warn',
+  '@typescript-eslint/no-floating-promises': 'error',
   '@typescript-eslint/no-misused-promises': ['warn', {
     checksVoidReturn: false, // Allow async functions in void-returning positions (common in handlers)
   }],

@@ -26,6 +26,9 @@ binding = "R2"
 bucket_name = "freshwax-releases"
 
 [vars]
+# NOTE: PUBLIC_FIREBASE_API_KEY is a *public* Firebase Web API key (safe to expose
+# client-side). It is NOT a secret. If it were sensitive, it should be moved to
+# the Cloudflare dashboard (Settings > Environment Variables > Secrets) instead.
 PUBLIC_FIREBASE_API_KEY = "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g"
 PUBLIC_RECAPTCHA_SITE_KEY = "6LfojkEsAAAAAJ9A6y9ZIzO-ZaRqdsWCGfXjU-sm"
 WHIP_BASE_URL = "https://stream.freshwax.co.uk"

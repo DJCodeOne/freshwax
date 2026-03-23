@@ -1010,4 +1010,344 @@ describe('Create Order', () => {
     expect(movement.previousStock).toBe(10);
     expect(movement.newStock).toBe(9);
   });
+
+  // -----------------------------------------------------------------------
+  // 28. Out-of-stock merch still creates order (logged but not blocked)
+  // -----------------------------------------------------------------------
+  it('creates order even when merch stock is zero (oversell is logged)', async () => {
+    mockGetDocument.mockImplementation(async (collection: string, id: string) => {
+      if (collection === 'merch' && id === 'merch_1') {
+        return {
+          retailPrice: 24.99,
+          variantStock: { 'l_black': { stock: 0, sold: 50 } },
+          totalStock: 0,
+          _updateTime: '2026-01-01T00:00:00Z',
+        };
+      }
+      if (collection === 'users') return { email: 'buyer@test.com', displayName: 'Test Buyer' };
+      if (collection === 'artists') return null;
+      return null;
+    });
+
+    const request = makeRequest(makeMerchOrderPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    // Order is created — stock update proceeds with clamped value (max 0)
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+
+    // Order was saved to Firebase
+    expect(mockAddDocument).toHaveBeenCalledWith(
+      'orders',
+      expect.objectContaining({
+        orderNumber: 'FW-260321-abc123',
+      }),
+      undefined
+    );
+
+    // Stock was still updated (clamped to 0)
+    expect(mockUpdateDocumentConditional).toHaveBeenCalledWith(
+      'merch',
+      'merch_1',
+      expect.objectContaining({
+        variantStock: expect.objectContaining({
+          'l_black': expect.objectContaining({
+            stock: 0,
+            sold: 51,
+          }),
+        }),
+      }),
+      '2026-01-01T00:00:00Z'
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // 29. Mixed cart with digital + merch items
+  // -----------------------------------------------------------------------
+  it('creates order with both digital and merch items in same cart', async () => {
+    const mixedPayload = {
+      customer: {
+        email: 'buyer@test.com',
+        firstName: 'Test',
+        lastName: 'Buyer',
+        userId: 'user_123',
+      },
+      items: [
+        {
+          id: 'release_1',
+          releaseId: 'release_1',
+          name: 'Jungle Massive EP',
+          type: 'digital',
+          price: 9.99,
+          quantity: 1,
+          artist: 'Test Artist',
+          artistId: 'artist_1',
+        },
+        {
+          productId: 'merch_1',
+          name: 'Underground Lair T-Shirt',
+          type: 'merch',
+          price: 24.99,
+          quantity: 1,
+          size: 'L',
+          color: 'Black',
+        },
+      ],
+      shipping: {
+        address1: '123 Test St',
+        city: 'London',
+        postcode: 'SW1A 1AA',
+        country: 'GB',
+      },
+      totals: {
+        subtotal: 34.98,
+        shipping: 4.99,
+        total: 39.97,
+      },
+      hasPhysicalItems: true,
+    };
+
+    const request = makeRequest(mixedPayload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+
+    // Order saved with both items
+    const orderCall = mockAddDocument.mock.calls.find(
+      (call: unknown[]) => call[0] === 'orders'
+    );
+    expect(orderCall).toBeDefined();
+    const savedOrder = orderCall![1] as Record<string, unknown>;
+    const items = savedOrder.items as Record<string, unknown>[];
+    expect(items).toHaveLength(2);
+    expect(savedOrder.hasPhysicalItems).toBe(true);
+
+    // Merch stock was updated
+    expect(mockUpdateDocumentConditional).toHaveBeenCalled();
+
+    // Digital item has download info
+    const digitalItem = items.find((i: Record<string, unknown>) => i.type === 'digital');
+    expect(digitalItem).toBeDefined();
+    expect(digitalItem).toHaveProperty('downloads');
+  });
+
+  // -----------------------------------------------------------------------
+  // 30. Multiple quantity merch items decrement stock correctly
+  // -----------------------------------------------------------------------
+  it('decrements stock by correct quantity for multi-quantity merch order', async () => {
+    const multiQtyPayload = makeMerchOrderPayload();
+    (multiQtyPayload.items[0] as Record<string, unknown>).quantity = 3;
+    multiQtyPayload.totals = { subtotal: 74.97, shipping: 0, total: 74.97 };
+
+    // Update mock to return price consistent with 3x
+    mockGetDocument.mockImplementation(async (collection: string, id: string) => {
+      if (collection === 'merch' && id === 'merch_1') {
+        return {
+          retailPrice: 24.99,
+          variantStock: { 'l_black': { stock: 10, sold: 0 } },
+          totalStock: 10,
+          _updateTime: '2026-01-01T00:00:00Z',
+        };
+      }
+      if (collection === 'users') return { email: 'buyer@test.com', displayName: 'Test Buyer' };
+      if (collection === 'artists') return null;
+      return null;
+    });
+
+    const request = makeRequest(multiQtyPayload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // Stock should be decremented by 3
+    expect(mockUpdateDocumentConditional).toHaveBeenCalledWith(
+      'merch',
+      'merch_1',
+      expect.objectContaining({
+        variantStock: expect.objectContaining({
+          'l_black': expect.objectContaining({
+            stock: 7,
+            sold: 3,
+          }),
+        }),
+      }),
+      '2026-01-01T00:00:00Z'
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // 31. Stock update conflict retries and succeeds
+  // -----------------------------------------------------------------------
+  it('retries stock update on optimistic concurrency conflict', async () => {
+    let attemptCount = 0;
+    mockUpdateDocumentConditional.mockImplementation(async () => {
+      attemptCount++;
+      if (attemptCount === 1) {
+        throw new Error('CONFLICT: Document was modified');
+      }
+      // Second attempt succeeds
+      return undefined;
+    });
+
+    const request = makeRequest(makeMerchOrderPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+
+    // Should have been called twice (1 conflict + 1 success)
+    expect(mockUpdateDocumentConditional).toHaveBeenCalledTimes(2);
+  });
+
+  // -----------------------------------------------------------------------
+  // 32. Stock update failure after max retries still creates order
+  // -----------------------------------------------------------------------
+  it('creates order even when stock update fails after max retries', async () => {
+    mockUpdateDocumentConditional.mockRejectedValue(
+      new Error('CONFLICT: Document was modified')
+    );
+
+    const request = makeRequest(makeMerchOrderPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    // Order should still succeed — stock errors are logged but non-blocking
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+  });
+
+  // -----------------------------------------------------------------------
+  // 33. Merch product not found during price validation
+  // -----------------------------------------------------------------------
+  it('returns 400 when merch product is not found for price validation', async () => {
+    mockGetDocument.mockImplementation(async (collection: string) => {
+      if (collection === 'merch') return null; // Product not found
+      if (collection === 'users') return { email: 'buyer@test.com' };
+      if (collection === 'artists') return null;
+      return null;
+    });
+
+    const request = makeRequest(makeMerchOrderPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toContain('Product not found');
+    expect(mockAddDocument).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 34. Merch uses server-side sale price when available
+  // -----------------------------------------------------------------------
+  it('uses sale price from server when merch product has salePrice', async () => {
+    mockGetDocument.mockImplementation(async (collection: string, id: string) => {
+      if (collection === 'merch' && id === 'merch_1') {
+        return {
+          retailPrice: 24.99,
+          salePrice: 19.99, // On sale
+          variantStock: { 'l_black': { stock: 10, sold: 0 } },
+          totalStock: 10,
+          _updateTime: '2026-01-01T00:00:00Z',
+        };
+      }
+      if (collection === 'users') return { email: 'buyer@test.com', displayName: 'Test Buyer' };
+      if (collection === 'artists') return null;
+      return null;
+    });
+
+    // Client submits sale price
+    const payload = makeMerchOrderPayload();
+    (payload.items[0] as Record<string, unknown>).price = 19.99;
+    payload.totals = { subtotal: 19.99, shipping: 4.99, total: 24.98 };
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // Order should use server sale price
+    const orderCall = mockAddDocument.mock.calls.find(
+      (call: unknown[]) => call[0] === 'orders'
+    );
+    expect(orderCall).toBeDefined();
+    const savedOrder = orderCall![1] as Record<string, unknown>;
+    const totals = savedOrder.totals as Record<string, number>;
+    // Server subtotal should use salePrice (19.99)
+    expect(totals.subtotal).toBe(19.99);
+  });
+
+  // -----------------------------------------------------------------------
+  // 35. Missing totals object returns 400
+  // -----------------------------------------------------------------------
+  it('returns 400 when totals object has non-positive total', async () => {
+    const payload = makeDigitalOrderPayload({
+      totals: { subtotal: 0, shipping: 0, total: 0 },
+    });
+
+    const request = makeRequest(payload);
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(400);
+    expect(mockAddDocument).not.toHaveBeenCalled();
+  });
+
+  // -----------------------------------------------------------------------
+  // 36. Customer lastOrderAt is updated alongside orderCount
+  // -----------------------------------------------------------------------
+  it('updates customer lastOrderAt when incrementing orderCount', async () => {
+    const request = makeRequest(makeDigitalOrderPayload());
+
+    const response = await POST({
+      request,
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    expect(response.status).toBe(200);
+
+    // Both orderCount increment AND lastOrderAt update should have been called
+    expect(mockAtomicIncrement).toHaveBeenCalledWith('users', 'user_123', { orderCount: 1 });
+    expect(mockUpdateDocument).toHaveBeenCalledWith(
+      'users',
+      'user_123',
+      expect.objectContaining({
+        lastOrderAt: expect.any(String),
+      })
+    );
+  });
 });

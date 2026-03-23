@@ -12,6 +12,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
+    "test:e2e:staging": "playwright test --config=playwright.staging.config.ts",
     "test:lighthouse": "lhci autorun --config=.github/lighthouse-ci.json",
     "test:lighthouse:prod": "lhci autorun --config=.github/lighthouse-ci-production.json",
     "lint": "eslint src/",

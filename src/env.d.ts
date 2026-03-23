@@ -109,9 +109,6 @@ interface ImportMetaEnv {
   // ---- Audio Processing ----
   readonly AUDIO_PROCESSOR_URL: string;
 
-  // ---- Vinyl API ----
-  readonly PUBLIC_VINYL_API_URL: string;
-
   // ---- Analytics (GA4) ----
   readonly PUBLIC_GA4_ID: string;
 }
@@ -234,9 +231,6 @@ interface CloudflareEnv {
 
   // ---- Audio Processing ----
   AUDIO_PROCESSOR_URL: string;
-
-  // ---- Vinyl API ----
-  PUBLIC_VINYL_API_URL: string;
 
   // ---- Google Analytics ----
   PUBLIC_GA4_ID: string;
