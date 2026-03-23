@@ -90,23 +90,3 @@ export async function checkStationLive(station: RelayStation): Promise<StationSt
   }
 }
 
-// Get station by ID
-export function getStationById(id: string): RelayStation | undefined {
-  return APPROVED_RELAY_STATIONS.find(s => s.id === id);
-}
-
-// Get the playback URL for a station (prefers HTTPS for browser compatibility)
-export function getPlaybackUrl(station: RelayStation): { url: string; isHttps: boolean; needsRelay: boolean } {
-  // If we have an HTTPS relay URL, use it
-  if (station.httpsStreamUrl) {
-    return { url: station.httpsStreamUrl, isHttps: true, needsRelay: false };
-  }
-
-  // If the primary stream is already HTTPS, use it directly
-  if (station.streamUrl.startsWith('https://')) {
-    return { url: station.streamUrl, isHttps: true, needsRelay: false };
-  }
-
-  // HTTP stream with no HTTPS relay - cannot play on HTTPS pages
-  return { url: station.streamUrl, isHttps: false, needsRelay: true };
-}

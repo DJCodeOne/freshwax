@@ -118,7 +118,7 @@ export function disableEmojis(): void {
  * Start simulated audio meters for playlist playback
  * Uses realistic decay, beat sync, and correlated stereo
  */
-export function startPlaylistMeters(): void {
+function startPlaylistMeters(): void {
   if (playlistMeterAnimationId) return;
 
   const leftLeds = document.querySelectorAll('#leftMeter .led');

@@ -114,36 +114,6 @@ export function parseMediaUrl(url: string): ParsedUrl {
 }
 
 /**
- * Validate if a URL is supported
- */
-export function validateUrl(url: string): boolean {
-  const parsed = parseMediaUrl(url);
-  return parsed.isValid;
-}
-
-/**
- * Get embed URL for a parsed media item
- */
-export function getEmbedUrl(platform: MediaPlatform, embedId: string, url: string): string {
-  switch (platform) {
-    case 'youtube':
-      return `https://www.youtube.com/embed/${embedId}?autoplay=1&enablejsapi=1`;
-
-    case 'vimeo':
-      return `https://player.vimeo.com/video/${embedId}?autoplay=1`;
-
-    case 'soundcloud':
-      return `https://w.soundcloud.com/player/?url=https://soundcloud.com/${embedId}&auto_play=true`;
-
-    case 'direct':
-      return url;
-
-    default:
-      return url;
-  }
-}
-
-/**
  * Get platform display name
  */
 export function getPlatformName(platform: MediaPlatform): string {

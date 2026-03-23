@@ -83,8 +83,8 @@ export function getTodayDate(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-// Check if subscription is active
-export function isSubscriptionActive(subscription?: UserSubscription): boolean {
+// Check if subscription is active (used internally by getEffectiveTier)
+function isSubscriptionActive(subscription?: UserSubscription): boolean {
   if (!subscription) return false;
   if (subscription.tier === SUBSCRIPTION_TIERS.FREE) return true;
   if (!subscription.expiresAt) return false;

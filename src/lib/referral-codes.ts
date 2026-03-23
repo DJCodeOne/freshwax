@@ -16,8 +16,8 @@ export interface ReferralCode {
   active: boolean;
 }
 
-// Generate a unique referral code (using cryptographic randomness)
-export function generateReferralCode(creatorName: string): string {
+// Generate a unique referral code (used internally by createReferralCode)
+function generateReferralCode(creatorName: string): string {
   const prefix = 'FWX';
   const namePart = creatorName
     .replace(/[^a-zA-Z0-9]/g, '')

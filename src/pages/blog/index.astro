@@ -8,31 +8,12 @@ import Footer from '../../components/Footer.astro';
 import PageLoader from '../../components/PageLoader.astro';
 import { blogPosts as posts, getCategories } from '../../data/blog-posts';
 import { escapeHtml } from '../../lib/api-utils';
+import { formatDateLong as formatDate, getReadTime } from '../../lib/format-utils';
 
 export const prerender = false;
 
 // Extract unique categories for filter
 const categories = getCategories();
-
-// Format date helper
-function formatDate(dateString: string): string {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-}
-
-// Estimate read time (avg 200 words per minute)
-function getReadTime(content: string): string {
-  if (!content) return '1 min read';
-  const text = content.replace(/<[^>]*>/g, '');
-  const words = text.split(/\s+/).length;
-  const minutes = Math.max(1, Math.ceil(words / 200));
-  return `${minutes} min read`;
-}
 
 const nonce = Astro.locals.nonce || '';
 

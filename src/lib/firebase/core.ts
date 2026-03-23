@@ -19,7 +19,7 @@ let _legacyAuthToken: string | null = null;
 let _legacyAuthExpiry: number = 0;
 
 // Base64url encode a Uint8Array
-export function base64urlEncode(data: Uint8Array): string {
+function base64urlEncode(data: Uint8Array): string {
   let binary = '';
   for (let i = 0; i < data.length; i++) {
     binary += String.fromCharCode(data[i]);
@@ -28,7 +28,7 @@ export function base64urlEncode(data: Uint8Array): string {
 }
 
 // Base64url encode a string
-export function base64urlEncodeString(str: string): string {
+function base64urlEncodeString(str: string): string {
   return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
@@ -270,7 +270,7 @@ export function setCache(key: string, data: unknown, ttl: number = CACHE_TTL.DEF
   }
 }
 
-export function pruneCache(): void {
+function pruneCache(): void {
   const now = Date.now();
   let pruned = 0;
   // First pass: remove expired entries

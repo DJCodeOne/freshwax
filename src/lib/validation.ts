@@ -6,8 +6,8 @@ import { z } from 'zod';
 // ZOD SCHEMAS FOR INPUT VALIDATION
 // ============================================
 
-// Sanitize string to prevent XSS
-export function sanitizeString(str: string): string {
+// Sanitize string to prevent XSS (used internally by schemas below)
+function sanitizeString(str: string): string {
   return str
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -104,16 +104,6 @@ export const moderationSchema = z.object({
   adminKey: adminKeySchema,
 });
 
-// Validation helper
-export function validateRequest<T>(schema: z.ZodType<T>, data: unknown): { success: true; data: T } | { success: false; error: string } {
-  const result = schema.safeParse(data);
-  if (result.success) {
-    return { success: true, data: result.data };
-  }
-  const errors = result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-  return { success: false, error: `Validation failed: ${errors}` };
-}
-
 // ============================================
 // PROFANITY FILTER
 // ============================================
@@ -172,25 +162,6 @@ export function containsProfanity(text: string): { found: boolean; word?: string
 }
 
 /**
- * Validate text field for profanity
- * @param text - Text to validate
- * @param fieldName - Name of field for error message
- * @returns Validation result
- */
-export function validateTextContent(text: string, fieldName: string = 'content'): { valid: boolean; error?: string } {
-  if (!text || typeof text !== 'string') {
-    return { valid: false, error: `${fieldName} is required` };
-  }
-
-  const profanityCheck = containsProfanity(text);
-  if (profanityCheck.found) {
-    return { valid: false, error: 'Please keep it clean - no profanity allowed' };
-  }
-
-  return { valid: true };
-}
-
-/**
  * Sanitize filename for safe storage
  * @param filename - Original filename
  * @param maxLength - Maximum allowed length
@@ -202,14 +173,3 @@ export function sanitizeFilename(filename: string, maxLength: number = 100): str
     .substring(0, maxLength);
 }
 
-/**
- * Sanitize string for use in IDs/keys
- * @param str - Original string
- * @param maxLength - Maximum allowed length
- * @returns Sanitized string (alphanumeric only)
- */
-export function sanitizeForId(str: string, maxLength: number = 30): string {
-  return str
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .substring(0, maxLength);
-}

@@ -8,32 +8,13 @@ import Footer from '../../components/Footer.astro';
 import { blogPosts, getPostBySlug } from '../../data/blog-posts';
 import { escapeHtml } from '../../lib/api-utils';
 import { SITE_URL } from '../../lib/constants';
+import { formatDateLong as formatDate, getReadTime } from '../../lib/format-utils';
 
 export const prerender = false;
 
 const { slug } = Astro.params;
 const post = getPostBySlug(slug || '');
 const error = !post ? 'Post not found' : null;
-
-// Format date helper
-function formatDate(dateString: string): string {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-}
-
-// Estimate read time
-function getReadTime(content: string): string {
-  if (!content) return '1 min read';
-  const text = content.replace(/<[^>]*>/g, '');
-  const words = text.split(/\s+/).length;
-  const minutes = Math.max(1, Math.ceil(words / 200));
-  return `${minutes} min read`;
-}
 
 // Generate excerpt from content if not provided
 function generateExcerpt(content: string, maxLength: number = 160): string {

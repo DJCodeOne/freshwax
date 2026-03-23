@@ -6,6 +6,7 @@ import { requireAdminAuth } from '../../lib/admin';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { formatDateShort as formatDate } from '../../lib/format-utils';
 
 // Server-side admin auth check
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
@@ -92,15 +93,6 @@ function getDaysRemaining(expiresAt: string): { days: number; status: string; co
   }
 }
 
-// Format date
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
-}
 Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 const nonce = Astro.locals.nonce || '';
 ---
