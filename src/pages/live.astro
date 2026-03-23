@@ -1599,13 +1599,12 @@ try {
   });
 
   // Presence deps for module functions
+  // NOTE: live-status events are handled by pusher-events.js (via live-stream.js),
+  // so presence.js no longer needs pausePlaylistForStream/invalidateScheduleCache/loadSchedule.
   var presenceDeps = {
     escapeHtml: escapeHtml,
     getCurrentUser: function() { return currentUser; },
-    getUserInfo: function() { return userInfo; },
-    pausePlaylistForStream: pausePlaylistForStream,
-    invalidateScheduleCache: function() { scheduleCache = null; },
-    loadSchedule: loadSchedule
+    getUserInfo: function() { return userInfo; }
   };
 
   // Expose schedule refresh for live-stream.js Pusher events

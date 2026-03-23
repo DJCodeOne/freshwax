@@ -301,38 +301,18 @@ function setupTouchGestures() {
 
 function setupPlaylistSave() {
   var nowPlayingSaveBtn = document.getElementById('nowPlayingSaveBtn');
-  var djInfoBar = document.querySelector('.dj-info-bar');
   var currentPlaylistTrack = null;
 
-  // Listen for playlist updates
+  // Listen for playlist updates — only handle save button state here.
+  // DJ info bar DOM updates (controlsDjName, npTrackTitle, bottomDurationBox, etc.)
+  // are handled by live-stream.js handlePlaylistUpdate() as the single source of truth.
   window.addEventListener('playlistUpdate', function(e) {
     var detail = e.detail;
     var isPlaylistPlaying = detail.isPlaying && detail.queue && detail.queue.length > 0;
-    var controlsLabel = document.getElementById('controlsLabel');
-    var controlsDjName = document.getElementById('controlsDjName');
-    var npTrackTitle = document.getElementById('npTrackTitle');
-    var bottomDurationBox = document.getElementById('bottomDurationBox');
-    var bottomDurationLabel = document.getElementById('bottomDurationLabel');
-    var streamGenre = document.getElementById('streamGenre');
 
     if (isPlaylistPlaying) {
-      if (djInfoBar) djInfoBar.classList.add('playlist-mode');
-      var infoBar = document.getElementById('streamInfoBar');
-      if (infoBar) infoBar.classList.add('playlist-mode');
-
       var currentIndex = detail.currentIndex || 0;
       currentPlaylistTrack = detail.queue[currentIndex];
-
-      if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
-      if (controlsDjName && currentPlaylistTrack) {
-        var title = currentPlaylistTrack.title || '';
-        controlsDjName.textContent = title.length > 50 ? title.substring(0, 50) + '...' : title;
-      }
-      if (npTrackTitle) npTrackTitle.textContent = '';
-
-      if (bottomDurationBox) bottomDurationBox.style.display = 'flex';
-      if (bottomDurationLabel) bottomDurationLabel.textContent = 'LEFT';
-      if (streamGenre) streamGenre.style.display = 'none';
 
       if (nowPlayingSaveBtn && currentPlaylistTrack) {
         var personalPlaylist = detail.personalPlaylist || [];
@@ -341,17 +321,7 @@ function setupPlaylistSave() {
         nowPlayingSaveBtn.title = isInPlaylist ? 'Already in My Playlist' : 'Save to My Playlist';
       }
     } else {
-      if (djInfoBar) djInfoBar.classList.remove('playlist-mode');
-      var infoBar2 = document.getElementById('streamInfoBar');
-      if (infoBar2) infoBar2.classList.remove('playlist-mode');
       currentPlaylistTrack = null;
-      if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
-      if (npTrackTitle) npTrackTitle.textContent = '';
-      if (controlsDjName && !window.isLiveStreamActive && !window.streamDetectedThisSession && !window.currentStreamData) {
-        controlsDjName.textContent = '--';
-      }
-      if (bottomDurationBox) bottomDurationBox.style.display = 'none';
-      if (streamGenre) streamGenre.style.display = '';
     }
   });
 

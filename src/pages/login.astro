@@ -76,6 +76,20 @@ const csrfToken = Astro.locals.csrfToken || '';
       };
     })();
   </script>
+  <script is:inline nonce={nonce}>
+    window.__setAuthCookies = function(opts) {
+      var body = {};
+      if (opts.token) body.token = opts.token;
+      if (opts.action) body.action = opts.action;
+      if (opts.isPartner) body.isPartner = true;
+      return fetch('/api/auth/set-session/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        credentials: 'same-origin'
+      }).then(function(r) { return r.json(); }).catch(function() { return null; });
+    };
+  </script>
   <a href="#login-form" class="skip-link">Skip to login form</a>
   <main id="main-content">
   <div class="split-container">
@@ -259,9 +273,12 @@ const csrfToken = Astro.locals.csrfToken || '';
     const errorMessage = document.getElementById('errorMessage');
     const successMessage = document.getElementById('successMessage');
 
+    // Flag to prevent onAuthStateChanged from redirecting while login handlers are running
+    let loginInProgress = false;
+
     // Check if user is already logged in - redirect them immediately
     onAuthStateChanged(auth, (user) => {
-      if (user) {
+      if (user && !loginInProgress) {
         // Track verification status for interactive feature restrictions
         if (!user.emailVerified) {
           sessionStorage.setItem('fw_email_unverified', 'true');
@@ -292,6 +309,7 @@ const csrfToken = Astro.locals.csrfToken || '';
       errorMessage.style.display = 'none';
       successMessage.style.display = 'none';
 
+      loginInProgress = true;
       try {
         const provider = new GoogleAuthProvider();
         provider.addScope('email');
@@ -340,6 +358,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         }, 1000);
 
       } catch (error) {
+        loginInProgress = false;
         console.error('[Login] Google sign-in error:', error);
         const code = error && typeof error === 'object' && 'code' in error ? error.code : '';
         if (code === 'auth/popup-closed-by-user') {
@@ -503,7 +522,8 @@ const csrfToken = Astro.locals.csrfToken || '';
       submitBtn.disabled = true;
       submitBtn.querySelector('.btn-text').classList.add('hidden');
       submitBtn.querySelector('.btn-loading').classList.remove('hidden');
-      
+
+      loginInProgress = true;
       try {
         // Sign out any existing user first to ensure clean state
         if (auth.currentUser) {
@@ -632,6 +652,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         }, 1000);
         
       } catch (error) {
+        loginInProgress = false;
         const code = error && typeof error === 'object' && 'code' in error ? error.code : '';
         let message = 'Login failed. Please try again.';
         if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-email') {
@@ -643,10 +664,10 @@ const csrfToken = Astro.locals.csrfToken || '';
         } else if (code === 'auth/network-request-failed') {
           message = 'Network error. Please check your connection.';
         }
-        
+
         errorMessage.textContent = message;
         errorMessage.style.display = 'block';
-        
+
         submitBtn.disabled = false;
         submitBtn.querySelector('.btn-text').classList.remove('hidden');
         submitBtn.querySelector('.btn-loading').classList.add('hidden');

@@ -8,7 +8,10 @@ export function initPresence(deps) {
   escapeHtml = deps.escapeHtml;
 }
 
-// Setup live status listener after Pusher loads
+// Setup presence channel after Pusher loads
+// NOTE: live-status events (stream-started/stream-ended) are handled by
+// pusher-events.js via live-stream.js — no duplicate subscription here.
+// Reaction/like/viewer events on stream-{id} are handled by chat-handler.js.
 export async function setupLiveStatusListener(deps) {
   var config = window.PUSHER_CONFIG;
   if (!config || !config.key) {
@@ -16,34 +19,6 @@ export async function setupLiveStatusListener(deps) {
   }
 
   try {
-    var statusPusher = new window.Pusher(config.key, {
-      cluster: config.cluster || 'eu',
-      forceTLS: true
-    });
-
-    var liveStatusChannel = statusPusher.subscribe('live-status');
-
-    liveStatusChannel.bind('stream-started', function(data) {
-      deps.pausePlaylistForStream();
-      if (typeof window.checkLiveStatus === 'function') {
-        window.checkLiveStatus(true);
-      }
-      deps.invalidateScheduleCache();
-      deps.loadSchedule(true);
-    });
-
-    liveStatusChannel.bind('stream-ended', function(data) {
-      deps.invalidateScheduleCache();
-      deps.loadSchedule(true);
-      setTimeout(function() {
-        var playlistManager = window.playlistManager;
-        if (playlistManager && playlistManager.wasPausedForStream) {
-          playlistManager.wasPausedForStream = false;
-          if (playlistManager.play) playlistManager.play();
-        }
-      }, 10000);
-    });
-
     // Subscribe to presence channel for viewer tracking
     var streamId = window.currentStreamId || 'playlist-global';
     var presenceChannelName = 'presence-stream-' + streamId;
@@ -144,42 +119,11 @@ export async function setupLiveStatusListener(deps) {
       updateOnlineUsers();
     });
 
-    // Also subscribe to regular channel for reactions/shoutouts
-    var reactionChannelName = 'stream-' + streamId;
-    var reactionChannel = statusPusher.subscribe(reactionChannelName);
-
-    // Update like count from both dedicated like-update events and combined reaction events
-    function updateLikeCount(totalLikes) {
-      if (!totalLikes || totalLikes <= 0) return;
-      var likeCountEl = document.getElementById('likeCount');
-      var fsLikes = document.getElementById('fsLikes');
-      if (likeCountEl) likeCountEl.textContent = totalLikes;
-      if (fsLikes) fsLikes.textContent = totalLikes;
-    }
-
-    reactionChannel.bind('like-update', function(data) {
-      updateLikeCount(data.totalLikes);
-    });
-
-    // Reactions now include totalLikes in the payload (merged to save Pusher messages)
-    reactionChannel.bind('reaction', function(data) {
-      if (data.totalLikes) updateLikeCount(data.totalLikes);
-    });
-
-    reactionChannel.bind('viewer-update', function(data) {
-      var count = data.count !== undefined ? data.count : data.currentViewers;
-      if (count !== undefined) {
-        var viewerEl = document.getElementById('viewerCount');
-        var fsViewers = document.getElementById('fsViewers');
-        var chatViewers = document.getElementById('chatViewers');
-        if (viewerEl) viewerEl.textContent = count;
-        if (fsViewers) fsViewers.textContent = count;
-        if (chatViewers) chatViewers.textContent = count + ' watching';
-      }
-    });
+    // NOTE: reaction/like/viewer events on stream-{id} are handled by
+    // chat-handler.js — no duplicate subscription here.
 
   } catch (err) {
-    console.warn('[LiveStatus] Failed to setup Pusher:', err);
+    console.warn('[Presence] Failed to setup Pusher:', err);
   }
 }
 

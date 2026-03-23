@@ -171,6 +171,15 @@ function handlePlaylistUpdate(e) {
   var elapsed = Date.now() - lastSyncTime;
   if (!(!playing && (document.hidden || elapsed < 5000))) window.isPlaylistPlaying = playing;
   if (window.isLiveStreamActive) return;
+  // DJ info bar elements (single source of truth — previously duplicated in mobile.js)
+  var djInfoBar = document.querySelector('.dj-info-bar');
+  var controlsLabel = document.getElementById('controlsLabel');
+  var controlsDjName = document.getElementById('controlsDjName');
+  var npTrackTitle = document.getElementById('npTrackTitle');
+  var bottomDurationBox = document.getElementById('bottomDurationBox');
+  var bottomDurationLabel = document.getElementById('bottomDurationLabel');
+  var streamGenre = document.getElementById('streamGenre');
+  var streamInfoBar = document.getElementById('streamInfoBar');
   if (queue.length > 0) {
     if (offlineOverlay) offlineOverlay.classList.add('hidden');
     if (audioPlayer) audioPlayer.classList.add('hidden');
@@ -185,6 +194,20 @@ function handlePlaylistUpdate(e) {
         else { if (playIcon) playIcon.classList.remove('hidden'); if (pauseIcon) pauseIcon.classList.add('hidden'); playBtn.classList.remove('playing'); pausePlaylistWave(); }
       }
     }
+    // Update DJ info bar for playlist mode
+    if (djInfoBar) djInfoBar.classList.add('playlist-mode');
+    if (streamInfoBar) streamInfoBar.classList.add('playlist-mode');
+    var currentIndex = e.detail.currentIndex || 0;
+    var currentTrack = queue[currentIndex];
+    if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
+    if (controlsDjName && currentTrack) {
+      var title = currentTrack.title || '';
+      controlsDjName.textContent = title.length > 50 ? title.substring(0, 50) + '...' : title;
+    }
+    if (npTrackTitle) npTrackTitle.textContent = '';
+    if (bottomDurationBox) bottomDurationBox.style.display = 'flex';
+    if (bottomDurationLabel) bottomDurationLabel.textContent = 'LEFT';
+    if (streamGenre) streamGenre.style.display = 'none';
     window.emojiAnimationsEnabled = true; setReactionButtonsEnabled(true); setChatEnabled(true);
     if (!window.isLiveStreamActive) {
       var badge = document.getElementById('liveBadge'); var statusText = document.getElementById('liveStatusText');
@@ -199,6 +222,16 @@ function handlePlaylistUpdate(e) {
     }
   } else {
     if (playlistPlayer) playlistPlayer.classList.add('hidden');
+    // Reset DJ info bar from playlist mode
+    if (djInfoBar) djInfoBar.classList.remove('playlist-mode');
+    if (streamInfoBar) streamInfoBar.classList.remove('playlist-mode');
+    if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
+    if (npTrackTitle) npTrackTitle.textContent = '';
+    if (controlsDjName && !window.isLiveStreamActive && !window.streamDetectedThisSession && !window.currentStreamData) {
+      controlsDjName.textContent = '--';
+    }
+    if (bottomDurationBox) bottomDurationBox.style.display = 'none';
+    if (streamGenre) streamGenre.style.display = '';
     var recentSync = (Date.now() - lastSyncTime) < 5000;
     if (!window.isLiveStreamActive && offlineOverlay && !recentSync && !streamDetectedThisSession) offlineOverlay.classList.remove('hidden');
     if (playBtn && !window.isLiveStreamActive && !recentSync) { playBtn.disabled = true; if (playIcon) playIcon.classList.remove('hidden'); if (pauseIcon) pauseIcon.classList.add('hidden'); playBtn.classList.remove('playing'); }

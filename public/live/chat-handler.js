@@ -76,19 +76,24 @@ export async function setupChat(streamId) {
   }
 
   if (!pusher) {
-    var config = {
-      key: (window.PUSHER_CONFIG && window.PUSHER_CONFIG.key) || '',
-      cluster: (window.PUSHER_CONFIG && window.PUSHER_CONFIG.cluster) || 'eu'
-    };
-    if (!config.key) {
-      console.error('[Chat] Pusher key not configured - check window.PUSHER_CONFIG');
-      console.error('[DEBUG] window.PUSHER_CONFIG:', window.PUSHER_CONFIG);
-      return;
+    // Reuse the shared statusPusher instance from pusher-events.js if available,
+    // avoiding a duplicate Pusher connection for the same channels.
+    if (window.statusPusher) {
+      pusher = window.statusPusher;
+    } else {
+      var config = {
+        key: (window.PUSHER_CONFIG && window.PUSHER_CONFIG.key) || '',
+        cluster: (window.PUSHER_CONFIG && window.PUSHER_CONFIG.cluster) || 'eu'
+      };
+      if (!config.key) {
+        console.error('[Chat] Pusher key not configured - check window.PUSHER_CONFIG');
+        return;
+      }
+      pusher = new window.Pusher(config.key, { cluster: config.cluster, forceTLS: true });
+      pusher.connection.bind('error', function(err) {
+        console.error('[DEBUG] Pusher connection error:', err);
+      });
     }
-    pusher = new window.Pusher(config.key, { cluster: config.cluster, forceTLS: true });
-    pusher.connection.bind('error', function(err) {
-      console.error('[DEBUG] Pusher connection error:', err);
-    });
   }
 
   // Load initial messages
