@@ -101,9 +101,13 @@ export async function downloadFile(downloadInfo, filename, button) {
 
     updateDownloadModal(filename, 'downloading', -1);
 
+    var dlController = new AbortController();
+    var dlTimeout = setTimeout(function() { dlController.abort(); }, 30000);
     var fileResponse = await fetch('/api/download-file/?' + params.toString(), {
-      headers: { 'Authorization': 'Bearer ' + token }
+      headers: { 'Authorization': 'Bearer ' + token },
+      signal: dlController.signal
     });
+    clearTimeout(dlTimeout);
 
     if (!fileResponse.ok) {
       var errBody = await fileResponse.json().catch(function() { return {}; });

@@ -26,9 +26,13 @@ export async function loadWishlistCount(userId) {
 
   try {
     var token = await ctx.getCurrentUser().getIdToken();
+    var wlCountController = new AbortController();
+    var wlCountTimeout = setTimeout(function() { wlCountController.abort(); }, 15000);
     var response = await fetch('/api/wishlist/?userId=' + encodeURIComponent(userId), {
-      headers: { 'Authorization': 'Bearer ' + token }
+      headers: { 'Authorization': 'Bearer ' + token },
+      signal: wlCountController.signal
     });
+    clearTimeout(wlCountTimeout);
     var data = await response.json();
 
     if (data.success) {
@@ -54,9 +58,13 @@ export async function loadWishlist(userId) {
 
   try {
     var token = await currentUser.getIdToken();
+    var wlLoadController = new AbortController();
+    var wlLoadTimeout = setTimeout(function() { wlLoadController.abort(); }, 15000);
     var response = await fetch('/api/wishlist/?userId=' + encodeURIComponent(userId), {
-      headers: { 'Authorization': 'Bearer ' + token }
+      headers: { 'Authorization': 'Bearer ' + token },
+      signal: wlLoadController.signal
     });
+    clearTimeout(wlLoadTimeout);
     var data = await response.json();
 
     if (data.success) {
@@ -124,6 +132,8 @@ export async function loadWishlist(userId) {
 
             try {
               var removeToken = await currentUser.getIdToken();
+              var wlRemoveController = new AbortController();
+              var wlRemoveTimeout = setTimeout(function() { wlRemoveController.abort(); }, 15000);
               var res = await fetch('/api/wishlist/', {
                 method: 'POST',
                 headers: {
@@ -134,8 +144,10 @@ export async function loadWishlist(userId) {
                   userId: userId,
                   releaseId: releaseId,
                   action: 'remove'
-                })
+                }),
+                signal: wlRemoveController.signal
               });
+              clearTimeout(wlRemoveTimeout);
 
               var result = await res.json();
               if (result.success) {
@@ -236,9 +248,13 @@ export async function loadFollowingCount(userId) {
 
   try {
     var token = await ctx.getCurrentUser().getIdToken();
+    var fCountController = new AbortController();
+    var fCountTimeout = setTimeout(function() { fCountController.abort(); }, 15000);
     var response = await fetch('/api/follow-artist/?userId=' + encodeURIComponent(userId), {
-      headers: { 'Authorization': 'Bearer ' + token }
+      headers: { 'Authorization': 'Bearer ' + token },
+      signal: fCountController.signal
     });
+    clearTimeout(fCountTimeout);
     var data = await response.json();
 
     if (data.success) {
@@ -264,9 +280,13 @@ export async function loadFollowing(userId) {
 
   try {
     var token = await currentUser.getIdToken();
+    var fLoadController = new AbortController();
+    var fLoadTimeout = setTimeout(function() { fLoadController.abort(); }, 15000);
     var response = await fetch('/api/follow-artist/?userId=' + encodeURIComponent(userId), {
-      headers: { 'Authorization': 'Bearer ' + token }
+      headers: { 'Authorization': 'Bearer ' + token },
+      signal: fLoadController.signal
     });
+    clearTimeout(fLoadTimeout);
     var data = await response.json();
 
     if (data.success) {
@@ -318,6 +338,8 @@ export async function loadFollowing(userId) {
 
             try {
               var unfollowToken = await currentUser.getIdToken();
+              var unfollowController = new AbortController();
+              var unfollowTimeout = setTimeout(function() { unfollowController.abort(); }, 15000);
               var res = await fetch('/api/follow-artist/', {
                 method: 'POST',
                 headers: {
@@ -328,8 +350,10 @@ export async function loadFollowing(userId) {
                   userId: userId,
                   artistName: artistName,
                   action: 'unfollow'
-                })
+                }),
+                signal: unfollowController.signal
               });
+              clearTimeout(unfollowTimeout);
 
               var result = await res.json();
               if (result.success) {

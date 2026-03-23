@@ -35,7 +35,12 @@ export async function initLivestreamChat(streamId) {
   window.livestreamChatInitialized = true;
 
   try {
-    var response = await fetch('/api/livestream/chat/?streamId=' + streamId + '&limit=50');
+    var chatLoadController = new AbortController();
+    var chatLoadTimeout = setTimeout(function() { chatLoadController.abort(); }, 15000);
+    var response = await fetch('/api/livestream/chat/?streamId=' + streamId + '&limit=50', {
+      signal: chatLoadController.signal
+    });
+    clearTimeout(chatLoadTimeout);
     var result = await response.json();
 
     if (result.success && result.messages) {
@@ -247,6 +252,8 @@ export function setupLivestreamChatSend(streamId) {
     try {
       var token = await currentUser.getIdToken();
       var activeStreamId = window.currentStreamId || streamId;
+      var chatSendController = new AbortController();
+      var chatSendTimeout = setTimeout(function() { chatSendController.abort(); }, 15000);
       var response = await fetch('/api/livestream/chat/', {
         method: 'POST',
         headers: {
@@ -262,8 +269,10 @@ export function setupLivestreamChatSend(streamId) {
           badge: 'crown',
           message: message,
           type: 'text'
-        })
+        }),
+        signal: chatSendController.signal
       });
+      clearTimeout(chatSendTimeout);
 
       if (!response.ok) {
         var err = await response.json();
@@ -273,6 +282,8 @@ export function setupLivestreamChatSend(streamId) {
           staleStreamIds.add(activeStreamId);
           window.currentStreamId = 'playlist-global';
           cleanupLivestreamChat();
+          var retryController = new AbortController();
+          var retryTimeout = setTimeout(function() { retryController.abort(); }, 15000);
           var retryResponse = await fetch('/api/livestream/chat/', {
             method: 'POST',
             headers: {
@@ -288,8 +299,10 @@ export function setupLivestreamChatSend(streamId) {
               badge: 'crown',
               message: message,
               type: 'text'
-            })
+            }),
+            signal: retryController.signal
           });
+          clearTimeout(retryTimeout);
           if (!retryResponse.ok) {
             var retryErr = await retryResponse.json();
             console.error('[LivestreamChat] Retry also failed:', retryErr);

@@ -186,11 +186,15 @@ export async function cleanupDmMessages() {
     var channelId = getDmChannelId(currentUser.uid, dmTargetDj.id);
     var token = await currentUser.getIdToken();
 
+    var dmCleanupController = new AbortController();
+    var dmCleanupTimeout = setTimeout(function() { dmCleanupController.abort(); }, 15000);
     await fetch('/api/dj-lobby/dm-cleanup/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ channelId: channelId })
+      body: JSON.stringify({ channelId: channelId }),
+      signal: dmCleanupController.signal
     });
+    clearTimeout(dmCleanupTimeout);
   } catch (e) {
     console.error('DM cleanup error:', e);
   }

@@ -31,7 +31,12 @@ export async function fetchMixes(userId, forceRefresh) {
   if (!container) return;
 
   try {
-    var response = await fetch('/api/get-dj-mixes/?userId=' + encodeURIComponent(userId));
+    var mixesController = new AbortController();
+    var mixesTimeout = setTimeout(function() { mixesController.abort(); }, 15000);
+    var response = await fetch('/api/get-dj-mixes/?userId=' + encodeURIComponent(userId), {
+      signal: mixesController.signal
+    });
+    clearTimeout(mixesTimeout);
     var data = await response.json();
 
     if (data.success && data.mixes) {

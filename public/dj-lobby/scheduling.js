@@ -66,7 +66,12 @@ export async function loadMySlot() {
     var now = new Date();
     var end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    var response = await fetch('/api/livestream/slots/?start=' + now.toISOString() + '&end=' + end.toISOString() + '&djId=' + currentUser.uid);
+    var slotController = new AbortController();
+    var slotTimeout = setTimeout(function() { slotController.abort(); }, 15000);
+    var response = await fetch('/api/livestream/slots/?start=' + now.toISOString() + '&end=' + end.toISOString() + '&djId=' + currentUser.uid, {
+      signal: slotController.signal
+    });
+    clearTimeout(slotTimeout);
     var result = await response.json();
 
     if (result.success && result.slots && result.slots.length > 0) {
@@ -88,7 +93,12 @@ export async function loadAllSlots() {
   try {
     var now = new Date();
     var end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    var response = await fetch('/api/livestream/slots/?start=' + now.toISOString() + '&end=' + end.toISOString());
+    var allSlotsController = new AbortController();
+    var allSlotsTimeout = setTimeout(function() { allSlotsController.abort(); }, 15000);
+    var response = await fetch('/api/livestream/slots/?start=' + now.toISOString() + '&end=' + end.toISOString(), {
+      signal: allSlotsController.signal
+    });
+    clearTimeout(allSlotsTimeout);
     var result = await response.json();
     if (result.success && result.slots) {
       allDjSlots = result.slots.sort(function(a, b) {
@@ -422,11 +432,15 @@ export async function fetchStreamKey() {
 
   try {
     var token = await currentUser.getIdToken();
+    var keyController = new AbortController();
+    var keyTimeout = setTimeout(function() { keyController.abort(); }, 15000);
     var response = await fetch('/api/livestream/slots/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ action: 'getStreamKey', slotId: mySlot.id, djId: currentUser.uid })
+      body: JSON.stringify({ action: 'getStreamKey', slotId: mySlot.id, djId: currentUser.uid }),
+      signal: keyController.signal
     });
+    clearTimeout(keyTimeout);
 
     var result = await response.json();
     if (result.success && result.streamKey) {
@@ -741,14 +755,18 @@ export async function handleGoLiveReady() {
     requestBody.streamKey = currentStreamKey;
   }
 
+  var goLiveController = new AbortController();
+  var goLiveTimeout = setTimeout(function() { goLiveController.abort(); }, 30000);
   var response = await fetch('/api/livestream/slots/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ' + token
     },
-    body: JSON.stringify(requestBody)
+    body: JSON.stringify(requestBody),
+    signal: goLiveController.signal
   });
+  clearTimeout(goLiveTimeout);
 
   var result = await response.json();
 

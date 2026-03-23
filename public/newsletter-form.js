@@ -32,12 +32,16 @@ function initNewsletterForm() {
     btn.textContent = 'Subscribing...';
     message.classList.add('hidden');
 
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 15000);
     try {
       var response = await fetch('/api/newsletter/subscribe/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, source: 'footer', consent: true })
+        body: JSON.stringify({ email: email, source: 'footer', consent: true }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error('Something went wrong');
       var data = await response.json();

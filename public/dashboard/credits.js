@@ -24,11 +24,15 @@ export async function loadCreditBalance(userId) {
       return;
     }
 
+    var balanceController = new AbortController();
+    var balanceTimeout = setTimeout(function() { balanceController.abort(); }, 15000);
     var response = await fetch('/api/giftcards/balance/?userId=' + userId, {
       headers: {
         'Authorization': 'Bearer ' + idToken
-      }
+      },
+      signal: balanceController.signal
     });
+    clearTimeout(balanceTimeout);
     var result = await response.json();
 
     if (result.success) {
@@ -141,11 +145,15 @@ export function initCreditTab() {
 
       try {
         var idToken = await currentUser.getIdToken();
+        var redeemController = new AbortController();
+        var redeemTimeout = setTimeout(function() { redeemController.abort(); }, 15000);
         var response = await fetch('/api/giftcards/redeem/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
-          body: JSON.stringify({ code: code })
+          body: JSON.stringify({ code: code }),
+          signal: redeemController.signal
         });
+        clearTimeout(redeemTimeout);
 
         var result = await response.json();
 
