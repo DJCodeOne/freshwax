@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
-import { getServiceAccountKey, getServiceAccountToken } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 
 export const prerender = false;
 
@@ -22,16 +22,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const userId = url.searchParams.get('userId') || 'JueT7q9eKjQk4iFRg2tXa4ZP8642';
   const confirm = url.searchParams.get('confirm');
 
-  const env = locals.runtime.env;
-  const projectId = (env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store') as string;
-
-  const serviceAccountKey = getServiceAccountKey(env as Record<string, unknown>);
-  if (!serviceAccountKey) {
-    return ApiErrors.serverError('Service account not configured');
-  }
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { projectId } = fbCtx;
 
   try {
-    const token = await getServiceAccountToken(serviceAccountKey);
+    const token = await fbCtx.getToken();
     const docUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
 
     // First, GET the current document

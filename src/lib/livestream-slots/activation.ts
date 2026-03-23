@@ -5,6 +5,7 @@ import { buildRtmpUrl, buildHlsUrl } from '../red5';
 import { broadcastLiveStatus } from '../pusher';
 import { logActivity } from '../activity-feed';
 import { createLogger, ApiErrors, fetchWithTimeout, successResponse } from '../api-utils';
+import { TIMEOUTS } from '../timeouts';
 import {
   syncSlotToD1,
   syncSlotStatusToD1,
@@ -77,15 +78,15 @@ export async function handleGoLive(
       try {
         const checkResponse = await fetchWithTimeout(hlsCheckUrl.replace('/index.m3u8', '/'), {
           method: 'HEAD'
-        }, 5000);
+        }, TIMEOUTS.SHORT);
         streamActive = checkResponse.ok || checkResponse.status === 200;
         if (!streamActive && streamCheckAttempts < maxAttempts) {
-          await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+          await new Promise(r => setTimeout(r, TIMEOUTS.TICK)); // Wait 1s before retry
         }
       } catch (e: unknown) {
         log.warn(`Stream check attempt ${streamCheckAttempts} failed:`, e);
         if (streamCheckAttempts < maxAttempts) {
-          await new Promise(r => setTimeout(r, 1000));
+          await new Promise(r => setTimeout(r, TIMEOUTS.TICK));
         }
       }
     }

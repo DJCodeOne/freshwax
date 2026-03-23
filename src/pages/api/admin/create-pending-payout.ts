@@ -3,7 +3,8 @@
 
 import type { APIRoute } from 'astro';
 
-import { saSetDocument, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 const log = createLogger('admin/create-pending-payout');
@@ -17,9 +18,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`create-pending-payout:${clientId}`, RateLimiters.adminDelete);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = locals.runtime.env;
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
-  const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { env, projectId, saKey: serviceAccountKey } = fbCtx;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
@@ -32,11 +33,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!payoutData) {
       return ApiErrors.badRequest('payoutData required');
-    }
-
-    const serviceAccountKey = getServiceAccountKey(env);
-    if (!serviceAccountKey) {
-      return ApiErrors.serverError('Service account not configured');
     }
 
     const now = new Date().toISOString();

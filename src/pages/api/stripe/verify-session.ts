@@ -8,6 +8,7 @@ import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { createOrder } from '../../../lib/order-utils';
 import { createLogger, fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
 import { FIREBASE_API_KEY } from '../../../lib/constants';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('[verify-session]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -113,7 +114,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Order not found - wait a bit more and check again (webhook might be processing)
-    await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 more seconds
+    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.TOAST)); // Wait 3 more seconds
 
     // Check again after waiting
     if (paymentIntentId) {

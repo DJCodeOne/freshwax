@@ -4,8 +4,8 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
-import { getServiceAccountToken, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/update-order');
@@ -47,10 +47,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`update-order:${clientId}`, RateLimiters.write);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = locals.runtime.env;
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
-  const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { env, projectId } = fbCtx;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
@@ -68,11 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { orderId, updates } = parsed.data;
 
     // Get service account token for write permission
-    const serviceAccountKey = getServiceAccountKey(env);
-    if (!serviceAccountKey) {
-      return ApiErrors.serverError('Service account not configured');
-    }
-    const token = await getServiceAccountToken(serviceAccountKey);
+    const token = await fbCtx.getToken();
 
     // Get current order
     const order = await getDocument('orders', orderId);

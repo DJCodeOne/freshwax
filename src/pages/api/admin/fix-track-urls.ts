@@ -8,7 +8,7 @@ import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
-import { getServiceAccountKey, getServiceAccountToken } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 
 const fixTrackUrlsSchema = z.object({
   releaseId: z.string().min(1),
@@ -39,12 +39,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
   const { releaseId, trackFixes } = parsed.data;
 
-  const projectId = (env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store') as string;
-
-  const serviceAccountKey = getServiceAccountKey(env as Record<string, unknown>);
-  if (!serviceAccountKey) {
-    return ApiErrors.serverError('Service account not configured');
-  }
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { projectId } = fbCtx;
 
   try {
     // Get current release
@@ -83,7 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }));
 
     // Update via REST API
-    const token = await getServiceAccountToken(serviceAccountKey);
+    const token = await fbCtx.getToken();
     const docUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/releases/${releaseId}?updateMask.fieldPaths=tracks`;
 
     const patchResponse = await fetchWithTimeout(docUrl, {

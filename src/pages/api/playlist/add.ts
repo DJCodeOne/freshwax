@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseMediaUrl, sanitizeUrl } from '../../../lib/url-parser';
 import { parseJsonBody, ApiErrors, fetchWithTimeout, createLogger, successResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('playlist/add');
 import type { UserPlaylist, PlaylistItem, MediaPlatform } from '../../../lib/types';
@@ -43,7 +44,7 @@ function getThumbnailUrl(platform: MediaPlatform, embedId?: string, url?: string
 // Fetch video metadata using noembed.com (free oEmbed proxy)
 async function fetchVideoMetadata(url: string): Promise<{ title?: string; thumbnail?: string }> {
   try {
-    const response = await fetchWithTimeout(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, {}, 8000);
+    const response = await fetchWithTimeout(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, {}, TIMEOUTS.OEMBED);
     if (!response.ok) return {};
 
     // SECURITY: Reject oversized responses to prevent DoS

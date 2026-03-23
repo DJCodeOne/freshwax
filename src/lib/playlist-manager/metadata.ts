@@ -2,6 +2,7 @@
 // Metadata fetching functions for playlist items (oEmbed, YouTube, SoundCloud)
 
 import { createClientLogger } from '../client-logger';
+import { TIMEOUTS } from '../timeouts';
 
 const log = createClientLogger('PlaylistMetadata');
 
@@ -20,7 +21,7 @@ export async function fetchMetadata(url: string): Promise<{ title?: string; thum
   try {
     // Try noembed first
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API);
     try {
       const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, { signal: controller.signal });
       if (response.ok) {
@@ -49,7 +50,7 @@ export async function fetchMetadata(url: string): Promise<{ title?: string; thum
   // Fallback: Try YouTube oEmbed directly for YouTube URLs
   if (url.includes('youtube.com') || url.includes('youtu.be')) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API);
     try {
       const ytResponse = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, { signal: controller.signal });
       if (ytResponse.ok) {
@@ -74,7 +75,7 @@ export async function fetchMetadata(url: string): Promise<{ title?: string; thum
   // Fallback: Try SoundCloud oEmbed for SoundCloud URLs
   if (url.includes('soundcloud.com')) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API);
     try {
       const scResponse = await fetch(`https://soundcloud.com/oembed?url=${encodeURIComponent(url)}&format=json`, { signal: controller.signal });
       if (scResponse.ok) {
@@ -130,7 +131,7 @@ export async function fetchVideoDuration(url: string, platform: string, embedId?
  */
 export async function fetchYouTubeTitle(videoId: string): Promise<string | null> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API);
   try {
     const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, { signal: controller.signal });
     if (response.ok) {

@@ -51,8 +51,8 @@ export interface ResendEmailResult {
 
 const RESEND_API_URL = 'https://api.resend.com/emails';
 const DEFAULT_TIMEOUT_MS = TIMEOUTS.API;
-const RATE_LIMIT_RETRY_DELAY_MS = 1000;
-const SERVER_ERROR_RETRY_DELAY_MS = 2000;
+const RATE_LIMIT_RETRY_DELAY_MS = TIMEOUTS.RATE_LIMIT_RETRY;
+const SERVER_ERROR_RETRY_DELAY_MS = TIMEOUTS.SERVER_ERROR_RETRY;
 
 // ============================================
 // HELPERS

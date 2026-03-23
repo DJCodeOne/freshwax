@@ -165,7 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const R2_CONFIG = getR2Config(env);
         const s3Client = createS3Client(R2_CONFIG);
 
-        const artworkResp = await fetchWithTimeout(artworkUrl, {}, 15000);
+        const artworkResp = await fetchWithTimeout(artworkUrl, {}, TIMEOUTS.API_EXTENDED);
         if (artworkResp.ok) {
           const artworkBuffer = await artworkResp.arrayBuffer();
 

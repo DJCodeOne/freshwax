@@ -4,7 +4,8 @@
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { saSetDocument, saQueryCollection, getServiceAccountKey } from '../../lib/firebase-service-account';
+import { saSetDocument, saQueryCollection } from '../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../lib/firebase/admin-context';
 import { invalidateReleasesCache, clearCache } from '../../lib/firebase-rest';
 import { createLogger, errorResponse, successResponse, ApiErrors } from '../../lib/api-utils';
 import { requireAdminAuth } from '../../lib/admin';
@@ -58,15 +59,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = locals.runtime.env;
-
-  // Get service account key for Firestore writes
-  const serviceAccountKey = getServiceAccountKey(env);
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-
-  if (!serviceAccountKey) {
-    return ApiErrors.serverError('Backend service temporarily unavailable');
-  }
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { env, projectId, saKey: serviceAccountKey } = fbCtx;
 
   // R2 public domain for CDN URLs
   const publicDomain = env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk';

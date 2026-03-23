@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection, addDocument, setDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin, initAdminEnv } from '../../../lib/admin';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { provisionArtistRecord, provisionVinylSellerRecord, revokeArtistRecord, revokeVinylSellerRecord } from '../../../lib/role-provisioning';
 
 const log = createLogger('roles/manage');
 
@@ -258,104 +259,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // For artist or merchSeller roles, create/update artists collection entry
       if (roleType === 'artist' || roleType === 'merchSeller') {
-        try {
-          const pendingData = userData?.pendingRoles?.[roleType] || {};
-          const existingArtist = await getDocument('artists', uid);
-
-          const artistData = {
-            id: uid,
-            userId: uid,
-            artistName: pendingData.artistName || userData?.displayName || userData?.name || 'Partner',
-            name: userData?.fullName || userData?.name || userData?.displayName || '',
-            displayName: pendingData.artistName || userData?.displayName || '',
-            email: userData?.email || '',
-            phone: userData?.phone || '',
-            bio: pendingData.bio || '',
-            links: pendingData.links || '',
-            businessName: pendingData.businessName || '',
-            isArtist: roleType === 'artist',
-            isDJ: false,
-            isMerchSupplier: roleType === 'merchSeller',
-            approved: true,
-            suspended: false,
-            approvedAt: new Date().toISOString(),
-            approvedBy: adminUid,
-            updatedAt: new Date().toISOString()
-          };
-
-          if (existingArtist) {
-            // Update existing artist record - merge with existing data
-            await updateDocument('artists', uid, {
-              ...artistData,
-              isArtist: roleType === 'artist' ? true : existingArtist.isArtist || false,
-              isMerchSupplier: roleType === 'merchSeller' ? true : existingArtist.isMerchSupplier || false,
-              createdAt: existingArtist.createdAt || new Date().toISOString()
-            });
-            // Updated artists entry
-          } else {
-            // Create new artist record
-            await setDocument('artists', uid, {
-              ...artistData,
-              registeredAt: new Date().toISOString(),
-              createdAt: new Date().toISOString()
-            });
-            // Created artists entry
-          }
-        } catch (artistError: unknown) {
-          log.error(`[roles/manage] Failed to create/update artists collection for ${uid}:`, artistError);
-          // Don't fail the whole approval - user role is still granted
-        }
+        await provisionArtistRecord(uid, roleType, adminUid, userData);
       }
 
       // For vinylSeller role, create vinylSellers collection entry
       if (roleType === 'vinylSeller') {
-        try {
-          const pendingData = userData?.pendingRoles?.vinylSeller || {};
-          const existingVinylSeller = await getDocument('vinylSellers', uid);
-
-          const vinylSellerData = {
-            id: uid,
-            userId: uid,
-            storeName: pendingData.storeName || userData?.displayName || 'Vinyl Store',
-            description: pendingData.description || '',
-            location: pendingData.location || '',
-            discogsUrl: pendingData.discogsUrl || '',
-            email: userData?.email || '',
-            displayName: userData?.displayName || '',
-            approved: true,
-            suspended: false,
-            totalSales: 0,
-            activeListings: 0,
-            ratings: {
-              average: 0,
-              count: 0,
-              breakdown: {
-                communication: 0,
-                accuracy: 0,
-                shipping: 0
-              }
-            },
-            approvedAt: new Date().toISOString(),
-            approvedBy: adminUid,
-            updatedAt: new Date().toISOString()
-          };
-
-          if (existingVinylSeller) {
-            await updateDocument('vinylSellers', uid, {
-              ...vinylSellerData,
-              createdAt: existingVinylSeller.createdAt || new Date().toISOString()
-            });
-            // Updated vinylSellers entry
-          } else {
-            await setDocument('vinylSellers', uid, {
-              ...vinylSellerData,
-              createdAt: new Date().toISOString()
-            });
-            // Created vinylSellers entry
-          }
-        } catch (vinylError: unknown) {
-          log.error(`[roles/manage] Failed to create/update vinylSellers collection for ${uid}:`, vinylError);
-        }
+        await provisionVinylSellerRecord(uid, adminUid, userData);
       }
 
       // Create notification for user
@@ -455,41 +364,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Update artists collection if revoking artist/merch role
       if (roleType === 'artist' || roleType === 'merchSeller') {
-        try {
-          const existingArtist = await getDocument('artists', uid);
-          if (existingArtist) {
-            const artistUpdate: Record<string, unknown> = {
-              updatedAt: new Date().toISOString(),
-              revokedAt: new Date().toISOString(),
-              revokedBy: adminUid
-            };
-            if (roleType === 'artist') artistUpdate.isArtist = false;
-            if (roleType === 'merchSeller') artistUpdate.isMerchSupplier = false;
-            await updateDocument('artists', uid, artistUpdate);
-            // Revoked role from artists
-          }
-        } catch (e: unknown) {
-          log.error(`[roles/manage] Failed to update artists/${uid} during revoke:`, e);
-        }
+        await revokeArtistRecord(uid, roleType, adminUid);
       }
 
       // Update vinylSellers collection if revoking vinyl seller role
       if (roleType === 'vinylSeller') {
-        try {
-          const existingVinylSeller = await getDocument('vinylSellers', uid);
-          if (existingVinylSeller) {
-            await updateDocument('vinylSellers', uid, {
-              approved: false,
-              suspended: true,
-              updatedAt: new Date().toISOString(),
-              revokedAt: new Date().toISOString(),
-              revokedBy: adminUid
-            });
-            // Revoked vinylSeller role
-          }
-        } catch (e: unknown) {
-          log.error(`[roles/manage] Failed to update vinylSellers/${uid} during revoke:`, e);
-        }
+        await revokeVinylSellerRecord(uid, adminUid);
       }
 
       return successResponse({ message: 'Role revoked' });

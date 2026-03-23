@@ -9,6 +9,7 @@ import type { APIContext } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse, errorResponse } from '../../../lib/api-utils';
+import { KV_TTL } from '../../../lib/timeouts';
 
 const postSchema = z.object({
   item: z.object({
@@ -147,7 +148,7 @@ export async function POST({ request, locals }: APIContext) {
     await kv.put(KV_HISTORY_KEY, JSON.stringify({
       items: history,
       lastUpdated: new Date().toISOString()
-    }), { expirationTtl: 604800 });
+    }), { expirationTtl: KV_TTL.ONE_WEEK });
 
     return successResponse({ count: history.length });
   } catch (error: unknown) {
@@ -200,7 +201,7 @@ export async function DELETE({ request, locals }: APIContext) {
       await kv.put(KV_HISTORY_KEY, JSON.stringify({
         items: filteredItems,
         lastUpdated: new Date().toISOString()
-      }), { expirationTtl: 604800 });
+      }), { expirationTtl: KV_TTL.ONE_WEEK });
       log.info(`[PlaylistHistory] Removed ${totalRemoved} item(s)`);
     }
 

@@ -2,6 +2,8 @@
 // Red5 Pro Streaming Server Configuration & Utilities
 // Central configuration for Fresh Wax livestream infrastructure
 
+import { TIMEOUTS } from './timeouts';
+
 // Note: Using Web Crypto API compatible approach for Cloudflare Workers
 
 // =============================================================================
@@ -94,10 +96,10 @@ export const RED5_CONFIG = {
   // Timeouts and intervals
   timing: {
     // How often to check stream health (ms)
-    healthCheckInterval: 10000,
+    healthCheckInterval: TIMEOUTS.API,
 
     // Stream timeout - mark offline if no data (ms)
-    streamTimeout: 30000,
+    streamTimeout: TIMEOUTS.LONG,
 
     // Grace period after scheduled end time (ms)
     endGracePeriod: 5 * 60 * 1000, // 5 minutes

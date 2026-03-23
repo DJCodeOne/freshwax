@@ -1,12 +1,17 @@
 // src/pages/api/admin/sync-artists.ts
 // Syncs users with artist roles to the artists collection
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, queryCollection, setDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger, successResponse, maskEmail } from '../../../lib/api-utils';
 const log = createLogger('[sync-artists]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const syncArtistsSchema = z.object({
+  idToken: z.string().max(5000).optional(),
+}).strip();
 
 export const prerender = false;
 
@@ -20,6 +25,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await parseJsonBody(request);
+
+    const parsed = syncArtistsSchema.safeParse(body ?? {});
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request body');
+    }
 
     // Check admin authentication
     const authError = await requireAdminAuth(request, locals, body);

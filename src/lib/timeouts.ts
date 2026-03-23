@@ -26,4 +26,32 @@ export const TIMEOUTS = {
   RECENTLY_PLAYED_REFRESH: 60000,
   /** Safety auto-hide for loading overlays (15 seconds) */
   SAFETY_OVERLAY: 15000,
+  /** oEmbed metadata fetch timeout (8 seconds) */
+  OEMBED: 8000,
+  /** Bot welcome/tune comment delay (1.5 seconds) */
+  BOT_DELAY: 1500,
+  /** Rating debounce cooldown (2 seconds) */
+  RATING_DEBOUNCE: 2000,
+  /** Batch operation rate limit delay (200 milliseconds) */
+  BATCH_DELAY: 200,
+  /** Quick polling/DOM cleanup interval (100 milliseconds) */
+  POLL: 100,
+  /** Retry delay after transient server error (500 milliseconds) */
+  RETRY_DELAY: 500,
+  /** Rate limit retry delay for email sending (1 second) */
+  RATE_LIMIT_RETRY: 1000,
+  /** Server error retry delay for email sending (2 seconds) */
+  SERVER_ERROR_RETRY: 2000,
+} as const;
+
+/** KV expirationTtl values in seconds */
+export const KV_TTL = {
+  /** 1 day (86400 seconds) */
+  ONE_DAY: 86400,
+  /** 7 days (604800 seconds) */
+  ONE_WEEK: 604800,
+  /** 30 days (2592000 seconds) */
+  ONE_MONTH: 30 * 24 * 60 * 60,
+  /** 1 year (31536000 seconds) */
+  ONE_YEAR: 365 * 24 * 60 * 60,
 } as const;

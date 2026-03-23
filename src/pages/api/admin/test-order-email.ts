@@ -3,9 +3,10 @@
 // Usage: GET /api/admin/test-order-email/?orderNumber=FW-260126-1O1JTG&email=test@example.com
 
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument } from '../../../lib/firebase-rest';
+import { getDocument } from '../../../lib/firebase-rest';
 import { sendOrderConfirmationEmail } from '../../../lib/order-utils';
-import { saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saQueryCollection } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -20,7 +21,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`test-order-email:${clientId}`, RateLimiters.write);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = locals.runtime.env;
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { env, projectId, saKey: serviceAccountKey } = fbCtx;
+
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -34,10 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Missing orderNumber');
   }
 
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-
   const saQuery = getSaQuery(locals);
-  const serviceAccountKey = getServiceAccountKey(env);
 
   try {
     // Find order by order number

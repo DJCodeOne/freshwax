@@ -1,5 +1,6 @@
 // src/lib/csrf.ts
 // Double-submit cookie CSRF protection
+import { KV_TTL } from './timeouts';
 //
 // Defense-in-depth layer on top of Astro's `security: { checkOrigin: true }`.
 //
@@ -147,6 +148,6 @@ export function buildCsrfCookie(token: string, isSecure: boolean): string {
     parts.push('Secure');
   }
   // 24-hour expiry (token refreshes on each request)
-  parts.push('Max-Age=86400');
+  parts.push(`Max-Age=${KV_TTL.ONE_DAY}`);
   return parts.join('; ');
 }

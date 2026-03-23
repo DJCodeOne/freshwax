@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('livestream/heartbeat');
 import { z } from 'zod';
@@ -26,7 +27,7 @@ interface ViewerInfo {
 // Map structure: streamId -> Map<sessionId, ViewerInfo>
 const viewers = new Map<string, Map<string, ViewerInfo>>();
 
-const SESSION_TIMEOUT = 60000; // 60 seconds - expire if no heartbeat
+const SESSION_TIMEOUT = TIMEOUTS.CRON; // 60 seconds - expire if no heartbeat
 
 // Clean up stale sessions and return active viewers
 function cleanupStaleSessions(streamId: string): ViewerInfo[] {

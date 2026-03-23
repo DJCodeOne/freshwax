@@ -2,6 +2,7 @@
 // Extracted helper functions for the global playlist API
 
 import { fetchWithTimeout, createLogger } from '../api-utils';
+import { KV_TTL } from '../timeouts';
 import { simpleMd5 } from '../pusher';
 
 const log = createLogger('playlist/global');
@@ -95,7 +96,7 @@ export async function addToRecentlyPlayed(track: Record<string, unknown>): Promi
     await kvCache.put(KV_HISTORY_KEY, JSON.stringify({
       items,
       lastUpdated: new Date().toISOString()
-    }), { expirationTtl: 86400 });
+    }), { expirationTtl: KV_TTL.ONE_DAY });
     // Added to recently played
   } catch (error: unknown) {
     log.error('[GlobalPlaylist] Error adding to recently played:', error);

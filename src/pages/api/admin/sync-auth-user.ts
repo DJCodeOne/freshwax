@@ -3,10 +3,18 @@
 // Use when a user exists in Auth but not in Firestore
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { saSetDocument, saGetDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const syncAuthUserSchema = z.object({
+  uid: z.string().min(1).max(200),
+  email: z.string().email().max(320),
+  displayName: z.string().max(200).optional(),
+  idToken: z.string().max(5000).optional(),
+}).strip();
 
 const log = createLogger('admin/sync-auth-user');
 
@@ -43,11 +51,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { uid, email, displayName } = body;
-
-    if (!uid || !email) {
-      return ApiErrors.badRequest('Missing required fields: uid and email');
+    const parsed = syncAuthUserSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request: uid (string) and email (valid email) are required');
     }
+
+    const { uid, email, displayName } = parsed.data;
 
     // Check if user already exists
     const existing = await saGetDocument(serviceAccountKey, projectId, 'users', uid);

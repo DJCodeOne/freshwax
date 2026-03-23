@@ -3,6 +3,7 @@
  * Extracted from api.ts for focused module organization.
  */
 import { createClientLogger } from '../client-logger';
+import { TIMEOUTS } from '../timeouts';
 import { FWCache, getAuthUser } from './cache';
 
 const log = createClientLogger('ReleasePlate');
@@ -110,7 +111,7 @@ function setupRatingClickHandlers() {
 
       if (ratingDebounce[releaseId]) return;
       ratingDebounce[releaseId] = true;
-      setTimeout(function() { delete ratingDebounce[releaseId]; }, 2000);
+      setTimeout(function() { delete ratingDebounce[releaseId]; }, TIMEOUTS.RATING_DEBOUNCE);
 
       var user = await getAuthUser();
       if (!user) {

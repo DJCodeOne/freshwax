@@ -3,8 +3,9 @@
 // Usage: GET /api/admin/send-artist-notification/?orderNumber=FW-xxx&send=yes
 
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument } from '../../../lib/firebase-rest';
-import { saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { getDocument } from '../../../lib/firebase-rest';
+import { saQueryCollection } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -75,7 +76,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`send-artist-notification:${clientId}`, RateLimiters.write);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = locals.runtime.env;
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { env, projectId, saKey: serviceAccountKey } = fbCtx;
+
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -88,9 +92,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Missing orderNumber');
   }
 
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
-  const serviceAccountKey = getServiceAccountKey(env);
 
   const saQuery = getSaQuery(locals);
 

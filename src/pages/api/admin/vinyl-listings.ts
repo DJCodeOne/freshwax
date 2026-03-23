@@ -4,7 +4,8 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 
-import { saQueryCollection, saUpdateDocument, saGetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saQueryCollection, saUpdateDocument, saGetDocument } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
@@ -20,7 +21,10 @@ const log = createLogger('[vinyl-listings]');
 export const prerender = false;
 
 // GET - Fetch pending vinyl listings for admin review
-export const GET: APIRoute = async ({ request, locals }) => {  const env = locals.runtime.env || {};
+export const GET: APIRoute = async ({ request, locals }) => {
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { env, projectId, saKey: serviceAccountKey } = fbCtx;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
@@ -38,12 +42,6 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
   }
 
   try {
-    const serviceAccountKey = getServiceAccountKey(env);
-    const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-
-    if (!serviceAccountKey) {
-      return ApiErrors.serverError('Service account not configured');
-    }
 
     // Query pending vinyl listings
     const listings = await saQueryCollection(serviceAccountKey, projectId, 'vinylListings', {
@@ -66,7 +64,10 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
 };
 
 // POST - Approve or reject vinyl listing
-export const POST: APIRoute = async ({ request, locals }) => {  const env = locals.runtime.env || {};
+export const POST: APIRoute = async ({ request, locals }) => {
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { env, projectId, saKey: serviceAccountKey } = fbCtx;
 
   // Rate limit writes
   const clientId = getClientId(request);
@@ -90,13 +91,6 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
       return ApiErrors.badRequest('Invalid request data');
     }
     const { action, listingId } = parseResult.data;
-
-    const serviceAccountKey = getServiceAccountKey(env);
-    const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-
-    if (!serviceAccountKey) {
-      return ApiErrors.serverError('Service account not configured');
-    }
 
     // Get the listing first
     const listing = await saGetDocument(serviceAccountKey, projectId, 'vinylListings', listingId);

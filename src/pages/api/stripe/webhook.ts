@@ -1,21 +1,5 @@
 // src/pages/api/stripe/webhook.ts
 // Handles Stripe webhook events for product checkouts
-//
-// D1 MIGRATION REQUIRED — run this against your D1 database:
-// -------------------------------------------------------
-// CREATE TABLE IF NOT EXISTS pending_orders (
-//   id INTEGER PRIMARY KEY AUTOINCREMENT,
-//   stripe_session_id TEXT UNIQUE NOT NULL,
-//   customer_email TEXT,
-//   amount_total INTEGER,
-//   currency TEXT DEFAULT 'gbp',
-//   items TEXT,
-//   status TEXT DEFAULT 'pending',
-//   firebase_order_id TEXT,
-//   created_at TEXT DEFAULT (datetime('now')),
-//   updated_at TEXT DEFAULT (datetime('now'))
-// );
-// -------------------------------------------------------
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';

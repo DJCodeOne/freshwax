@@ -4,10 +4,20 @@
 // NOTE: getUserByEmail functionality replaced with Firestore lookup (Firebase Admin doesn't work on Cloudflare)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const lobbyBypassSchema = z.object({
+  action: z.enum(['grant', 'revoke']),
+  email: z.string().email().max(320).optional(),
+  userId: z.string().max(200).optional(),
+  reason: z.string().max(1000).optional(),
+  adminKey: z.string().max(500).optional(),
+  idToken: z.string().max(5000).optional(),
+}).strip();
 
 const log = createLogger('[lobby-bypass]');
 
@@ -79,7 +89,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const saQuery = getSaQuery(locals);
   try {
     const data = await request.json();
-    const { action, email, userId, reason, adminKey } = data;
+
+    const parsed = lobbyBypassSchema.safeParse(data);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request: action (grant|revoke) is required');
+    }
+
+    const { action, email, userId, reason } = parsed.data;
 
     // Admin auth check (timing-safe comparison)
     const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');

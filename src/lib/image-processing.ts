@@ -5,7 +5,7 @@
 import { PhotonImage, SamplingFilter, crop, resize } from '@cf-wasm/photon';
 import encodeWebP, { init as initWebPEncode } from '@jsquash/webp/encode';
 // Direct WASM imports for Cloudflare Workers (no filesystem fetch available)
-// @ts-ignore — .wasm imports are handled by Cloudflare/Vite bundler
+// @ts-expect-error — .wasm imports have no type declarations; handled by Cloudflare/Vite bundler at build time
 import webpEncWasm from '@jsquash/webp/codec/enc/webp_enc.wasm';
 
 let webpReady: Promise<unknown> | null = null;

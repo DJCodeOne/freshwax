@@ -7,7 +7,10 @@ import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin as checkIsAdmin, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
-import { setKVCache, addToRecentlyPlayed, pickRandomFromServerHistory, broadcastEmojiReaction, broadcastPlaylistUpdate } from '../../../lib/playlist/helpers';
+import { setKVCache, broadcastPlaylistUpdate } from '../../../lib/playlist/helpers';
+import { KV_TTL } from '../../../lib/timeouts';
+import { processPlaylistAction } from '../../../lib/playlist/actions';
+import type { GlobalPlaylist, PlaylistItem } from '../../../lib/playlist/actions';
 
 const log = createLogger('playlist/global');
 import { z } from 'zod';
@@ -49,26 +52,7 @@ const PlaylistPutSchema = z.object({
 const KV_PLAYLIST_KEY = 'global-playlist';
 const MAX_QUEUE_SIZE = 10;
 
-interface PlaylistItem {
-  id: string;
-  url: string;
-  platform: string;
-  embedId?: string;
-  title?: string;
-  thumbnail?: string;
-  addedBy?: string;
-  addedByName?: string;
-  addedAt: string;
-}
-
-interface GlobalPlaylist {
-  queue: PlaylistItem[];
-  currentIndex: number;
-  isPlaying: boolean;
-  lastUpdated: string;
-  trackStartedAt?: string | null;
-  reactionCount?: number; // Global reaction count, resets per track
-}
+// PlaylistItem and GlobalPlaylist types are imported from ../../../lib/playlist/actions
 
 // Helper to get KV binding
 function getKV(locals: App.Locals): KVNamespace | undefined {
@@ -199,7 +183,7 @@ export async function POST({ request, locals }: APIContext) {
       lastUpdated: playlist.lastUpdated,
       trackStartedAt: playlist.trackStartedAt || null,
       reactionCount: playlist.reactionCount || 0
-    }), { expirationTtl: 86400 });
+    }), { expirationTtl: KV_TTL.ONE_DAY });
 
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, locals.runtime.env);
@@ -305,7 +289,7 @@ export async function DELETE({ request, locals }: APIContext) {
       lastUpdated: playlist.lastUpdated,
       trackStartedAt: playlist.trackStartedAt || null,
       reactionCount: playlist.reactionCount || 0
-    }), { expirationTtl: 86400 });
+    }), { expirationTtl: KV_TTL.ONE_DAY });
 
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, locals.runtime.env);
@@ -384,162 +368,14 @@ export async function PUT({ request, locals }: APIContext) {
         };
       }
 
-      const now = new Date().toISOString();
+      // Process the action using extracted handler
+      const actionResult = await processPlaylistAction(action, playlist, body as Record<string, unknown>, env);
+      playlist = actionResult.playlist;
 
-      switch (action) {
-        case 'next':
-          // Skip current track - remove it and play next user track or autoplay
-          if (playlist.queue.length > 0) {
-            playlist.queue.shift(); // Remove current track
-          }
-
-          if (playlist.queue.length > 0) {
-            // Play next user-added track
-            playlist.isPlaying = true;
-            playlist.trackStartedAt = now;
-            playlist.currentIndex = 0;
-            // Playing next user track
-          } else {
-            // Queue empty - pick random track for autoplay
-            const nextRandomTrack = await pickRandomFromServerHistory(env);
-            if (nextRandomTrack) {
-              playlist.queue.push(nextRandomTrack);
-              playlist.isPlaying = true;
-              playlist.trackStartedAt = now;
-              playlist.currentIndex = 0;
-              // Autoplay picked next track
-            } else {
-              playlist.isPlaying = false;
-              playlist.trackStartedAt = null;
-            }
-          }
-          break;
-        case 'play':
-          playlist.isPlaying = true;
-          // Set track start time when resuming/starting
-          playlist.trackStartedAt = now;
-          break;
-        case 'pause':
-          playlist.isPlaying = false;
-          // Clear track start time when paused
-          playlist.trackStartedAt = null;
-          break;
-        case 'toggle':
-          playlist.isPlaying = !playlist.isPlaying;
-          // Update track start time based on new state
-          playlist.trackStartedAt = playlist.isPlaying ? now : null;
-          break;
-        case 'trackEnded':
-          // SERVER picks next track - ensures all clients play the same thing
-          // Use trackId to prevent race conditions (multiple clients calling trackEnded)
-          const { trackId, finishedTrackTitle } = body;
-          const currentTrack = playlist.queue[0];
-
-          // RACE PROTECTION 1: If trackId provided and doesn't match current track, already handled
-          if (trackId && currentTrack && currentTrack.id !== trackId) {
-            // trackEnded ignored - track already changed
-            return successResponse({ alreadyHandled: true,
-              playlist });
-          }
-
-          // RACE PROTECTION 2: If a new track was started within last 5 seconds, don't pick another
-          // This catches cases where multiple clients read old state before any wrote
-          const trackJustStarted = playlist.trackStartedAt &&
-            (Date.now() - new Date(playlist.trackStartedAt).getTime()) < 5000;
-          if (trackJustStarted && playlist.queue.length > 0) {
-            // trackEnded ignored - race protection
-            return successResponse({ alreadyHandled: true,
-              playlist });
-          }
-
-          // Save the finished track to recently played before removing
-          if (currentTrack) {
-            // Use the title from the client if provided (it has the resolved title)
-            // Otherwise fall back to the track's title
-            const trackTitle = finishedTrackTitle || currentTrack.title;
-            await addToRecentlyPlayed({
-              ...currentTrack,
-              title: trackTitle,
-              playedAt: now
-            });
-          }
-
-          // Remove only the finished track (first in queue)
-          // User-added tracks should play next - autoplay only when queue is empty
-          if (playlist.queue.length > 0) {
-            playlist.queue.shift(); // Remove first item (the one that just ended)
-          }
-
-          // If queue still has items (user-added tracks), play them
-          if (playlist.queue.length > 0) {
-            playlist.isPlaying = true;
-            playlist.trackStartedAt = now;
-            // Playing next user track
-          } else {
-            // Queue is empty - pick a random track for autoplay
-            const randomTrack = await pickRandomFromServerHistory(env);
-            if (randomTrack) {
-              playlist.queue.push(randomTrack);
-              playlist.isPlaying = true;
-              playlist.trackStartedAt = now;
-              // Auto-play: picked random track
-            } else {
-              // No tracks available - stop playback
-              playlist.isPlaying = false;
-              playlist.trackStartedAt = null;
-              // No tracks for auto-play, stopping
-            }
-          }
-          playlist.currentIndex = 0; // Always play from front of queue
-          playlist.reactionCount = 0; // Reset reactions for new track
-          break;
-
-        case 'react':
-          // Increment global reaction count
-          playlist.reactionCount = (playlist.reactionCount || 0) + 1;
-          // Broadcast emoji animation to all viewers
-          const { emoji, sessionId } = body;
-          if (emoji) {
-            await broadcastEmojiReaction(emoji, sessionId, locals.runtime.env);
-          }
-          break;
-
-        case 'startAutoPlay':
-          // Server picks autoplay track - ensures ALL clients play the SAME track
-          // This is called when queue is empty and clients want to start autoplay
-
-          // RACE PROTECTION: If a track was started within last 10 seconds, don't pick new one
-          // This prevents multiple clients from racing to pick different tracks
-          const recentlyStarted = playlist.trackStartedAt &&
-            (Date.now() - new Date(playlist.trackStartedAt).getTime()) < 10000;
-
-          if (playlist.queue.length === 0 && !recentlyStarted) {
-            const autoTrack = await pickRandomFromServerHistory(env);
-            if (autoTrack) {
-              playlist.queue.push(autoTrack);
-              playlist.isPlaying = true;
-              playlist.trackStartedAt = now;
-              playlist.currentIndex = 0;
-              playlist.reactionCount = 0;
-              // startAutoPlay: picked track
-            } else {
-              // startAutoPlay: no tracks available
-            }
-          } else if (playlist.queue.length > 0) {
-            // Queue already has items - just ensure it's playing
-            playlist.isPlaying = true;
-            if (!playlist.trackStartedAt) {
-              playlist.trackStartedAt = now;
-            }
-            // startAutoPlay: queue has items, resuming
-          } else {
-            // Recently started - just return current state, don't change anything
-            // startAutoPlay: race protection
-          }
-          break;
+      // Handle early returns (e.g. race protection in trackEnded)
+      if (actionResult.earlyReturn) {
+        return successResponse(actionResult.earlyReturn);
       }
-
-      playlist.lastUpdated = now;
     }
 
     // Save to KV
@@ -550,7 +386,7 @@ export async function PUT({ request, locals }: APIContext) {
       lastUpdated: playlist.lastUpdated,
       trackStartedAt: playlist.trackStartedAt || null,
       reactionCount: playlist.reactionCount || 0
-    }), { expirationTtl: 86400 });
+    }), { expirationTtl: KV_TTL.ONE_DAY });
 
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, locals.runtime.env);

@@ -5,8 +5,8 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
-import { queryCollection } from '../../../lib/firebase-rest';
-import { saQueryCollection, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
@@ -28,7 +28,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
   try {
-    const env = locals.runtime.env;
+    const fbCtx = getAdminFirebaseContext(locals);
+    if (fbCtx instanceof Response) return fbCtx;
+    const { projectId, saKey: serviceAccountKey } = fbCtx;
+
     const body = await request.json();
 
     // Admin auth
@@ -41,13 +44,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const { orderNumber, actualPaypalFee, artistPayout } = parsed.data;
-
-    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-    const serviceAccountKey = getServiceAccountKey(env);
-
-    if (!serviceAccountKey) {
-      return ApiErrors.serverError('Service account not configured');
-    }
 
     const saQuery = getSaQuery(locals);
 

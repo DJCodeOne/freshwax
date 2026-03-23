@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
 import { errorResponse, successResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+import { KV_TTL } from '../../lib/timeouts';
 
 const log = createLogger('save-user-badge');
 
@@ -81,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Save badge to KV (no Firebase write, no quota impact)
     await kv.put(getBadgeKey(userId), badge, {
-      expirationTtl: 365 * 24 * 60 * 60 // 1 year TTL
+      expirationTtl: KV_TTL.ONE_YEAR // 1 year TTL
     });
 
     return successResponse({ badge });

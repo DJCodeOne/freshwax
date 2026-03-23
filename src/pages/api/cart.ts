@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { verifyRequestUser } from '../../lib/firebase-rest';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+import { KV_TTL } from '../../lib/timeouts';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const log = createLogger('cart');
@@ -123,7 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Store with 30 day expiration (in seconds)
     await kv.put(cartKey, JSON.stringify(cartData), {
-      expirationTtl: 30 * 24 * 60 * 60
+      expirationTtl: KV_TTL.ONE_MONTH
     });
 
     log.info('[Cart API] POST', cartKey, 'saved', items.length, 'items');

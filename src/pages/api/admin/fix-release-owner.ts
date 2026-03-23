@@ -2,11 +2,18 @@
 // Fix release submittedBy field to link to correct artist
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const fixReleaseOwnerSchema = z.object({
+  releaseId: z.string().min(1).max(200),
+  newOwnerId: z.string().min(1).max(200),
+  idToken: z.string().max(5000).optional(),
+}).strip();
 
 const log = createLogger('admin/fix-release-owner');
 
@@ -42,11 +49,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { releaseId, newOwnerId } = body;
-
-    if (!releaseId || !newOwnerId) {
-      return ApiErrors.badRequest('Missing releaseId or newOwnerId');
+    const parsed = fixReleaseOwnerSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request: releaseId and newOwnerId are required strings');
     }
+
+    const { releaseId, newOwnerId } = parsed.data;
 
     // Get the release to verify it exists
     const release = await getDocument('releases', releaseId);

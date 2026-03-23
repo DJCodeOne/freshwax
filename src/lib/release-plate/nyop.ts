@@ -2,6 +2,7 @@
  * Release plate — NYOP (Name Your Own Price) modal system.
  * Extracted from api.ts for focused module organization.
  */
+import { TIMEOUTS } from '../timeouts';
 
 // ============================================
 // NYOP (Name Your Own Price) Modal System
@@ -177,7 +178,7 @@ export function initNYOPSystem() {
     tempBtn.dataset.isPreorder = nyopCurrentReleaseData.isPreorder ? 'true' : 'false';
     document.body.appendChild(tempBtn);
     tempBtn.click();
-    setTimeout(function() { tempBtn.remove(); }, 100);
+    setTimeout(function() { tempBtn.remove(); }, TIMEOUTS.POLL);
 
     closeModal();
   });

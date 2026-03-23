@@ -5,7 +5,8 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
-import { saSetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saSetDocument } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
@@ -67,13 +68,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`quick-access-key-write:${clientId}`, RateLimiters.write);
-  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);  const env = locals.runtime.env;
-  const serviceAccountKey = getServiceAccountKey(env);
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-
-  if (!serviceAccountKey) {
-    return ApiErrors.serverError('Service account not configured');
-  }
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { env, projectId, saKey: serviceAccountKey } = fbCtx;
 
   try {
     const rawBody = await request.json();

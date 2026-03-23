@@ -3,7 +3,7 @@
 
 import Stripe from 'stripe';
 import { createOrder, validateStock } from '../order-utils';
-import { getDocument, queryCollection, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion, invalidateReleasesCache, clearAllMerchCache } from '../firebase-rest';
+import { getDocument, queryCollection, deleteDocument, addDocument, updateDocument, invalidateReleasesCache, clearAllMerchCache } from '../firebase-rest';
 import { kvDelete, CACHE_CONFIG, invalidateReleasesKVCache } from '../kv-cache';
 import { logStripeEvent } from '../webhook-logger';
 import { createGiftCardAfterPayment } from '../giftcard';
@@ -11,6 +11,8 @@ import { recordMultiSellerSale } from '../sales-ledger';
 import { fetchWithTimeout, createLogger, errorResponse } from '../api-utils';
 import { processArtistPayments, processSupplierPayments, getCountryName } from './payments';
 import { processVinylCrateSellerPayments } from './vinyl-crate-payments';
+import { enrichItemsWithSellerInfo } from './seller-enrichment';
+import { deductAppliedCredit } from './credit-deduction';
 
 const log = createLogger('stripe-webhook-product-order');
 
@@ -355,74 +357,7 @@ export async function handleProductOrder(
     const stripeFee = serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total! / 100) * 0.015 + 0.20);
 
     // Enrich items with seller info from release/product lookup
-    // Use Promise.allSettled so a single failed enrichment doesn't block the sales ledger
-    const enrichmentResults = await Promise.allSettled(items.map(async (item: Record<string, unknown>) => {
-      const releaseId = item.releaseId || item.productId || item.id;
-      let submitterId = null;
-      let submitterEmail = null;
-      let artistName = item.artist || item.artistName || null;
-
-      // Look up release to get submitter info
-      if (releaseId && (item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.releaseId)) {
-        try {
-          const release = await getDocument('releases', releaseId as string);
-          if (release) {
-            submitterId = release.submitterId || release.uploadedBy || release.userId || release.submittedBy || null;
-            // Email field - release stores it as 'email', not 'submitterEmail'
-            submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
-            artistName = release.artistName || release.artist || artistName;
-
-            // seller lookup done
-          }
-        } catch (lookupErr: unknown) {
-          log.error(`[Stripe Webhook] Failed to lookup release ${releaseId}:`, lookupErr);
-        }
-      }
-
-      // For merch items, look up the merch document for seller info
-      if (item.type === 'merch' && item.productId) {
-        try {
-          const merch = await getDocument('merch', item.productId as string);
-          if (merch) {
-            // Check supplierId first (set by assign-seller), then sellerId, then fallbacks
-            submitterId = merch.supplierId || merch.sellerId || merch.userId || merch.createdBy || null;
-            submitterEmail = merch.email || merch.sellerEmail || null;
-            artistName = merch.sellerName || merch.supplierName || merch.brandName || artistName;
-
-            // If no email on product, look up seller in users/artists collection
-            if (!submitterEmail && submitterId) {
-              try {
-                const userData = await getDocument('users', submitterId as string);
-                if (userData?.email) {
-                  submitterEmail = userData.email;
-                } else {
-                  const artistData = await getDocument('artists', submitterId as string);
-                  if (artistData?.email) {
-                    submitterEmail = artistData.email;
-                  }
-                }
-              } catch (e: unknown) {
-                // Ignore lookup errors
-              }
-            }
-
-            // merch seller lookup done
-          }
-        } catch (lookupErr: unknown) {
-          log.error(`[Stripe Webhook] Failed to lookup merch ${item.productId}:`, lookupErr);
-        }
-      }
-
-      return {
-        ...item,
-        submitterId,
-        submitterEmail,
-        artistName
-      };
-    }));
-    const enrichedItems = enrichmentResults.map((result, i) =>
-      result.status === 'fulfilled' ? result.value : { ...items[i], submitterId: null, submitterEmail: null, artistName: items[i].artist || items[i].artistName || null }
-    );
+    const enrichedItems = await enrichItemsWithSellerInfo(items);
 
     // Use multi-seller recording to create per-seller ledger entries
     // Dual-write: D1 (primary) + Firebase (backup)
@@ -501,46 +436,12 @@ export async function handleProductOrder(
   const appliedCredit = parseFloat(metadata.appliedCredit) || 0;
   const userId = metadata.customer_userId;
   if (appliedCredit > 0 && userId) {
-    // Deduct applied credit
-    try {
-      const creditData = await getDocument('userCredits', userId);
-      if (creditData && (creditData.balance as number) >= appliedCredit) {
-        const now = new Date().toISOString();
-
-        // Atomically decrement balance to prevent race conditions
-        await atomicIncrement('userCredits', userId, { balance: -appliedCredit });
-
-        // Create transaction record
-        const newBalance = (creditData.balance as number) - appliedCredit;
-        const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const transaction = {
-          id: transactionId,
-          type: 'purchase',
-          amount: -appliedCredit,
-          description: `Applied to order ${result.orderNumber || result.orderId}`,
-          orderId: result.orderId,
-          orderNumber: result.orderNumber,
-          createdAt: now,
-          balanceAfter: newBalance
-        };
-
-        // Atomic arrayUnion prevents lost transactions under concurrent writes
-        await arrayUnion('userCredits', userId, 'transactions', [transaction], {
-          lastUpdated: now
-        });
-
-        // Also update user document atomically
-        await atomicIncrement('users', userId, { creditBalance: -appliedCredit });
-        await updateDocument('users', userId, { creditUpdatedAt: now });
-
-        // Credit deducted
-      } else {
-        log.warn('[Stripe Webhook] Insufficient credit balance for deduction');
-      }
-    } catch (creditErr: unknown) {
-      log.error('[Stripe Webhook] Failed to deduct credit:', creditErr);
-      // Don't fail the order, just log the error
-    }
+    await deductAppliedCredit({
+      appliedCredit,
+      userId,
+      orderId: result.orderId!,
+      orderNumber: result.orderNumber
+    });
   }
 
   // Log successful order

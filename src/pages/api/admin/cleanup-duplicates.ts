@@ -4,8 +4,10 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
-import { saDeleteDocument, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saDeleteDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { checkRateLimit, delay, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { TIMEOUTS } from '../../../lib/timeouts';
 import { requireAdminAuth } from '../../../lib/admin';
 import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
@@ -47,12 +49,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const { releaseIds } = parsed.data;
 
-    const serviceAccountKey = getServiceAccountKey(env);
-    const projectId = (env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store') as string;
-
-    if (!serviceAccountKey) {
-      return ApiErrors.serverError('Service account not configured');
-    }
+    const fbCtx = getAdminFirebaseContext(locals);
+    if (fbCtx instanceof Response) return fbCtx;
+    const { projectId, saKey: serviceAccountKey } = fbCtx;
 
     const r2: R2Bucket = locals.runtime.env.R2;
     const db = locals.runtime.env.DB as D1Database;
@@ -180,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Delay between operations
-      await delay(100);
+      await delay(TIMEOUTS.POLL);
     }
 
     // 7. Invalidate KV cache

@@ -3,6 +3,7 @@
 // Handles magic byte validation, WebP conversion, R2 upload for cover + thumb + original
 
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../image-processing';
+import { errorResponse } from '../api-utils';
 import type { createLogger } from '../api-utils';
 
 export interface ArtworkResult {
@@ -86,10 +87,7 @@ export async function processReleaseArtwork(params: ProcessArtworkParams): Promi
   if (!magicValid) {
     log.error(`Artwork file failed magic byte validation: ${artworkKey}`);
     // Return a Response to signal validation failure to the caller
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Artwork file content does not match a valid image format (JPEG, PNG, WebP, GIF).'
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return errorResponse('Artwork file content does not match a valid image format (JPEG, PNG, WebP, GIF).', 400);
   }
 
   // Process to WebP: 800x800 cover + 400x400 thumbnail (in parallel)

@@ -2,7 +2,8 @@
 // One-time migration: Sync existing Firebase vinyl listings to D1
 
 import type { APIRoute } from 'astro';
-import { saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saQueryCollection } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
@@ -27,13 +28,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
-  try {
-    const serviceAccountKey = getServiceAccountKey(env);
-    const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { projectId, saKey: serviceAccountKey } = fbCtx;
 
-    if (!serviceAccountKey) {
-      return ApiErrors.serverError('Firebase not configured');
-    }
+  try {
 
     log.info('[sync-vinyl-to-d1] Fetching listings from Firebase...');
 

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const youtubePostSchema = z.object({
   streamKey: z.string().optional(),
@@ -38,7 +39,7 @@ async function resolveChannelId(apiKey: string, handle: string): Promise<string 
     channelUrl.searchParams.set('forHandle', handle);
     channelUrl.searchParams.set('key', apiKey);
 
-    const response = await fetchWithTimeout(channelUrl.toString(), {}, 10000);
+    const response = await fetchWithTimeout(channelUrl.toString(), {}, TIMEOUTS.API);
 
     if (!response.ok) {
       log.error('[youtube-live-id] Failed to resolve handle:', handle);
@@ -84,7 +85,7 @@ async function fetchYouTubeLiveVideoId(apiKey: string, channelIdOrHandle: string
     searchUrl.searchParams.set('maxResults', '1');
     searchUrl.searchParams.set('key', apiKey);
 
-    const response = await fetchWithTimeout(searchUrl.toString(), {}, 10000);
+    const response = await fetchWithTimeout(searchUrl.toString(), {}, TIMEOUTS.API);
 
     if (!response.ok) {
       const errorText = await response.text();

@@ -3,9 +3,9 @@
 
 import Stripe from 'stripe';
 import { getDocument } from '../firebase-rest';
-import { redeemReferralCode } from '../referral-codes';
 import { logStripeEvent } from '../webhook-logger';
 import { fetchWithTimeout, createLogger } from '../api-utils';
+import { activateSubscription } from './subscription-helpers';
 
 const log = createLogger('stripe-webhook-subscriptions');
 
@@ -61,143 +61,20 @@ export async function handlePlusSubscription(
   const email = session.customer_email || metadata.email;
 
   if (userId) {
-    // Calculate subscription dates
-    const subscribedAt = new Date().toISOString();
-    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year
-
-    // Generate Plus ID
-    const year = new Date().getFullYear().toString().slice(-2);
-    const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
-    const userHash = userId.slice(-4).toUpperCase();
-    const plusId = `FWP-${year}${month}-${userHash}`;
-
-    // Update user subscription in Firestore
-    const FIREBASE_PROJECT_ID = (env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store') as string;
-    const FIREBASE_API_KEY = (env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY) as string;
-
-    const updateData = {
-      fields: {
-        'subscription': {
-          mapValue: {
-            fields: {
-              tier: { stringValue: 'pro' },
-              subscribedAt: { stringValue: subscribedAt },
-              expiresAt: { stringValue: expiresAt },
-              subscriptionId: { stringValue: session.subscription || session.id },
-              plusId: { stringValue: plusId },
-              paymentMethod: { stringValue: 'stripe' }
-            }
-          }
-        }
-      }
-    };
-
-    try {
-      const updateResponse = await fetchWithTimeout(
-        `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?updateMask.fieldPaths=subscription&key=${FIREBASE_API_KEY}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updateData)
-        }
-      );
-
-      if (updateResponse.ok) {
-        log.info('[Stripe Webhook] User subscription updated:', userId);
-
-        // Send welcome email
-        try {
-          const origin = new URL(requestUrl).origin;
-          const welcomeEmailRes = await fetchWithTimeout(`${origin}/api/admin/send-plus-welcome-email/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email,
-              name: metadata.userName || email?.split('@')[0],
-              subscribedAt,
-              expiresAt,
-              plusId,
-              isRenewal: false
-            })
-          });
-          if (!welcomeEmailRes.ok) {
-            log.error(`[Stripe Webhook] Failed to send Plus welcome email: ${welcomeEmailRes.status}`);
-          } else {
-            log.debug('[Stripe Webhook] Welcome email sent');
-          }
-
-          // Mark referral code as redeemed if one was used
-          const referralCardId = metadata.referralCardId;
-          const isKvCode = metadata.isKvCode === 'true';
-          const promoCodeUsed = metadata.promoCode;
-
-          if (isKvCode && promoCodeUsed) {
-            // New KV-based referral code system
-            try {
-              const kv = env?.CACHE as KVNamespace | undefined;
-              if (kv) {
-                const result = await redeemReferralCode(kv, promoCodeUsed, userId);
-                if (result.success) {
-                  log.debug(`[Stripe Webhook] KV referral code ${promoCodeUsed} marked as redeemed by ${userId}`);
-                } else {
-                  log.error('[Stripe Webhook] KV referral redemption error:', result.error);
-                }
-              }
-            } catch (referralError: unknown) {
-              log.error('[Stripe Webhook] Failed to mark KV referral code as redeemed:', referralError);
-            }
-          } else if (referralCardId) {
-            // Legacy Firebase giftCards system
-            try {
-              const redeemData = {
-                fields: {
-                  redeemedBy: { stringValue: userId },
-                  redeemedAt: { stringValue: new Date().toISOString() },
-                  isActive: { booleanValue: false }
-                }
-              };
-
-              const redeemRes = await fetchWithTimeout(
-                `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/giftCards/${referralCardId}?updateMask.fieldPaths=redeemedBy&updateMask.fieldPaths=redeemedAt&updateMask.fieldPaths=isActive&key=${FIREBASE_API_KEY}`,
-                {
-                  method: 'PATCH',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(redeemData)
-                }
-              );
-              if (!redeemRes.ok) {
-                log.error(`[Stripe Webhook] Failed to redeem referral gift card in Firestore: ${redeemRes.status}`);
-              } else {
-                log.debug(`[Stripe Webhook] Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
-              }
-            } catch (referralError: unknown) {
-              log.error('[Stripe Webhook] Failed to mark Firebase referral code as redeemed:', referralError);
-            }
-          }
-
-          // Log successful subscription
-          logStripeEvent(eventType, eventId, true, {
-            message: `Plus subscription activated for ${userId}`,
-            metadata: { userId, plusId, promoCode: promoCodeUsed || null },
-            processingTimeMs: Date.now() - startTime
-          }).catch(e => log.error('[Stripe Webhook] Log error:', e));
-        } catch (emailError: unknown) {
-          log.error('[Stripe Webhook] Failed to send welcome email:', emailError);
-        }
-      } else {
-        log.error('[Stripe Webhook] Failed to update user subscription');
-        logStripeEvent(eventType, eventId, false, {
-          message: 'Failed to update user subscription',
-          error: 'Firestore update failed'
-        }).catch(e => log.error('[Stripe Webhook] Log error:', e));
-      }
-    } catch (updateError: unknown) {
-      log.error('[Stripe Webhook] Error updating subscription:', updateError);
-      logStripeEvent(eventType, eventId, false, {
-        message: 'Error updating subscription',
-        error: updateError instanceof Error ? updateError.message : 'Unknown error'
-      }).catch(e => log.error('[Stripe Webhook] Log error:', e));
-    }
+    await activateSubscription({
+      userId,
+      email,
+      userName: metadata.userName,
+      subscriptionId: (session.subscription || session.id) as string,
+      promoCode: metadata.promoCode,
+      referralCardId: metadata.referralCardId,
+      isKvCode: metadata.isKvCode === 'true',
+      env,
+      requestUrl,
+      startTime,
+      eventType,
+      eventId
+    });
   }
 
   return { received: true };
@@ -234,134 +111,20 @@ export async function handlePlusPromoPayment(
   }
 
   if (userId) {
-    // Calculate subscription dates
-    const subscribedAt = new Date().toISOString();
-    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year
-
-    // Generate Plus ID
-    const year = new Date().getFullYear().toString().slice(-2);
-    const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
-    const userHash = userId.slice(-4).toUpperCase();
-    const plusId = `FWP-${year}${month}-${userHash}`;
-
-    // Update user subscription in Firestore
-    const FIREBASE_PROJECT_ID = (env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store') as string;
-    const FIREBASE_API_KEY = (env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY) as string;
-
-    const updateData = {
-      fields: {
-        'subscription': {
-          mapValue: {
-            fields: {
-              tier: { stringValue: 'pro' },
-              subscribedAt: { stringValue: subscribedAt },
-              expiresAt: { stringValue: expiresAt },
-              subscriptionId: { stringValue: session.payment_intent || session.id },
-              plusId: { stringValue: plusId },
-              paymentMethod: { stringValue: 'stripe' },
-              promoCode: { stringValue: promoCode || '' }
-            }
-          }
-        }
-      }
-    };
-
-    try {
-      const updateResponse = await fetchWithTimeout(
-        `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?updateMask.fieldPaths=subscription&key=${FIREBASE_API_KEY}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updateData)
-        }
-      );
-
-      if (updateResponse.ok) {
-        log.info('[Stripe Webhook] User Plus subscription activated (promo):', userId);
-
-        // Send welcome email
-        try {
-          const origin = new URL(requestUrl).origin;
-          const welcomeEmailRes = await fetchWithTimeout(`${origin}/api/admin/send-plus-welcome-email/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email,
-              name: metadata.userName || email?.split('@')[0],
-              subscribedAt,
-              expiresAt,
-              plusId,
-              isRenewal: false
-            })
-          });
-          if (!welcomeEmailRes.ok) {
-            log.error(`[Stripe Webhook] Failed to send Plus welcome email (promo): ${welcomeEmailRes.status}`);
-          } else {
-            log.debug('[Stripe Webhook] Welcome email sent');
-          }
-        } catch (emailError: unknown) {
-          log.error('[Stripe Webhook] Failed to send welcome email:', emailError);
-        }
-
-        // Mark referral code as redeemed
-        const referralCardId = metadata.referralCardId;
-        const isKvCode = metadata.isKvCode === 'true';
-
-        if (isKvCode && promoCode) {
-          // Redeem KV-based referral code
-          try {
-            const kv = env?.CACHE as KVNamespace | undefined;
-            if (kv) {
-              const result = await redeemReferralCode(kv, promoCode, userId);
-              if (result.success) {
-                log.debug(`[Stripe Webhook] KV referral code ${promoCode} marked as redeemed by ${userId}`);
-              } else {
-                log.error(`[Stripe Webhook] Failed to redeem KV code: ${result.error}`);
-              }
-            }
-          } catch (referralError: unknown) {
-            log.error('[Stripe Webhook] Failed to mark KV referral code as redeemed:', referralError);
-          }
-        } else if (referralCardId) {
-          // Redeem Firebase-based referral code (legacy)
-          try {
-            const redeemData = {
-              fields: {
-                redeemedBy: { stringValue: userId },
-                redeemedAt: { stringValue: new Date().toISOString() },
-                isActive: { booleanValue: false }
-              }
-            };
-
-            const redeemRes = await fetchWithTimeout(
-              `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/giftCards/${referralCardId}?updateMask.fieldPaths=redeemedBy&updateMask.fieldPaths=redeemedAt&updateMask.fieldPaths=isActive&key=${FIREBASE_API_KEY}`,
-              {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(redeemData)
-              }
-            );
-            if (!redeemRes.ok) {
-              log.error(`[Stripe Webhook] Failed to redeem referral gift card in Firestore (promo): ${redeemRes.status}`);
-            } else {
-              log.debug(`[Stripe Webhook] Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
-            }
-          } catch (referralError: unknown) {
-            log.error('[Stripe Webhook] Failed to mark Firebase referral code as redeemed:', referralError);
-          }
-        }
-
-        logStripeEvent(eventType, eventId, true, {
-          message: `Plus subscription activated via promo for ${userId}`,
-          metadata: { userId, plusId, promoCode },
-          processingTimeMs: Date.now() - startTime
-        }).catch(e => log.error('[Stripe Webhook] Log error:', e));
-      } else {
-        log.error('[Stripe Webhook] Failed to update user subscription (promo)');
-      }
-    } catch (updateError: unknown) {
-      log.error('[Stripe Webhook] Error updating subscription (promo):', updateError);
-    }
+    await activateSubscription({
+      userId,
+      email,
+      userName: metadata.userName,
+      subscriptionId: (session.payment_intent || session.id) as string,
+      promoCode: promoCode,
+      referralCardId: metadata.referralCardId,
+      isKvCode: metadata.isKvCode === 'true',
+      env,
+      requestUrl,
+      startTime,
+      eventType,
+      eventId
+    });
   }
 
   return { received: true };

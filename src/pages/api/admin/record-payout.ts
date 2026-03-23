@@ -5,7 +5,8 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { getDocument } from '../../../lib/firebase-rest';
-import { saSetDocument, saQueryCollection, saDeleteDocument, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saSetDocument, saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 import { formatPrice } from '../../../lib/format-utils';
@@ -25,19 +26,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
   try {
-    const env = locals.runtime.env;
+    const fbCtx = getAdminFirebaseContext(locals);
+    if (fbCtx instanceof Response) return fbCtx;
+    const { projectId, saKey: serviceAccountKey } = fbCtx;
+
     const bodyData = await request.json();
 
     // Admin auth required
     const authError = await requireAdminAuth(request, locals, bodyData);
     if (authError) return authError;
-
-    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
-
-    const serviceAccountKey = getServiceAccountKey(env);
-    if (!serviceAccountKey) {
-      return ApiErrors.serverError('Firebase service account not configured');
-    }
 
     const parsed = recordPayoutSchema.safeParse(bodyData);
     if (!parsed.success) {

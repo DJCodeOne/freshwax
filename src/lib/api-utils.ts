@@ -1,6 +1,8 @@
 // src/lib/api-utils.ts
 // Shared utilities for API endpoints
 
+import { TIMEOUTS } from './timeouts';
+
 // ============================================
 // LOGGER - Controlled logging for API endpoints
 // ============================================
@@ -235,7 +237,7 @@ export { escapeHtml } from './escape-html';
 export async function fetchWithTimeout(
   url: string,
   options: RequestInit = {},
-  timeoutMs: number = 10000
+  timeoutMs: number = TIMEOUTS.API
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);

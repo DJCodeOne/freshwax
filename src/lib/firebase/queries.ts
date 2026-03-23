@@ -2,6 +2,7 @@
 // Core Firestore query functions: queryCollection, getDocument, getSettings, getDocumentsBatch
 
 import { fetchWithTimeout } from '../api-utils';
+import { TIMEOUTS } from '../timeouts';
 import {
   log,
   PROJECT_ID,
@@ -107,17 +108,17 @@ export async function queryCollection(
         method: 'POST',
         headers: fetchHeaders,
         body: JSON.stringify({ structuredQuery })
-      }, 15000);
+      }, TIMEOUTS.API_EXTENDED);
 
       // Single retry after 500ms delay for transient server errors
       if (!response.ok && response.status >= 500 && response.status < 600) {
         log.warn(`Query ${collection} got ${response.status}, retrying in 500ms...`);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.RETRY_DELAY));
         response = await fetchWithTimeout(url, {
           method: 'POST',
           headers: fetchHeaders,
           body: JSON.stringify({ structuredQuery })
-        }, 15000);
+        }, TIMEOUTS.API_EXTENDED);
       }
 
       if (!response.ok) {
@@ -185,13 +186,13 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
       // Add server auth for all Firestore operations
       const headers: Record<string, string> = await getAuthHeaders();
 
-      let response = await fetchWithTimeout(url, { headers }, 15000);
+      let response = await fetchWithTimeout(url, { headers }, TIMEOUTS.API_EXTENDED);
 
       // Single retry after 500ms delay for transient server errors
       if (!response.ok && response.status >= 500 && response.status < 600) {
         log.warn(`Get document ${collection}/${docId} got ${response.status}, retrying in 500ms...`);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        response = await fetchWithTimeout(url, { headers }, 15000);
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.RETRY_DELAY));
+        response = await fetchWithTimeout(url, { headers }, TIMEOUTS.API_EXTENDED);
       }
 
       if (!response.ok) {
@@ -289,7 +290,7 @@ export async function getDocumentsBatch(
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...batchAuthHeaders },
         body: JSON.stringify({ documents })
-      }, 15000);
+      }, TIMEOUTS.API_EXTENDED);
 
       if (!response.ok) {
         log.error('Batch get failed:', response.status);

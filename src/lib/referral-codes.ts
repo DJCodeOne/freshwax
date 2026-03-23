@@ -2,6 +2,8 @@
 // KV-based referral code system - separate from gift cards for security
 // Uses Cloudflare KV for fast lookups without Firebase reads
 
+import { KV_TTL } from './timeouts';
+
 export interface ReferralCode {
   code: string;
   creatorId: string;
@@ -72,14 +74,14 @@ export async function saveReferralCode(kv: KVNamespace, referralCode: ReferralCo
   await kv.put(
     KV_KEYS.byCode(referralCode.code),
     JSON.stringify(referralCode),
-    { expirationTtl: 365 * 24 * 60 * 60 } // 1 year TTL
+    { expirationTtl: KV_TTL.ONE_YEAR } // 1 year TTL
   );
 
   // Save user -> code mapping
   await kv.put(
     KV_KEYS.byUser(referralCode.creatorId),
     referralCode.code,
-    { expirationTtl: 365 * 24 * 60 * 60 }
+    { expirationTtl: KV_TTL.ONE_YEAR }
   );
 }
 
@@ -165,7 +167,7 @@ export async function redeemReferralCode(
   await kv.put(
     KV_KEYS.byCode(referralCode.code),
     JSON.stringify(referralCode),
-    { expirationTtl: 365 * 24 * 60 * 60 }
+    { expirationTtl: KV_TTL.ONE_YEAR }
   );
 
   return { success: true };

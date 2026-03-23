@@ -3,6 +3,9 @@
 // Queries D1 error_logs for recent error count and sends a webhook if threshold exceeded.
 // Uses KV to debounce alerts (max one alert per cooldown period).
 
+import { fetchWithTimeout } from './api-utils';
+import { TIMEOUTS } from './timeouts';
+
 interface AlertEnv {
   DB?: import('@cloudflare/workers-types').D1Database;
   CACHE?: import('@cloudflare/workers-types').KVNamespace;
@@ -81,12 +84,12 @@ export async function checkAndAlertErrorSpike(env: AlertEnv | undefined): Promis
       text: `Error Spike Alert: ${errorCount} errors in the last hour (threshold: ${ERROR_THRESHOLD})`,
     };
 
-    // Send webhook (fire-and-forget, don't await response processing)
-    const response = await fetch(webhookUrl, {
+    // Send webhook with timeout to avoid blocking the caller
+    const response = await fetchWithTimeout(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
+    }, TIMEOUTS.API);
 
     // Set cooldown in KV to prevent spam
     if (kv && response.ok) {

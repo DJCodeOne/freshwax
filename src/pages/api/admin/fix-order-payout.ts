@@ -4,7 +4,8 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
-import { saSetDocument, saUpdateDocument, saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saSetDocument, saUpdateDocument, saQueryCollection } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
@@ -18,7 +19,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`fix-order-payout:${clientId}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = locals.runtime.env;
+  const fbCtx = getAdminFirebaseContext(locals);
+  if (fbCtx instanceof Response) return fbCtx;
+  const { env, projectId, saKey: serviceAccountKey } = fbCtx;
+
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -29,13 +33,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   if (!orderId) {
     return ApiErrors.badRequest('Missing orderId');
-  }
-
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-
-  const serviceAccountKey = getServiceAccountKey(env);
-  if (!serviceAccountKey) {
-    return ApiErrors.serverError('Service account not configured');
   }
 
   try {

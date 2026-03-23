@@ -5,9 +5,11 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
-import { saQueryCollection, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
+import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
+import { TIMEOUTS } from '../../../lib/timeouts';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const PlusUpgradeAllSchema = z.object({
@@ -126,12 +128,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Get all users
-    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-    const serviceAccountKey = getServiceAccountKey(env);
-
-    if (!serviceAccountKey) {
-      return ApiErrors.serverError('Service account not configured');
-    }
+    const fbCtx = getAdminFirebaseContext(locals);
+    if (fbCtx instanceof Response) return fbCtx;
+    const { projectId, saKey: serviceAccountKey } = fbCtx;
 
     // Fetch all users
     const users = await saQueryCollection(serviceAccountKey, projectId, 'users', {
@@ -225,7 +224,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.BATCH_DELAY));
       } catch (err: unknown) {
         results.emailsFailed.push(userEmail);
       }
