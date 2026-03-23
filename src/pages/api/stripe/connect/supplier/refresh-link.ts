@@ -6,9 +6,9 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import Stripe from 'stripe';
-import { getDocument, queryCollection } from '../../../../../lib/firebase-rest';
-import { SITE_URL } from '../../../../../lib/constants';
-import { ApiErrors, createLogger, successResponse } from '../../../../../lib/api-utils';
+import { getDocument, queryCollection } from '@lib/firebase-rest';
+import { SITE_URL } from '@lib/constants';
+import { ApiErrors, createLogger, successResponse } from '@lib/api-utils';
 
 const SupplierRefreshLinkSchema = z.object({
   supplierId: z.string().optional(),
@@ -16,7 +16,7 @@ const SupplierRefreshLinkSchema = z.object({
 }).strip();
 
 const log = createLogger('stripe/connect/supplier/refresh-link');
-import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
 
 export const prerender = false;
 

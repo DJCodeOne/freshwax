@@ -1,10 +1,19 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
-  // NOTE: This project uses relative import paths (e.g. '../../lib/firebase-rest')
-  // rather than tsconfig path aliases (e.g. '@lib/firebase-rest'). This is the
-  // established convention across 260+ files and 1000+ imports. Adding a path alias
-  // like "@lib" -> "src/lib" would require touching most files in the codebase and
-  // risks breaking the Cloudflare Workers runtime. Keep using relative imports.
+  "exclude": ["dist"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@lib/*": ["src/lib/*"],
+      "@components/*": ["src/components/*"],
+      "@layouts/*": ["src/layouts/*"],
+      "@styles/*": ["src/styles/*"]
+    }
+  }
+  // NOTE: Path aliases (@lib/, @components/, @layouts/, @styles/) are resolved at BUILD TIME
+  // by Vite/Rollup. The Cloudflare Workers runtime never sees these aliases — only
+  // the final bundled JS. Aliases are safe to use and are preferred for deeply nested
+  // files (4+ levels of ../). Shallow files (1-2 levels) may continue using relative
+  // imports — both styles coexist without issues.
 }

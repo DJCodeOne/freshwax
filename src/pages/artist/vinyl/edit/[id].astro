@@ -1,7 +1,7 @@
 ---
 // src/pages/artist/vinyl/edit/[id].astro
 // Edit vinyl listing page
-import VinylDashboardLayout from '../../../../layouts/VinylDashboardLayout.astro';
+import VinylDashboardLayout from '@layouts/VinylDashboardLayout.astro';
 
 const { id } = Astro.params;
 
@@ -168,7 +168,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { FIREBASE_API_KEY } from '../../../../lib/constants';
+  import { FIREBASE_API_KEY } from '@lib/constants';
 
   const firebaseConfig = {
     apiKey: FIREBASE_API_KEY,

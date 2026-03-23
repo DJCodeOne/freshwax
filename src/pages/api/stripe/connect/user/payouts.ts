@@ -2,11 +2,11 @@
 // Get crate selling payout history for a user
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, verifyRequestUser } from '../../../../../lib/firebase-rest';
-import { ApiErrors, createLogger, successResponse } from '../../../../../lib/api-utils';
+import { getDocument, queryCollection, verifyRequestUser } from '@lib/firebase-rest';
+import { ApiErrors, createLogger, successResponse } from '@lib/api-utils';
 
 const log = createLogger('stripe/connect/user/payouts');
-import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
 
 export const prerender = false;
 

@@ -4,9 +4,9 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import Stripe from 'stripe';
-import { getDocument, updateDocument, verifyRequestUser } from '../../../../../lib/firebase-rest';
-import { SITE_URL } from '../../../../../lib/constants';
-import { createLogger, ApiErrors, successResponse } from '../../../../../lib/api-utils';
+import { getDocument, updateDocument, verifyRequestUser } from '@lib/firebase-rest';
+import { SITE_URL } from '@lib/constants';
+import { createLogger, ApiErrors, successResponse } from '@lib/api-utils';
 
 const UserCreateAccountSchema = z.object({
   returnUrl: z.string().optional(),
@@ -14,7 +14,7 @@ const UserCreateAccountSchema = z.object({
 }).strip();
 
 const log = createLogger('[stripe-connect-user]');
-import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
 
 export const prerender = false;
 

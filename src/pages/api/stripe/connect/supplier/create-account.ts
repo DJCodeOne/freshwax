@@ -6,9 +6,9 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import Stripe from 'stripe';
-import { getDocument, updateDocument } from '../../../../../lib/firebase-rest';
-import { SITE_URL } from '../../../../../lib/constants';
-import { createLogger, ApiErrors, successResponse } from '../../../../../lib/api-utils';
+import { getDocument, updateDocument } from '@lib/firebase-rest';
+import { SITE_URL } from '@lib/constants';
+import { createLogger, ApiErrors, successResponse } from '@lib/api-utils';
 
 const SupplierCreateAccountSchema = z.object({
   supplierId: z.string().optional(),
@@ -16,7 +16,7 @@ const SupplierCreateAccountSchema = z.object({
 }).strip();
 
 const log = createLogger('[stripe-connect-supplier]');
-import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
 
 export const prerender = false;
 
@@ -57,7 +57,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     } else {
       // Look up by access code
-      const { queryCollection } = await import('../../../../../lib/firebase-rest');
+      const { queryCollection } = await import('@lib/firebase-rest');
       const suppliers = await queryCollection('merch-suppliers', { limit: 100 });
       const found = suppliers.find((s: Record<string, unknown>) => s.accessCode === accessCode);
       if (found) {

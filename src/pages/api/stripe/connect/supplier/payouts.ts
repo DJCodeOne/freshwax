@@ -2,11 +2,11 @@
 // Get payout history for a supplier
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection } from '../../../../../lib/firebase-rest';
-import { ApiErrors, createLogger, successResponse } from '../../../../../lib/api-utils';
+import { getDocument, queryCollection } from '@lib/firebase-rest';
+import { ApiErrors, createLogger, successResponse } from '@lib/api-utils';
 
 const log = createLogger('stripe/connect/supplier/payouts');
-import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
 
 export const prerender = false;
 

@@ -3,11 +3,11 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { getDocument, queryCollection, updateDocument } from '../../../../../lib/firebase-rest';
-import { ApiErrors, createLogger, successResponse } from '../../../../../lib/api-utils';
+import { getDocument, queryCollection, updateDocument } from '@lib/firebase-rest';
+import { ApiErrors, createLogger, successResponse } from '@lib/api-utils';
 
 const log = createLogger('stripe/connect/supplier/status');
-import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
 
 export const prerender = false;
 

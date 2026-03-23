@@ -2,9 +2,9 @@
 // src/pages/admin/dj-mixes/edit/[id].astro
 // Admin page to edit DJ mix metadata
 
-import { requireAdminAuth } from '../../../../lib/admin';
-import AdminLayout from '../../../../layouts/AdminLayout.astro';
-import { getDocument } from '../../../../lib/firebase-rest';
+import { requireAdminAuth } from '@lib/admin';
+import AdminLayout from '@layouts/AdminLayout.astro';
+import { getDocument } from '@lib/firebase-rest';
 
 
 // Server-side admin auth check

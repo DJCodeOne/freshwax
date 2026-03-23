@@ -1,10 +1,10 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { getDocument, updateDocument, addDocument } from '../../../../lib/firebase-rest';
-import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
-import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
-import { escapeHtml } from '../../../../lib/escape-html';
-import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../../lib/api-utils';
+import { getDocument, updateDocument, addDocument } from '@lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '@lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
+import { escapeHtml } from '@lib/escape-html';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '@lib/api-utils';
 
 const log = createLogger('[vinyl-order]');
 

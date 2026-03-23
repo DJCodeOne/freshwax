@@ -4,11 +4,11 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { queryCollection, updateDocument, addDocument, getDocument, atomicIncrement } from '../../../../lib/firebase-rest';
-import { sendPayoutCompletedEmail } from '../../../../lib/payout-emails';
-import { logConnectEvent } from '../../../../lib/webhook-logger';
-import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../../lib/paypal-payouts';
-import { createLogger, jsonResponse } from '../../../../lib/api-utils';
+import { queryCollection, updateDocument, addDocument, getDocument, atomicIncrement } from '@lib/firebase-rest';
+import { sendPayoutCompletedEmail } from '@lib/payout-emails';
+import { logConnectEvent } from '@lib/webhook-logger';
+import { createPayout as createPayPalPayout, getPayPalConfig } from '@lib/paypal-payouts';
+import { createLogger, jsonResponse } from '@lib/api-utils';
 
 const log = createLogger('[connect-webhook]');
 
