@@ -143,7 +143,8 @@ async function safeDelete(collection: string, docId: string): Promise<DeletionRe
     await deleteDocument(collection, docId);
     return { success: true, count: 1 };
   } catch (e: unknown) {
-    return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
+    log.error(`[delete-account] Failed to delete ${collection}/${docId}:`, e);
+    return { success: false, error: 'Deletion step failed' };
   }
 }
 
@@ -168,7 +169,8 @@ async function deleteByQuery(collection: string, field: string, value: string): 
     }
     return { success: true, count };
   } catch (e: unknown) {
-    return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
+    log.error(`[delete-account] Failed to query/delete ${collection}:`, e);
+    return { success: false, error: 'Deletion step failed' };
   }
 }
 
@@ -198,7 +200,8 @@ async function anonymizeOrders(userId: string, timestamp: string): Promise<Delet
     }
     return { success: true, count };
   } catch (e: unknown) {
-    return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
+    log.error('[delete-account] Failed to anonymize orders:', e);
+    return { success: false, error: 'Deletion step failed' };
   }
 }
 
@@ -228,7 +231,8 @@ async function anonymizeComments(userId: string): Promise<DeletionResult> {
     }
     return { success: true, count };
   } catch (e: unknown) {
-    return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
+    log.error('[delete-account] Failed to anonymize comments:', e);
+    return { success: false, error: 'Deletion step failed' };
   }
 }
 
@@ -269,7 +273,8 @@ async function cleanupD1(db: Record<string, unknown>, userId: string, userEmail:
 
     return { success: true, count: totalAffected };
   } catch (e: unknown) {
-    return { success: false, error: e instanceof Error ? e.message : 'D1 cleanup error' };
+    log.error('[delete-account] D1 cleanup failed:', e);
+    return { success: false, error: 'Deletion step failed' };
   }
 }
 
@@ -283,10 +288,11 @@ async function cleanupKV(cache: Record<string, unknown>, userId: string): Promis
       `user:orders:${userId}`,
     ];
     for (const key of keys) {
-      try { await cache.delete(key); } catch (e: unknown) { log.error('[delete-account] Failed to delete KV cache key:', key, e instanceof Error ? e.message : e); }
+      try { await cache.delete(key); } catch (e: unknown) { log.error('[delete-account] Failed to delete KV cache key:', key, e); }
     }
     return { success: true, count: keys.length };
   } catch (e: unknown) {
-    return { success: false, error: e instanceof Error ? e.message : 'KV cleanup error' };
+    log.error('[delete-account] KV cleanup failed:', e);
+    return { success: false, error: 'Deletion step failed' };
   }
 }

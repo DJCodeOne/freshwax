@@ -42,6 +42,12 @@ export const TIMEOUTS = {
   RATE_LIMIT_RETRY: 1000,
   /** Server error retry delay for email sending (2 seconds) */
   SERVER_ERROR_RETRY: 2000,
+  /** D1 SQLITE_BUSY retry base delay — multiplied by attempt number (100 milliseconds) */
+  D1_RETRY_BASE: 100,
+  /** PayPal transient failure retry delay (2 seconds) */
+  PAYPAL_RETRY: 2000,
+  /** Firebase rate limit (429) retry delay (1 second) */
+  FIREBASE_RATE_LIMIT_RETRY: 1000,
 } as const;
 
 /** KV expirationTtl values in seconds */

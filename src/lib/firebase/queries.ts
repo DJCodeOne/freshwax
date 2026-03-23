@@ -3,6 +3,7 @@
 
 import { fetchWithTimeout } from '../api-utils';
 import { TIMEOUTS } from '../timeouts';
+const FIREBASE_429_RETRY_DELAY = TIMEOUTS.FIREBASE_RATE_LIMIT_RETRY;
 import {
   log,
   PROJECT_ID,
@@ -121,6 +122,17 @@ export async function queryCollection(
         }, TIMEOUTS.API_EXTENDED);
       }
 
+      // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+      if (!response.ok && response.status === 429) {
+        log.warn(`Query ${collection} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+        await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
+        response = await fetchWithTimeout(url, {
+          method: 'POST',
+          headers: fetchHeaders,
+          body: JSON.stringify({ structuredQuery })
+        }, TIMEOUTS.API_EXTENDED);
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         log.error('Query failed:', errorText);
@@ -192,6 +204,13 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
       if (!response.ok && response.status >= 500 && response.status < 600) {
         log.warn(`Get document ${collection}/${docId} got ${response.status}, retrying in 500ms...`);
         await new Promise(resolve => setTimeout(resolve, TIMEOUTS.RETRY_DELAY));
+        response = await fetchWithTimeout(url, { headers }, TIMEOUTS.API_EXTENDED);
+      }
+
+      // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+      if (!response.ok && response.status === 429) {
+        log.warn(`Get document ${collection}/${docId} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+        await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
         response = await fetchWithTimeout(url, { headers }, TIMEOUTS.API_EXTENDED);
       }
 

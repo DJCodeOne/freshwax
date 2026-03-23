@@ -602,7 +602,10 @@ const nonce = Astro.locals.nonce || '';
 
       // Fetch user details
       fetch(`/api/admin/user-details/?userId=${userId}`)
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) throw new Error('Server error: ' + res.status);
+          return res.json();
+        })
         .then(data => {
           if (data.success && data.user) {
             const u = data.user;
@@ -688,6 +691,10 @@ const nonce = Astro.locals.nonce || '';
         body: JSON.stringify({ userId: currentUserId, days, reason })
       });
 
+      if (!response.ok) {
+        alert('Failed to extend: server error ' + response.status);
+        return;
+      }
       const result = await response.json();
 
       if (result.success) {

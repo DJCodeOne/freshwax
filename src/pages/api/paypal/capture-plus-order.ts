@@ -7,7 +7,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { getDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { redeemReferralCode } from '../../../lib/referral-codes';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
-import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
+import { getPayPalBaseUrl, getPayPalAccessToken, paypalFetchWithRetry } from '../../../lib/paypal-auth';
 
 const log = createLogger('paypal-plus');
 
@@ -107,7 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const accessToken = await getPayPalAccessToken(paypalClientId, paypalSecret, paypalMode);
     const baseUrl = getPayPalBaseUrl(paypalMode);
 
-    const captureResponse = await fetchWithTimeout(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
+    const captureResponse = await paypalFetchWithRetry(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

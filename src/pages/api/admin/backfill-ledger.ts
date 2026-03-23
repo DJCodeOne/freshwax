@@ -113,7 +113,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       );
     }
 
-    await Promise.all(fetchPromises);
+    const fetchResults = await Promise.allSettled(fetchPromises);
+    const fetchFailed = fetchResults.filter(r => r.status === 'rejected').length;
+    if (fetchFailed > 0) {
+      log.warn(`[backfill] ${fetchFailed} release/merch lookups failed`);
+    }
 
     // Now batch-fetch artist docs for all submitterIds found in releases
     const artistIdsToFetch = new Set<string>();
@@ -131,7 +135,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
           .catch(() => { /* Ignore lookup errors */ })
       );
     }
-    await Promise.all(artistFetchPromises);
+    const artistResults = await Promise.allSettled(artistFetchPromises);
+    const artistFetchFailed = artistResults.filter(r => r.status === 'rejected').length;
+    if (artistFetchFailed > 0) {
+      log.warn(`[backfill] ${artistFetchFailed} artist lookups failed`);
+    }
 
     log.info(`[backfill] Pre-fetched ${releaseMap.size} releases, ${merchMap.size} merch, ${artistMap.size} artists`);
 
@@ -315,11 +323,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
             });
             totalCreated++;
           } catch (writeErr: unknown) {
+            log.error(`[backfill] Failed to write ledger for order ${order.id}:`, writeErr);
             results.push({
               orderId: order.id,
               item: item.title || item.name,
               status: 'error',
-              error: writeErr instanceof Error ? writeErr.message : 'Unknown error'
+              error: 'Ledger write failed'
             });
           }
         }

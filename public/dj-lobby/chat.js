@@ -41,6 +41,10 @@ export async function initLivestreamChat(streamId) {
       signal: chatLoadController.signal
     });
     clearTimeout(chatLoadTimeout);
+    if (!response.ok) {
+      console.error('[LivestreamChat] Failed to load messages: HTTP ' + response.status);
+      return;
+    }
     var result = await response.json();
 
     if (result.success && result.messages) {

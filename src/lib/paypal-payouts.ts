@@ -1,10 +1,10 @@
 // src/lib/paypal-payouts.ts
 // PayPal Payouts API integration
 
-import { fetchWithTimeout, createLogger } from './api-utils';
+import { createLogger } from './api-utils';
 
 const log = createLogger('paypal-payouts');
-import { getPayPalBaseUrl, getPayPalAccessToken } from './paypal-auth';
+import { getPayPalBaseUrl, getPayPalAccessToken, paypalFetchWithRetry } from './paypal-auth';
 
 interface PayPalConfig {
   clientId: string;
@@ -70,7 +70,7 @@ export async function createPayout(
       ],
     };
 
-    const response = await fetchWithTimeout(`${baseUrl}/v1/payments/payouts`, {
+    const response = await paypalFetchWithRetry(`${baseUrl}/v1/payments/payouts`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -143,7 +143,7 @@ export async function createBatchPayout(
       })),
     };
 
-    const response = await fetchWithTimeout(`${baseUrl}/v1/payments/payouts`, {
+    const response = await paypalFetchWithRetry(`${baseUrl}/v1/payments/payouts`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -195,7 +195,7 @@ export async function getPayoutStatus(
     const accessToken = await getAccessToken(config);
     const baseUrl = getPayPalBaseUrl(configToMode(config));
 
-    const response = await fetchWithTimeout(`${baseUrl}/v1/payments/payouts/${batchId}`, {
+    const response = await paypalFetchWithRetry(`${baseUrl}/v1/payments/payouts/${batchId}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
       },

@@ -228,11 +228,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
           const result = await response.json();
           sent.push({ email: artistEmail, success: true, id: result.id });
         } else {
-          const error = await response.text();
-          sent.push({ email: artistEmail, success: false, error });
+          log.error(`Resend API error for ${artistEmail}: HTTP ${response.status}`);
+          sent.push({ email: artistEmail, success: false, error: 'Email delivery failed' });
         }
       } catch (e: unknown) {
-        sent.push({ email: artistEmail, success: false, error: e instanceof Error ? e.message : 'Unknown error' });
+        log.error(`Failed to send notification to ${artistEmail}:`, e);
+        sent.push({ email: artistEmail, success: false, error: 'Email delivery failed' });
       }
     }
 

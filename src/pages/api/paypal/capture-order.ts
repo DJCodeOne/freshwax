@@ -10,12 +10,12 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { createOrder, validateStock } from '../../../lib/order-utils';
 import { getDocument, deleteDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
-import { createLogger, fetchWithTimeout, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
 import { processArtistPayments, processVinylCrateSellerPayments } from '../../../lib/order/seller-payments';
 import { processMerchRoyalties, enrichItemsForLedger, deductAppliedCredit } from '../../../lib/order/paypal-capture-helpers';
 
 const log = createLogger('[paypal-capture]');
-import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
+import { getPayPalBaseUrl, getPayPalAccessToken, paypalFetchWithRetry } from '../../../lib/paypal-auth';
 
 // Zod schema for PayPal capture request
 const PayPalCaptureSchema = z.object({
@@ -158,7 +158,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const baseUrl = getPayPalBaseUrl(paypalMode);
 
     // Capture the PayPal order
-    const captureResponse = await fetchWithTimeout(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
+    const captureResponse = await paypalFetchWithRetry(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

@@ -6,10 +6,10 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument, getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
-import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[create-plus-order]');
-import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
+import { getPayPalBaseUrl, getPayPalAccessToken, paypalFetchWithRetry } from '../../../lib/paypal-auth';
 
 // Zod schema for PayPal Plus order creation
 const PayPalPlusOrderSchema = z.object({
@@ -158,7 +158,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     };
 
-    const paypalResponse = await fetchWithTimeout(`${baseUrl}/v2/checkout/orders`, {
+    const paypalResponse = await paypalFetchWithRetry(`${baseUrl}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

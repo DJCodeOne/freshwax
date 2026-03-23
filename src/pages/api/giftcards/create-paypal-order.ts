@@ -6,10 +6,10 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[create-paypal-order]');
-import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
+import { getPayPalBaseUrl, getPayPalAccessToken, paypalFetchWithRetry } from '../../../lib/paypal-auth';
 
 // Zod schema for gift card PayPal order creation
 const GiftCardPayPalSchema = z.object({
@@ -128,7 +128,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Create PayPal order
-    const createResponse = await fetchWithTimeout(`${baseUrl}/v2/checkout/orders`, {
+    const createResponse = await paypalFetchWithRetry(`${baseUrl}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

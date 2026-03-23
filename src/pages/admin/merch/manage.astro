@@ -429,7 +429,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
       body: JSON.stringify({ productId: id })
     })
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error('Server error: ' + res.status);
+      return res.json();
+    })
     .then(data => {
       if (data.success) {
         // Force hard refresh by adding cache-busting parameter
@@ -454,7 +457,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY }
     })
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error('Server error: ' + res.status);
+      return res.json();
+    })
     .then(data => {
       if (data.success) {
         btn.innerHTML = '✓ Synced!';

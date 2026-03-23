@@ -268,7 +268,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
           const latency = Date.now() - start;
           return { name: 'D1 Database', status: 'ok' as const, latency, lastChecked: new Date().toISOString() };
         } catch (error: unknown) {
-          return { name: 'D1 Database', status: 'error' as const, message: error instanceof Error ? error.message : 'D1 unreachable', lastChecked: new Date().toISOString() };
+          const msg = error instanceof Error ? error.message.split('\n')[0] : 'D1 unreachable';
+          return { name: 'D1 Database', status: 'error' as const, message: msg, lastChecked: new Date().toISOString() };
         }
       })()
     : Promise.resolve({ name: 'D1 Database', status: 'error' as const, message: 'D1 binding not available', lastChecked: new Date().toISOString() });

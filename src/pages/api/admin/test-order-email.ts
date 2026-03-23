@@ -136,9 +136,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
           sentTo: testEmail
         };
       } catch (e: unknown) {
+        log.error('Failed to send test email:', e);
         results.emailSent = {
           success: false,
-          error: e instanceof Error ? e.message : 'Unknown error'
+          error: 'Email send failed'
         };
       }
     } else if (testEmail) {

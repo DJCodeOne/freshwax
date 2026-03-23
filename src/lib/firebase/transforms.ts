@@ -2,6 +2,7 @@
 // Atomic Firestore operations: atomicIncrement, updateDocumentConditional, arrayUnion, arrayRemove
 
 import { fetchWithTimeout } from '../api-utils';
+import { TIMEOUTS } from '../timeouts';
 import {
   log,
   PROJECT_ID,
@@ -11,6 +12,8 @@ import {
   toFirestoreValue,
 } from './core';
 import { clearCache } from './cache';
+
+const FIREBASE_429_RETRY_DELAY = TIMEOUTS.FIREBASE_RATE_LIMIT_RETRY;
 
 /**
  * Atomically increment numeric fields using Firestore's commit API with fieldTransforms.
@@ -43,18 +46,30 @@ export async function atomicIncrement(
   }));
 
   const atomicHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
-  const response = await fetchWithTimeout(commitUrl, {
+  const commitBody = JSON.stringify({
+    writes: [{
+      transform: {
+        document: documentPath,
+        fieldTransforms
+      }
+    }]
+  });
+  let response = await fetchWithTimeout(commitUrl, {
     method: 'POST',
     headers: atomicHeaders,
-    body: JSON.stringify({
-      writes: [{
-        transform: {
-          document: documentPath,
-          fieldTransforms
-        }
-      }]
-    })
+    body: commitBody
   }, 15000);
+
+  // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+  if (!response.ok && response.status === 429) {
+    log.warn(`atomicIncrement ${collection}/${docId} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+    await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
+    response = await fetchWithTimeout(commitUrl, {
+      method: 'POST',
+      headers: atomicHeaders,
+      body: commitBody
+    }, 15000);
+  }
 
   if (!response.ok) {
     const error = await response.text();
@@ -108,24 +123,36 @@ export async function updateDocumentConditional(
   }
 
   const conditionalHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
-  const response = await fetchWithTimeout(commitUrl, {
+  const conditionalBody = JSON.stringify({
+    writes: [{
+      update: {
+        name: documentPath,
+        fields
+      },
+      updateMask: {
+        fieldPaths: Object.keys(data)
+      },
+      currentDocument: {
+        updateTime: expectedUpdateTime
+      }
+    }]
+  });
+  let response = await fetchWithTimeout(commitUrl, {
     method: 'POST',
     headers: conditionalHeaders,
-    body: JSON.stringify({
-      writes: [{
-        update: {
-          name: documentPath,
-          fields
-        },
-        updateMask: {
-          fieldPaths: Object.keys(data)
-        },
-        currentDocument: {
-          updateTime: expectedUpdateTime
-        }
-      }]
-    })
+    body: conditionalBody
   }, 15000);
+
+  // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+  if (!response.ok && response.status === 429) {
+    log.warn(`updateDocumentConditional ${collection}/${docId} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+    await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
+    response = await fetchWithTimeout(commitUrl, {
+      method: 'POST',
+      headers: conditionalHeaders,
+      body: conditionalBody
+    }, 15000);
+  }
 
   if (!response.ok) {
     const error = await response.text();
@@ -206,11 +233,23 @@ export async function arrayUnion(
   }
 
   const arrayUnionHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
-  const response = await fetchWithTimeout(commitUrl, {
+  const arrayUnionBody = JSON.stringify({ writes });
+  let response = await fetchWithTimeout(commitUrl, {
     method: 'POST',
     headers: arrayUnionHeaders,
-    body: JSON.stringify({ writes })
+    body: arrayUnionBody
   }, 15000);
+
+  // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+  if (!response.ok && response.status === 429) {
+    log.warn(`arrayUnion ${collection}/${docId} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+    await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
+    response = await fetchWithTimeout(commitUrl, {
+      method: 'POST',
+      headers: arrayUnionHeaders,
+      body: arrayUnionBody
+    }, 15000);
+  }
 
   if (!response.ok) {
     const error = await response.text();
@@ -284,11 +323,23 @@ export async function arrayRemove(
   }
 
   const arrayRemoveHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
-  const response = await fetchWithTimeout(commitUrl, {
+  const arrayRemoveBody = JSON.stringify({ writes });
+  let response = await fetchWithTimeout(commitUrl, {
     method: 'POST',
     headers: arrayRemoveHeaders,
-    body: JSON.stringify({ writes })
+    body: arrayRemoveBody
   }, 15000);
+
+  // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+  if (!response.ok && response.status === 429) {
+    log.warn(`arrayRemove ${collection}/${docId} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+    await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
+    response = await fetchWithTimeout(commitUrl, {
+      method: 'POST',
+      headers: arrayRemoveHeaders,
+      body: arrayRemoveBody
+    }, 15000);
+  }
 
   if (!response.ok) {
     const error = await response.text();

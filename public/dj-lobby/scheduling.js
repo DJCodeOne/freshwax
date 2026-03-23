@@ -72,6 +72,10 @@ export async function loadMySlot() {
       signal: slotController.signal
     });
     clearTimeout(slotTimeout);
+    if (!response.ok) {
+      console.error('Load slot error: HTTP ' + response.status);
+      return;
+    }
     var result = await response.json();
 
     if (result.success && result.slots && result.slots.length > 0) {
@@ -99,6 +103,10 @@ export async function loadAllSlots() {
       signal: allSlotsController.signal
     });
     clearTimeout(allSlotsTimeout);
+    if (!response.ok) {
+      console.error('Load all slots error: HTTP ' + response.status);
+      return;
+    }
     var result = await response.json();
     if (result.success && result.slots) {
       allDjSlots = result.slots.sort(function(a, b) {
@@ -442,6 +450,10 @@ export async function fetchStreamKey() {
     });
     clearTimeout(keyTimeout);
 
+    if (!response.ok) {
+      console.error('Fetch key error: HTTP ' + response.status);
+      return;
+    }
     var result = await response.json();
     if (result.success && result.streamKey) {
       var keyEl = document.getElementById('myStreamKey');
@@ -582,6 +594,9 @@ export async function loadStreamKeyForGoLive() {
     clearTimeout(timeoutId);
     log('[GoLive] Step 5: Got response, status: ' + response.status);
 
+    if (!response.ok) {
+      throw new Error('Server error: ' + response.status);
+    }
     var result = await response.json();
     log('[GoLive] Step 6: Parsed response: ' + (result.success ? 'success' : result.error));
 
@@ -768,6 +783,9 @@ export async function handleGoLiveReady() {
   });
   clearTimeout(goLiveTimeout);
 
+  if (!response.ok) {
+    throw new Error('Server error: ' + response.status);
+  }
   var result = await response.json();
 
   if (result.success) {

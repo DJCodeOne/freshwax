@@ -7,11 +7,11 @@ import { z } from 'zod';
 import { createOrder } from '../../../lib/order-utils';
 import { getDocument, deleteDocument, atomicIncrement, arrayUnion, queryCollection } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
-import { createLogger, fetchWithTimeout } from '../../../lib/api-utils';
+import { createLogger } from '../../../lib/api-utils';
 import { processArtistPayments, processMerchSupplierPayments, processVinylCrateSellerPayments } from '../../../lib/order/seller-payments';
 
 const log = createLogger('[paypal-redirect]');
-import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
+import { getPayPalBaseUrl, getPayPalAccessToken, paypalFetchWithRetry } from '../../../lib/paypal-auth';
 
 // Zod schema for PayPal redirect query params
 const PayPalRedirectParamsSchema = z.object({
@@ -93,7 +93,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     const baseUrl = getPayPalBaseUrl(paypalMode);
 
     // Capture the PayPal order
-    const captureResponse = await fetchWithTimeout(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
+    const captureResponse = await paypalFetchWithRetry(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

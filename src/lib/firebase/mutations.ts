@@ -2,6 +2,7 @@
 // CRUD write operations: setDocument, createDocumentIfNotExists, updateDocument, deleteDocument, addDocument
 
 import { fetchWithTimeout } from '../api-utils';
+import { TIMEOUTS } from '../timeouts';
 import {
   log,
   PROJECT_ID,
@@ -13,6 +14,8 @@ import {
   validatePath,
 } from './core';
 import { clearCache } from './cache';
+
+const FIREBASE_429_RETRY_DELAY = TIMEOUTS.FIREBASE_RATE_LIMIT_RETRY;
 
 export async function setDocument(
   collection: string,
@@ -43,11 +46,22 @@ export async function setDocument(
     Object.assign(headers, await getAuthHeaders());
   }
 
-  const response = await fetchWithTimeout(url, {
+  let response = await fetchWithTimeout(url, {
     method: 'PATCH',
     headers,
     body: JSON.stringify({ fields })
   }, 15000);
+
+  // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+  if (!response.ok && response.status === 429) {
+    log.warn(`setDocument ${collection}/${docId} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+    await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
+    response = await fetchWithTimeout(url, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ fields })
+    }, 15000);
+  }
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -92,11 +106,23 @@ export async function createDocumentIfNotExists(
   }
 
   const cdinHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
-  const response = await fetchWithTimeout(url, {
+  const cdinBody = JSON.stringify({ fields });
+  let response = await fetchWithTimeout(url, {
     method: 'PATCH',
     headers: cdinHeaders,
-    body: JSON.stringify({ fields })
+    body: cdinBody
   }, 15000);
+
+  // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+  if (!response.ok && response.status === 429) {
+    log.warn(`createDocumentIfNotExists ${collection}/${docId} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+    await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
+    response = await fetchWithTimeout(url, {
+      method: 'PATCH',
+      headers: cdinHeaders,
+      body: cdinBody
+    }, 15000);
+  }
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -160,11 +186,22 @@ export async function updateDocument(
     Object.assign(headers, await getAuthHeaders());
   }
 
-  const response = await fetchWithTimeout(url, {
+  let response = await fetchWithTimeout(url, {
     method: 'PATCH',
     headers,
     body: JSON.stringify({ fields })
   }, 15000);
+
+  // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+  if (!response.ok && response.status === 429) {
+    log.warn(`updateDocument ${collection}/${docId} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+    await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
+    response = await fetchWithTimeout(url, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ fields })
+    }, 15000);
+  }
 
   if (!response.ok) {
     const error = await response.text();
@@ -203,10 +240,20 @@ export async function deleteDocument(
     Object.assign(headers, await getAuthHeaders());
   }
 
-  const response = await fetchWithTimeout(url, {
+  let response = await fetchWithTimeout(url, {
     method: 'DELETE',
     headers
   }, 15000);
+
+  // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+  if (!response.ok && response.status === 429) {
+    log.warn(`deleteDocument ${collection}/${docId} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+    await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
+    response = await fetchWithTimeout(url, {
+      method: 'DELETE',
+      headers
+    }, 15000);
+  }
 
   if (!response.ok && response.status !== 404) {
     const error = await response.text();
@@ -250,11 +297,22 @@ export async function addDocument(
     Object.assign(headers, await getAuthHeaders());
   }
 
-  const response = await fetchWithTimeout(url, {
+  let response = await fetchWithTimeout(url, {
     method: 'POST',
     headers,
     body: JSON.stringify({ fields })
   }, 15000);
+
+  // Single retry after 1s delay for rate limiting (429 RESOURCE_EXHAUSTED)
+  if (!response.ok && response.status === 429) {
+    log.warn(`addDocument ${collection} got 429 (rate limited), retrying in ${FIREBASE_429_RETRY_DELAY}ms...`);
+    await new Promise(resolve => setTimeout(resolve, FIREBASE_429_RETRY_DELAY));
+    response = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ fields })
+    }, 15000);
+  }
 
   if (!response.ok) {
     const error = await response.text();

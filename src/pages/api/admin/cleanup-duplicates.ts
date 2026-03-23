@@ -175,7 +175,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       } catch (error: unknown) {
         log.error(`Failed to delete ${releaseId}:`, error);
-        results.push({ id: releaseId, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+        log.error(`Failed to delete release ${releaseId}:`, error);
+        results.push({ id: releaseId, success: false, error: 'Deletion failed' });
       }
 
       // Delay between operations

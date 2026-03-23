@@ -10,10 +10,10 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
 import { SITE_URL } from '../../../lib/constants';
-import { createLogger, fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[paypal-create]');
-import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
+import { getPayPalBaseUrl, getPayPalAccessToken, paypalFetchWithRetry } from '../../../lib/paypal-auth';
 
 // Zod schemas for PayPal order creation (same structure as Stripe checkout)
 const PayPalItemSchema = z.object({
@@ -274,7 +274,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Order request built
 
     // Create PayPal order
-    const createResponse = await fetchWithTimeout(`${baseUrl}/v2/checkout/orders`, {
+    const createResponse = await paypalFetchWithRetry(`${baseUrl}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
