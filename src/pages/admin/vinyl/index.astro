@@ -242,6 +242,7 @@ const nonce = Astro.locals.nonce || '';
       ) : (
         <div class="table-wrapper">
           <table class="data-table compact-table" aria-label="Vinyl sellers">
+            <caption class="sr-only">Vinyl sellers</caption>
             <thead>
               <tr>
                 <th scope="col">Seller</th>
@@ -311,6 +312,7 @@ const nonce = Astro.locals.nonce || '';
       ) : (
         <div class="table-wrapper">
           <table class="data-table" aria-label="Recent vinyl listings">
+            <caption class="sr-only">Recent vinyl listings</caption>
             <thead>
               <tr>
                 <th scope="col">Record</th>
@@ -365,6 +367,7 @@ const nonce = Astro.locals.nonce || '';
     ) : (
       <div class="table-wrapper">
         <table class="data-table" aria-label="Recent vinyl orders">
+          <caption class="sr-only">Recent vinyl orders</caption>
           <thead>
             <tr>
               <th scope="col">Order</th>

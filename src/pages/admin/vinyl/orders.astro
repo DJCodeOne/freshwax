@@ -74,6 +74,7 @@ const nonce = Astro.locals.nonce || '';
   <div id="ordersTable" class="card" style="display: none;">
     <div class="table-responsive">
       <table class="data-table" aria-label="Vinyl orders">
+        <caption class="sr-only">Vinyl orders</caption>
         <thead>
           <tr>
             <th scope="col">Order ID</th>
@@ -137,6 +138,7 @@ const nonce = Astro.locals.nonce || '';
             <div class="order-items">
               <h4>Items</h4>
               <table class="items-table" aria-label="Order items">
+                <caption class="sr-only">Order items</caption>
                 <thead>
                   <tr>
                     <th scope="col">Item</th>

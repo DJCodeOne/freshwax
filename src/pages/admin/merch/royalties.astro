@@ -215,7 +215,7 @@ const nonce = Astro.locals.nonce || '';
           else brandTotals[bn].paid += (e.royalty_amount || 0);
         }
 
-        var html = '<table aria-label="Merch royalties"><thead><tr>' +
+        var html = '<table aria-label="Merch royalties"><caption class="sr-only">Merch royalties</caption><thead><tr>' +
           '<th scope="col" class="check-col"><input type="checkbox" id="selectAll" aria-label="Select all" /></th>' +
           '<th scope="col">Date</th>' +
           '<th scope="col">Order</th>' +

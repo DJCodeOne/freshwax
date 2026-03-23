@@ -25,8 +25,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <meta name="description" content="Verify your email address to activate your Fresh Wax account." />
   <link rel="canonical" href={`${SITE_URL}/verify-email/`} />
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <style>
+    .skip-to-main{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999}
+    .skip-to-main:focus{position:absolute;top:8px;left:8px;width:auto;height:auto;overflow:visible;background:#fff;color:#000;padding:8px 12px;border-radius:4px;font-weight:bold;text-decoration:none}
+  </style>
 </head>
 <body>
+  <a href="#main-content" class="skip-to-main">Skip to main content</a>
   <script is:inline nonce={nonce}>
     (function() {
       var originalFetch = window.fetch;

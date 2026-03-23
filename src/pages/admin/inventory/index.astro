@@ -135,6 +135,7 @@ const nonce = Astro.locals.nonce || '';
         </div>
         
         <table class="stock-table" aria-label="Inventory stock levels">
+          <caption class="sr-only">Inventory stock levels</caption>
           <thead>
             <tr>
               <th scope="col" style="width:30px;"></th>
@@ -984,6 +985,7 @@ const nonce = Astro.locals.nonce || '';
           <div style="${sectionStyle}">
             <div style="${supplierHeaderStyle}">📦 ${escapeHtml(supplier)} (${products.length} products)</div>
             <table style="${tableStyle}" aria-label="Stock count for ${escapeHtml(supplier)}">
+              <caption class="sr-only">Stock count for ${escapeHtml(supplier)}</caption>
               <thead style="${theadStyle}">
                 <tr style="${trStyle}">
                   <th scope="col" style="${thStyle} width: 200px;">Product / Size</th>
