@@ -4,6 +4,7 @@
   "exclude": ["dist"],
   "compilerOptions": {
     "baseUrl": ".",
+    "noUncheckedIndexedAccess": true,
     "paths": {
       "@lib/*": ["src/lib/*"],
       "@components/*": ["src/components/*"],
