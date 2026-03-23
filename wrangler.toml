@@ -30,18 +30,36 @@ PUBLIC_FIREBASE_API_KEY = "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g"
 PUBLIC_RECAPTCHA_SITE_KEY = "6LfojkEsAAAAAJ9A6y9ZIzO-ZaRqdsWCGfXjU-sm"
 WHIP_BASE_URL = "https://stream.freshwax.co.uk"
 
-# Cron triggers — configured in Cloudflare dashboard for Pages projects
-# (wrangler.toml [triggers] is only supported for Workers, not Pages)
+# ──────────────────────────────────────────────────────────────────────
+# Cron Triggers
+# ──────────────────────────────────────────────────────────────────────
+# Pages projects do NOT support [triggers] in wrangler.toml.
+# Crons must be configured in Cloudflare Dashboard:
+#   Dashboard > Pages > freshwax > Settings > Functions > Cron Triggers
 #
-# Schedule summary (configure in Cloudflare Dashboard > Pages > Settings > Cron Triggers):
-#   0 * * * *    /api/cron/cleanup-reservations   - Expire stale stock reservations
-#   0 */6 * * *  /api/cron/retry-payouts           - Retry failed payouts (Stripe/PayPal)
-#   0 */6 * * *  /api/cron/send-restock-notifications - Email users when items restock
-#   0 3 * * *    /api/cron/cleanup-d1              - Purge old D1 rows (error_logs, pending_orders)
-#   0 2 * * *    /api/cron/backup-d1               - Back up D1 tables to R2 as JSON (daily at 02:00 UTC)
-#   0 4 * * *    /api/cron/image-scan              - Scan R2 for non-WebP images
-#   0 10 * * *   /api/cron/verification-reminders  - Remind unverified users to verify email
-#   0 10 * * SUN /api/cron/weekly-digest            - Weekly "This Week on FreshWax" digest email (Sundays 10:00 UTC) ✅ configured on freshwax-api Worker
-#   DISABLED     /api/cron/stock-alerts            - Low stock admin alerts (disabled)
+# The weekly-digest cron is configured on the freshwax-api Worker instead
+# (Workers support [triggers] directly). Use the Cloudflare API to update:
+#   PUT /accounts/{id}/workers/scripts/freshwax-api/schedules
+#   (replaces ALL schedules, so include existing ones in the payload)
 #
-# Auth: All cron endpoints require Authorization: Bearer $CRON_SECRET or X-Admin-Key header
+# ┌──────────────────┬─────────────────────────────────────┬──────────────────────────────────────────────┐
+# │ Schedule (UTC)   │ Endpoint                            │ Description                                  │
+# ├──────────────────┼─────────────────────────────────────┼──────────────────────────────────────────────┤
+# │ 0 * * * *        │ /api/cron/cleanup-reservations      │ Expire stale stock reservations (hourly)     │
+# │ 0 */6 * * *      │ /api/cron/retry-payouts             │ Retry failed Stripe/PayPal payouts (6-hourly)│
+# │ 0 */6 * * *      │ /api/cron/send-restock-notifications│ Email users when items restock (6-hourly)    │
+# │ 0 2 * * *        │ /api/cron/backup-d1                 │ Back up D1 tables to R2 as JSON (02:00)      │
+# │ 0 3 * * *        │ /api/cron/cleanup-d1                │ Purge old D1 rows (03:00)                    │
+# │ 0 4 * * *        │ /api/cron/image-scan                │ Scan R2 for non-WebP images (04:00)          │
+# │ 0 10 * * *       │ /api/cron/verification-reminders    │ Remind unverified users (10:00)              │
+# │ 0 10 * * SUN     │ /api/cron/weekly-digest             │ Weekly digest email (Sunday 10:00)           │
+# │ DISABLED         │ /api/cron/stock-alerts              │ Low stock admin alerts                       │
+# └──────────────────┴─────────────────────────────────────┴──────────────────────────────────────────────┘
+#
+# Auth: All cron endpoints require Authorization: Bearer $CRON_SECRET
+#       or X-Admin-Key header. Endpoints are listed in CSRF_SKIP (src/lib/csrf.ts).
+#
+# Staging: Preview/staging deployments share the same D1/KV/R2 bindings.
+#          Use CRON_SECRET to test cron endpoints manually via curl:
+#            curl -X POST https://staging.freshwax.pages.dev/api/cron/cleanup-reservations \
+#              -H "Authorization: Bearer $CRON_SECRET"

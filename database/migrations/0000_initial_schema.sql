@@ -1,5 +1,7 @@
--- Initial schema (retroactive documentation of existing tables)
--- These tables were created directly via wrangler d1 execute
+-- Migration 0000: Initial schema (retroactive documentation of existing tables)
+-- These tables were created directly via wrangler d1 execute before the
+-- numbered migration system was introduced. This file is 0000 to avoid
+-- conflicting with 0001_add_sales_ledger.sql (the first real migration).
 
 CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,

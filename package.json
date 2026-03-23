@@ -19,6 +19,8 @@
     "validate": "npm run lint && npm run typecheck && npm run test && npm run build",
     "validate:ci": "npm audit --omit=dev --audit-level=high && npm run validate",
     "test:ci": "vitest run",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name=freshwax",
+    "deploy:staging": "npm run build && wrangler pages deploy dist --project-name=freshwax --branch=staging",
     "astro": "astro"
   },
   "dependencies": {
