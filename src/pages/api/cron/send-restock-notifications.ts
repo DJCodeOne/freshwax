@@ -11,12 +11,50 @@ import { queryCollection, getDocument, deleteDocument } from '../../../lib/fireb
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout, ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
+import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('restock-notifications');
 
 export const prerender = false;
 
 const MAX_NOTIFICATIONS_PER_RUN = 50;
+const EMAIL_BATCH_SIZE = 5;
+
+interface PendingEmail {
+  sub: Record<string, unknown>;
+  productName: string;
+  productUrl: string;
+  productId: string;
+}
+
+function buildRestockEmailHtml(productName: string, productUrl: string, variantKey: string | undefined, email: string, productId: string): string {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0a0a0a; padding: 40px; color: #fff;">
+      <h1 style="color: #22c55e;">Back in Stock!</h1>
+      <p>Great news! An item you were waiting for is back in stock:</p>
+
+      <div style="background-color: #1f1f1f; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h2 style="margin: 0 0 10px; color: #fff;">${productName}</h2>
+        ${variantKey ? `<p style="margin: 0; color: #a3a3a3;">Variant: ${variantKey.replace('_', ' / ')}</p>` : ''}
+      </div>
+
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="${productUrl}" style="display: inline-block; background: #dc2626; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+          Shop Now
+        </a>
+      </p>
+
+      <p style="color: #737373; font-size: 13px; margin-top: 30px;">
+        Stock is limited - grab it before it's gone!
+      </p>
+
+      <p style="color: #737373; font-size: 12px; margin-top: 20px; border-top: 1px solid #262626; padding-top: 20px;">
+        You received this email because you signed up for back-in-stock notifications.<br>
+        <a href="${SITE_URL}/api/notify-restock/?email=${encodeURIComponent(email)}&productId=${productId}&action=unsubscribe" style="color: #737373;">Unsubscribe</a>
+      </p>
+    </div>
+  `;
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
@@ -79,21 +117,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
       byProduct[key].push(sub);
     }
 
+    // Phase 1: Check stock and collect emails to send
+    const pendingEmails: PendingEmail[] = [];
+
     for (const [key, subs] of Object.entries(byProduct)) {
-      if (results.notified >= MAX_NOTIFICATIONS_PER_RUN) break;
+      if (pendingEmails.length >= MAX_NOTIFICATIONS_PER_RUN) break;
 
       const [productType, productId] = key.split(':');
       results.checked++;
 
       try {
         let isInStock = false;
-        let productName = subs[0].productName;
+        let productName = String(subs[0].productName || '');
         let productUrl = '';
 
         if (productType === 'merch') {
           const product = await getDocument('merch', productId);
           if (product) {
-            productName = product.name || product.productName || productName;
+            productName = String(product.name || product.productName || productName);
             productUrl = `${SITE_URL}/merch?product=${productId}`;
 
             // Check if any variant is in stock
@@ -118,7 +159,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } else if (productType === 'vinyl') {
           const release = await getDocument('releases', productId);
           if (release) {
-            productName = release.releaseName || release.name || productName;
+            productName = String(release.releaseName || release.name || productName);
             productUrl = `${SITE_URL}/item/${productId}`;
             isInStock = (release.vinylStock || 0) > 0;
           }
@@ -129,68 +170,61 @@ export const POST: APIRoute = async ({ request, locals }) => {
           continue;
         }
 
-        // Product is back in stock - send notifications
+        // Product is back in stock - collect subscriptions for batch sending
         for (const sub of subs) {
-          if (results.notified >= MAX_NOTIFICATIONS_PER_RUN) break;
-
-          try {
-            const restockResp = await fetchWithTimeout('https://api.resend.com/emails', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${RESEND_API_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                from: 'Fresh Wax <shop@freshwax.co.uk>',
-                to: [sub.email],
-                subject: `Back in Stock: ${productName}`,
-                html: `
-                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0a0a0a; padding: 40px; color: #fff;">
-                    <h1 style="color: #22c55e;">Back in Stock!</h1>
-                    <p>Great news! An item you were waiting for is back in stock:</p>
-
-                    <div style="background-color: #1f1f1f; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                      <h2 style="margin: 0 0 10px; color: #fff;">${productName}</h2>
-                      ${sub.variantKey ? `<p style="margin: 0; color: #a3a3a3;">Variant: ${sub.variantKey.replace('_', ' / ')}</p>` : ''}
-                    </div>
-
-                    <p style="text-align: center; margin: 30px 0;">
-                      <a href="${productUrl}" style="display: inline-block; background: #dc2626; color: #fff; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-                        Shop Now
-                      </a>
-                    </p>
-
-                    <p style="color: #737373; font-size: 13px; margin-top: 30px;">
-                      Stock is limited - grab it before it's gone!
-                    </p>
-
-                    <p style="color: #737373; font-size: 12px; margin-top: 20px; border-top: 1px solid #262626; padding-top: 20px;">
-                      You received this email because you signed up for back-in-stock notifications.<br>
-                      <a href="${SITE_URL}/api/notify-restock/?email=${encodeURIComponent(sub.email)}&productId=${productId}&action=unsubscribe" style="color: #737373;">Unsubscribe</a>
-                    </p>
-                  </div>
-                `
-              })
-            }, 10000);
-
-            if (!restockResp.ok) {
-              log.error('[Restock Notifications] Email send failed', { status: restockResp.status, email: sub.email });
-            }
-
-            // Remove subscription after sending
-            await deleteDocument('restockNotifications', sub.id);
-            results.notified++;
-            log.info('[Restock Notifications] Sent to', sub.email, 'for', productName);
-
-          } catch (emailErr: unknown) {
-            log.error('[Restock Notifications] Email error:', emailErr);
-            results.errors++;
-          }
+          if (pendingEmails.length >= MAX_NOTIFICATIONS_PER_RUN) break;
+          pendingEmails.push({ sub, productName, productUrl, productId });
         }
 
       } catch (productErr: unknown) {
         log.error('[Restock Notifications] Product lookup error:', productErr);
         results.errors++;
+      }
+    }
+
+    // Phase 2: Send emails in parallel batches of EMAIL_BATCH_SIZE
+    for (let i = 0; i < pendingEmails.length; i += EMAIL_BATCH_SIZE) {
+      const batch = pendingEmails.slice(i, i + EMAIL_BATCH_SIZE);
+
+      const batchResults = await Promise.allSettled(
+        batch.map(async ({ sub, productName, productUrl, productId }) => {
+          const email = String(sub.email || '');
+          const variantKey = sub.variantKey ? String(sub.variantKey) : undefined;
+          const html = buildRestockEmailHtml(productName, productUrl, variantKey, email, productId);
+
+          const restockResp = await fetchWithTimeout('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${RESEND_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              from: 'Fresh Wax <shop@freshwax.co.uk>',
+              to: [email],
+              subject: `Back in Stock: ${productName}`,
+              html
+            })
+          }, TIMEOUTS.API);
+
+          if (!restockResp.ok) {
+            log.error('[Restock Notifications] Email send failed', { status: restockResp.status, email });
+            throw new Error(`Email send failed: ${restockResp.status}`);
+          }
+
+          // Remove subscription after successful send
+          await deleteDocument('restockNotifications', sub.id as string);
+          log.info('[Restock Notifications] Sent to', email, 'for', productName);
+          return { email, productName };
+        })
+      );
+
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          results.notified++;
+        } else {
+          log.error('[Restock Notifications] Email error:', result.reason);
+          results.errors++;
+        }
       }
     }
 

@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
           'Authorization': `Bearer ${stripeSecretKey}`
         }
       },
-      10000
+      TIMEOUTS.API
     );
 
     if (!sessionResponse.ok) {
@@ -75,14 +75,13 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || FIREBASE_API_KEY;
 
-    // Try to find order by payment intent ID
     const paymentIntentId = session.payment_intent;
 
-    if (paymentIntentId) {
-      // Query Firestore for order with this payment intent
+    // Helper: query Firestore for order by paymentIntentId
+    async function findOrderByPaymentIntent(): Promise<string | null> {
+      if (!paymentIntentId) return null;
       const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
-
-      const queryResponse = await fetchWithTimeout(queryUrl, {
+      const resp = await fetchWithTimeout(queryUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,69 +97,47 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
             limit: 1
           }
         })
-      }, 10000);
-
-      if (queryResponse.ok) {
-        const results = await queryResponse.json();
-
-        if (results && results[0]?.document) {
-          const docPath = results[0].document.name;
-          const orderId = docPath.split('/').pop();
-
-          return successResponse({ orderId,
-            paymentStatus: session.payment_status });
-        }
+      }, TIMEOUTS.API);
+      if (!resp.ok) return null;
+      const results = await resp.json();
+      if (results && results[0]?.document) {
+        return results[0].document.name.split('/').pop() || null;
       }
+      return null;
     }
 
-    // Order not found - wait a bit more and check again (webhook might be processing)
-    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.TOAST)); // Wait 3 more seconds
-
-    // Check again after waiting
-    if (paymentIntentId) {
-      const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
-      const retryResponse = await fetchWithTimeout(queryUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          structuredQuery: {
-            from: [{ collectionId: 'orders' }],
-            where: {
-              fieldFilter: {
-                field: { fieldPath: 'paymentIntentId' },
-                op: 'EQUAL',
-                value: { stringValue: paymentIntentId }
-              }
-            },
-            limit: 1
-          }
-        })
-      }, 10000);
-
-      if (retryResponse.ok) {
-        const retryResults = await retryResponse.json();
-        if (retryResults && retryResults[0]?.document) {
-          const docPath = retryResults[0].document.name;
-          const orderId = docPath.split('/').pop();
-          return successResponse({ orderId,
-            paymentStatus: session.payment_status });
-        }
-      }
-    }
-
-    // Order still not found - create it now as fallback (webhook may have failed)
-    log.info('Fallback order creation for paymentIntentId:', paymentIntentId);
-
-    // Get line items from Stripe session
-    const lineItemsResponse = await fetchWithTimeout(
+    // Fire line items fetch early (runs in parallel with order query below)
+    // Only awaited if we reach the fallback order creation path
+    const lineItemsPromise = fetchWithTimeout(
       `https://api.stripe.com/v1/checkout/sessions/${sessionId}/line_items?limit=100`,
       {
         headers: {
           'Authorization': `Bearer ${stripeSecretKey}`
         }
       },
-      10000
+      TIMEOUTS.API
     );
+
+    // Try to find existing order by payment intent ID
+    const orderId = await findOrderByPaymentIntent();
+    if (orderId) {
+      return successResponse({ orderId, paymentStatus: session.payment_status });
+    }
+
+    // Order not found - wait a bit more and check again (webhook might be processing)
+    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.TOAST));
+
+    // Check again after waiting
+    const retryOrderId = await findOrderByPaymentIntent();
+    if (retryOrderId) {
+      return successResponse({ orderId: retryOrderId, paymentStatus: session.payment_status });
+    }
+
+    // Order still not found - create it now as fallback (webhook may have failed)
+    log.info('Fallback order creation for paymentIntentId:', paymentIntentId);
+
+    // Await the pre-fetched line items response
+    const lineItemsResponse = await lineItemsPromise;
 
     let items: Record<string, unknown>[] = [];
 
