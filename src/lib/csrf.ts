@@ -61,6 +61,9 @@ const CSRF_SKIP = new Set([
   '/api/cron/backup-d1/',
   // Auth session — sets HttpOnly cookies; validated via Firebase ID token verification
   '/api/auth/set-session/',
+  // Listener tracking — public endpoint for join/leave/heartbeat.
+  // Uses sendBeacon (no CSRF header) and anonymous viewer tracking.
+  '/api/livestream/listeners/',
 ]);
 
 /**
