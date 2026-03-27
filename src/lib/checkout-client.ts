@@ -139,8 +139,8 @@ export function init() {
 
   // Use window.authReady from Header.astro instead of importing Firebase Auth SDK
   // Header already loads Firebase Auth and resolves this promise with the user
-  if ((window as any).authReady) {
-    (window as any).authReady.then(async (user: any) => {
+  if (window.authReady) {
+    window.authReady.then(async (user) => {
       // If auth already initialized by timeout, skip
       if (authInitialized) return;
 

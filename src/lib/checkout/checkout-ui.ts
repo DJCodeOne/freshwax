@@ -3,7 +3,7 @@
 
 import { escapeHtml } from '../escape-html';
 import { TIMEOUTS } from '../timeouts';
-import type { CheckoutState } from './types';
+import type { CheckoutState, DuplicateResult } from './types';
 import { calculateTotals, getBadgeStyle, getCustomerIdFromCookie, removeDuplicatesFromCart } from './cart-validation';
 
 // Helper function to show user-friendly error messages
@@ -31,7 +31,7 @@ export function hideError() {
 }
 
 // Field-level validation for accessibility
-export function validateField(input: any): boolean {
+export function validateField(input: HTMLInputElement | HTMLSelectElement | null): boolean {
   if (!input) return true;
   var errorSpan = document.getElementById(input.id + '-error');
   if (!input.checkValidity()) {
@@ -229,7 +229,7 @@ export function renderCheckout(
     selectPaymentMethod: (method: string) => void;
     toggleApplyCredit: (checked: boolean) => void;
     handleSubmit: (e: Event) => void;
-    removeDuplicatesFromCart: (duplicates: any[]) => void;
+    removeDuplicatesFromCart: (duplicates: DuplicateResult[]) => void;
     renderCheckout: () => void;
     setupPaymentMethods: () => void;
   }
@@ -250,7 +250,7 @@ export function renderCheckout(
   }
 
   const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals(state);
-  const itemCount = cart.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  const itemCount = cart.reduce((sum: number, item: CartItem) => sum + item.quantity, 0);
 
   // Pre-fill from customer data
   const cd = customerData || {};
@@ -280,7 +280,7 @@ export function renderCheckout(
         </div>
         <div style="padding: 1.25rem;">
           <div style="display: flex; flex-direction: column; gap: 0.875rem;">
-            ${cart.map((item: any) => {
+            ${cart.map((item: CartItem) => {
               const itemType = item.type || item.productType || 'digital';
               const artistName = item.artist || '';
               const labelName = item.labelName || '';
@@ -560,7 +560,7 @@ export function renderCheckout(
 
   // Show duplicate warning if any found
   if (duplicatePurchases && duplicatePurchases.length > 0) {
-    const itemsList = duplicatePurchases.map((d: any) => `<li><strong>${escapeHtml(d.item.name)}</strong> - ${escapeHtml(d.reason)}</li>`).join('');
+    const itemsList = duplicatePurchases.map((d: DuplicateResult) => `<li><strong>${escapeHtml(d.item.name)}</strong> - ${escapeHtml(d.reason)}</li>`).join('');
 
     const warningHtml = `
       <div id="duplicate-warning" style="background: #7f1d1d; border: 3px solid #dc2626; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">

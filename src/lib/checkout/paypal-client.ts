@@ -5,6 +5,12 @@ import { TIMEOUTS } from '../timeouts';
 import type { CheckoutState } from './types';
 import { calculateTotals, getCustomerIdFromCookie } from './cart-validation';
 
+/** Type-safe form field accessor — returns value of a named form element */
+function getFormField(form: HTMLFormElement, name: string): string {
+  const el = form.elements.namedItem(name) as HTMLInputElement | null;
+  return el?.value ?? '';
+}
+
 export const PAYPAL_CLIENT_ID = import.meta.env.PUBLIC_PAYPAL_CLIENT_ID || 'AZL6pU1E2TbA9DdGgLvljJsON4-IwXIyWsHhQ_Od-BtMXTZTTgThss7pVuZzscyovO1z7XZRKgLRwpmv';
 
 export function loadPayPalSDK() {
@@ -99,21 +105,21 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
 
     const orderData = {
       customer: {
-        email: (form as any).email.value,
-        firstName: (form as any).firstName.value,
-        lastName: (form as any).lastName.value,
-        phone: (form as any).phone?.value || '',
+        email: getFormField(form, 'email'),
+        firstName: getFormField(form, 'firstName'),
+        lastName: getFormField(form, 'lastName'),
+        phone: getFormField(form, 'phone'),
         userId: state.currentUser?.uid || null
       },
       shipping: hasPhysicalItems ? {
-        address1: (form as any).address1.value,
-        address2: (form as any).address2?.value || '',
-        city: (form as any).city.value,
-        county: (form as any).county?.value || '',
-        postcode: (form as any).postcode.value,
-        country: (form as any).country.value
+        address1: getFormField(form, 'address1'),
+        address2: getFormField(form, 'address2'),
+        city: getFormField(form, 'city'),
+        county: getFormField(form, 'county'),
+        postcode: getFormField(form, 'postcode'),
+        country: getFormField(form, 'country')
       } : null,
-      items: state.cart.map((item: any) => ({
+      items: state.cart.map((item: CartItem) => ({
         id: item.id || item.productId,
         productId: item.productId || item.id,
         releaseId: item.releaseId || item.productId || item.id,
@@ -157,7 +163,7 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
       const result = await response.json();
       // Check for specific error types
       if (result.unavailableItems && result.unavailableItems.length > 0) {
-        const itemNames = result.unavailableItems.map((item: any) => item.name).join(', ');
+        const itemNames = result.unavailableItems.map((item: UnavailableItem) => item.name).join(', ');
         throw new Error(`Some items are no longer available: ${itemNames}. Please update your cart and try again.`);
       }
       throw new Error(result.error || 'Failed to create PayPal order');
@@ -197,7 +203,7 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
 }
 
 export function renderPayPalButtons(state: CheckoutState) {
-  if (state.paypalButtonsRendered || !(window as any).paypal) return;
+  if (state.paypalButtonsRendered || !window.paypal) return;
 
   const container = document.getElementById('paypal-button-container');
   if (!container) return;
@@ -206,7 +212,7 @@ export function renderPayPalButtons(state: CheckoutState) {
   state.paypalButtonsRendered = true;
   container.innerHTML = '';
 
-  (window as any).paypal.Buttons({
+  window.paypal.Buttons({
     style: {
       layout: 'vertical',
       color: 'gold',
@@ -216,7 +222,7 @@ export function renderPayPalButtons(state: CheckoutState) {
       tagline: false
     },
 
-    createOrder: async function(data: any, actions: any) {
+    createOrder: async function() {
       // Skip email verification on checkout
       const form = document.getElementById('checkoutForm') as HTMLFormElement;
       const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals(state);
@@ -229,21 +235,21 @@ export function renderPayPalButtons(state: CheckoutState) {
 
       const orderData = {
         customer: {
-          email: (form as any).email.value,
-          firstName: (form as any).firstName.value,
-          lastName: (form as any).lastName.value,
-          phone: (form as any).phone?.value || '',
+          email: getFormField(form, 'email'),
+          firstName: getFormField(form, 'firstName'),
+          lastName: getFormField(form, 'lastName'),
+          phone: getFormField(form, 'phone'),
           userId: state.currentUser?.uid || null
         },
         shipping: hasPhysicalItems ? {
-          address1: (form as any).address1.value,
-          address2: (form as any).address2?.value || '',
-          city: (form as any).city.value,
-          county: (form as any).county?.value || '',
-          postcode: (form as any).postcode.value,
-          country: (form as any).country.value
+          address1: getFormField(form, 'address1'),
+          address2: getFormField(form, 'address2'),
+          city: getFormField(form, 'city'),
+          county: getFormField(form, 'county'),
+          postcode: getFormField(form, 'postcode'),
+          country: getFormField(form, 'country')
         } : null,
-        items: state.cart.map((item: any) => ({
+        items: state.cart.map((item: CartItem) => ({
           id: item.id || item.productId,
           productId: item.productId || item.id,
           releaseId: item.releaseId || item.productId || item.id,
@@ -291,12 +297,12 @@ export function renderPayPalButtons(state: CheckoutState) {
       }
 
       // Store order data for capture
-      (window as any).pendingPayPalOrderData = orderData;
+      window.pendingPayPalOrderData = orderData;
 
       return result.orderId;
     },
 
-    onApprove: async function(data: any, actions: any) {
+    onApprove: async function(data: { orderID: string }) {
       const errorMsg = document.getElementById('error-message')!;
       errorMsg.style.display = 'none';
 
@@ -322,7 +328,7 @@ export function renderPayPalButtons(state: CheckoutState) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               paypalOrderId: data.orderID,
-              orderData: (window as any).pendingPayPalOrderData,
+              orderData: window.pendingPayPalOrderData,
               idToken
             }),
             signal: captureController.signal

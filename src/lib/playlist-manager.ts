@@ -86,7 +86,7 @@ export class PlaylistManager {
     await subscribeToPusherHelper(this.ctx, (data) => handleRemoteUpdateHelper(this.ctx, data, () => this.playCurrent(), () => this.renderUI()));
     if (this.playlist.queue.length > 0 && this.playlist.isPlaying) {
       await this.playCurrent();
-    } else if (this.playlist.queue.length === 0 && !(window as any).isLiveStreamActive) {
+    } else if (this.playlist.queue.length === 0 && !window.isLiveStreamActive) {
       setTimeout(() => startAutoPlayHelper(this.ctx, () => this.playCurrent(), () => this.renderUI()), TIMEOUTS.ANIMATION);
     }
     this.renderUI();
@@ -98,7 +98,7 @@ export class PlaylistManager {
 
   // Playback controls
   async play(): Promise<void> {
-    if ((window as any).isLiveStreamActive || this.playlist.queue.length === 0) return;
+    if (window.isLiveStreamActive || this.playlist.queue.length === 0) return;
     await sendControlAction(this.ctx, 'play', () => this.playCurrent(), () => this.renderUI());
   }
   async pause(): Promise<void> {
@@ -141,7 +141,7 @@ export class PlaylistManager {
 
   // Utility
   private generateId(): string { return Date.now().toString(36) + Math.random().toString(36).substring(2, 9); }
-  private async getAuthToken(): Promise<string | null> { try { const u = (window as any).firebaseAuth?.currentUser; return u ? await u.getIdToken() : null; } catch (_e: unknown) { return null; } }
+  private async getAuthToken(): Promise<string | null> { try { const u = window.firebaseAuth?.currentUser; return u ? await u.getIdToken() : null; } catch (_e: unknown) { return null; } }
 
   // Getters
   get queue(): GlobalPlaylistItem[] { return this.playlist.queue; }
@@ -159,7 +159,7 @@ export class PlaylistManager {
   // Cleanup
   destroy(): void {
     clearTrackTimer(this.ctx); stopCountdown(this.ctx);
-    if (this.pusherChannel) { this.pusherChannel.unbind_all(); const p = (window as any).pusherInstance; if (p) p.unsubscribe('live-playlist'); }
+    if (this.pusherChannel) { this.pusherChannel.unbind_all(); const p = window.pusherInstance; if (p) p.unsubscribe('live-playlist'); }
     stopPlaylistMeters(); this.player?.destroy();
   }
 }

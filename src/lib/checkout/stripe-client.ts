@@ -2,7 +2,7 @@
 // Stripe-specific logic: form submit handling, checkout session creation, free orders
 
 import { TIMEOUTS } from '../timeouts';
-import type { CheckoutState } from './types';
+import type { CheckoutState, UnavailableItem } from './types';
 import { calculateTotals, getCustomerIdFromCookie } from './cart-validation';
 
 /**
@@ -46,7 +46,8 @@ export async function handleSubmit(
   const form = e.target as HTMLFormElement;
 
   // Save details to customer account if checkbox is checked
-  const saveDetails = (form as any).saveDetails?.checked;
+  const saveDetailsEl = form.elements.namedItem('saveDetails') as HTMLInputElement | null;
+  const saveDetails = saveDetailsEl?.checked;
   if (saveDetails && state.currentUser) {
     try {
       const saveToken = await state.currentUser.getIdToken();
@@ -80,9 +81,9 @@ export async function handleSubmit(
   }
 
   // Track begin checkout event
-  (window as any).trackBeginCheckout?.(state.cart, total);
+  window.trackBeginCheckout?.(state.cart, total);
 
-  const orderData: any = {
+  const orderData: Record<string, unknown> = {
     customer: {
       email: form.email.value,
       firstName: form.firstName.value,
@@ -98,7 +99,7 @@ export async function handleSubmit(
       postcode: form.postcode.value,
       country: form.country.value
     } : null,
-    items: state.cart.filter((item: any) => item && item.name).map((item: any) => ({
+    items: state.cart.filter((item: CartItem) => item && item.name).map((item: CartItem) => ({
       id: item.id || item.productId,
       productId: item.productId || item.id,
       releaseId: item.releaseId || item.productId || item.id,
@@ -125,7 +126,7 @@ export async function handleSubmit(
       try {
         // Get Firebase ID token for auth
         const tokenPromise = state.currentUser.getIdToken();
-        const timeoutPromise = new Promise((_: any, reject: any) =>
+        const timeoutPromise = new Promise<string>((_resolve, reject) =>
           setTimeout(() => reject(new Error('Token timeout')), TIMEOUTS.SHORT)
         );
         orderData.idToken = await Promise.race([tokenPromise, timeoutPromise]);
@@ -220,7 +221,7 @@ export async function handleSubmit(
         const result = await response.json();
         // Check for specific error types
         if (result.unavailableItems && result.unavailableItems.length > 0) {
-          const itemNames = result.unavailableItems.map((item: any) => item.name).join(', ');
+          const itemNames = result.unavailableItems.map((item: UnavailableItem) => item.name).join(', ');
           throw new Error(`Some items are no longer available: ${itemNames}. Please update your cart and try again.`);
         }
         throw new Error(result.error || 'Server error. Please try again.');

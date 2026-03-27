@@ -2,7 +2,7 @@
 // Price/stock validation, cart calculations, credit, and duplicate checking
 
 import { TIMEOUTS } from '../timeouts';
-import type { CheckoutState } from './types';
+import type { CheckoutState, DuplicateResult } from './types';
 
 export function getCustomerIdFromCookie(): string | null {
   const cookies = document.cookie.split(';');
@@ -15,7 +15,7 @@ export function getCustomerIdFromCookie(): string | null {
   return null;
 }
 
-export function loadCart(state: CheckoutState): any[] {
+export function loadCart(state: CheckoutState): CartItem[] {
   try {
     const customerId = getCustomerIdFromCookie();
     if (!customerId) {
@@ -39,8 +39,8 @@ export function loadCart(state: CheckoutState): any[] {
 }
 
 export function calculateTotals(state: CheckoutState) {
-  const subtotal = state.cart.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
-  const hasPhysicalItems = state.cart.some((item: any) =>
+  const subtotal = state.cart.reduce((sum: number, item: CartItem) => sum + (item.price * item.quantity), 0);
+  const hasPhysicalItems = state.cart.some((item: CartItem) =>
     item.type === 'vinyl' || item.type === 'merch' || item.productType === 'vinyl' || item.productType === 'merch'
   );
 
@@ -115,11 +115,11 @@ export async function checkDuplicatePurchases(state: CheckoutState, userId: stri
 }
 
 // Remove duplicate items from cart
-export function removeDuplicatesFromCart(state: CheckoutState, duplicates: any[]) {
+export function removeDuplicatesFromCart(state: CheckoutState, duplicates: DuplicateResult[]) {
   const customerId = getCustomerIdFromCookie();
   if (!customerId) return;
 
-  const duplicateKeys = new Set(duplicates.map((d: any) => {
+  const duplicateKeys = new Set(duplicates.map((d: DuplicateResult) => {
     const item = d.item;
     if (item.trackId) {
       return `${item.releaseId || item.productId || item.id}_${item.trackId}`;
@@ -127,7 +127,7 @@ export function removeDuplicatesFromCart(state: CheckoutState, duplicates: any[]
     return item.releaseId || item.productId || item.id;
   }));
 
-  state.cart = state.cart.filter((item: any) => {
+  state.cart = state.cart.filter((item: CartItem) => {
     const key = item.trackId
       ? `${item.releaseId || item.productId || item.id}_${item.trackId}`
       : (item.releaseId || item.productId || item.id);
@@ -143,7 +143,7 @@ export function removeDuplicatesFromCart(state: CheckoutState, duplicates: any[]
   }
 
   // Dispatch cart update event
-  window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: state.cart.reduce((sum: number, item: any) => sum + item.quantity, 0) } }));
+  window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: state.cart.reduce((sum: number, item: CartItem) => sum + item.quantity, 0) } }));
 }
 
 // Load user's credit balance
@@ -175,12 +175,12 @@ export async function loadCreditBalance(state: CheckoutState) {
         state.creditBalance = data.balance || 0;
         // Find the earliest expiry from transactions
         if (data.transactions && data.transactions.length > 0) {
-          const activeTransactions = data.transactions.filter((t: any) =>
+          const activeTransactions = data.transactions.filter((t: { expiresAt?: string }) =>
             t.expiresAt && new Date(t.expiresAt) > new Date()
           );
           if (activeTransactions.length > 0) {
-            state.creditExpiry = activeTransactions.reduce((earliest: Date | null, t: any) => {
-              const expiry = new Date(t.expiresAt);
+            state.creditExpiry = activeTransactions.reduce((earliest: Date | null, t: { expiresAt?: string }) => {
+              const expiry = new Date(t.expiresAt!);
               return !earliest || expiry < earliest ? expiry : earliest;
             }, null);
           }

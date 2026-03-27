@@ -253,17 +253,17 @@ export async function subscribeToPusher(
   const maxWait = TIMEOUTS.API;
   const startTime = Date.now();
 
-  while (!(window as any).Pusher && Date.now() - startTime < maxWait) {
+  while (!window.Pusher && Date.now() - startTime < maxWait) {
     await new Promise(resolve => setTimeout(resolve, TIMEOUTS.POLL));
   }
 
-  if (!(window as any).Pusher) {
+  if (!window.Pusher) {
     log.warn('Pusher not available, no real-time sync');
     return;
   }
 
   // Get Pusher config from window
-  const pusherConfig = (window as any).PUSHER_CONFIG;
+  const pusherConfig = window.PUSHER_CONFIG;
   if (!pusherConfig?.key) {
     log.warn('Pusher config not found');
     return;
@@ -271,13 +271,13 @@ export async function subscribeToPusher(
 
   try {
     // Use existing Pusher instance if available, or create new one
-    let pusher = (window as any).pusherInstance;
+    let pusher = window.pusherInstance;
     if (!pusher) {
-      pusher = new (window as any).Pusher(pusherConfig.key, {
+      pusher = new window.Pusher(pusherConfig.key, {
         cluster: pusherConfig.cluster || 'eu',
         forceTLS: true
       });
-      (window as any).pusherInstance = pusher;
+      window.pusherInstance = pusher;
     }
 
     // Subscribe to playlist channel
@@ -304,7 +304,7 @@ export async function handleRemoteUpdate(
   renderUI: () => void,
 ): Promise<void> {
   // If live stream is active, ignore "isPlaying" from remote updates
-  const liveStreamActive = (window as any).isLiveStreamActive;
+  const liveStreamActive = window.isLiveStreamActive;
   if (liveStreamActive && newPlaylist.isPlaying) {
     newPlaylist.isPlaying = false;
   }
@@ -393,7 +393,7 @@ export async function loadFromServer(ctx: PlaylistContext): Promise<void> {
       ctx.playlist = result.playlist;
 
       // If live stream is active, force playlist to not play
-      if ((window as any).isLiveStreamActive && ctx.playlist.isPlaying) {
+      if (window.isLiveStreamActive && ctx.playlist.isPlaying) {
         ctx.playlist.isPlaying = false;
       }
 

@@ -155,7 +155,7 @@ export async function startAutoPlay(
   renderUI: () => void,
 ): Promise<boolean> {
   // Don't start if live stream is active
-  if ((window as any).isLiveStreamActive) {
+  if (window.isLiveStreamActive) {
     return false;
   }
 
@@ -507,7 +507,7 @@ export async function playCurrent(
   handleTrackEndedFn: () => Promise<void>,
   renderUI: () => void,
 ): Promise<void> {
-  if ((window as any).isLiveStreamActive) return;
+  if (window.isLiveStreamActive) return;
 
   const currentItem = ctx.playlist.queue[ctx.playlist.currentIndex];
   if (!currentItem) return;
