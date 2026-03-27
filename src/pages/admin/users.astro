@@ -378,6 +378,10 @@ const nonce = Astro.locals.nonce || '';
         }
         currentAdminUid = user.uid;
         // Wait for AdminLayout to set ADMIN_KEY via getIdToken
+        // AdminLayout module may not have run yet, so poll briefly
+        for (var _w = 0; _w < 20 && !window.ADMIN_KEY && !window.getAdminToken; _w++) {
+          await new Promise(function(r) { setTimeout(r, 100); });
+        }
         if (!window.ADMIN_KEY && window.getAdminToken) {
           await window.getAdminToken();
         }

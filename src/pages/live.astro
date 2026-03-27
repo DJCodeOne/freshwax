@@ -3643,7 +3643,7 @@ try {
     }
 
     // Add auto-hide class to header - body class MUST come first so CSS specificity works
-    document.body.classList.add('header-hidden');
+    document.body.classList.add('header-hidden', 'live-page');
     header.classList.add('header-auto-hide');
 
     // Show header when hovering near the top
@@ -3698,7 +3698,7 @@ try {
     }
     var h = document.getElementById('freshwax-header');
     if (h) h.classList.remove('header-auto-hide', 'header-visible');
-    document.body.classList.remove('header-hidden');
+    document.body.classList.remove('header-hidden', 'live-page');
     var hz = document.querySelector('.header-hover-zone');
     if (hz) hz.remove();
     // Note: module-scoped intervals (fullscreenStats, takeover, countdown, etc.)
