@@ -78,6 +78,7 @@ const firebaseConfig = {
           aria-autocomplete="list"
           aria-expanded="false"
           aria-controls="search-results-mobile"
+          aria-owns="search-results-mobile"
           aria-haspopup="listbox"
         />
         <!-- Mobile Search Results Dropdown -->
@@ -229,6 +230,7 @@ const firebaseConfig = {
           aria-autocomplete="list"
           aria-expanded="false"
           aria-controls="search-results"
+          aria-owns="search-results"
           aria-haspopup="listbox"
         />
         <!-- Search Results Dropdown -->
@@ -360,7 +362,7 @@ const firebaseConfig = {
             <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" />
           </svg>
         </button>
-        <div id="langPanel" class="fwx-lang-panel" role="dialog" aria-label="Select language" hidden>
+        <div id="langPanel" class="fwx-lang-panel" role="dialog" aria-modal="true" aria-label="Select language" hidden>
           <div class="fwx-lang-grid">
             <button class="fwx-lang-opt" data-lang="en" aria-pressed="true">English</button>
             <button class="fwx-lang-opt" data-lang="fr">Français</button>
