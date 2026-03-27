@@ -1847,6 +1847,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }, 8000);
   
   let lobbyInitialized = false;
+  let accessCheckTimeout = null;
 
   onAuthStateChanged(auth, async (user) => {
     authInitialized = true;
@@ -1861,7 +1862,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     // Email verification is still enforced for other interactive features (comments, chat, etc.)
 
     // Set a timeout for the access check itself
-    const accessCheckTimeout = setTimeout(() => {
+    accessCheckTimeout = setTimeout(() => {
       log('[DJLobby] Access check timeout - no response after 15 seconds');
       const authGate = document.getElementById('authGate');
       if (authGate && !authGate.classList.contains('hidden')) {
@@ -2333,6 +2334,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           lobbyAudioPreviewObserver.disconnect();
           lobbyAudioPreviewObserver = null;
         }
+
+        // Clean up auth timeouts (may still be pending if user navigates before auth resolves)
+        if (authTimeout) { clearTimeout(authTimeout); authTimeout = null; }
+        if (accessCheckTimeout) { clearTimeout(accessCheckTimeout); accessCheckTimeout = null; }
+
+        // Clean up mobile broadcast intervals (heartbeat, timer)
+        mobileBroadcast.cleanup();
 
         await cleanupPusher();
       } catch (e) {

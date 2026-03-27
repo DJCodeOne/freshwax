@@ -58,7 +58,7 @@ export function renderOrders(ordersList, containerId) {
                          itemType === 'track' ? 'track' : 'digital';
           var itemImage = item.image || item.artwork || item.artworkUrl || item.coverArtUrl || item.downloads?.artworkUrl || '/place-holder.webp';
           return '<div class="order-item">' +
-            '<img src="' + escapeHtml(itemImage) + '" alt="' + escapeHtml(item.name || item.title || 'Order item') + '" class="order-item-image">' +
+            '<img src="' + escapeHtml(itemImage) + '" alt="' + escapeHtml(item.name || item.title || 'Order item') + '" class="order-item-image" width="64" height="64" loading="lazy" decoding="async">' +
             '<div class="order-item-details">' +
               '<div class="order-item-name">' + escapeHtml(item.name || item.title || 'Item') + '</div>' +
               '<div class="order-item-meta">' +

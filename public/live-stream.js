@@ -547,5 +547,5 @@ var isInitialized = false;
 async function safeInit() { if (window.location.pathname.startsWith('/live')) { isInitialized = true; await init(); } }
 safeInit();
 
-document.addEventListener('astro:before-swap', function() { cleanupLiveStream(); destroyHlsPlayer(); if (liveStatusPollInterval) { clearInterval(liveStatusPollInterval); liveStatusPollInterval = null; } if (slowPollInterval) { clearInterval(slowPollInterval); slowPollInterval = null; } isInitialized = false; streamDetectedThisSession = false; window.streamDetectedThisSession = false; });
+document.addEventListener('astro:before-swap', function() { if (getIsRecording()) stopRecording(); cleanupLiveStream(); destroyHlsPlayer(); if (liveStatusPollInterval) { clearInterval(liveStatusPollInterval); liveStatusPollInterval = null; } if (slowPollInterval) { clearInterval(slowPollInterval); slowPollInterval = null; } isInitialized = false; streamDetectedThisSession = false; window.streamDetectedThisSession = false; });
 document.addEventListener('astro:page-load', function() { isInitialized = false; resetChatMessages(); safeInit(); });

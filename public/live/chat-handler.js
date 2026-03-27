@@ -238,7 +238,7 @@ function renderChatMessages(messages, isInitialLoad) {
     if (isBot) {
       return '<div class="chat-message chat-bot-message" style="padding: 0.5rem; margin: 0.25rem 0; animation: slideIn 0.2s ease-out; background: linear-gradient(135deg, #1a1a2e 0%, #1e293b 100%); border-radius: 8px; border-left: 3px solid #3b82f6;">' +
         '<div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">' +
-        '<img src="/logo.webp" alt="Bot" style="width: 20px; height: 20px; border-radius: 50%; background: #fff; padding: 2px;" />' +
+        '<img src="/logo.webp" alt="Bot" width="20" height="20" style="width: 20px; height: 20px; border-radius: 50%; background: #fff; padding: 2px;" decoding="async" />' +
         '<span style="font-weight: 600; color: #3b82f6; font-size: 0.8125rem;">FreshWax</span>' +
         '<span style="background: #3b82f6; color: #fff; font-size: 0.625rem; padding: 0.125rem 0.375rem; border-radius: 4px; font-weight: 600;">BOT</span>' +
         '<span style="font-size: 0.6875rem; color: #666; margin-left: auto;">' + timeStr + '</span></div>' +
@@ -252,7 +252,7 @@ function renderChatMessages(messages, isInitialLoad) {
     // GIF message
     if (msg.type === 'giphy' && msg.giphyUrl) {
       var gifImg = (msg.giphyUrl && /^https?:\/\//i.test(msg.giphyUrl))
-        ? '<img src="' + esc(msg.giphyUrl) + '" alt="GIF" style="max-width: 300px; border-radius: 8px;" onload="setTimeout(() => this.scrollIntoView({ behavior: \'instant\', block: \'end\' }), 50);" />'
+        ? '<img src="' + esc(msg.giphyUrl) + '" alt="GIF" width="300" height="200" style="max-width: 300px; border-radius: 8px;" loading="lazy" decoding="async" onload="setTimeout(() => this.scrollIntoView({ behavior: \'instant\', block: \'end\' }), 50);" />'
         : '';
       return '<div class="chat-message" style="padding: 0.5rem 0; animation: slideIn 0.2s ease-out; position: relative;" onmouseenter="this.querySelector(\'.reply-btn\').style.opacity=\'1\'" onmouseleave="this.querySelector(\'.reply-btn\').style.opacity=\'0\'">' +
         replyHtml +

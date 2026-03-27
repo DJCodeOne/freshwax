@@ -119,7 +119,7 @@ export async function fetchMixes(userId, forceRefresh) {
           return '<div style="display: flex; flex-direction: row; align-items: stretch; background: linear-gradient(to bottom, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem;">' +
             '<div style="width: 240px; min-width: 240px; height: 240px; background: #000; overflow: hidden; flex-shrink: 0;">' +
               (artworkUrl ?
-                '<img src="' + escapeHtml(artworkUrl) + '" alt="' + escapeHtml(mixTitle) + '" style="width: 100%; height: 100%; object-fit: cover; display: block;" data-fallback="hide">' :
+                '<img src="' + escapeHtml(artworkUrl) + '" alt="' + escapeHtml(mixTitle) + '" width="240" height="240" style="width: 100%; height: 100%; object-fit: cover; display: block;" loading="lazy" decoding="async" data-fallback="hide">' :
                 '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%); color: #fff; font-size: 4rem;">🎧</div>') +
             '</div>' +
             '<div style="flex: 1; padding: 1.75rem 2rem; display: flex; flex-direction: column; justify-content: center; gap: 1.25rem; min-width: 0;">' +

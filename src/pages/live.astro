@@ -1612,7 +1612,7 @@ try {
 
   // Initialize presence module and setup Pusher listener
   initPresence(presenceDeps);
-  setTimeout(function() { waitForPusherAndSetup(presenceDeps); }, 500);
+  var pusherSetupTimeout = setTimeout(function() { waitForPusherAndSetup(presenceDeps); }, 500);
   
   async function checkUserStatus(userId) {
     try {
@@ -3581,6 +3581,10 @@ try {
     if (lobbyCountdownTimeout) {
       clearTimeout(lobbyCountdownTimeout);
       lobbyCountdownTimeout = null;
+    }
+    if (pusherSetupTimeout) {
+      clearTimeout(pusherSetupTimeout);
+      pusherSetupTimeout = null;
     }
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('schedule-updated', handleScheduleUpdated);

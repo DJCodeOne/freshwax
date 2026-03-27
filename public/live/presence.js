@@ -82,7 +82,7 @@ export async function setupLiveStatusListener(deps) {
             var avatar = member.info ? member.info.avatar : null;
             var name = (member.info ? member.info.name : null) || 'Viewer';
             var avatarHtml = avatar
-              ? '<div class="online-user-avatar"><img src="' + escapeHtml(avatar) + '" alt="' + escapeHtml(name) + '" /></div>'
+              ? '<div class="online-user-avatar"><img src="' + escapeHtml(avatar) + '" alt="' + escapeHtml(name) + '" width="32" height="32" loading="lazy" decoding="async" /></div>'
               : '<div class="online-user-avatar">' + escapeHtml(name.charAt(0).toUpperCase()) + '</div>';
             usersHtml += '<div class="online-user-item" data-user-id="' + escapeHtml(member.id) + '">' + avatarHtml + '<span class="online-user-name">' + escapeHtml(name) + '</span></div>';
           });

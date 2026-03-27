@@ -94,7 +94,7 @@ export async function loadWishlist(userId) {
           return '<div class="wishlist-card" data-release-id="' + escapeHtml(release.id) + '">' +
             '<div class="wishlist-card-artwork">' +
               '<a href="/item/' + escapeHtml(release.id) + '/">' +
-                '<img src="' + escapeHtml(release.coverArtUrl || '/place-holder.webp') + '" alt="' + escapeHtml(release.releaseName) + '" loading="lazy">' +
+                '<img src="' + escapeHtml(release.coverArtUrl || '/place-holder.webp') + '" alt="' + escapeHtml(release.releaseName) + '" width="300" height="300" loading="lazy" decoding="async">' +
               '</a>' +
             '</div>' +
             '<div class="wishlist-card-content">' +
@@ -311,7 +311,7 @@ export async function loadFollowing(userId) {
           var releaseCount = artist.releaseCount || 0;
 
           return '<div class="following-card" data-artist-name="' + escapeHtml(artist.artistName) + '">' +
-            '<img src="' + escapeHtml(artist.coverArtUrl || '/place-holder.webp') + '" alt="' + escapeHtml(artist.artistName) + '" class="following-card-avatar">' +
+            '<img src="' + escapeHtml(artist.coverArtUrl || '/place-holder.webp') + '" alt="' + escapeHtml(artist.artistName) + '" class="following-card-avatar" width="120" height="120" loading="lazy" decoding="async">' +
             '<h4 class="following-card-name">' + escapeHtml(artist.artistName) + '</h4>' +
             '<p class="following-card-releases">' + releaseCount + ' release' + (releaseCount !== 1 ? 's' : '') + '</p>' +
             (latestRelease ?

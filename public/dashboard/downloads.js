@@ -552,7 +552,7 @@ export function renderDownloads(ordersList) {
 
     return '<div class="download-card">' +
       '<div class="download-header">' +
-        '<img src="' + escapeHtml(item.image || item.downloads?.artworkUrl || '/place-holder.webp') + '" alt="' + escapeHtml(displayName) + '" class="download-art">' +
+        '<img src="' + escapeHtml(item.image || item.downloads?.artworkUrl || '/place-holder.webp') + '" alt="' + escapeHtml(displayName) + '" class="download-art" width="80" height="80" loading="lazy" decoding="async">' +
         '<div class="download-info">' +
           '<h4>' + escapeHtml(displayName) + '</h4>' +
           '<p>' + escapeHtml(typeLabel) + ' &middot; ' + escapeHtml(orderDate) + '</p>' +

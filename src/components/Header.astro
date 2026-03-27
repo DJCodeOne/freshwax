@@ -1795,6 +1795,7 @@ const firebaseConfig = {
   // Clean up intervals and event listeners before View Transitions swaps the DOM
   document.addEventListener('astro:before-swap', () => {
     if (liveStatusInterval) { clearInterval(liveStatusInterval); liveStatusInterval = null; }
+    if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = undefined; }
     headerCleanupController.abort();
   }, { once: true });
 

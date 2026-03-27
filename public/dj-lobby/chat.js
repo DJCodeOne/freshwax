@@ -169,7 +169,7 @@ export function formatLivestreamMessage(msg) {
 
   var safeAvatar = msg.userAvatar && /^https?:\/\//i.test(msg.userAvatar) ? escapeHtml(msg.userAvatar) : '';
   var avatarHtml = safeAvatar
-    ? '<img src="' + safeAvatar + '" alt="" class="ls-chat-avatar" data-fallback="html" data-fallback-html="<span class=\'ls-chat-avatar-letter\'>' + initial + '</span>" />'
+    ? '<img src="' + safeAvatar + '" alt="" class="ls-chat-avatar" width="32" height="32" loading="lazy" decoding="async" data-fallback="html" data-fallback-html="<span class=\'ls-chat-avatar-letter\'>' + initial + '</span>" />'
     : '<span class="ls-chat-avatar-letter">' + initial + '</span>';
 
   var badgeEmoji = msg.isPro ? (BADGE_EMOJIS[msg.badge] || BADGE_EMOJIS.crown) : '';
@@ -189,7 +189,7 @@ export function formatLivestreamMessage(msg) {
       '<span class="ls-chat-time">' + time + '</span>' +
       '</div>' +
       '<div class="ls-chat-gif">' +
-      '<img src="' + safeGiphyUrl + '" alt="GIF" loading="lazy" />' +
+      '<img src="' + safeGiphyUrl + '" alt="GIF" width="300" height="200" loading="lazy" decoding="async" />' +
       '</div>' +
       '</div>';
   }
