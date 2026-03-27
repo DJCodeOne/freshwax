@@ -93,6 +93,13 @@ const RATE_LIMIT_SKIP = new Set([
   '/api/health/payments/',
   '/api/cron/weekly-digest/',
   '/api/cron/stock-alerts/',
+  // Live page endpoints — high-frequency, have own per-endpoint rate limiting
+  '/api/livestream/listeners/',
+  '/api/playlist/global/',
+  '/api/playlist/personal/',
+  '/api/pusher/auth/',
+  '/api/dj-lobby/pusher-auth/',
+  '/api/auth/set-session/',
 ]);
 
 // Tight limit: search & external proxies (30 req/min)
