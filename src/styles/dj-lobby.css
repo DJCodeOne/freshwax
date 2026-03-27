@@ -90,7 +90,7 @@ body.dj-lobby-page{ --g1:linear-gradient(#1f2937,#111827);--g2:linear-gradient(1
 to{ opacity:1; transform:scale(1) } }
 .header-time-value{ font-family:'JetBrains Mono','SF Mono','Fira Code',Consolas,monospace; font-weight:600; font-size:1.25rem; color:#dc2626; letter-spacing:0; line-height:1; min-width:8.5ch; text-align:center }
 .header-time-value.urgent{ animation:urgentPulse 1s ease-in-out infinite }
-@keyframes urgentPulse{,100%{ opacity:1 }
+@keyframes urgentPulse{0%,100%{ opacity:1 }
 50%{ opacity:.6 } }
 .header-time-label{ color:#dc2626; font-size:.65rem; text-transform:uppercase; letter-spacing:.08em; font-weight:600 }
 .header-right .back-link{ font-size:.8rem; padding:.4rem .75rem; gap:.4rem }
@@ -99,7 +99,7 @@ to{ opacity:1; transform:scale(1) } }
 .header-center p,
 .incoming-dj span{ }
 .go-live-btn{ display:flex; align-items:center; gap:.5rem; padding:.6rem 1.25rem; background:linear-gradient(135deg,#10b981,#059669); color:#fff; text-decoration:none; border-radius:8px; font-weight:600; font-size:.9rem; transition:background .2s,opacity .2s,box-shadow .2s; box-shadow:0 0 15px var(--a6),0 0 30px var(--ae) }
-@keyframes goLiveGlow{,100%{ box-shadow:0 0 15px var(--a6),0 0 30px var(--ae) }
+@keyframes goLiveGlow{0%,100%{ box-shadow:0 0 15px var(--a6),0 0 30px var(--ae) }
 50%{ box-shadow:0 0 25px rgba(16,185,129,.8),0 0 50px var(--a6) } }
 .go-live-btn.disabled{ background:#6b7280; cursor:not-allowed; opacity:.6; pointer-events:none; box-shadow:none; animation:none }
 .header-right{ display:flex; align-items:center; justify-content:flex-end; gap:1rem }
@@ -124,7 +124,7 @@ to{ opacity:1; transform:scale(1) } }
 .takeover-attempts{}
 .end-stream-status.live{ color:#dc2626; font-weight:600 }
 .lobby-end-stream-btn.ending{ background:linear-gradient(135deg,#dc2626,#991b1b); animation:endingPulse 1s ease-in-out infinite }
-@keyframes endingPulse{,100%{ box-shadow:0 0 10px var(--ab) }
+@keyframes endingPulse{0%,100%{ box-shadow:0 0 10px var(--ab) }
 50%{ box-shadow:0 0 25px rgba(220,38,38,.7),0 0 40px var(--ab) } }
 .end-countdown{ background:var(--a8); padding:.15rem .5rem; border-radius:4px; font-family:var(--fm); font-size:.85rem; margin-left:.5rem }
 .end-stream-status.ending{ color:#f59e0b; font-weight:700; animation:statusPulse 1s ease-in-out infinite }
@@ -181,9 +181,9 @@ html, body{ height:100%; overflow:hidden }
 .indicator-dot.connecting{ background:#f59e0b; animation:indicatorPulse 1s ease-in-out infinite; box-shadow:0 0 8px rgba(245,158,11,.6) }
 .indicator-dot.connected{ background:#10b981; box-shadow:0 0 12px rgba(16,185,129,.8),0 0 20px rgba(16,185,129,.4); animation:indicatorGlow 1.5s ease-in-out infinite }
 .indicator-dot.error{ background:#ef4444; box-shadow:0 0 12px rgba(239,68,68,.8) }
-@keyframes indicatorPulse{,100%{ opacity:1; transform:scale(1) }
+@keyframes indicatorPulse{0%,100%{ opacity:1; transform:scale(1) }
 50%{ opacity:.5; transform:scale(.9) } }
-@keyframes indicatorGlow{,100%{ box-shadow:0 0 8px rgba(16,185,129,.6),0 0 16px var(--ae) }
+@keyframes indicatorGlow{0%,100%{ box-shadow:0 0 8px rgba(16,185,129,.6),0 0 16px var(--ae) }
 50%{ box-shadow:0 0 16px rgba(16,185,129,1),0 0 28px var(--a6) } }
 .indicator-label{ font-size:.65rem; color:#aaa; text-transform:uppercase; font-weight:500 }
 .indicator-dot.connected+.indicator-label{ color:#10b981 }
@@ -352,9 +352,9 @@ html, body{ height:100%; overflow:hidden }
 .preview-player.fading-out::after{opacity:0; animation:fadeToBlack 10s ease-out forwards; z-index:5 }
 .preview-player.faded-out::after{opacity:1; z-index:5 }
 .preview-player.fading-in::after{opacity:1; animation:fadeFromBlack 2s ease-in forwards; z-index:5 }
-@keyframes fadeToBlack{ 0{ opacity:0 }
+@keyframes fadeToBlack{ 0%{ opacity:0 }
 100%{ opacity:1 } }
-@keyframes fadeFromBlack{ 0{ opacity:1 }
+@keyframes fadeFromBlack{ 0%{ opacity:1 }
 100%{ opacity:0 } }
 .offline-state{ position:relative; width:100%; height:100%; min-height:200px; background:#000 }
 .preview-branding{ position:absolute; top:12px; right:12px; font-family:var(--fb); font-size:1.1rem; letter-spacing:2px; opacity:.7 }
@@ -371,7 +371,7 @@ html, body{ height:100%; overflow:hidden }
 .status-indicator{ width:8px; height:8px; border-radius:50%; flex-shrink:0 }
 .status-indicator.offline{ background:#6b7280 }
 .status-indicator.live{ background:#dc2626; box-shadow:0 0 8px var(--ac); animation:statusPulse 1.5s infinite }
-@keyframes statusPulse{,100%{ opacity:1; box-shadow:0 0 8px var(--ac) }
+@keyframes statusPulse{0%,100%{ opacity:1; box-shadow:0 0 8px var(--ac) }
 50%{ opacity:.7; box-shadow:0 0 12px rgba(220,38,38,.9) } }
 .stream-key-section{ flex:1; padding:1rem 1.25rem; background:var(--g3); border:1px solid #2a2a2a; border-radius:10px; color:#fff; display:flex }
 .stream-key-section .section-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:.85rem }
@@ -433,7 +433,7 @@ to{ opacity:1; transform:translateY(0) } }
 .cred-value-compact code.key-unavailable{ color:#aaa; background:#1a1a1a }
 .cred-value-compact code.key-unavailable .key-no-slot{ color:#bbb; font-style:italic; font-size:.85rem }
 .cred-value-compact code.key-reveal .key-text{ display:inline-block; animation:keyReveal 2.5s ease-out forwards }
-@keyframes keyReveal{ 0{ opacity:0; filter:blur(12px); text-shadow:0 0 30px #f59e0b }
+@keyframes keyReveal{ 0%{ opacity:0; filter:blur(12px); text-shadow:0 0 30px #f59e0b }
 30%{ opacity:.6; filter:blur(8px); text-shadow:0 0 40px #f59e0b,0 0 80px #f59e0b }
 60%{ opacity:.9; filter:blur(3px); text-shadow:0 0 25px #f59e0b,0 0 50px #f59e0b }
 100%{ opacity:1; filter:blur(0); text-shadow:0 0 8px rgba(245,158,11,.5) } }
@@ -441,7 +441,7 @@ code.url-scrolling{ overflow:hidden; text-overflow:clip }
 code.url-scrolling .url-text{ display:inline-block; animation:scrollUrlIn 1.2s ease-out forwards }
 #rtmpUrl .url-text{ animation-delay:.2s; opacity:0 }
 #outputUrl .url-text{ animation-delay:.6s; opacity:0 }
-@keyframes scrollUrlIn{ 0{ transform:translateX(100%); opacity:0 }
+@keyframes scrollUrlIn{ 0%{ transform:translateX(100%); opacity:0 }
 100%{ transform:translateX(0); opacity:1 } }
 .copy-btn-sm{background:#c2410c; font-weight:600 }
 .copy-btn-sm:hover{ background:#9a3412 }
@@ -474,10 +474,10 @@ code.url-scrolling .url-text{ display:inline-block; animation:scrollUrlIn 1.2s e
 .spawn-dots .dot:nth-child(1){animation-delay:0}
 .loading-dots .dot:nth-child(2){ animation-delay:.2s }
 .loading-dots .dot:nth-child(3){ animation-delay:.4s }
-@keyframes loadingBounce{,80%,100%{ transform:scale(.6); opacity:.4 }
+@keyframes loadingBounce{0%,80%,100%{ transform:scale(.6); opacity:.4 }
 40%{ transform:scale(1); opacity:1 } }
 .loading-dots.wave .dot{ animation:loadingWave 1.2s ease-in-out infinite }
-@keyframes loadingWave{,100%{ transform:translateY(0) } }
+@keyframes loadingWave{0%,100%{ transform:translateY(0) } }
 .relay-source-item{background:#111; border:var(--b6); cursor:pointer }
 .relay-source-item:hover{ border-color:#555; background:#1a1a1a }
 .relay-source-item.selected{ border-color:#f97316; background:rgba(249,115,22,.1) }
@@ -505,7 +505,7 @@ code.url-scrolling .url-text{ display:inline-block; animation:scrollUrlIn 1.2s e
 .spawn-dots .dot{ width:6px; height:6px; background:#f59e0b; border-radius:50%; animation:spawnDotBounce 1.8s ease-in-out infinite; box-shadow:0 0 6px rgba(245,158,11,.8) }
 .spawn-dots .dot:nth-child(2){ animation-delay:.25s }
 .spawn-dots .dot:nth-child(3){ animation-delay:.5s }
-@keyframes keyPulse{,100%{ opacity:.7; text-shadow:0 0 8px var(--ad) }
+@keyframes keyPulse{0%,100%{ opacity:.7; text-shadow:0 0 8px var(--ad) }
 50%{ opacity:1; text-shadow:0 0 16px rgba(245,158,11,.9),0 0 24px rgba(245,158,11,.5) } }
 .go-live-btn.glow{ animation:goLiveGlow 2s ease-in-out infinite; box-shadow:0 0 20px rgba(16,185,129,.4) }
 .go-live-btn.glow:hover{ animation:none; box-shadow:0 0 35px rgba(16,185,129,.8),0 0 70px var(--a6); transform:scale(1.03) }
@@ -513,12 +513,12 @@ code.url-scrolling .url-text{ display:inline-block; animation:scrollUrlIn 1.2s e
 .go-live-btn.go-live-final:hover{ animation:none; box-shadow:0 0 40px rgba(220,38,38,1),0 0 80px var(--ac); transform:scale(1.05) }
 .go-live-btn.is-ready-state{ background:linear-gradient(135deg,#059669,#047857)!important; border-color:#059669!important; animation:none; cursor:default }
 .go-live-btn.is-ready{ animation:liveBreathe 1.5s ease-in-out infinite; background:linear-gradient(135deg,#dc2626,#ef4444)!important; box-shadow:0 0 20px var(--a7) }
-@keyframes liveBreathe{,100%{ box-shadow:0 0 15px var(--a7),0 0 30px var(--a0); transform:scale(1) }
+@keyframes liveBreathe{0%,100%{ box-shadow:0 0 15px var(--a7),0 0 30px var(--a0); transform:scale(1) }
 50%{ box-shadow:0 0 25px rgba(220,38,38,.8),0 0 50px var(--a7),0 0 80px var(--a0); transform:scale(1.02) } }
 #countdownToSlot{ display:inline-block; font-weight:700; color:#f59e0b; text-shadow:0 0 8px var(--ad); animation:countdownPulse 1s ease-in-out infinite }
 #countdownToSlot:empty{ animation:none }
 #countdownToSlot.slot-now{ color:#22c55e; animation:slotNowFlash .8s ease-in-out infinite; text-shadow:0 0 12px var(--a4) }
-@keyframes slotNowFlash{,100%{ opacity:1; text-shadow:0 0 12px var(--a4); transform:scale(1) }
+@keyframes slotNowFlash{0%,100%{ opacity:1; text-shadow:0 0 12px var(--a4); transform:scale(1) }
 50%{ opacity:.9; text-shadow:0 0 20px rgba(34,197,94,1),0 0 40px var(--a4) } }
 .takeover-creds{ background:var(--g1); border-radius:6px; padding:.5rem; margin-bottom:.5rem }
 .cred-row{ margin-bottom:.4rem }
@@ -802,7 +802,7 @@ button{ -webkit-user-select:none; user-select:none } }
 .broadcast-mode-toggle .indicator.source-toggle:hover{ background:rgba(50,50,50,.9); border-color:#dc2626 }
 .broadcast-mode-toggle .indicator-label{ font-size:.7rem; color:#d1d5db }
 .broadcast-mode-toggle .indicator.source-toggle:hover .indicator-label{ color:#fff }
-@keyframes pulse-scale{,100%{ transform:scale(1) }
+@keyframes pulse-scale{0%,100%{ transform:scale(1) }
 50%{ transform:scale(1.1) } }
 .init-progress-section,
 .init-check-item.connected .init-spinner,
@@ -835,7 +835,7 @@ button{ -webkit-user-select:none; user-select:none } }
 .mobile-live-top{ display:flex; align-items:center; gap:10px }
 .mobile-live-badge{ display:inline-flex; align-items:center; gap:6px; background:rgba(220,38,38,.9); color:#fff; font-weight:700; font-size:.75rem; padding:4px 10px; border-radius:4px }
 .mobile-live-dot{ width:8px; height:8px; background:#fff; border-radius:50%; animation:mobileLivePulse 1.5s ease-in-out infinite }
-@keyframes mobileLivePulse{,100%{ opacity:1 }
+@keyframes mobileLivePulse{0%,100%{ opacity:1 }
 50%{ opacity:.4 } }
 .mobile-live-timer{ color:#fff; font-size:.875rem; font-weight:600; font-variant-numeric:tabular-nums; text-shadow:0 1px 3px rgba(0,0,0,.6) }
 .mobile-live-controls{ display:flex; justify-content:center; gap:16px; align-self:flex-end; width:100% }

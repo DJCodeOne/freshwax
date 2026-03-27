@@ -374,8 +374,9 @@ try {
               var initOverlay = document.getElementById('initializingOverlay');
               var offlineOverlay = document.getElementById('offlineOverlay');
 
+              // Store timer IDs on window for cleanup on navigation
               // Fade both overlays after 5 seconds
-              setTimeout(function() {
+              window._overlayFadeTimer = setTimeout(function() {
                 if (initOverlay && !initOverlay.classList.contains('hidden')) {
                   initOverlay.classList.add('fade-out');
                 }
@@ -386,7 +387,7 @@ try {
               }, 5000);
 
               // Force hide both overlays after 10 seconds
-              setTimeout(function() {
+              window._overlayHideTimer = setTimeout(function() {
                 if (initOverlay) {
                   initOverlay.classList.add('hidden');
                   initOverlay.style.display = 'none';
@@ -396,6 +397,18 @@ try {
                   offlineOverlay.style.display = 'none';
                 }
               }, 10000);
+
+              // Clean up overlay timers on View Transition navigation
+              document.addEventListener('astro:before-swap', function() {
+                if (window._overlayFadeTimer) {
+                  clearTimeout(window._overlayFadeTimer);
+                  window._overlayFadeTimer = null;
+                }
+                if (window._overlayHideTimer) {
+                  clearTimeout(window._overlayHideTimer);
+                  window._overlayHideTimer = null;
+                }
+              }, { once: true });
             })();
           </script>
 
@@ -3671,7 +3684,9 @@ try {
     hoverZone.addEventListener('mouseleave', function(e) {
       var headerRect = header.getBoundingClientRect();
       if (e.clientY > headerRect.bottom || e.clientY < headerRect.top) {
-        setTimeout(function() {
+        if (window._headerHoverTimer) clearTimeout(window._headerHoverTimer);
+        window._headerHoverTimer = setTimeout(function() {
+          window._headerHoverTimer = null;
           if (!header.matches(':hover')) {
             header.classList.remove('header-visible');
           }
@@ -3684,7 +3699,9 @@ try {
     window.addEventListener('scroll', function() {
       if (window.scrollY === 0 && lastScrollY > 0) {
         header.classList.add('header-visible');
-        setTimeout(function() {
+        if (window._headerScrollTimer) clearTimeout(window._headerScrollTimer);
+        window._headerScrollTimer = setTimeout(function() {
+          window._headerScrollTimer = null;
           if (!header.matches(':hover') && !hoverZone.matches(':hover')) {
             header.classList.remove('header-visible');
           }
@@ -3699,6 +3716,15 @@ try {
     if (window._headerAutoHideAbort) {
       window._headerAutoHideAbort.abort();
       window._headerAutoHideAbort = null;
+    }
+    // Clear header hover/scroll timeouts
+    if (window._headerHoverTimer) {
+      clearTimeout(window._headerHoverTimer);
+      window._headerHoverTimer = null;
+    }
+    if (window._headerScrollTimer) {
+      clearTimeout(window._headerScrollTimer);
+      window._headerScrollTimer = null;
     }
     var h = document.getElementById('freshwax-header');
     if (h) h.classList.remove('header-auto-hide', 'header-visible');

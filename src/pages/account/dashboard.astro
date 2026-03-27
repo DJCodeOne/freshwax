@@ -1414,39 +1414,33 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // Show verification banner for unverified users (created after 2026-01-06)
           showVerificationBanner(user, customerData);
 
-          // Fetch orders via API
-          orders = await fetchOrders(user.uid);
-          
-          // Render orders (module)
+          // Fetch orders + independent API calls in parallel
+          var results = await Promise.all([
+            fetchOrders(user.uid),
+            checkPartnerStatus(user.uid),
+            socialModule.loadWishlistCount(user.uid),
+            socialModule.loadFollowingCount(user.uid),
+            creditsModule.loadCreditBalance(user.uid),
+            subscriptionModule.loadSubscriptionStatus(user.uid),
+            loadActivityFeed(user).catch(function() { /* non-critical: activity feed initial load */ })
+          ]);
+          orders = results[0];
+
+          // Render orders (module) — depends on orders result above
           ordersModule.renderOrders(orders.slice(0, 5), 'recentOrdersList');
           ordersModule.renderOrders(orders, 'ordersContainer');
-          
+
           // Render downloads from orders (module)
           downloadsModule.renderDownloads(orders);
-          
+
           // Update stats (module)
           ordersModule.updateStats(orders);
-          
-          // Load wishlist count for badge (module)
-          socialModule.loadWishlistCount(user.uid);
-          
-          // Load following count for badge (module)
-          socialModule.loadFollowingCount(user.uid);
-          
-          // Check if user is approved partner and enable Partner Dashboard button
-          checkPartnerStatus(user.uid);
-          
-          // Load credit balance (module)
-          creditsModule.loadCreditBalance(user.uid);
-          
+
           // Initialize components
           initTabs();
           initLogout();
           profileModule.initProfileForm();
           creditsModule.initCreditTab();
-
-          // Load subscription status (module)
-          subscriptionModule.loadSubscriptionStatus(user.uid);
 
           // Check for successful upgrade redirect (module)
           subscriptionModule.checkUpgradeSuccess();
@@ -1454,9 +1448,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // Initialize Go Plus modal (module)
           subscriptionModule.initGoPlusModal();
           downloadsModule.initZipModal();
-
-          // Load activity feed (non-blocking)
-          loadActivityFeed(user).catch(function() { /* non-critical: activity feed initial load */ });
 
         } catch (error) {
           console.error('[Dashboard] Error loading dashboard:', error);
