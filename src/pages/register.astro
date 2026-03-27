@@ -103,13 +103,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <input type="text" id="displayName" name="displayName" required aria-required="true" placeholder="Enter the name you want use across the site" minlength="2" maxlength="30" aria-describedby="displayNameHint" autocomplete="name">
             <span class="input-status" id="displayNameStatus"></span>
           </div>
-          <small class="input-hint" id="displayNameHint" role="alert"></small>
+          <small class="input-hint" id="displayNameHint" role="alert" aria-live="assertive"></small>
         </div>
 
         <div class="form-group">
           <label for="email">Email</label>
           <input type="email" id="email" name="email" required aria-required="true" placeholder="your@email.com" aria-describedby="emailError" autocomplete="email">
-          <p class="field-error" id="emailError" role="alert"></p>
+          <p class="field-error" id="emailError" role="alert" aria-live="assertive"></p>
         </div>
 
         <div class="form-group password-field">
@@ -156,7 +156,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </svg>
             </button>
           </div>
-          <p class="field-error" id="confirmPasswordError" role="alert"></p>
+          <p class="field-error" id="confirmPasswordError" role="alert" aria-live="assertive"></p>
         </div>
 
         <div class="form-divider">
@@ -265,8 +265,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <span class="btn-loading" style="display: none;">Creating...</span>
         </button>
 
-        <div id="formError" class="form-error" role="alert" style="display: none;"></div>
-        <div id="formSuccess" class="form-success" role="status" style="display: none;"></div>
+        <div id="formError" class="form-error" role="alert" aria-live="assertive" style="display: none;"></div>
+        <div id="formSuccess" class="form-success" role="status" aria-live="polite" style="display: none;"></div>
 
         <p class="recaptcha-notice">
           This site is protected by reCAPTCHA and the Google

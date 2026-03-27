@@ -25,7 +25,7 @@ export {
  */
 export function renderPlaylistUI(ctx: PlaylistContext): void {
   // Update reaction count display
-  const reactionCount = (ctx.playlist as any).reactionCount || 0;
+  const reactionCount = ctx.playlist.reactionCount || 0;
   const likeCountEl = document.getElementById('likeCount');
   const fsLikes = document.getElementById('fsLikes');
   if (likeCountEl) likeCountEl.textContent = String(reactionCount);

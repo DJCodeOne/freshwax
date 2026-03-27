@@ -4,7 +4,7 @@
 
 import { createClientLogger } from './client-logger';
 import { TIMEOUTS } from './timeouts';
-import type { CheckoutState } from './checkout/types';
+import type { CheckoutState, CheckoutFirebaseUser, DuplicateResult } from './checkout/types';
 import {
   getCustomerIdFromCookie,
   loadCart,
@@ -68,7 +68,7 @@ export function init() {
     selectPaymentMethod: (method: string) => selectPaymentMethod(state, method),
     toggleApplyCredit: (checked: boolean) => toggleApplyCredit(state, checked),
     handleSubmit: (e: Event) => handleSubmit(e, state),
-    removeDuplicatesFromCart: (duplicates: any[]) => removeDuplicatesFromCart(state, duplicates),
+    removeDuplicatesFromCart: (duplicates: DuplicateResult[]) => removeDuplicatesFromCart(state, duplicates),
     renderCheckout: () => doRenderCheckout(),
     setupPaymentMethods: () => setupPaymentMethods(),
   };
@@ -87,7 +87,7 @@ export function init() {
   let authInitialized = false;
 
   // Shared function to initialize checkout with user data
-  async function initCheckoutWithUser(user: any, customerId: string | null) {
+  async function initCheckoutWithUser(user: CheckoutFirebaseUser | null, customerId: string | null) {
     authInitialized = true;
     state.authInitialized = true;
     clearTimeout(authTimeout);
