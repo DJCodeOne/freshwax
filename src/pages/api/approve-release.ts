@@ -6,7 +6,7 @@ import { getDocument, updateDocument, invalidateReleasesCache } from '../../lib/
 import { d1UpsertRelease } from '../../lib/d1-catalog';
 import { requireAdminAuth } from '../../lib/admin';
 import { invalidateReleasesKVCache } from '../../lib/kv-cache';
-import { createLogger, errorResponse, successResponse } from '../../lib/api-utils';
+import { createLogger, successResponse, ApiErrors } from '../../lib/api-utils';
 import { logActivity } from '../../lib/activity-feed';
 import { broadcastActivity } from '../../lib/pusher';
 
@@ -24,7 +24,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as App.Locals).runtime?.env;
 
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON');
+    }
 
     // Admin authentication required
     const authError = await requireAdminAuth(request, locals, body);
@@ -32,7 +37,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = ApproveReleaseSchema.safeParse(body);
     if (!parsed.success) {
-      return errorResponse('releaseId (string) and action ("approve" or "reject") are required', 400);
+      return ApiErrors.badRequest('releaseId (string) and action ("approve" or "reject") are required');
     }
 
     const { releaseId, action } = parsed.data;
@@ -43,7 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const releaseData = await getDocument('releases', releaseId) as Record<string, unknown> | null;
 
     if (!releaseData) {
-      return errorResponse('Release not found', 404);
+      return ApiErrors.notFound('Release not found');
     }
 
     // Update release status
@@ -136,6 +141,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const message = e instanceof Error ? e.message : String(e);
     log.error('[approve-release] Error:', message);
 
-    return errorResponse('Internal server error');
+    return ApiErrors.serverError();
   }
 };

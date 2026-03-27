@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { createLogger, errorResponse, jsonResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, jsonResponse, ApiErrors } from '../../../lib/api-utils';
 
 const log = createLogger('[pusher-auth]');
 import { SITE_URL } from '../../../lib/constants';
@@ -135,6 +135,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));
-    return errorResponse('Auth failed');
+    return ApiErrors.serverError('Auth failed');
   }
 };

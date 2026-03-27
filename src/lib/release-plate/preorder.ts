@@ -7,7 +7,7 @@
 // PRE-ORDER SYSTEM
 // ============================================
 export function initPreorderSystem() {
-  var preorderButtons = document.querySelectorAll('.preorder-btn');
+  const preorderButtons = document.querySelectorAll('.preorder-btn');
 
   preorderButtons.forEach(function(btn) {
     btn.addEventListener('click', async function(e) {
@@ -18,18 +18,18 @@ export function initPreorderSystem() {
         return;
       }
 
-      var releaseId = (btn as HTMLElement).getAttribute('data-release-id');
-      var title = (btn as HTMLElement).getAttribute('data-title');
-      var artist = (btn as HTMLElement).getAttribute('data-artist');
-      var artwork = (btn as HTMLElement).getAttribute('data-artwork');
-      var price = parseFloat((btn as HTMLElement).getAttribute('data-price') || '0');
-      var releaseDate = (btn as HTMLElement).getAttribute('data-release-date');
+      const releaseId = (btn as HTMLElement).getAttribute('data-release-id');
+      const title = (btn as HTMLElement).getAttribute('data-title');
+      const artist = (btn as HTMLElement).getAttribute('data-artist');
+      const artwork = (btn as HTMLElement).getAttribute('data-artwork');
+      const price = parseFloat((btn as HTMLElement).getAttribute('data-price') || '0');
+      const releaseDate = (btn as HTMLElement).getAttribute('data-release-date');
 
-      var cart = window.FreshWaxCart.get();
-      var items = cart.items || [];
+      const cart = window.FreshWaxCart.get();
+      const items = cart.items || [];
 
-      var existingIndex = -1;
-      for (var i = 0; i < items.length; i++) {
+      let existingIndex = -1;
+      for (let i = 0; i < items.length; i++) {
         if (items[i].id === releaseId && (items[i].type === 'digital' || items[i].type === 'preorder')) {
           existingIndex = i;
           break;
@@ -37,7 +37,7 @@ export function initPreorderSystem() {
       }
 
       if (existingIndex !== -1) {
-        var originalHTML = btn.innerHTML;
+        const originalHTML = btn.innerHTML;
         btn.innerHTML = '<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> In Cart</span>';
         setTimeout(function() {
           btn.innerHTML = originalHTML;
@@ -64,7 +64,7 @@ export function initPreorderSystem() {
       window.FreshWaxCart.save({ items: items });
       window.FreshWaxCart.updateBadge();
 
-      var originalHTML2 = btn.innerHTML;
+      const originalHTML2 = btn.innerHTML;
       btn.innerHTML = '<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added!</span>';
       btn.classList.remove('from-orange-500', 'to-red-500');
       btn.classList.add('from-green-500', 'to-green-600');

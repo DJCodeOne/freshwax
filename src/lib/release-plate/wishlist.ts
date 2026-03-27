@@ -13,22 +13,22 @@ export function initWishlistSystem() {
   if (window._wishlistInitialized) return;
   window._wishlistInitialized = true;
 
-  var wishlistButtons = document.querySelectorAll('.wishlist-btn');
+  const wishlistButtons = document.querySelectorAll('.wishlist-btn');
 
   async function fetchWishlistState() {
-    var user = window.firebaseAuth?.currentUser;
+    const user = window.firebaseAuth?.currentUser;
     if (user && wishlistButtons.length > 0) {
       try {
-        var token = await user.getIdToken();
+        const token = await user.getIdToken();
         fetch('/api/wishlist/?userId=' + user.uid, {
           headers: { 'Authorization': 'Bearer ' + token }
         })
           .then(function(res) { return res.ok ? res.json() : null; })
           .then(function(data) {
             if (data && data.success && data.wishlist) {
-              var wishlistIds = data.wishlist.map(function(r: WishlistEntry) { return r.id; });
+              const wishlistIds = data.wishlist.map(function(r: WishlistEntry) { return r.id; });
               wishlistButtons.forEach(function(btn) {
-                var releaseId = btn.getAttribute('data-release-id');
+                const releaseId = btn.getAttribute('data-release-id');
                 if (wishlistIds.includes(releaseId)) {
                   setWishlistState(btn, true);
                 }
@@ -55,14 +55,14 @@ export function initWishlistSystem() {
   }
 
   document.addEventListener('click', async function(e) {
-    var btn = (e.target as HTMLElement).closest('.wishlist-btn') as HTMLElement | null;
+    const btn = (e.target as HTMLElement).closest('.wishlist-btn') as HTMLElement | null;
     if (!btn) return;
 
     e.preventDefault();
     e.stopPropagation();
 
-    var user = window.firebaseAuth?.currentUser;
-    var releaseId = btn.getAttribute('data-release-id');
+    const user = window.firebaseAuth?.currentUser;
+    const releaseId = btn.getAttribute('data-release-id');
 
     if (!user) {
       window.showToast?.('Please log in to add items to your wishlist');
@@ -73,7 +73,7 @@ export function initWishlistSystem() {
     btn.style.pointerEvents = 'none';
 
     try {
-      var token = await user.getIdToken();
+      const token = await user.getIdToken();
 
       fetch('/api/wishlist/', {
         method: 'POST',
@@ -115,9 +115,9 @@ export function initWishlistSystem() {
 }
 
 function setWishlistState(btn: Element, inWishlist: boolean) {
-  var emptyIcon = btn.querySelector('.wishlist-icon-empty');
-  var filledIcon = btn.querySelector('.wishlist-icon-filled');
-  var textSpan = btn.querySelector('.wishlist-text');
+  const emptyIcon = btn.querySelector('.wishlist-icon-empty');
+  const filledIcon = btn.querySelector('.wishlist-icon-filled');
+  const textSpan = btn.querySelector('.wishlist-text');
 
   if (inWishlist) {
     if (emptyIcon) emptyIcon.classList.add('hidden');

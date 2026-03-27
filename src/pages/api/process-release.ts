@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { saSetDocument, saQueryCollection } from '../../lib/firebase-service-account';
 import { getAdminFirebaseContext } from '../../lib/firebase/admin-context';
 import { invalidateReleasesCache, clearCache } from '../../lib/firebase-rest';
-import { createLogger, errorResponse, successResponse, ApiErrors } from '../../lib/api-utils';
+import { createLogger, successResponse, ApiErrors } from '../../lib/api-utils';
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { invalidateReleasesKVCache } from '../../lib/kv-cache';
@@ -436,12 +436,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);
     log.error('Inner error:', errMsg);
-    return errorResponse('Processing failed');
+    return ApiErrors.serverError('Processing failed');
   }
 
   } catch (outerError: unknown) {
     const errMsg = outerError instanceof Error ? outerError.message : String(outerError);
     log.error('Outer error (uncaught):', errMsg);
-    return errorResponse('An internal error occurred');
+    return ApiErrors.serverError('An internal error occurred');
   }
 };

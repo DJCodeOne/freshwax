@@ -7,7 +7,7 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../../lib/kv-cache';
-import { errorResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
 
 const log = createLogger('payment/status');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -235,6 +235,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     log.error('[payment/status] Error:', error instanceof Error ? error.message : String(error));
-    return errorResponse('Failed to get payment status');
+    return ApiErrors.serverError('Failed to get payment status');
   }
 };

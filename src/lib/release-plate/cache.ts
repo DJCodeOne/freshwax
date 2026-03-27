@@ -4,7 +4,7 @@
 import { TIMEOUTS } from '../timeouts';
 import { AUTH_CACHE_TTL } from '../constants/limits';
 
-export var FWCache = {
+export const FWCache = {
   PREFIX: 'fwx_',
   TTL: {
     RATINGS: 30 * 60 * 1000,      // 30 minutes
@@ -15,10 +15,10 @@ export var FWCache = {
 
   get: function(key: string): unknown {
     try {
-      var cached = localStorage.getItem(this.PREFIX + key);
+      const cached = localStorage.getItem(this.PREFIX + key);
       if (!cached) return null;
-      var data = JSON.parse(cached);
-      var ttl = data.ttl || this.TTL.RATINGS;
+      const data = JSON.parse(cached);
+      const ttl = data.ttl || this.TTL.RATINGS;
       if (Date.now() - data.ts > ttl) {
         localStorage.removeItem(this.PREFIX + key);
         return null;
@@ -40,8 +40,8 @@ export var FWCache = {
   },
 
   update: function<T>(key: string, updateFn: (current: T) => T): T {
-    var current = (this.get(key) || {}) as T;
-    var updated = updateFn(current);
+    const current = (this.get(key) || {}) as T;
+    const updated = updateFn(current);
     this.set(key, updated);
     return updated;
   },
@@ -52,13 +52,13 @@ export var FWCache = {
 
   cleanup: function(): void {
     try {
-      var keysToRemove: string[] = [];
-      for (var i = 0; i < localStorage.length; i++) {
-        var key = localStorage.key(i);
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
         if (key && key.startsWith(this.PREFIX)) {
-          var cached = localStorage.getItem(key);
+          const cached = localStorage.getItem(key);
           if (cached) {
-            var data = JSON.parse(cached);
+            const data = JSON.parse(cached);
             if (Date.now() - data.ts > (data.ttl || this.TTL.RATINGS)) {
               keysToRemove.push(key);
             }
@@ -115,12 +115,12 @@ export function sanitizeComment(text: string): string {
 }
 
 export function formatDate(timestamp: number | string): string {
-  var date = new Date(timestamp);
-  var now = new Date();
-  var diff = now.getTime() - date.getTime();
-  var minutes = Math.floor(diff / 60000);
-  var hours = Math.floor(diff / 3600000);
-  var days = Math.floor(diff / 86400000);
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
 
   if (minutes < 1) return 'Just now';
   if (minutes < 60) return minutes + 'm ago';

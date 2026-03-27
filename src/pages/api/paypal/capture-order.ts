@@ -49,7 +49,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.serverError('PayPal not configured');
     }
 
-    const rawBody = await request.json();
+    let rawBody;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON');
+    }
 
     const parseResult = PayPalCaptureSchema.safeParse(rawBody);
     if (!parseResult.success) {

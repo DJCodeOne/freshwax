@@ -37,7 +37,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.unauthorized('Authentication required');
     }
 
-    const rawBody = await request.json();
+    let rawBody;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON');
+    }
 
     // Zod input validation
     const parseResult = CreateCheckoutSchema.safeParse(rawBody);

@@ -116,6 +116,6 @@ export const GET: APIRoute = async ({ request }) => {
       return errorResponse('Request timed out. Please try again.', 504);
     }
 
-    return errorResponse('Failed to lookup postcode. Please try again.');
+    return ApiErrors.serverError('Failed to lookup postcode. Please try again.');
   }
 };

@@ -5,7 +5,7 @@ import { createClientLogger } from './client-logger';
 
 const logger = createClientLogger('ShufflePlayer');
 
-var ShufflePlayer = {
+const ShufflePlayer = {
   tracks: [] as Array<{
     id: string;
     title: string;
@@ -40,12 +40,12 @@ var ShufflePlayer = {
   els: {} as Record<string, HTMLElement | null>,
 
   init: function() {
-    var container = document.getElementById('shuffle-player-container');
+    const container = document.getElementById('shuffle-player-container');
     if (!container) return;
 
     // Load tracks from data attribute
     try {
-      var tracksData = container.getAttribute('data-tracks');
+      const tracksData = container.getAttribute('data-tracks');
       this.tracks = JSON.parse(tracksData || '[]');
     } catch (e: unknown){
       logger.error('Failed to parse tracks:', e);
@@ -102,9 +102,9 @@ var ShufflePlayer = {
 
   shuffleTracks: function() {
     this.shuffledTracks = this.tracks.slice();
-    for (var i = this.shuffledTracks.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var temp = this.shuffledTracks[i];
+    for (let i = this.shuffledTracks.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = this.shuffledTracks[i];
       this.shuffledTracks[i] = this.shuffledTracks[j];
       this.shuffledTracks[j] = temp;
     }
@@ -112,8 +112,8 @@ var ShufflePlayer = {
   },
 
   bindEvents: function() {
-    var self = this;
-    var audio = this.audio;
+    const self = this;
+    const audio = this.audio;
     if (!audio) return;
 
     // Play/Pause
@@ -181,13 +181,13 @@ var ShufflePlayer = {
     if (this.els.progressContainer) {
       this.els.progressContainer.onclick = function(e) {
         if (!audio || !audio.duration || !isFinite(audio.duration)) return;
-        var bar = self.els.progressContainer?.querySelector('.shuffle-progress-bar');
+        const bar = self.els.progressContainer?.querySelector('.shuffle-progress-bar');
         if (!bar) return;
-        var rect = bar.getBoundingClientRect();
-        var progress = (e.clientX - rect.left) / rect.width;
-        var dur = audio.duration;
-        var clipStart = dur > self.CLIP_START ? self.CLIP_START : 0;
-        var clipLen = self.clipEndTime - clipStart;
+        const rect = bar.getBoundingClientRect();
+        const progress = (e.clientX - rect.left) / rect.width;
+        const dur = audio.duration;
+        const clipStart = dur > self.CLIP_START ? self.CLIP_START : 0;
+        const clipLen = self.clipEndTime - clipStart;
         audio.currentTime = clipStart + (progress * clipLen);
       };
     }
@@ -199,7 +199,7 @@ var ShufflePlayer = {
 
     audio.onloadedmetadata = function() {
       if (!audio) return;
-      var dur = audio.duration;
+      const dur = audio.duration;
       // Calculate clip boundaries based on track length
       if (dur > self.CLIP_START + self.CLIP_DURATION) {
         // Track long enough: play 60s starting at 30s
@@ -219,7 +219,7 @@ var ShufflePlayer = {
     audio.oncanplay = function() {
       if (!self.seeked && audio) {
         self.seeked = true;
-        var dur = audio.duration;
+        const dur = audio.duration;
         if (dur > self.CLIP_START) {
           audio.currentTime = self.CLIP_START;
         }
@@ -257,7 +257,7 @@ var ShufflePlayer = {
   play: function() {
     if (this.shuffledTracks.length === 0 || !this.audio) return;
 
-    var track = this.shuffledTracks[this.currentIndex];
+    let track = this.shuffledTracks[this.currentIndex];
     if (!track) {
       this.currentIndex = 0;
       track = this.shuffledTracks[0];
@@ -337,10 +337,10 @@ var ShufflePlayer = {
 
   updateProgress: function() {
     if (!this.audio || !this.audio.duration || !isFinite(this.audio.duration)) return;
-    var dur = this.audio.duration;
-    var ct = this.audio.currentTime;
-    var clipStart = dur > this.CLIP_START ? this.CLIP_START : 0;
-    var clipLen = this.clipEndTime - clipStart;
+    const dur = this.audio.duration;
+    const ct = this.audio.currentTime;
+    const clipStart = dur > this.CLIP_START ? this.CLIP_START : 0;
+    const clipLen = this.clipEndTime - clipStart;
 
     // Auto-advance when clip time is up
     if (ct >= this.clipEndTime) {
@@ -349,9 +349,9 @@ var ShufflePlayer = {
     }
 
     // Show progress relative to the clip window
-    var elapsed = ct - clipStart;
+    let elapsed = ct - clipStart;
     if (elapsed < 0) elapsed = 0;
-    var progress = clipLen > 0 ? (elapsed / clipLen) * 100 : 0;
+    const progress = clipLen > 0 ? (elapsed / clipLen) * 100 : 0;
     if (this.els.progress) (this.els.progress as HTMLElement).style.width = progress + '%';
     if (this.els.currentTime) this.els.currentTime.textContent = this.formatTime(elapsed);
   },
@@ -382,9 +382,9 @@ var ShufflePlayer = {
   },
 
   updateQueueDisplay: function() {
-    var self = this;
+    const self = this;
     if (!this.els.queueList) return;
-    var upcoming = this.shuffledTracks.slice(this.currentIndex + 1, this.currentIndex + 6);
+    const upcoming = this.shuffledTracks.slice(this.currentIndex + 1, this.currentIndex + 6);
 
     if (upcoming.length === 0) {
       this.els.queueList.innerHTML = '<span class="queue-empty">End of queue</span>';
@@ -392,7 +392,7 @@ var ShufflePlayer = {
     }
 
     this.els.queueList.innerHTML = upcoming.map(function(track, i) {
-      var actualIndex = self.currentIndex + 1 + i;
+      const actualIndex = self.currentIndex + 1 + i;
       return '<div class="queue-item" data-index="' + actualIndex + '">' +
         '<img src="' + escapeHtml(track.artwork || '/place-holder.webp') + '" alt="' + escapeHtml(track.title) + ' artwork" loading="lazy">' +
         '<div class="queue-item-info">' +
@@ -405,7 +405,7 @@ var ShufflePlayer = {
     // Add click handlers to queue items
     this.els.queueList.querySelectorAll('.queue-item').forEach(function(item) {
       (item as HTMLElement).onclick = function() {
-        var index = parseInt(item.getAttribute('data-index') || '0');
+        const index = parseInt(item.getAttribute('data-index') || '0');
         self.playFromQueue(index);
       };
     });
@@ -413,11 +413,11 @@ var ShufflePlayer = {
 
   pauseGlobalPlayer: function() {
     try {
-      var globalAudio = document.getElementById('global-audio') as HTMLAudioElement | null;
+      const globalAudio = document.getElementById('global-audio') as HTMLAudioElement | null;
       if (globalAudio && !globalAudio.paused) {
         globalAudio.pause();
-        var miniPlayIcon = document.getElementById('mini-play-icon');
-        var miniPauseIcon = document.getElementById('mini-pause-icon');
+        const miniPlayIcon = document.getElementById('mini-play-icon');
+        const miniPauseIcon = document.getElementById('mini-pause-icon');
         if (miniPlayIcon) miniPlayIcon.classList.remove('hidden');
         if (miniPauseIcon) miniPauseIcon.classList.add('hidden');
       }
@@ -432,8 +432,8 @@ var ShufflePlayer = {
       }
     });
     document.querySelectorAll('.play-button').forEach(function(btn) {
-      var playIcon = btn.querySelector('.play-icon');
-      var pauseIcon = btn.querySelector('.pause-icon');
+      const playIcon = btn.querySelector('.play-icon');
+      const pauseIcon = btn.querySelector('.pause-icon');
       if (playIcon) playIcon.classList.remove('hidden');
       if (pauseIcon) pauseIcon.classList.add('hidden');
     });
@@ -441,13 +441,13 @@ var ShufflePlayer = {
 
   formatTime: function(seconds: number) {
     if (!seconds || !isFinite(seconds)) return '0:00';
-    var mins = Math.floor(seconds / 60);
-    var secs = Math.floor(seconds % 60);
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
     return mins + ':' + (secs < 10 ? '0' : '') + secs;
   },
 
   escapeHtml: function(text: string) {
-    var div = document.createElement('div');
+    const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }

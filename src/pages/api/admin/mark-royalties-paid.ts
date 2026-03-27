@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { d1MarkRoyaltiesPaid } from '../../../lib/d1-catalog';
-import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
+import { createLogger, successResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
 
 const log = createLogger('mark-royalties-paid');
 
@@ -26,14 +26,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const ids = body?.ids;
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return errorResponse('ids array required', 400);
+      return ApiErrors.badRequest('ids array required');
     }
 
     // Validate all IDs are strings
     const validIds = ids.filter((id: unknown) => typeof id === 'string' && id.length > 0) as string[];
 
     if (validIds.length === 0) {
-      return errorResponse('No valid IDs provided', 400);
+      return ApiErrors.badRequest('No valid IDs provided');
     }
 
     const updated = await d1MarkRoyaltiesPaid(db, validIds);

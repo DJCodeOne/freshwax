@@ -7,7 +7,7 @@
 
 import type { APIContext } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
-import { createLogger, errorResponse, jsonResponse, successResponse } from '../../lib/api-utils';
+import { createLogger, ApiErrors, jsonResponse, successResponse } from '../../lib/api-utils';
 
 const log = createLogger('icecast-auth');
 
@@ -162,6 +162,6 @@ export async function GET({ url, locals }: APIContext) {
       canConnect: now >= new Date(slotStart.getTime() - 10 * 60 * 1000) &&
                   now <= new Date(slotEnd.getTime() + 5 * 60 * 1000) });
   } catch (error: unknown) {
-    return errorResponse('Internal error');
+    return ApiErrors.serverError('Internal error');
   }
 }

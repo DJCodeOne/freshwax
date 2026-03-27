@@ -7,21 +7,21 @@ import { TIMEOUTS } from '../timeouts';
 // ============================================
 // NYOP (Name Your Own Price) Modal System
 // ============================================
-var nyopModalInitialized = false;
-var nyopCurrentReleaseData: NyopReleaseData | null = null;
+let nyopModalInitialized = false;
+let nyopCurrentReleaseData: NyopReleaseData | null = null;
 
 export function initNYOPSystem() {
-  var modal = document.getElementById('nyop-modal');
+  const modal = document.getElementById('nyop-modal');
   if (!modal) return;
 
-  var modalArtwork = document.getElementById('nyop-modal-artwork') as HTMLImageElement;
-  var modalTitle = document.getElementById('nyop-modal-title');
-  var modalArtist = document.getElementById('nyop-modal-artist');
-  var modalPrice = document.getElementById('nyop-modal-price') as HTMLInputElement;
-  var modalMinText = document.getElementById('nyop-modal-min-text');
-  var modalError = document.getElementById('nyop-modal-error') as HTMLElement;
-  var modalAddCart = document.getElementById('nyop-modal-add-cart') as HTMLButtonElement;
-  var quickPrices = modal.querySelectorAll('.nyop-quick-price');
+  const modalArtwork = document.getElementById('nyop-modal-artwork') as HTMLImageElement;
+  const modalTitle = document.getElementById('nyop-modal-title');
+  const modalArtist = document.getElementById('nyop-modal-artist');
+  const modalPrice = document.getElementById('nyop-modal-price') as HTMLInputElement;
+  const modalMinText = document.getElementById('nyop-modal-min-text');
+  const modalError = document.getElementById('nyop-modal-error') as HTMLElement;
+  const modalAddCart = document.getElementById('nyop-modal-add-cart') as HTMLButtonElement;
+  const quickPrices = modal.querySelectorAll('.nyop-quick-price');
 
   document.querySelectorAll('.nyop-open-modal').forEach(function(btn: Element) {
     if ((btn as HTMLElement).dataset.nyopInit === 'true') return;
@@ -31,8 +31,8 @@ export function initNYOPSystem() {
       e.preventDefault();
       e.stopPropagation();
 
-      var minPrice = parseFloat((btn as HTMLElement).dataset.nyopMin || '0') || 0;
-      var suggestedPrice = parseFloat((btn as HTMLElement).dataset.nyopSuggested || '0') || minPrice || 5;
+      const minPrice = parseFloat((btn as HTMLElement).dataset.nyopMin || '0') || 0;
+      const suggestedPrice = parseFloat((btn as HTMLElement).dataset.nyopSuggested || '0') || minPrice || 5;
 
       nyopCurrentReleaseData = {
         releaseId: (btn as HTMLElement).dataset.releaseId,
@@ -66,7 +66,7 @@ export function initNYOPSystem() {
   if (nyopModalInitialized) return;
   nyopModalInitialized = true;
 
-  var nyopPreviousFocus: Element | null = null;
+  let nyopPreviousFocus: Element | null = null;
 
   function closeModal() {
     modal!.classList.add('hidden');
@@ -80,12 +80,12 @@ export function initNYOPSystem() {
 
   modal.addEventListener('keydown', function(e: KeyboardEvent) {
     if (e.key !== 'Tab') return;
-    var focusableEls = modal!.querySelectorAll(
+    const focusableEls = modal!.querySelectorAll(
       'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
     );
     if (focusableEls.length === 0) return;
-    var firstEl = focusableEls[0] as HTMLElement;
-    var lastEl = focusableEls[focusableEls.length - 1] as HTMLElement;
+    const firstEl = focusableEls[0] as HTMLElement;
+    const lastEl = focusableEls[focusableEls.length - 1] as HTMLElement;
     if (e.shiftKey) {
       if (document.activeElement === firstEl) {
         e.preventDefault();
@@ -111,7 +111,7 @@ export function initNYOPSystem() {
 
   quickPrices.forEach(function(btn: Element) {
     btn.addEventListener('click', function() {
-      var price = parseFloat((btn as HTMLElement).dataset.price || '0') || 0;
+      const price = parseFloat((btn as HTMLElement).dataset.price || '0') || 0;
       modalPrice.value = price.toFixed(2);
       updateQuickPriceButtons(price);
       validatePrice();
@@ -120,7 +120,7 @@ export function initNYOPSystem() {
 
   function updateQuickPriceButtons(selectedPrice: number) {
     quickPrices.forEach(function(btn: Element) {
-      var btnPrice = parseFloat((btn as HTMLElement).dataset.price || '0') || 0;
+      const btnPrice = parseFloat((btn as HTMLElement).dataset.price || '0') || 0;
       if (btnPrice === selectedPrice) {
         btn.classList.add('active');
       } else {
@@ -135,8 +135,8 @@ export function initNYOPSystem() {
   });
 
   modalPrice.addEventListener('blur', function() {
-    var value = parseFloat(modalPrice.value) || 0;
-    var minPrice = nyopCurrentReleaseData ? nyopCurrentReleaseData.minPrice : 0;
+    const value = parseFloat(modalPrice.value) || 0;
+    const minPrice = nyopCurrentReleaseData ? nyopCurrentReleaseData.minPrice : 0;
     modalPrice.value = Math.max(minPrice, value).toFixed(2);
     validatePrice();
   });
@@ -144,8 +144,8 @@ export function initNYOPSystem() {
   function validatePrice(): boolean {
     if (!nyopCurrentReleaseData) return true;
 
-    var value = parseFloat(modalPrice.value) || 0;
-    var minPrice = nyopCurrentReleaseData.minPrice || 0;
+    const value = parseFloat(modalPrice.value) || 0;
+    const minPrice = nyopCurrentReleaseData.minPrice || 0;
 
     if (value < minPrice) {
       modalError.textContent = 'Minimum price is \u00a3' + minPrice.toFixed(2);
@@ -164,9 +164,9 @@ export function initNYOPSystem() {
   modalAddCart.addEventListener('click', function() {
     if (!nyopCurrentReleaseData || !validatePrice()) return;
 
-    var price = parseFloat(modalPrice.value) || 0;
+    const price = parseFloat(modalPrice.value) || 0;
 
-    var tempBtn = document.createElement('button');
+    const tempBtn = document.createElement('button');
     tempBtn.className = 'add-to-cart hidden';
     tempBtn.dataset.releaseId = nyopCurrentReleaseData.releaseId;
     tempBtn.dataset.productType = 'digital';

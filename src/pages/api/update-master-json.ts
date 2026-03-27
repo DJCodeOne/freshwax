@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument } from '../../lib/firebase-rest';
 import { requireAdminAuth } from '../../lib/admin';
-import { createLogger, errorResponse, jsonResponse, successResponse } from '../../lib/api-utils';
+import { createLogger, ApiErrors, jsonResponse, successResponse } from '../../lib/api-utils';
 
 // passthrough() needed because the full release object (tracks, prices, etc.) is spread into Firestore
 const UpdateMasterJsonSchema = z.object({
@@ -117,7 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     log.error('[Master JSON] Error:', message);
-    return errorResponse('Internal error');
+    return ApiErrors.serverError('Internal error');
   }
 };
 

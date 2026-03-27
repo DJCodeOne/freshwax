@@ -42,7 +42,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const resend = new Resend(apiKey);
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON');
+    }
     const parsed = ContactSchema.safeParse(body);
     if (!parsed.success) {
       return ApiErrors.badRequest('Invalid request');

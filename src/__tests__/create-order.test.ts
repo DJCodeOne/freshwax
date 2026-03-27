@@ -638,9 +638,9 @@ describe('Create Order', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 16. Invalid JSON body returns 500
+  // 16. Invalid JSON body returns 400
   // -----------------------------------------------------------------------
-  it('returns 500 when request body is not valid JSON', async () => {
+  it('returns 400 when request body is not valid JSON', async () => {
     const request = new Request('https://freshwax.co.uk/api/create-order/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -652,7 +652,7 @@ describe('Create Order', () => {
       locals: makeLocals(),
     } as unknown as Parameters<typeof POST>[0]);
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
     expect(mockAddDocument).not.toHaveBeenCalled();
   });
 

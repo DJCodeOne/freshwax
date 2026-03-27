@@ -81,7 +81,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
   } catch (purchaseErr: unknown) {
     log.error('[download] Purchase verification error:', purchaseErr);
-    return errorResponse('Could not verify purchase');
+    return ApiErrors.serverError('Could not verify purchase');
   }
 
   try {
@@ -131,6 +131,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   } catch (error: unknown) {
     log.error('[download] Error:', error);
-    return errorResponse('Download failed');
+    return ApiErrors.serverError('Download failed');
   }
 };

@@ -85,7 +85,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.serverError('Payment service temporarily unavailable');
     }
 
-    const rawBody = await request.json();
+    let rawBody;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON');
+    }
 
     // Validate input with Zod
     const parseResult = StripeCheckoutSchema.safeParse(rawBody);

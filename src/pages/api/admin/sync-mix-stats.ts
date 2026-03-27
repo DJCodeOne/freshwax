@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { d1UpsertMix } from '../../../lib/d1-catalog';
-import { successResponse, errorResponse, createLogger } from '../../../lib/api-utils';
+import { successResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
 
 const log = createLogger('admin/sync-mix-stats');
 
@@ -14,7 +14,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authResult) return authResult;
 
   const db = locals.runtime?.env?.DB;
-  if (!db) return errorResponse('D1 not available', 500);
+  if (!db) return ApiErrors.serverError('D1 not available');
 
   try {
     // Fetch all mixes from Firestore (source of truth)
@@ -56,6 +56,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: unknown) {
     log.error('Error:', error);
-    return errorResponse('Migration failed', 500);
+    return ApiErrors.serverError('Migration failed');
   }
 };

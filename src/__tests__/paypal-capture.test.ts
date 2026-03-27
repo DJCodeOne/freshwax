@@ -71,9 +71,11 @@ vi.mock('../lib/rate-limit', () => ({
 // Mock paypal-auth
 const mockGetPayPalAccessToken = vi.fn();
 const mockGetPayPalBaseUrl = vi.fn();
+const mockPaypalFetchWithRetry = vi.fn();
 vi.mock('../lib/paypal-auth', () => ({
   getPayPalAccessToken: (...args: unknown[]) => mockGetPayPalAccessToken(...args),
   getPayPalBaseUrl: (...args: unknown[]) => mockGetPayPalBaseUrl(...args),
+  paypalFetchWithRetry: (...args: unknown[]) => mockPaypalFetchWithRetry(...args),
 }));
 
 // Mock api-utils — keep real implementations but mock fetchWithTimeout and logger
@@ -216,7 +218,7 @@ describe('PayPal Capture Order', () => {
     mockValidateStock.mockResolvedValue({ available: true });
 
     // Default: PayPal capture succeeds
-    mockFetchWithTimeout.mockResolvedValue(
+    mockPaypalFetchWithRetry.mockResolvedValue(
       new Response(JSON.stringify(makeCaptureResult()), { status: 200 })
     );
 
@@ -269,7 +271,7 @@ describe('PayPal Capture Order', () => {
     expect(mockValidateStock).toHaveBeenCalledTimes(1);
 
     // PayPal capture API was called
-    expect(mockFetchWithTimeout).toHaveBeenCalledWith(
+    expect(mockPaypalFetchWithRetry).toHaveBeenCalledWith(
       'https://api-m.sandbox.paypal.com/v2/checkout/orders/PAYPAL-ORDER-123/capture',
       expect.objectContaining({
         method: 'POST',
@@ -366,7 +368,7 @@ describe('PayPal Capture Order', () => {
     // createOrder should NOT have been called
     expect(mockCreateOrder).not.toHaveBeenCalled();
     // PayPal capture should NOT have been called
-    expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+    expect(mockPaypalFetchWithRetry).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------
@@ -387,7 +389,7 @@ describe('PayPal Capture Order', () => {
     expect(body.error).toContain('Unable to verify order status');
 
     // Must not proceed with capture
-    expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+    expect(mockPaypalFetchWithRetry).not.toHaveBeenCalled();
     expect(mockCreateOrder).not.toHaveBeenCalled();
   });
 
@@ -410,7 +412,7 @@ describe('PayPal Capture Order', () => {
 
     // Must not proceed to stock validation or capture
     expect(mockValidateStock).not.toHaveBeenCalled();
-    expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+    expect(mockPaypalFetchWithRetry).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------
@@ -452,7 +454,7 @@ describe('PayPal Capture Order', () => {
     expect(body.error).toContain('no longer available');
 
     // PayPal capture must NOT have been called (payment not taken)
-    expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+    expect(mockPaypalFetchWithRetry).not.toHaveBeenCalled();
     expect(mockCreateOrder).not.toHaveBeenCalled();
   });
 
@@ -474,14 +476,14 @@ describe('PayPal Capture Order', () => {
     expect(body.error).toContain('Unable to verify stock');
 
     // PayPal capture must NOT have been called
-    expect(mockFetchWithTimeout).not.toHaveBeenCalled();
+    expect(mockPaypalFetchWithRetry).not.toHaveBeenCalled();
   });
 
   // -----------------------------------------------------------------------
   // 11. PayPal capture API returns error -> 500
   // -----------------------------------------------------------------------
   it('returns 500 when PayPal capture API returns non-ok response', async () => {
-    mockFetchWithTimeout.mockResolvedValue(
+    mockPaypalFetchWithRetry.mockResolvedValue(
       new Response('UNPROCESSABLE_ENTITY', { status: 422 })
     );
 
@@ -504,7 +506,7 @@ describe('PayPal Capture Order', () => {
   // 12. PayPal capture status not COMPLETED -> 400
   // -----------------------------------------------------------------------
   it('returns 400 when PayPal capture status is not COMPLETED', async () => {
-    mockFetchWithTimeout.mockResolvedValue(
+    mockPaypalFetchWithRetry.mockResolvedValue(
       new Response(JSON.stringify(makeCaptureResult({ status: 'PENDING' })), { status: 200 })
     );
 
@@ -596,7 +598,7 @@ describe('PayPal Capture Order', () => {
   // -----------------------------------------------------------------------
   it('flags order for admin review when captured amount mismatches expected total', async () => {
     // Captured amount differs from expected total
-    mockFetchWithTimeout.mockResolvedValue(
+    mockPaypalFetchWithRetry.mockResolvedValue(
       new Response(
         JSON.stringify(
           makeCaptureResult({
@@ -814,7 +816,7 @@ describe('PayPal Capture Order', () => {
   // 24. PayPal capture network timeout -> 500
   // -----------------------------------------------------------------------
   it('returns 500 when PayPal capture request times out', async () => {
-    mockFetchWithTimeout.mockRejectedValue(new Error('AbortError: Request timed out'));
+    mockPaypalFetchWithRetry.mockRejectedValue(new Error('AbortError: Request timed out'));
 
     const request = makeRequest({ paypalOrderId: 'PAYPAL-ORDER-TIMEOUT' });
 
@@ -940,9 +942,9 @@ describe('PayPal Capture Order', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 28. Invalid JSON body -> 500
+  // 28. Invalid JSON body -> 400
   // -----------------------------------------------------------------------
-  it('returns 500 when request body is not valid JSON', async () => {
+  it('returns 400 when request body is not valid JSON', async () => {
     const request = new Request('https://freshwax.co.uk/api/paypal/capture-order/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -954,7 +956,7 @@ describe('PayPal Capture Order', () => {
       locals: makeLocals(),
     } as unknown as Parameters<typeof POST>[0]);
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
     expect(mockCreateOrder).not.toHaveBeenCalled();
   });
 

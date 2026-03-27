@@ -11,7 +11,7 @@ declare function showToast(msg: string): void;
 // ============================================
 // SHARE SYSTEM
 // ============================================
-export var shareInitialized = false;
+export let shareInitialized = false;
 
 export function resetShareInit() {
   shareInitialized = false;
@@ -21,30 +21,30 @@ export function initShareSystem() {
   if (shareInitialized) return;
   shareInitialized = true;
 
-  var shareModal = document.getElementById('share-modal');
-  var shareModalClose = document.getElementById('share-modal-close');
-  var shareModalBackdrop = document.getElementById('share-modal-backdrop');
-  var shareUrlInput = document.getElementById('share-url-input') as HTMLInputElement | null;
-  var copyUrlButton = document.getElementById('copy-url-button');
-  var copyFeedback = document.getElementById('copy-feedback');
-  var copyBtnText = document.getElementById('copy-btn-text');
-  var shareModalTitle = document.getElementById('share-modal-title');
-  var shareModalArtist = document.getElementById('share-modal-artist');
-  var shareModalArtwork = document.getElementById('share-modal-artwork') as HTMLImageElement | null;
+  const shareModal = document.getElementById('share-modal');
+  const shareModalClose = document.getElementById('share-modal-close');
+  const shareModalBackdrop = document.getElementById('share-modal-backdrop');
+  const shareUrlInput = document.getElementById('share-url-input') as HTMLInputElement | null;
+  const copyUrlButton = document.getElementById('copy-url-button');
+  const copyFeedback = document.getElementById('copy-feedback');
+  const copyBtnText = document.getElementById('copy-btn-text');
+  const shareModalTitle = document.getElementById('share-modal-title');
+  const shareModalArtist = document.getElementById('share-modal-artist');
+  const shareModalArtwork = document.getElementById('share-modal-artwork') as HTMLImageElement | null;
 
   if (!shareModal) return;
 
-  var previousFocus: Element | null = null;
+  let previousFocus: Element | null = null;
 
   window.currentReleaseShareData = {};
 
   document.querySelectorAll('.share-button').forEach(function(button) {
     (button as HTMLElement).onclick = function() {
-      var releaseId = button.getAttribute('data-release-id');
-      var title = button.getAttribute('data-title');
-      var artist = button.getAttribute('data-artist');
-      var artwork = button.getAttribute('data-artwork') || '/place-holder.webp';
-      var url = window.location.origin + '/item/' + releaseId;
+      const releaseId = button.getAttribute('data-release-id');
+      const title = button.getAttribute('data-title');
+      const artist = button.getAttribute('data-artist');
+      const artwork = button.getAttribute('data-artwork') || '/place-holder.webp';
+      const url = window.location.origin + '/item/' + releaseId;
 
       window.currentReleaseShareData = { title: title, artist: artist, url: url, artwork: artwork };
 
@@ -54,7 +54,7 @@ export function initShareSystem() {
       if (shareUrlInput) shareUrlInput.value = url;
       if (copyFeedback) copyFeedback.classList.add('hidden');
 
-      var nativeShareBtn = document.getElementById('native-share-btn');
+      const nativeShareBtn = document.getElementById('native-share-btn');
       if (navigator.share && nativeShareBtn) {
         nativeShareBtn.classList.remove('hidden');
         nativeShareBtn.classList.add('flex');
@@ -78,12 +78,12 @@ export function initShareSystem() {
 
   shareModal.addEventListener('keydown', function(e) {
     if (e.key !== 'Tab') return;
-    var focusableEls = shareModal!.querySelectorAll(
+    const focusableEls = shareModal!.querySelectorAll(
       'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
     );
     if (focusableEls.length === 0) return;
-    var firstEl = focusableEls[0] as HTMLElement;
-    var lastEl = focusableEls[focusableEls.length - 1] as HTMLElement;
+    const firstEl = focusableEls[0] as HTMLElement;
+    const lastEl = focusableEls[focusableEls.length - 1] as HTMLElement;
     if (e.shiftKey) {
       if (document.activeElement === firstEl) {
         e.preventDefault();
@@ -122,38 +122,38 @@ export function initShareSystem() {
 
   // Social share buttons
   document.getElementById('share-twitter')?.addEventListener('click', function() {
-    var d = window.currentReleaseShareData || {};
-    var text = 'Check out "' + d.title + '" by ' + d.artist + ' on Fresh Wax';
+    const d = window.currentReleaseShareData || {};
+    const text = 'Check out "' + d.title + '" by ' + d.artist + ' on Fresh Wax';
     window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(d.url), '_blank', 'noopener,noreferrer,width=550,height=420');
   });
 
   document.getElementById('share-facebook')?.addEventListener('click', function() {
-    var d = window.currentReleaseShareData || {};
+    const d = window.currentReleaseShareData || {};
     window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(d.url), '_blank', 'noopener,noreferrer,width=550,height=420');
   });
 
   document.getElementById('share-whatsapp')?.addEventListener('click', function() {
-    var d = window.currentReleaseShareData || {};
-    var text = 'Check out "' + d.title + '" by ' + d.artist + ' on Fresh Wax ' + d.url;
+    const d = window.currentReleaseShareData || {};
+    const text = 'Check out "' + d.title + '" by ' + d.artist + ' on Fresh Wax ' + d.url;
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
   });
 
   document.getElementById('share-instagram')?.addEventListener('click', function() {
-    var d = window.currentReleaseShareData || {};
-    var text = d.url;
+    const d = window.currentReleaseShareData || {};
+    const text = d.url;
     navigator.clipboard.writeText(text).then(function() {
       alert('Link copied! Paste it in your Instagram story or bio.');
     });
   });
 
   document.getElementById('share-reddit')?.addEventListener('click', function() {
-    var d = window.currentReleaseShareData || {};
-    var title = d.title + ' by ' + d.artist + ' - Fresh Wax';
+    const d = window.currentReleaseShareData || {};
+    const title = d.title + ' by ' + d.artist + ' - Fresh Wax';
     window.open('https://www.reddit.com/submit?url=' + encodeURIComponent(d.url) + '&title=' + encodeURIComponent(title), '_blank', 'noopener,noreferrer,width=550,height=420');
   });
 
   document.getElementById('native-share-btn')?.addEventListener('click', async function() {
-    var d = window.currentReleaseShareData || {};
+    const d = window.currentReleaseShareData || {};
     try {
       await navigator.share({
         title: d.title + ' by ' + d.artist,
@@ -181,7 +181,7 @@ export function initCartListeners() {
 
   // Add to cart (digital/vinyl releases)
   document.addEventListener('click', async function(e) {
-    var button = (e.target as HTMLElement).closest('.add-to-cart') as HTMLElement | null;
+    const button = (e.target as HTMLElement).closest('.add-to-cart') as HTMLElement | null;
     if (!button || button.hasAttribute('disabled')) return;
 
     e.preventDefault();
@@ -191,29 +191,29 @@ export function initCartListeners() {
       return;
     }
 
-    var releaseId = button.getAttribute('data-release-id');
-    var productType = button.getAttribute('data-product-type');
-    var price = parseFloat(button.getAttribute('data-price') || '0');
-    var title = button.getAttribute('data-title');
-    var artist = button.getAttribute('data-artist');
-    var labelName = button.getAttribute('data-label-name');
-    var artwork = button.getAttribute('data-artwork');
+    const releaseId = button.getAttribute('data-release-id');
+    const productType = button.getAttribute('data-product-type');
+    const price = parseFloat(button.getAttribute('data-price') || '0');
+    const title = button.getAttribute('data-title');
+    const artist = button.getAttribute('data-artist');
+    const labelName = button.getAttribute('data-label-name');
+    const artwork = button.getAttribute('data-artwork');
 
     // Check if user already owns this release
     try {
-      var userId: string | null = null;
+      let userId: string | null = null;
       if (window.firebaseAuth && window.firebaseAuth.currentUser) {
         userId = window.firebaseAuth.currentUser.uid;
       }
 
       if (userId) {
-        var ownershipCache = FWCache.get('ownership_' + userId) || {};
-        var cachedOwnership = ownershipCache[releaseId!];
+        const ownershipCache = FWCache.get('ownership_' + userId) || {};
+        let cachedOwnership = ownershipCache[releaseId!];
 
         if (!cachedOwnership) {
-          var _token = window.firebaseAuth?.currentUser ? await window.firebaseAuth.currentUser.getIdToken() : null;
-          var _headers: Record<string, string> = _token ? { 'Authorization': 'Bearer ' + _token } : {};
-          var checkRes = await fetch('/api/check-ownership/?userId=' + userId + '&releaseId=' + releaseId, { headers: _headers });
+          const _token = window.firebaseAuth?.currentUser ? await window.firebaseAuth.currentUser.getIdToken() : null;
+          const _headers: Record<string, string> = _token ? { 'Authorization': 'Bearer ' + _token } : {};
+          const checkRes = await fetch('/api/check-ownership/?userId=' + userId + '&releaseId=' + releaseId, { headers: _headers });
           if (!checkRes.ok) { cachedOwnership = {}; } else { cachedOwnership = await checkRes.json(); }
           ownershipCache[releaseId!] = cachedOwnership;
           FWCache.set('ownership_' + userId, ownershipCache, FWCache.TTL.OWNERSHIP);
@@ -228,8 +228,8 @@ export function initCartListeners() {
       log.warn('Ownership check failed:', err);
     }
 
-    var cart = window.FreshWaxCart.get();
-    var items = cart.items || [];
+    const cart = window.FreshWaxCart.get();
+    let items = cart.items || [];
 
     if (productType === 'vinyl') {
       items = items.filter(function(item: CartItem) {
@@ -238,7 +238,7 @@ export function initCartListeners() {
     }
 
     if (productType === 'digital' || productType === 'vinyl') {
-      var removedTracks = items.filter(function(item: CartItem) {
+      const removedTracks = items.filter(function(item: CartItem) {
         return item.id === releaseId && item.type === 'track';
       });
 
@@ -249,8 +249,8 @@ export function initCartListeners() {
       }
     }
 
-    var existingIndex = -1;
-    for (var i = 0; i < items.length; i++) {
+    let existingIndex = -1;
+    for (let i = 0; i < items.length; i++) {
       if (items[i].id === releaseId && items[i].type === productType) {
         existingIndex = i;
         break;
@@ -279,7 +279,7 @@ export function initCartListeners() {
     window.FreshWaxCart.save({ items: items });
     window.FreshWaxCart.updateBadge();
 
-    var originalHTML = button.innerHTML;
+    const originalHTML = button.innerHTML;
     button.innerHTML = '<span>\u2713 Added!</span>';
     button.classList.add('bg-green-700');
 
@@ -291,7 +291,7 @@ export function initCartListeners() {
 
   // Buy individual track
   document.addEventListener('click', async function(e) {
-    var button = (e.target as HTMLElement).closest('.buy-track') as HTMLElement | null;
+    const button = (e.target as HTMLElement).closest('.buy-track') as HTMLElement | null;
     if (!button) return;
 
     e.preventDefault();
@@ -301,17 +301,17 @@ export function initCartListeners() {
       return;
     }
 
-    var trackId = button.getAttribute('data-track-id');
-    var trackTitle = button.getAttribute('data-track-title');
-    var trackPrice = parseFloat(button.getAttribute('data-track-price') || '0');
-    var releaseId = button.getAttribute('data-release-id');
-    var artist = button.getAttribute('data-artist');
-    var artwork = button.getAttribute('data-artwork');
+    const trackId = button.getAttribute('data-track-id');
+    const trackTitle = button.getAttribute('data-track-title');
+    const trackPrice = parseFloat(button.getAttribute('data-track-price') || '0');
+    const releaseId = button.getAttribute('data-release-id');
+    const artist = button.getAttribute('data-artist');
+    const artwork = button.getAttribute('data-artwork');
 
-    var cart = window.FreshWaxCart.get();
-    var items = cart.items || [];
+    const cart = window.FreshWaxCart.get();
+    const items = cart.items || [];
 
-    var hasFullRelease = items.some(function(item: CartItem) {
+    const hasFullRelease = items.some(function(item: CartItem) {
       return item.id === releaseId && (item.type === 'digital' || item.type === 'vinyl');
     });
 
@@ -320,7 +320,7 @@ export function initCartListeners() {
       return;
     }
 
-    var hasTrack = items.some(function(item: CartItem) {
+    const hasTrack = items.some(function(item: CartItem) {
       return item.id === releaseId && item.trackId === trackId;
     });
 
@@ -331,19 +331,19 @@ export function initCartListeners() {
 
     // Check if user already owns this release or track
     try {
-      var userId: string | null = null;
+      let userId: string | null = null;
       if (window.firebaseAuth && window.firebaseAuth.currentUser) {
         userId = window.firebaseAuth.currentUser.uid;
       }
 
       if (userId) {
-        var ownershipCache = FWCache.get('ownership_' + userId) || {};
-        var cachedOwnership = ownershipCache[releaseId!];
+        const ownershipCache = FWCache.get('ownership_' + userId) || {};
+        let cachedOwnership = ownershipCache[releaseId!];
 
         if (!cachedOwnership) {
-          var _token2 = window.firebaseAuth?.currentUser ? await window.firebaseAuth.currentUser.getIdToken() : null;
-          var _headers2: Record<string, string> = _token2 ? { 'Authorization': 'Bearer ' + _token2 } : {};
-          var checkRes = await fetch('/api/check-ownership/?userId=' + userId + '&releaseId=' + releaseId + '&trackId=' + trackId, { headers: _headers2 });
+          const _token2 = window.firebaseAuth?.currentUser ? await window.firebaseAuth.currentUser.getIdToken() : null;
+          const _headers2: Record<string, string> = _token2 ? { 'Authorization': 'Bearer ' + _token2 } : {};
+          const checkRes = await fetch('/api/check-ownership/?userId=' + userId + '&releaseId=' + releaseId + '&trackId=' + trackId, { headers: _headers2 });
           if (!checkRes.ok) { cachedOwnership = {}; } else { cachedOwnership = await checkRes.json(); }
           ownershipCache[releaseId!] = cachedOwnership;
           FWCache.set('ownership_' + userId, ownershipCache, FWCache.TTL.OWNERSHIP);
@@ -354,7 +354,7 @@ export function initCartListeners() {
           return;
         }
 
-        var ownsThisTrack = cachedOwnership.ownedTrackIds && cachedOwnership.ownedTrackIds.indexOf(trackId) !== -1;
+        const ownsThisTrack = cachedOwnership.ownedTrackIds && cachedOwnership.ownedTrackIds.indexOf(trackId) !== -1;
         if (ownsThisTrack) {
           alert('You already own this track! Check your order history for download links.');
           return;
@@ -382,7 +382,7 @@ export function initCartListeners() {
     window.FreshWaxCart.save({ items: items });
     window.FreshWaxCart.updateBadge();
 
-    var originalHTML = button.innerHTML;
+    const originalHTML = button.innerHTML;
     button.innerHTML = '\u2713';
     button.classList.add('bg-green-700');
 

@@ -86,7 +86,12 @@ export const POST: APIRoute = async ({ request }) => {
       return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON');
+    }
     const parsed = UserProfileUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return ApiErrors.badRequest('Invalid request');

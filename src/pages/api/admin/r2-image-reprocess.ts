@@ -7,7 +7,7 @@ import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sd
 import { createS3Client } from '../../../lib/s3-client';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { requireAdminAuth } from '../../../lib/admin';
-import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody, getR2Config } from '../../../lib/api-utils';
+import { createLogger, successResponse, ApiErrors, parseJsonBody, getR2Config } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -242,6 +242,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     log.error('Reprocess batch failed:', error);
-    return errorResponse('Failed to reprocess images', 500);
+    return ApiErrors.serverError('Failed to reprocess images');
   }
 };

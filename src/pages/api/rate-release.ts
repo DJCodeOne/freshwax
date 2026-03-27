@@ -37,7 +37,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.unauthorized('You must be logged in to rate releases');
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON');
+    }
     const parsed = RateReleaseSchema.safeParse(body);
     if (!parsed.success) {
       log.info('[rate-release] Validation failed:', parsed.error.issues);

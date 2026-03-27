@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { createS3Client } from '../../../lib/s3-client';
 import { requireAdminAuth } from '../../../lib/admin';
-import { createLogger, successResponse, errorResponse, ApiErrors, getR2Config } from '../../../lib/api-utils';
+import { createLogger, successResponse, ApiErrors, getR2Config } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -212,6 +212,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     log.error('Scan failed:', error);
-    return errorResponse('Failed to scan R2 bucket', 500);
+    return ApiErrors.serverError('Failed to scan R2 bucket');
   }
 };

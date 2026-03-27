@@ -204,7 +204,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const idToken = authHeader?.replace('Bearer ', '') || undefined;
 
   try {
-    const rawBody = await request.json();
+    let rawBody;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON');
+    }
 
     const parseResult = SubscriptionPostSchema.safeParse(rawBody);
     if (!parseResult.success) {

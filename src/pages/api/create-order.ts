@@ -98,7 +98,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
 
   try {
-    const rawBody = await request.json();
+    let rawBody;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON');
+    }
 
     // Zod input validation
     const parseResult = CreateOrderSchema.safeParse(rawBody);

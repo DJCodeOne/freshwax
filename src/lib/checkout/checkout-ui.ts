@@ -33,7 +33,7 @@ export function hideError() {
 // Field-level validation for accessibility
 export function validateField(input: HTMLInputElement | HTMLSelectElement | null): boolean {
   if (!input) return true;
-  var errorSpan = document.getElementById(input.id + '-error');
+  const errorSpan = document.getElementById(input.id + '-error');
   if (!input.checkValidity()) {
     input.setAttribute('aria-invalid', 'true');
     if (errorSpan) errorSpan.style.display = 'block';
@@ -46,19 +46,19 @@ export function validateField(input: HTMLInputElement | HTMLSelectElement | null
 }
 
 export function validateAllFields(): boolean {
-  var fieldIds = ['firstName', 'lastName', 'email', 'address1', 'city', 'postcode'];
-  var allValid = true;
-  for (var i = 0; i < fieldIds.length; i++) {
-    var el = document.getElementById(fieldIds[i]);
+  const fieldIds = ['firstName', 'lastName', 'email', 'address1', 'city', 'postcode'];
+  let allValid = true;
+  for (let i = 0; i < fieldIds.length; i++) {
+    const el = document.getElementById(fieldIds[i]);
     if (el && !validateField(el)) allValid = false;
   }
   return allValid;
 }
 
 export function setupFieldValidation() {
-  var fieldIds = ['firstName', 'lastName', 'email', 'address1', 'city', 'postcode'];
-  for (var i = 0; i < fieldIds.length; i++) {
-    var el = document.getElementById(fieldIds[i]);
+  const fieldIds = ['firstName', 'lastName', 'email', 'address1', 'city', 'postcode'];
+  for (let i = 0; i < fieldIds.length; i++) {
+    const el = document.getElementById(fieldIds[i]);
     if (el) {
       el.addEventListener('blur', function() { validateField(this); });
       el.addEventListener('input', function() {

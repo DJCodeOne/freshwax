@@ -6,11 +6,11 @@ import { createClientLogger } from '../client-logger';
 const log = createClientLogger('ReleasePlate');
 
 // Clip restriction constants
-var CLIP_START_TIME = 60;
-var CLIP_DURATION = 90;
-var CLIP_END_TIME = CLIP_START_TIME + CLIP_DURATION;
-var FADE_DURATION = 3;
-var FADE_OUT_START = CLIP_END_TIME - FADE_DURATION;
+const CLIP_START_TIME = 60;
+const CLIP_DURATION = 90;
+const CLIP_END_TIME = CLIP_START_TIME + CLIP_DURATION;
+const FADE_DURATION = 3;
+const FADE_OUT_START = CLIP_END_TIME - FADE_DURATION;
 
 declare function showToast(msg: string): void;
 
@@ -19,25 +19,25 @@ export function initReleasePlayer() {
     if (releaseCard.hasAttribute('data-player-init')) return;
     releaseCard.setAttribute('data-player-init', 'true');
 
-    var releaseId = releaseCard.getAttribute('data-release');
+    const releaseId = releaseCard.getAttribute('data-release');
     if (!releaseId) return;
 
-    var canvas = releaseCard.querySelector('.shared-waveform[data-release-id="' + releaseId + '"]') as HTMLCanvasElement | null;
-    var volumeSlider = releaseCard.querySelector('.shared-volume-slider[data-release-id="' + releaseId + '"]') as HTMLInputElement | null;
-    var nowPlayingText = releaseCard.querySelector('[data-now-playing-text="' + releaseId + '"]');
-    var playButtons = releaseCard.querySelectorAll('.play-button');
+    const canvas = releaseCard.querySelector('.shared-waveform[data-release-id="' + releaseId + '"]') as HTMLCanvasElement | null;
+    const volumeSlider = releaseCard.querySelector('.shared-volume-slider[data-release-id="' + releaseId + '"]') as HTMLInputElement | null;
+    const nowPlayingText = releaseCard.querySelector('[data-now-playing-text="' + releaseId + '"]');
+    const playButtons = releaseCard.querySelectorAll('.play-button');
 
-    var currentAudio: HTMLAudioElement | null = null;
-    var currentButton: Element | null = null;
-    var currentVolume = 0.7;
-    var ctx: CanvasRenderingContext2D | null = null;
-    var bars = 60;
-    var barWidth = 0;
+    let currentAudio: HTMLAudioElement | null = null;
+    let currentButton: Element | null = null;
+    let currentVolume = 0.7;
+    let ctx: CanvasRenderingContext2D | null = null;
+    const bars = 60;
+    let barWidth = 0;
 
     if (canvas) {
       ctx = canvas.getContext('2d');
-      var container = canvas.parentElement;
-      var containerWidth = container ? container.offsetWidth : 400;
+      const container = canvas.parentElement;
+      const containerWidth = container ? container.offsetWidth : 400;
       canvas.width = Math.min(containerWidth, 400);
       canvas.height = 50;
       barWidth = (canvas.width / bars) - 1;
@@ -45,9 +45,9 @@ export function initReleasePlayer() {
 
       canvas.onclick = function(e) {
         if (!currentAudio || !currentAudio.duration || !isFinite(currentAudio.duration)) return;
-        var rect = canvas!.getBoundingClientRect();
-        var progress = (e.clientX - rect.left) / rect.width;
-        var seekTime = CLIP_START_TIME + (progress * CLIP_DURATION);
+        const rect = canvas!.getBoundingClientRect();
+        const progress = (e.clientX - rect.left) / rect.width;
+        const seekTime = CLIP_START_TIME + (progress * CLIP_DURATION);
         currentAudio.currentTime = Math.min(Math.max(seekTime, CLIP_START_TIME), CLIP_END_TIME - 1);
       };
     }
@@ -55,10 +55,10 @@ export function initReleasePlayer() {
     function drawWaveform(progress: number, isPlaying: boolean) {
       if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (var i = 0; i < bars; i++) {
-        var height = (Math.random() * 0.5 + 0.3) * canvas.height;
-        var x = i * (barWidth + 1);
-        var y = (canvas.height - height) / 2;
+      for (let i = 0; i < bars; i++) {
+        const height = (Math.random() * 0.5 + 0.3) * canvas.height;
+        const x = i * (barWidth + 1);
+        const y = (canvas.height - height) / 2;
         ctx.fillStyle = isPlaying ? (i / bars < progress ? '#dc2626' : '#ffffff') : (i / bars < progress ? '#dc2626' : '#4b5563');
         ctx.fillRect(x, y, barWidth, height);
       }
@@ -72,11 +72,11 @@ export function initReleasePlayer() {
     }
 
     playButtons.forEach(function(button) {
-      var trackId = button.getAttribute('data-track-id');
-      var previewUrl = button.getAttribute('data-preview-url');
-      var trackTitle = button.getAttribute('data-track-title') || 'Unknown Track';
-      var playIcon = button.querySelector('.play-icon');
-      var pauseIcon = button.querySelector('.pause-icon');
+      const trackId = button.getAttribute('data-track-id');
+      const previewUrl = button.getAttribute('data-preview-url');
+      const trackTitle = button.getAttribute('data-track-title') || 'Unknown Track';
+      const playIcon = button.querySelector('.play-icon');
+      const pauseIcon = button.querySelector('.pause-icon');
 
       (button as HTMLElement).onclick = function() {
         if (!previewUrl) {
@@ -85,7 +85,7 @@ export function initReleasePlayer() {
           return;
         }
 
-        var audio = releaseCard.querySelector('.track-audio[data-track-id="' + trackId + '"]') as HTMLAudioElement | null;
+        let audio = releaseCard.querySelector('.track-audio[data-track-id="' + trackId + '"]') as HTMLAudioElement | null;
 
         if (!audio) {
           audio = document.createElement('audio');
@@ -99,7 +99,7 @@ export function initReleasePlayer() {
 
           audio.ontimeupdate = function() {
             if (audio === currentAudio && audio!.duration && isFinite(audio!.duration)) {
-              var currentTime = audio!.currentTime;
+              const currentTime = audio!.currentTime;
 
               if (currentTime >= CLIP_END_TIME) {
                 audio!.pause();
@@ -116,16 +116,16 @@ export function initReleasePlayer() {
               }
 
               if (currentTime >= CLIP_START_TIME && currentTime < CLIP_START_TIME + FADE_DURATION) {
-                var fadeInProgress = (currentTime - CLIP_START_TIME) / FADE_DURATION;
+                const fadeInProgress = (currentTime - CLIP_START_TIME) / FADE_DURATION;
                 audio!.volume = currentVolume * fadeInProgress;
               } else if (currentTime >= FADE_OUT_START) {
-                var fadeOutProgress = (CLIP_END_TIME - currentTime) / FADE_DURATION;
+                const fadeOutProgress = (CLIP_END_TIME - currentTime) / FADE_DURATION;
                 audio!.volume = currentVolume * Math.max(0, fadeOutProgress);
               } else {
                 audio!.volume = currentVolume;
               }
 
-              var clipProgress = (currentTime - CLIP_START_TIME) / CLIP_DURATION;
+              const clipProgress = (currentTime - CLIP_START_TIME) / CLIP_DURATION;
               drawWaveform(Math.max(0, Math.min(1, clipProgress)), !audio!.paused);
             }
           };
@@ -179,20 +179,20 @@ export function initReleasePlayer() {
             });
             otherCard.querySelectorAll('.play-button').forEach(function(btn) {
               btn.classList.remove('playing');
-              var pi = btn.querySelector('.play-icon');
-              var pa = btn.querySelector('.pause-icon');
+              const pi = btn.querySelector('.play-icon');
+              const pa = btn.querySelector('.pause-icon');
               if (pi) pi.classList.remove('hidden');
               if (pa) pa.classList.add('hidden');
             });
-            var otherNowPlaying = otherCard.querySelector('[data-now-playing-text]');
+            const otherNowPlaying = otherCard.querySelector('[data-now-playing-text]');
             if (otherNowPlaying) otherNowPlaying.textContent = 'No track selected';
           }
         });
 
         playButtons.forEach(function(btn) {
           btn.classList.remove('playing');
-          var pi = btn.querySelector('.play-icon');
-          var pa = btn.querySelector('.pause-icon');
+          const pi = btn.querySelector('.play-icon');
+          const pa = btn.querySelector('.pause-icon');
           if (pi) pi.classList.remove('hidden');
           if (pa) pa.classList.add('hidden');
         });

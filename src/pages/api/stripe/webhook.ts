@@ -6,7 +6,7 @@ import Stripe from 'stripe';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { logStripeEvent } from '../../../lib/webhook-logger';
 import { formatPrice } from '../../../lib/format-utils';
-import { fetchWithTimeout, createLogger, jsonResponse, errorResponse, timingSafeCompare} from '../../../lib/api-utils';
+import { fetchWithTimeout, createLogger, jsonResponse, ApiErrors, timingSafeCompare} from '../../../lib/api-utils';
 
 // Extracted modules
 import { handleDisputeCreated, handleDisputeClosed } from '../../../lib/stripe-webhook/disputes';
@@ -193,7 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } catch (err: unknown) {
           if (err instanceof GiftCardIdempotencyError) {
             log.warn('[Stripe Webhook] Gift card idempotency:', err.message);
-            return errorResponse('Duplicate event', 500);
+            return ApiErrors.serverError('Duplicate event');
           }
           throw err;
         }

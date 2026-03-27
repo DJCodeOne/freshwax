@@ -101,7 +101,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON');
+    }
     const parsed = CartSaveSchema.safeParse(body);
     if (!parsed.success) {
       return ApiErrors.badRequest('Invalid cart data');
