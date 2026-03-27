@@ -266,10 +266,31 @@ export async function handleTrackEnded(
       if (ctx.playlist.queue.length > 0 && ctx.playlist.isPlaying) {
         await playCurrent();
       } else {
-        if (ctx.player) await ctx.player.destroy();
+        // Queue empty — server couldn't find a track. Retry after 10s.
+        // Don't destroy player permanently — autoplay should recover.
         disableEmojis();
         updateNowPlayingDisplay(null);
         showOfflineOverlay();
+        // Retry autoplay after delay (server may have tracks on next attempt)
+        if (!window.isLiveStreamActive) {
+          setTimeout(async () => {
+            try {
+              const retryResponse = await fetch('/api/playlist/global/', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'trackEnded' })
+              });
+              if (retryResponse.ok) {
+                const retryResult = await retryResponse.json();
+                if (retryResult.success && retryResult.playlist?.queue?.length > 0) {
+                  ctx.playlist = retryResult.playlist;
+                  await playCurrent();
+                  renderUI();
+                }
+              }
+            } catch { /* silent retry — will try again on next user interaction */ }
+          }, 10000);
+        }
       }
     }
   } catch (error: unknown) {

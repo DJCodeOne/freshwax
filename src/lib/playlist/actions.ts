@@ -126,12 +126,18 @@ export async function processPlaylistAction(
         playlist.trackStartedAt = now;
       } else {
         // Queue is empty - pick a random track for autoplay
-        const randomTrack = await pickRandomFromServerHistory(env);
+        let randomTrack = await pickRandomFromServerHistory(env);
+        // Retry once after 1s if first attempt fails (server may be slow to respond)
+        if (!randomTrack) {
+          await new Promise(r => setTimeout(r, 1000));
+          randomTrack = await pickRandomFromServerHistory(env);
+        }
         if (randomTrack) {
           playlist.queue.push(randomTrack);
           playlist.isPlaying = true;
           playlist.trackStartedAt = now;
         } else {
+          // Mark as idle but NOT permanently stopped — client will retry
           playlist.isPlaying = false;
           playlist.trackStartedAt = null;
         }
