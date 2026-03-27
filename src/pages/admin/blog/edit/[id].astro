@@ -57,6 +57,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <!-- Title -->
         <div class="card">
           <div class="card-body">
+            <label for="post-title" class="sr-only">Post title</label>
             <input
               type="text"
               id="post-title"
@@ -137,6 +138,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <div
               id="editor"
               contenteditable="true"
+              role="textbox"
+              aria-label="Post content editor"
+              aria-multiline="true"
               class="min-h-[400px] p-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 prose prose-invert prose-red max-w-none"
               set:html={post.content || ''}
             ></div>
@@ -203,9 +207,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           </div>
           <div class="card-body">
             <div id="featured-image-preview" class={post.featuredImage ? 'mb-4' : 'hidden mb-4'}>
-              <img id="featured-image-img" src={post.featuredImage || ''} alt="Featured" class="w-full h-40 object-cover rounded-lg" width="800" height="160" loading="lazy" decoding="async" />
+              <img id="featured-image-img" src={post.featuredImage || ''} alt="Featured image preview" class="w-full h-40 object-cover rounded-lg" width="800" height="160" loading="lazy" decoding="async" />
               <button id="remove-image-btn" class="mt-2 text-sm text-red-400 hover:text-red-300">Remove image</button>
             </div>
+            <label for="post-featured-image" class="sr-only">Featured image URL</label>
             <input
               type="text"
               id="post-featured-image"
@@ -280,6 +285,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             <h3>Author</h3>
           </div>
           <div class="card-body">
+            <label for="post-author" class="sr-only">Author name</label>
             <input
               type="text"
               id="post-author"

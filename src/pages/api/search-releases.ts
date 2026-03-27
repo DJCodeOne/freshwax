@@ -1,9 +1,15 @@
 // src/pages/api/search-releases.ts
 // OPTIMIZED: Uses D1 for search data - zero Firebase reads
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { d1SearchPublishedReleases, d1SearchPublishedMixes, d1SearchPublishedMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+
+const searchSchema = z.object({
+  q: z.string().min(2).max(200).trim(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+});
 
 export const prerender = false;
 
@@ -18,13 +24,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   const url = new URL(request.url);
-  const query = url.searchParams.get('q')?.toLowerCase().trim();
-  const limitParam = url.searchParams.get('limit');
-  const limit = limitParam ? parseInt(limitParam) : 20;
-
-  if (!query || query.length < 2) {
-    return ApiErrors.badRequest('Search query must be at least 2 characters');
+  const parseResult = searchSchema.safeParse({
+    q: url.searchParams.get('q') || '',
+    limit: url.searchParams.get('limit') || undefined,
+  });
+  if (!parseResult.success) {
+    return ApiErrors.badRequest('Search query must be between 2 and 200 characters');
   }
+  const query = parseResult.data.q.toLowerCase();
+  const limit = parseResult.data.limit;
 
   // Get D1 database from Cloudflare runtime
   const env = locals.runtime.env;

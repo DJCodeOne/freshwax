@@ -7,10 +7,11 @@ import '../styles/global.css';
 
 interface Props {
   title: string;
+  description?: string;
   activeSection?: string;
 }
 
-const { title, activeSection } = Astro.props;
+const { title, description, activeSection } = Astro.props;
 const csrfToken = Astro.locals.csrfToken || '';
 const nonce = Astro.locals.nonce || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
@@ -27,7 +28,7 @@ const firebaseConfig = {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow" />
   <meta name="csrf-token" content={csrfToken} />
-  <meta name="description" content="Artist and seller dashboard for managing releases, sales, and analytics on Fresh Wax." />
+  <meta name="description" content={description || "Artist and seller dashboard for managing releases, sales, and analytics on Fresh Wax."} />
   <title>{title} | Pro Dashboard | Fresh Wax</title>
 </head>
 <body data-active-section={activeSection || ''}>
