@@ -152,13 +152,17 @@ const { nonce = '' } = Astro.props;
   }
 
   // Start sync interval (only once per page lifecycle)
+  // Store interval ID on window so it can be cleared across script re-executions
   if (!window._floatingShuffleSyncStarted) {
     window._floatingShuffleSyncStarted = true;
-    var _floatingShuffleSyncId = setInterval(syncFloatingButtonState, 300);
+    window._floatingShuffleSyncId = setInterval(syncFloatingButtonState, 300);
 
     // Cleanup on View Transition navigation to avoid interval leak
     document.addEventListener('astro:before-swap', function() {
-      clearInterval(_floatingShuffleSyncId);
+      if (window._floatingShuffleSyncId) {
+        clearInterval(window._floatingShuffleSyncId);
+        window._floatingShuffleSyncId = null;
+      }
       window._floatingShuffleSyncStarted = false;
     }, { once: true });
   }

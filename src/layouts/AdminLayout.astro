@@ -1584,13 +1584,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <header class="page-header">
     <div class="header-container">
       <div class="header-left">
-        <slot name="breadcrumb">
-          <div class="header-breadcrumb">
-            <a href="/admin/">Admin</a>
-            <span>›</span>
-            <span>{title}</span>
-          </div>
-        </slot>
+        <nav aria-label="Breadcrumb">
+          <slot name="breadcrumb">
+            <div class="header-breadcrumb">
+              <a href="/admin/">Admin</a>
+              <span>›</span>
+              <span>{title}</span>
+            </div>
+          </slot>
+        </nav>
         <h1>{title}</h1>
       </div>
       <div class="header-actions">

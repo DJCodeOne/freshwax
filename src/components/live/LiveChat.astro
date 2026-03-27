@@ -185,8 +185,8 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
     const userName = window.currentUserInfo?.name || user.displayName || user.email?.split('@')[0] || 'User';
     const userAvatar = window.currentUserInfo?.avatar || user.photoURL || null;
 
-    async function doSendGif(targetStreamId) {
-      const chatHeaders = { 'Content-Type': 'application/json' };
+    async function doSendGif(targetStreamId: string) {
+      const chatHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
       try { const t = await user.getIdToken(); if (t) chatHeaders['Authorization'] = `Bearer ${t}`; } catch (e) {/* Auth token refresh failed — request proceeds without token; server allows unauthenticated chat */}
       return fetch('/api/livestream/chat/', {
         method: 'POST',
@@ -471,7 +471,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
       }
 
       try {
-        const dmHeaders = { 'Content-Type': 'application/json' };
+        const dmHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
         try { const t = await user.getIdToken(); if (t) dmHeaders['Authorization'] = `Bearer ${t}`; } catch (e) {/* Auth token refresh failed — DM proceeds without token; server allows unauthenticated chat */}
         const response = await fetch('/api/livestream/chat/', {
           method: 'POST',
@@ -490,9 +490,12 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
           dmInput.value = '';
           currentDmRecipient = null;
           restoreFocusFromModal(dmModal);
+        } else {
+          alert('Failed to send message. Please try again.');
         }
       } catch (err) {
         console.error('[DM] Error sending:', err);
+        alert('Failed to send message. Please try again.');
       }
     });
 

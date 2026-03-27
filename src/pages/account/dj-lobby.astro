@@ -2277,10 +2277,20 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     loadTwitchSettings();
 
     // Polling for non-realtime data (reduced frequency to minimize Firebase reads)
-    lobbyStreamStatusInterval = setInterval(loadStreamStatus, 60000); // 60s instead of 10s - saves ~84% reads
+    // Skip API calls when tab is hidden to save bandwidth and quota
+    lobbyStreamStatusInterval = setInterval(function() {
+      if (document.hidden) return;
+      loadStreamStatus();
+    }, 60000); // 60s instead of 10s - saves ~84% reads
     lobbyTimeRemainingInterval = setInterval(updateTimeRemaining, 500); // Update every 500ms — 2x/sec is smooth enough for countdown
-    lobbyStreamKeyInterval = setInterval(checkStreamKeyAvailability, 60000); // 60s instead of 30s
-    lobbyAllSlotsInterval = setInterval(loadAllSlots, 60000); // Refresh slots every minute for consecutive slot detection
+    lobbyStreamKeyInterval = setInterval(function() {
+      if (document.hidden) return;
+      checkStreamKeyAvailability();
+    }, 60000); // 60s instead of 30s
+    lobbyAllSlotsInterval = setInterval(function() {
+      if (document.hidden) return;
+      loadAllSlots();
+    }, 60000); // Refresh slots every minute for consecutive slot detection
   }
   
   // Page cleanup - called when leaving
@@ -2932,7 +2942,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   // Load viewers initially and on interval (reduced to 60s - Pusher handles real-time updates)
   loadStreamViewers();
-  var lobbyViewersInterval = setInterval(loadStreamViewers, 60000);
+  var lobbyViewersInterval = setInterval(function() {
+    if (document.hidden) return;
+    loadStreamViewers();
+  }, 60000);
 
   // Stream Info Panel - Update real-time stream information
   function updateStreamInfoPanel(isLive, stream = null) {

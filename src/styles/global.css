@@ -1138,6 +1138,16 @@ button,
 }
 
 /* ============================================
+   GLOBAL FOCUS-VISIBLE - Accessibility
+   Consistent keyboard focus indicator across
+   all interactive elements.
+   ============================================ */
+:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+/* ============================================
    REDUCED MOTION - Accessibility
    Disable significant animations for users
    who prefer reduced motion.

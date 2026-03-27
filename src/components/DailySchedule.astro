@@ -1984,7 +1984,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 
     async function updateBookingsDisabled(disabled) {
       try {
-        await fetch('/api/admin/update-settings/', {
+        var response = await fetch('/api/admin/update-settings/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1992,8 +1992,12 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             updates: { bookingsDisabled: disabled }
           })
         });
+        if (!response.ok) {
+          alert('Failed to update booking settings. Please try again.');
+        }
       } catch (error) {
         console.error('Failed to update settings:', error);
+        alert('Failed to update booking settings. Please try again.');
       }
     }
 

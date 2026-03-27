@@ -187,7 +187,7 @@ export class EmbedPlayerManager {
     const container = document.getElementById(this.containerId);
     if (!container) throw new Error('Container not found');
 
-    container.innerHTML = `<iframe id="vimeo-player" src="https://player.vimeo.com/video/${escapeHtml(encodeURIComponent(item.embedId))}?autoplay=1&controls=0&keyboard=0" width="100%" height="100%" frameborder="0" allow="autoplay" style="pointer-events: none;"></iframe>`;
+    container.innerHTML = `<iframe id="vimeo-player" src="https://player.vimeo.com/video/${escapeHtml(encodeURIComponent(item.embedId))}?autoplay=1&controls=0&keyboard=0" width="100%" height="100%" frameborder="0" allow="autoplay" title="Vimeo video player" style="pointer-events: none;"></iframe>`;
 
     const iframe = document.getElementById('vimeo-player') as HTMLIFrameElement;
     this.vimeoPlayer = new Vimeo.Player(iframe);
@@ -224,7 +224,7 @@ export class EmbedPlayerManager {
 
     const trackUrl = `https://soundcloud.com/${item.embedId}`;
     const embedUrl = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false`;
-    container.innerHTML = `<iframe id="soundcloud-player" width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="${escapeHtml(embedUrl)}"></iframe>`;
+    container.innerHTML = `<iframe id="soundcloud-player" width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" title="SoundCloud audio player" src="${escapeHtml(embedUrl)}"></iframe>`;
 
     const iframe = document.getElementById('soundcloud-player') as HTMLIFrameElement;
     this.soundcloudWidget = SC.Widget(iframe);

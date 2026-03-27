@@ -1261,7 +1261,9 @@ const firebaseConfig = {
 
   // Track if we've set up global listeners
   let globalListenersSet = false;
-  let liveStatusInterval = null;
+  // Use window-scoped interval ID to prevent accumulation across View Transitions
+  // (local let would create a new variable each time the inline script re-executes)
+  if (!window._headerLiveInterval) window._headerLiveInterval = null;
 
   // AbortController for cleaning up event listeners on View Transitions navigation
   const headerCleanupController = new AbortController();
@@ -1384,14 +1386,14 @@ const firebaseConfig = {
     // Check live status (reduced frequency to minimize Firebase reads)
     // Stop polling when tab is hidden to save API calls
     checkLiveStatus();
-    if (liveStatusInterval) clearInterval(liveStatusInterval);
-    liveStatusInterval = setInterval(checkLiveStatus, 60000); // 60s instead of 30s
+    if (window._headerLiveInterval) clearInterval(window._headerLiveInterval);
+    window._headerLiveInterval = setInterval(checkLiveStatus, 60000); // 60s instead of 30s
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) {
-        if (liveStatusInterval) { clearInterval(liveStatusInterval); liveStatusInterval = null; }
+        if (window._headerLiveInterval) { clearInterval(window._headerLiveInterval); window._headerLiveInterval = null; }
       } else {
         checkLiveStatus();
-        if (!liveStatusInterval) liveStatusInterval = setInterval(checkLiveStatus, 60000);
+        if (!window._headerLiveInterval) window._headerLiveInterval = setInterval(checkLiveStatus, 60000);
       }
     }, { signal: headerCleanupController.signal });
 
@@ -1750,18 +1752,18 @@ const firebaseConfig = {
         const customerId = document.cookie.split(';')
           .find(c => c.trim().startsWith('customerId='))
           ?.split('=')[1];
-        
+
         if (customerId) {
           const cartKey = 'freshwax_cart_' + customerId;
           const stored = localStorage.getItem(cartKey);
           if (stored) {
             const data = JSON.parse(stored);
-            const items = data.items || data || [];
+            const items = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
             count = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
           }
         }
       } catch (e){
-        console.error('Error reading cart:', e);
+        /* Non-critical: storage or JSON parse may fail in private browsing */
       }
     }
     
@@ -1794,7 +1796,7 @@ const firebaseConfig = {
 
   // Clean up intervals and event listeners before View Transitions swaps the DOM
   document.addEventListener('astro:before-swap', () => {
-    if (liveStatusInterval) { clearInterval(liveStatusInterval); liveStatusInterval = null; }
+    if (window._headerLiveInterval) { clearInterval(window._headerLiveInterval); window._headerLiveInterval = null; }
     if (searchTimeout) { clearTimeout(searchTimeout); searchTimeout = undefined; }
     headerCleanupController.abort();
   }, { once: true });
