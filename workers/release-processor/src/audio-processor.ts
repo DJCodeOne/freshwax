@@ -16,16 +16,16 @@ async function getFFmpeg(): Promise<FFmpeg> {
 
     // Configure logging
     ffmpegInstance.on('log', ({ message }) => {
-      console.log(`[FFmpeg] ${message}`);
+      console.info(`[FFmpeg] ${message}`);
     });
 
     ffmpegInstance.on('progress', ({ progress }) => {
-      console.log(`[FFmpeg] Progress: ${Math.round(progress * 100)}%`);
+      console.info(`[FFmpeg] Progress: ${Math.round(progress * 100)}%`);
     });
 
-    console.log('[FFmpeg] Loading...');
+    console.info('[FFmpeg] Loading...');
     await ffmpegInstance.load();
-    console.log('[FFmpeg] Loaded successfully');
+    console.info('[FFmpeg] Loaded successfully');
   }
   return ffmpegInstance;
 }
@@ -37,7 +37,7 @@ export function terminateFFmpeg(): void {
   if (ffmpegInstance) {
     ffmpegInstance.terminate();
     ffmpegInstance = null;
-    console.log('[FFmpeg] Terminated');
+    console.info('[FFmpeg] Terminated');
   }
 }
 
@@ -59,7 +59,7 @@ async function getAudioDuration(ffmpeg: FFmpeg, inputFile: string): Promise<numb
  * - Preserves original sample rate (44.1/48kHz)
  */
 async function convertWavToMp3(ffmpeg: FFmpeg, inputData: Uint8Array): Promise<Uint8Array> {
-  console.log('[Audio] Converting WAV to 320kbps MP3 (DJ quality)...');
+  console.info('[Audio] Converting WAV to 320kbps MP3 (DJ quality)...');
 
   await ffmpeg.writeFile('input.wav', inputData);
 
@@ -80,7 +80,7 @@ async function convertWavToMp3(ffmpeg: FFmpeg, inputData: Uint8Array): Promise<U
   await ffmpeg.deleteFile('input.wav');
   await ffmpeg.deleteFile('output.mp3');
 
-  console.log(`[Audio] WAV to MP3 complete: ${output.length} bytes (320kbps DJ quality)`);
+  console.info(`[Audio] WAV to MP3 complete: ${output.length} bytes (320kbps DJ quality)`);
   return output as Uint8Array;
 }
 
@@ -88,7 +88,7 @@ async function convertWavToMp3(ffmpeg: FFmpeg, inputData: Uint8Array): Promise<U
  * Convert MP3 to WAV (for HQ downloads)
  */
 async function convertMp3ToWav(ffmpeg: FFmpeg, inputData: Uint8Array): Promise<Uint8Array> {
-  console.log('[Audio] Converting MP3 to WAV...');
+  console.info('[Audio] Converting MP3 to WAV...');
 
   await ffmpeg.writeFile('input.mp3', inputData);
 
@@ -106,7 +106,7 @@ async function convertMp3ToWav(ffmpeg: FFmpeg, inputData: Uint8Array): Promise<U
   await ffmpeg.deleteFile('input.mp3');
   await ffmpeg.deleteFile('output.wav');
 
-  console.log(`[Audio] MP3 to WAV complete: ${output.length} bytes`);
+  console.info(`[Audio] MP3 to WAV complete: ${output.length} bytes`);
   return output as Uint8Array;
 }
 
@@ -115,7 +115,7 @@ async function convertMp3ToWav(ffmpeg: FFmpeg, inputData: Uint8Array): Promise<U
  * Starts at 30s mark if track is long enough, otherwise from start
  */
 async function createPreviewClip(ffmpeg: FFmpeg, inputData: Uint8Array, inputFormat: 'mp3' | 'wav'): Promise<Uint8Array> {
-  console.log('[Audio] Creating 60-second preview clip...');
+  console.info('[Audio] Creating 60-second preview clip...');
 
   const inputFile = `input.${inputFormat}`;
   await ffmpeg.writeFile(inputFile, inputData);
@@ -140,7 +140,7 @@ async function createPreviewClip(ffmpeg: FFmpeg, inputData: Uint8Array, inputFor
   await ffmpeg.deleteFile(inputFile);
   await ffmpeg.deleteFile('preview.mp3');
 
-  console.log(`[Audio] Preview clip complete: ${output.length} bytes`);
+  console.info(`[Audio] Preview clip complete: ${output.length} bytes`);
   return output as Uint8Array;
 }
 
@@ -174,7 +174,7 @@ export async function processAudioTrack(
   const trackTitle = trackMetadata.title;
   const paddedNum = trackNumber.toString().padStart(2, '0');
 
-  console.log(`[Audio] Processing track ${trackNumber}: ${trackTitle}`);
+  console.info(`[Audio] Processing track ${trackNumber}: ${trackTitle}`);
 
   // Download track from releases bucket (submissions/ folder)
   const trackObj = await env.RELEASES_BUCKET.get(trackKey);
@@ -184,7 +184,7 @@ export async function processAudioTrack(
 
   const trackBuffer = new Uint8Array(await trackObj.arrayBuffer());
   const sourceFormat = getAudioFormat(trackKey);
-  console.log(`[Audio] Downloaded track: ${trackBuffer.byteLength} bytes, format: ${sourceFormat}`);
+  console.info(`[Audio] Downloaded track: ${trackBuffer.byteLength} bytes, format: ${sourceFormat}`);
 
   const ffmpeg = await getFFmpeg();
 
@@ -200,7 +200,7 @@ export async function processAudioTrack(
     wavData = await convertMp3ToWav(ffmpeg, trackBuffer);
   } else if (sourceFormat === 'flac' || sourceFormat === 'aiff') {
     // Convert lossless formats to both MP3 and WAV
-    console.log(`[Audio] Converting ${sourceFormat} to 320kbps MP3 and WAV (DJ quality)...`);
+    console.info(`[Audio] Converting ${sourceFormat} to 320kbps MP3 and WAV (DJ quality)...`);
 
     const inputFile = `input.${sourceFormat}`;
     await ffmpeg.writeFile(inputFile, trackBuffer);
@@ -251,7 +251,7 @@ export async function processAudioTrack(
   const wavKey = `releases/${releaseId}/tracks/${paddedNum}-${safeTitle}.wav`;
   const previewKey = `releases/${releaseId}/previews/${paddedNum}-preview.mp3`;
 
-  console.log(`[Audio] Uploading processed files...`);
+  console.info(`[Audio] Uploading processed files...`);
 
   await Promise.all([
     env.RELEASES_BUCKET.put(mp3Key, mp3Data, {
@@ -278,10 +278,10 @@ export async function processAudioTrack(
   const wavUrl = `${env.R2_PUBLIC_DOMAIN}/${wavKey}`;
   const previewUrl = `${env.R2_PUBLIC_DOMAIN}/${previewKey}`;
 
-  console.log(`[Audio] Track ${trackNumber} processed successfully`);
-  console.log(`  MP3: ${mp3Url}`);
-  console.log(`  WAV: ${wavUrl}`);
-  console.log(`  Preview: ${previewUrl}`);
+  console.info(`[Audio] Track ${trackNumber} processed successfully`);
+  console.info(`  MP3: ${mp3Url}`);
+  console.info(`  WAV: ${wavUrl}`);
+  console.info(`  Preview: ${previewUrl}`);
 
   return {
     trackNumber,

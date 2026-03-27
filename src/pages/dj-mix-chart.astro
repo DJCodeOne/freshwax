@@ -68,11 +68,22 @@ const renderStars = (rating: number) => {
   return '★'.repeat(fullStars) + (hasHalf ? '½' : '') + '☆'.repeat(emptyStars);
 };
 
+// Build ItemList structured data for SEO
+const mixItemList = {
+  name: 'DJ Mix Chart - Top Rated Mixes',
+  items: mixes.slice(0, 50).map((mix, index) => ({
+    name: `${mix.title || mix.mixTitle || 'Untitled'} by ${mix.djName || mix.dj_name || 'Unknown DJ'}`,
+    url: `/dj-mix/${mix.id}/`,
+    image: (mix.artworkUrl || mix.artwork_url || undefined) as string | undefined,
+    position: index + 1,
+  }))
+};
+
 export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
-<Layout title="DJ Mix Chart - Top Rated Mixes" description="Most popular DJ mixes on Fresh Wax, weekly updated and ranked by plays and engagement. Discover the best jungle and drum & bass sets from top DJs.">
+<Layout title="DJ Mix Chart - Top Rated Mixes" description="Most popular DJ mixes on Fresh Wax, weekly updated and ranked by plays and engagement. Discover the best jungle and drum & bass sets from top DJs." itemList={mixItemList}>
   <Header />
   
   <div class="chart-main">

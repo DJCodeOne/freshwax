@@ -85,7 +85,7 @@ export async function processArtwork(
   releaseId: string,
   env: Env
 ): Promise<{ coverUrl: string; thumbUrl: string }> {
-  console.log(`[Image] Processing artwork: ${artworkKey}`);
+  console.info(`[Image] Processing artwork: ${artworkKey}`);
 
   // Download artwork from releases bucket (submissions/ folder)
   const artworkObj = await env.RELEASES_BUCKET.get(artworkKey);
@@ -94,15 +94,15 @@ export async function processArtwork(
   }
 
   const artworkBuffer = await artworkObj.arrayBuffer();
-  console.log(`[Image] Downloaded artwork: ${artworkBuffer.byteLength} bytes`);
+  console.info(`[Image] Downloaded artwork: ${artworkBuffer.byteLength} bytes`);
 
   // Process cover (800x800)
   const cover = await processImageToSquareWebP(artworkBuffer, 800);
-  console.log(`[Image] Created cover: ${cover.buffer.byteLength} bytes (${cover.format})`);
+  console.info(`[Image] Created cover: ${cover.buffer.byteLength} bytes (${cover.format})`);
 
   // Process thumbnail (400x400)
   const thumb = await processImageToSquareWebP(artworkBuffer, 400);
-  console.log(`[Image] Created thumbnail: ${thumb.buffer.byteLength} bytes (${thumb.format})`);
+  console.info(`[Image] Created thumbnail: ${thumb.buffer.byteLength} bytes (${thumb.format})`);
 
   // Upload to releases bucket with dynamic extensions based on chosen format
   const coverExt = imageExtension(cover.format);
@@ -128,8 +128,8 @@ export async function processArtwork(
   const coverUrl = `${env.R2_PUBLIC_DOMAIN}/${coverKey}`;
   const thumbUrl = `${env.R2_PUBLIC_DOMAIN}/${thumbKey}`;
 
-  console.log(`[Image] Uploaded cover: ${coverUrl}`);
-  console.log(`[Image] Uploaded thumbnail: ${thumbUrl}`);
+  console.info(`[Image] Uploaded cover: ${coverUrl}`);
+  console.info(`[Image] Uploaded thumbnail: ${thumbUrl}`);
 
   return { coverUrl, thumbUrl };
 }

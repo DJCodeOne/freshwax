@@ -410,7 +410,7 @@ async function getGenres(db: D1Database): Promise<string[]> {
 
 async function syncToFirebase(env: Env, id: string, data: any): Promise<void> {
   if (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_API_KEY) {
-    console.log('Firebase not configured, skipping sync');
+    console.warn('Firebase not configured, skipping sync');
     return;
   }
 
@@ -447,7 +447,7 @@ async function syncToFirebase(env: Env, id: string, data: any): Promise<void> {
       body: JSON.stringify(firestoreDoc),
     });
 
-    console.log(`Synced listing ${id} to Firebase`);
+    console.info(`Synced listing ${id} to Firebase`);
   } catch (e) {
     console.error('Firebase sync failed:', e);
   }

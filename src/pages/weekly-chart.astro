@@ -82,11 +82,22 @@ const formatDate = (dateValue: unknown) => {
 // Get label from release
 const getLabel = (release: Record<string, unknown>) => release.labelName || release.recordLabel || release.copyrightHolder || 'Unknown Label';
 
+// Build ItemList structured data for SEO
+const releaseItemList = {
+  name: 'Weekly Chart - Top Selling Releases',
+  items: releases.slice(0, 20).map((release, index) => ({
+    name: `${release.releaseName || 'Untitled'} by ${release.artistName || 'Unknown Artist'}`,
+    url: `/item/${release.id}/`,
+    image: (release.thumbUrl || release.coverArtUrl || undefined) as string | undefined,
+    position: index + 1,
+  }))
+};
+
 export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
-<Layout title="Weekly Chart - Top Selling Releases" description="Fresh Wax weekly chart — bestselling and trending jungle and drum & bass releases, updated weekly and ranked by sales and streams.">
+<Layout title="Weekly Chart - Top Selling Releases" description="Fresh Wax weekly chart — bestselling and trending jungle and drum & bass releases, updated weekly and ranked by sales and streams." itemList={releaseItemList}>
   <Header />
   
   <div class="chart-main">

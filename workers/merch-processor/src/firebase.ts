@@ -94,5 +94,5 @@ export async function createMerchInFirebase(product: ProcessedMerch, env: Env): 
     throw new Error(`Firebase error: ${response.status} - ${error}`);
   }
 
-  console.log(`[Firebase] Merch created/updated: ${product.id}`);
+  console.info(`[Firebase] Merch created/updated: ${product.id}`);
 }

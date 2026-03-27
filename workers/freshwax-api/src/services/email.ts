@@ -39,7 +39,7 @@ export async function sendEmail(env: Env, options: EmailOptions): Promise<boolea
       return false;
     }
 
-    console.log(`[email] Sent to ${options.to}: ${options.subject}`);
+    console.info(`[email] Sent to ${options.to}: ${options.subject}`);
     return true;
   } catch (error) {
     console.error('[email] Error:', error);

@@ -85,7 +85,7 @@ export async function processProductImages(
   productId: string,
   env: Env
 ): Promise<{ images: string[]; mainImage: string; thumbnail: string }> {
-  console.log(`[Image] Processing ${imageKeys.length} product images`);
+  console.info(`[Image] Processing ${imageKeys.length} product images`);
 
   const processedImages: string[] = [];
   let mainImage = '';
@@ -93,7 +93,7 @@ export async function processProductImages(
 
   for (let i = 0; i < imageKeys.length; i++) {
     const imageKey = imageKeys[i];
-    console.log(`[Image] Processing image ${i + 1}/${imageKeys.length}: ${imageKey}`);
+    console.info(`[Image] Processing image ${i + 1}/${imageKeys.length}: ${imageKey}`);
 
     // Download image
     const imageObj = await env.MERCH_BUCKET.get(imageKey);
@@ -103,11 +103,11 @@ export async function processProductImages(
     }
 
     const imageBuffer = await imageObj.arrayBuffer();
-    console.log(`[Image] Downloaded: ${imageBuffer.byteLength} bytes`);
+    console.info(`[Image] Downloaded: ${imageBuffer.byteLength} bytes`);
 
     // Process to 800x800 WebP
     const processed = await processImageToSquareWebP(imageBuffer, 800);
-    console.log(`[Image] Processed: ${processed.buffer.byteLength} bytes (${processed.format})`);
+    console.info(`[Image] Processed: ${processed.buffer.byteLength} bytes (${processed.format})`);
 
     // Upload to merch bucket with dynamic extension
     const ext = imageExtension(processed.format);
@@ -121,7 +121,7 @@ export async function processProductImages(
 
     const imageUrl = `${env.R2_PUBLIC_DOMAIN}/${outputKey}`;
     processedImages.push(imageUrl);
-    console.log(`[Image] Uploaded: ${imageUrl}`);
+    console.info(`[Image] Uploaded: ${imageUrl}`);
 
     // First image becomes main image
     if (i === 0) {
@@ -138,7 +138,7 @@ export async function processProductImages(
         }
       });
       thumbnail = `${env.R2_PUBLIC_DOMAIN}/${thumbKey}`;
-      console.log(`[Image] Thumbnail: ${thumbnail} (${thumb.format})`);
+      console.info(`[Image] Thumbnail: ${thumbnail} (${thumb.format})`);
     }
   }
 

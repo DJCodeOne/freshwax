@@ -27,7 +27,7 @@ async function parseSubmission(
   submissionId: string,
   env: Env
 ): Promise<{ metadata: SubmissionMetadata; artworkKey: string | null; trackKeys: string[] }> {
-  console.log(`[Parser] Parsing submission: ${submissionId}`);
+  console.info(`[Parser] Parsing submission: ${submissionId}`);
 
   // Get metadata.json from submissions/ folder
   const metadataKey = `submissions/${submissionId}/metadata.json`;
@@ -38,7 +38,7 @@ async function parseSubmission(
   }
 
   const metadata: SubmissionMetadata = await metadataObj.json();
-  console.log(`[Parser] Metadata loaded: ${metadata.artistName} - ${metadata.releaseName}`);
+  console.info(`[Parser] Metadata loaded: ${metadata.artistName} - ${metadata.releaseName}`);
 
   // List all files in submission folder
   const list = await env.RELEASES_BUCKET.list({ prefix: `submissions/${submissionId}/` });
@@ -58,7 +58,7 @@ async function parseSubmission(
       if (lowerKey.endsWith('.jpg') || lowerKey.endsWith('.jpeg') ||
           lowerKey.endsWith('.png') || lowerKey.endsWith('.webp')) {
         artworkKey = key;
-        console.log(`[Parser] Found artwork: ${key}`);
+        console.info(`[Parser] Found artwork: ${key}`);
       }
     }
     // Detect audio tracks
@@ -66,27 +66,27 @@ async function parseSubmission(
       if (lowerKey.endsWith('.mp3') || lowerKey.endsWith('.wav') ||
           lowerKey.endsWith('.flac') || lowerKey.endsWith('.aiff') || lowerKey.endsWith('.aif')) {
         trackKeys.push(key);
-        console.log(`[Parser] Found track: ${key}`);
+        console.info(`[Parser] Found track: ${key}`);
       }
     }
     // Root level audio files
     else if (lowerKey.endsWith('.mp3') || lowerKey.endsWith('.wav') ||
              lowerKey.endsWith('.flac') || lowerKey.endsWith('.aiff') || lowerKey.endsWith('.aif')) {
       trackKeys.push(key);
-      console.log(`[Parser] Found track (root): ${key}`);
+      console.info(`[Parser] Found track (root): ${key}`);
     }
     // Root level images could be artwork
     else if (!artworkKey && (lowerKey.endsWith('.jpg') || lowerKey.endsWith('.jpeg') ||
              lowerKey.endsWith('.png') || lowerKey.endsWith('.webp'))) {
       artworkKey = key;
-      console.log(`[Parser] Found artwork (root): ${key}`);
+      console.info(`[Parser] Found artwork (root): ${key}`);
     }
   }
 
   // Sort tracks by filename
   trackKeys.sort();
 
-  console.log(`[Parser] Found ${trackKeys.length} tracks, artwork: ${artworkKey ? 'yes' : 'no'}`);
+  console.info(`[Parser] Found ${trackKeys.length} tracks, artwork: ${artworkKey ? 'yes' : 'no'}`);
 
   return { metadata, artworkKey, trackKeys };
 }
@@ -101,10 +101,10 @@ async function processSubmission(
   const { metadata, artworkKey, trackKeys } = await parseSubmission(submissionId, env);
   const releaseId = generateReleaseId(metadata.artistName);
 
-  console.log(`[Processor] Starting: ${releaseId}`);
-  console.log(`[Processor] Artist: ${metadata.artistName}`);
-  console.log(`[Processor] Release: ${metadata.releaseName}`);
-  console.log(`[Processor] Tracks: ${trackKeys.length}`);
+  console.info(`[Processor] Starting: ${releaseId}`);
+  console.info(`[Processor] Artist: ${metadata.artistName}`);
+  console.info(`[Processor] Release: ${metadata.releaseName}`);
+  console.info(`[Processor] Tracks: ${trackKeys.length}`);
 
   // Process artwork
   let coverUrl = '';
@@ -115,7 +115,7 @@ async function processSubmission(
     coverUrl = artworkResult.coverUrl;
     thumbUrl = artworkResult.thumbUrl;
   } else {
-    console.log('[Processor] No artwork, using placeholder');
+    console.info('[Processor] No artwork, using placeholder');
     coverUrl = `${env.R2_PUBLIC_DOMAIN}/place-holder.webp`;
     thumbUrl = coverUrl;
   }
@@ -130,7 +130,7 @@ async function processSubmission(
       title: `Track ${i + 1}`
     };
 
-    console.log(`[Processor] Track ${i + 1}/${trackKeys.length}: ${trackMetadata.title}`);
+    console.info(`[Processor] Track ${i + 1}/${trackKeys.length}: ${trackMetadata.title}`);
 
     try {
       const processedTrack = await processAudioTrack(
@@ -273,7 +273,7 @@ async function processSubmission(
  * Delete submission files from releases bucket (submissions/ folder)
  */
 async function deleteSubmission(submissionId: string, env: Env): Promise<void> {
-  console.log(`[Cleanup] Deleting: ${submissionId}`);
+  console.info(`[Cleanup] Deleting: ${submissionId}`);
 
   const list = await env.RELEASES_BUCKET.list({ prefix: `submissions/${submissionId}/` });
 
@@ -281,7 +281,7 @@ async function deleteSubmission(submissionId: string, env: Env): Promise<void> {
     await env.RELEASES_BUCKET.delete(object.key);
   }
 
-  console.log(`[Cleanup] Deleted ${list.objects.length} files`);
+  console.info(`[Cleanup] Deleted ${list.objects.length} files`);
 }
 
 /**
@@ -367,7 +367,7 @@ export default {
           });
         }
 
-        console.log(`[API] Processing submission: ${submissionId}`);
+        console.info(`[API] Processing submission: ${submissionId}`);
 
         // Process the submission
         const release = await processSubmission(submissionId, env);
@@ -381,7 +381,7 @@ export default {
         // Delete original files
         await deleteSubmission(submissionId, env);
 
-        console.log(`[API] Complete: ${release.id}`);
+        console.info(`[API] Complete: ${release.id}`);
 
         return new Response(JSON.stringify({
           success: true,

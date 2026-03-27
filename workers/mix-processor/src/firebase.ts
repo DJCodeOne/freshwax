@@ -70,5 +70,5 @@ export async function createMixInFirebase(mix: ProcessedMix, env: Env): Promise<
     throw new Error(`Firebase error: ${response.status} - ${error}`);
   }
 
-  console.log(`[Firebase] Mix created/updated: ${mix.id}`);
+  console.info(`[Firebase] Mix created/updated: ${mix.id}`);
 }

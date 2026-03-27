@@ -37,7 +37,7 @@ async function parseSubmission(
   submissionId: string,
   env: Env
 ): Promise<{ metadata: MerchSubmissionMetadata; imageKeys: string[] }> {
-  console.log(`[Parser] Parsing submission: ${submissionId}`);
+  console.info(`[Parser] Parsing submission: ${submissionId}`);
 
   // Get metadata.json from merch-submissions/ folder
   const metadataKey = `merch-submissions/${submissionId}/metadata.json`;
@@ -48,7 +48,7 @@ async function parseSubmission(
   }
 
   const metadata: MerchSubmissionMetadata = await metadataObj.json();
-  console.log(`[Parser] Metadata loaded: ${metadata.name} (${metadata.category})`);
+  console.info(`[Parser] Metadata loaded: ${metadata.name} (${metadata.category})`);
 
   // List all files in submission folder
   const list = await env.MERCH_BUCKET.list({ prefix: `merch-submissions/${submissionId}/` });
@@ -67,14 +67,14 @@ async function parseSubmission(
         lowerKey.endsWith('.png') || lowerKey.endsWith('.webp') ||
         lowerKey.endsWith('.gif')) {
       imageKeys.push(key);
-      console.log(`[Parser] Found image: ${key}`);
+      console.info(`[Parser] Found image: ${key}`);
     }
   }
 
   // Sort images by filename to maintain order
   imageKeys.sort();
 
-  console.log(`[Parser] Found ${imageKeys.length} images`);
+  console.info(`[Parser] Found ${imageKeys.length} images`);
 
   return { metadata, imageKeys };
 }
@@ -90,9 +90,9 @@ async function processSubmission(
   const productId = generateProductId(metadata.name);
   const slug = generateSlug(metadata.name);
 
-  console.log(`[Processor] Starting: ${productId}`);
-  console.log(`[Processor] Supplier: ${metadata.supplierName}`);
-  console.log(`[Processor] Product: ${metadata.name}`);
+  console.info(`[Processor] Starting: ${productId}`);
+  console.info(`[Processor] Supplier: ${metadata.supplierName}`);
+  console.info(`[Processor] Product: ${metadata.name}`);
 
   // Process images
   const { images, mainImage, thumbnail } = await processProductImages(
@@ -183,7 +183,7 @@ async function processSubmission(
  * Delete submission files from bucket
  */
 async function deleteSubmission(submissionId: string, env: Env): Promise<void> {
-  console.log(`[Cleanup] Deleting: ${submissionId}`);
+  console.info(`[Cleanup] Deleting: ${submissionId}`);
 
   const list = await env.MERCH_BUCKET.list({ prefix: `merch-submissions/${submissionId}/` });
 
@@ -191,7 +191,7 @@ async function deleteSubmission(submissionId: string, env: Env): Promise<void> {
     await env.MERCH_BUCKET.delete(object.key);
   }
 
-  console.log(`[Cleanup] Deleted ${list.objects.length} files`);
+  console.info(`[Cleanup] Deleted ${list.objects.length} files`);
 }
 
 /**
@@ -276,7 +276,7 @@ export default {
           });
         }
 
-        console.log(`[API] Processing merch submission: ${submissionId}`);
+        console.info(`[API] Processing merch submission: ${submissionId}`);
 
         // Process the submission
         const product = await processSubmission(submissionId, env);
@@ -290,7 +290,7 @@ export default {
         // Delete original files
         await deleteSubmission(submissionId, env);
 
-        console.log(`[API] Complete: ${product.id}`);
+        console.info(`[API] Complete: ${product.id}`);
 
         return new Response(JSON.stringify({
           success: true,

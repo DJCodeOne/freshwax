@@ -29,7 +29,7 @@ async function parseSubmission(
   submissionId: string,
   env: Env
 ): Promise<{ metadata: MixSubmissionMetadata; artworkKey: string | null; audioKey: string | null }> {
-  console.log(`[Parser] Parsing submission: ${submissionId}`);
+  console.info(`[Parser] Parsing submission: ${submissionId}`);
 
   // Get metadata.json from mix-submissions/ folder
   const metadataKey = `mix-submissions/${submissionId}/metadata.json`;
@@ -40,7 +40,7 @@ async function parseSubmission(
   }
 
   const metadata: MixSubmissionMetadata = await metadataObj.json();
-  console.log(`[Parser] Metadata loaded: ${metadata.djName} - ${metadata.title}`);
+  console.info(`[Parser] Metadata loaded: ${metadata.djName} - ${metadata.title}`);
 
   // List all files in submission folder
   const list = await env.MIXES_BUCKET.list({ prefix: `mix-submissions/${submissionId}/` });
@@ -59,17 +59,17 @@ async function parseSubmission(
     if (lowerKey.endsWith('.jpg') || lowerKey.endsWith('.jpeg') ||
         lowerKey.endsWith('.png') || lowerKey.endsWith('.webp')) {
       artworkKey = key;
-      console.log(`[Parser] Found artwork: ${key}`);
+      console.info(`[Parser] Found artwork: ${key}`);
     }
     // Detect audio
     else if (lowerKey.endsWith('.mp3') || lowerKey.endsWith('.wav') ||
              lowerKey.endsWith('.flac') || lowerKey.endsWith('.aiff') || lowerKey.endsWith('.aif')) {
       audioKey = key;
-      console.log(`[Parser] Found audio: ${key}`);
+      console.info(`[Parser] Found audio: ${key}`);
     }
   }
 
-  console.log(`[Parser] Artwork: ${artworkKey ? 'yes' : 'no'}, Audio: ${audioKey ? 'yes' : 'no'}`);
+  console.info(`[Parser] Artwork: ${artworkKey ? 'yes' : 'no'}, Audio: ${audioKey ? 'yes' : 'no'}`);
 
   return { metadata, artworkKey, audioKey };
 }
@@ -82,7 +82,7 @@ async function copyAudioFile(
   mixId: string,
   env: Env
 ): Promise<{ audioUrl: string }> {
-  console.log(`[Audio] Copying audio file: ${audioKey}`);
+  console.info(`[Audio] Copying audio file: ${audioKey}`);
 
   // Get the audio file
   const audioObj = await env.MIXES_BUCKET.get(audioKey);
@@ -111,7 +111,7 @@ async function copyAudioFile(
   });
 
   const audioUrl = `${env.R2_PUBLIC_DOMAIN}/${outputKey}`;
-  console.log(`[Audio] Uploaded audio: ${audioUrl} (${audioBuffer.byteLength} bytes)`);
+  console.info(`[Audio] Uploaded audio: ${audioUrl} (${audioBuffer.byteLength} bytes)`);
 
   return { audioUrl };
 }
@@ -126,9 +126,9 @@ async function processSubmission(
   const { metadata, artworkKey, audioKey } = await parseSubmission(submissionId, env);
   const mixId = generateMixId(metadata.djName, metadata.title);
 
-  console.log(`[Processor] Starting: ${mixId}`);
-  console.log(`[Processor] DJ: ${metadata.djName}`);
-  console.log(`[Processor] Title: ${metadata.title}`);
+  console.info(`[Processor] Starting: ${mixId}`);
+  console.info(`[Processor] DJ: ${metadata.djName}`);
+  console.info(`[Processor] Title: ${metadata.title}`);
 
   // Process artwork
   let artworkUrl = '';
@@ -136,7 +136,7 @@ async function processSubmission(
     const artworkResult = await processArtwork(submissionId, artworkKey, mixId, env);
     artworkUrl = artworkResult.artworkUrl;
   } else {
-    console.log('[Processor] No artwork, using placeholder');
+    console.info('[Processor] No artwork, using placeholder');
     artworkUrl = `${env.R2_PUBLIC_DOMAIN}/place-holder.webp`;
   }
 
@@ -241,7 +241,7 @@ async function processSubmission(
  * Delete submission files from bucket
  */
 async function deleteSubmission(submissionId: string, env: Env): Promise<void> {
-  console.log(`[Cleanup] Deleting: ${submissionId}`);
+  console.info(`[Cleanup] Deleting: ${submissionId}`);
 
   const list = await env.MIXES_BUCKET.list({ prefix: `mix-submissions/${submissionId}/` });
 
@@ -249,7 +249,7 @@ async function deleteSubmission(submissionId: string, env: Env): Promise<void> {
     await env.MIXES_BUCKET.delete(object.key);
   }
 
-  console.log(`[Cleanup] Deleted ${list.objects.length} files`);
+  console.info(`[Cleanup] Deleted ${list.objects.length} files`);
 }
 
 /**
@@ -334,7 +334,7 @@ export default {
           });
         }
 
-        console.log(`[API] Processing mix submission: ${submissionId}`);
+        console.info(`[API] Processing mix submission: ${submissionId}`);
 
         // Process the submission
         const mix = await processSubmission(submissionId, env);
@@ -348,7 +348,7 @@ export default {
         // Delete original files
         await deleteSubmission(submissionId, env);
 
-        console.log(`[API] Complete: ${mix.id}`);
+        console.info(`[API] Complete: ${mix.id}`);
 
         return new Response(JSON.stringify({
           success: true,

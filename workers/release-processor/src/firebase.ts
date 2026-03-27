@@ -61,7 +61,7 @@ async function setDocument(
     throw new Error(`Failed to set document: ${response.status}`);
   }
 
-  console.log(`[Firebase] Document set: ${collection}/${docId}`);
+  console.info(`[Firebase] Document set: ${collection}/${docId}`);
   return { success: true, id: docId };
 }
 
@@ -134,7 +134,7 @@ export async function createReleaseInFirebase(
   release: ProcessedRelease,
   env: Env
 ): Promise<void> {
-  console.log(`[Firebase] Creating release: ${release.id}`);
+  console.info(`[Firebase] Creating release: ${release.id}`);
 
   // Create the main release document
   const releaseData = {
@@ -192,7 +192,7 @@ export async function createReleaseInFirebase(
   // Update the master releases list
   await updateMasterReleasesList(release, env);
 
-  console.log(`[Firebase] Release created successfully: ${release.id}`);
+  console.info(`[Firebase] Release created successfully: ${release.id}`);
 }
 
 /**
@@ -202,7 +202,7 @@ async function updateMasterReleasesList(
   release: ProcessedRelease,
   env: Env
 ): Promise<void> {
-  console.log('[Firebase] Updating master releases list...');
+  console.info('[Firebase] Updating master releases list...');
 
   // Get current master list
   const masterList = await getDocument('system', 'releases-master', env);
@@ -231,10 +231,10 @@ async function updateMasterReleasesList(
 
   if (existingIndex >= 0) {
     releasesList[existingIndex] = releaseSummary;
-    console.log('[Firebase] Updated existing release in master list');
+    console.info('[Firebase] Updated existing release in master list');
   } else {
     releasesList.push(releaseSummary);
-    console.log('[Firebase] Added new release to master list');
+    console.info('[Firebase] Added new release to master list');
   }
 
   // Update master list document
@@ -244,5 +244,5 @@ async function updateMasterReleasesList(
     lastUpdated: new Date().toISOString()
   }, env);
 
-  console.log(`[Firebase] Master list updated (${releasesList.length} total releases)`);
+  console.info(`[Firebase] Master list updated (${releasesList.length} total releases)`);
 }

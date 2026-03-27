@@ -34,7 +34,7 @@ async function sendEmail(options: EmailOptions, env: Env): Promise<boolean> {
       return false;
     }
 
-    console.log(`[Email] Sent to ${options.to}: ${options.subject}`);
+    console.info(`[Email] Sent to ${options.to}: ${options.subject}`);
     return true;
   } catch (error) {
     console.error('[Email] Error sending:', error);

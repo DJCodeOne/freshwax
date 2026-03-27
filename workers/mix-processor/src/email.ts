@@ -8,7 +8,7 @@ import type { Env, ProcessedMix } from './types';
  */
 export async function sendProcessingCompleteEmail(mix: ProcessedMix, env: Env): Promise<void> {
   if (!mix.email) {
-    console.log('[Email] No email address, skipping notification');
+    console.info('[Email] No email address, skipping notification');
     return;
   }
 
@@ -57,7 +57,7 @@ export async function sendProcessingCompleteEmail(mix: ProcessedMix, env: Env): 
       `
     });
 
-    console.log(`[Email] Processing complete email sent to ${mix.email}`);
+    console.info(`[Email] Processing complete email sent to ${mix.email}`);
   } catch (error) {
     console.error('[Email] Failed to send processing complete email:', error);
   }
@@ -91,7 +91,7 @@ export async function sendProcessingFailedEmail(
       `
     });
 
-    console.log(`[Email] Processing failed email sent to admin`);
+    console.info(`[Email] Processing failed email sent to admin`);
   } catch (error) {
     console.error('[Email] Failed to send processing failed email:', error);
   }

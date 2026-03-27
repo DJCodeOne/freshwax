@@ -510,7 +510,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         updatedAt: new Date().toISOString()
       });
 
-      console.log(`[releases] Approved: ${release.artistName} - ${release.releaseName}`);
+      console.info(`[releases] Approved: ${release.artistName} - ${release.releaseName}`);
 
       return jsonResponse({
         success: true,
@@ -543,7 +543,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         updatedAt: new Date().toISOString()
       });
 
-      console.log(`[releases] Rejected: ${release.artistName} - ${release.releaseName}`);
+      console.info(`[releases] Rejected: ${release.artistName} - ${release.releaseName}`);
 
       return jsonResponse({
         success: true,
@@ -589,7 +589,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 
       await setDocument(env, 'releases', releaseId, releaseData);
 
-      console.log(`[releases] Created: ${body.artistName} - ${body.releaseName} (${releaseId})`);
+      console.info(`[releases] Created: ${body.artistName} - ${body.releaseName} (${releaseId})`);
 
       return jsonResponse({
         success: true,
@@ -788,20 +788,20 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
 // Scheduled task handler
 async function handleScheduled(event: ScheduledEvent, env: Env): Promise<void> {
   const trigger = event.cron;
-  console.log(`[scheduled] Running cron: ${trigger}`);
+  console.info(`[scheduled] Running cron: ${trigger}`);
 
   try {
     if (trigger === '0 */6 * * *') {
       // Every 6 hours: Cleanup old notifications
       // Delete read notifications older than 30 days and unread ones older than 90 days
-      console.log('[scheduled] Running notification cleanup...');
+      console.info('[scheduled] Running notification cleanup...');
       await cleanupOldNotifications(env);
     }
 
     if (trigger === '0 9 * * *') {
       // Daily at 9am: Send pending request reminders
       // Find role requests pending > 48 hours and email admin a reminder
-      console.log('[scheduled] Checking for stale pending requests...');
+      console.info('[scheduled] Checking for stale pending requests...');
       await notifyStaleRequests(env);
     }
   } catch (error) {
@@ -840,7 +840,7 @@ async function cleanupOldNotifications(env: Env): Promise<void> {
   const toDelete = [...oldRead, ...oldUnread];
 
   if (toDelete.length === 0) {
-    console.log('[scheduled] No old notifications to clean up');
+    console.info('[scheduled] No old notifications to clean up');
     return;
   }
 
@@ -858,7 +858,7 @@ async function cleanupOldNotifications(env: Env): Promise<void> {
     );
   }
 
-  console.log(`[scheduled] Cleaned up ${toDelete.length} old notifications (${oldRead.length} read, ${oldUnread.length} unread)`);
+  console.info(`[scheduled] Cleaned up ${toDelete.length} old notifications (${oldRead.length} read, ${oldUnread.length} unread)`);
 }
 
 // Check for stale pending role requests (> 48 hours) and email admin a reminder
@@ -898,7 +898,7 @@ async function notifyStaleRequests(env: Env): Promise<void> {
   }
 
   if (staleRequests.length === 0) {
-    console.log('[scheduled] No stale pending requests');
+    console.info('[scheduled] No stale pending requests');
     return;
   }
 
@@ -907,7 +907,7 @@ async function notifyStaleRequests(env: Env): Promise<void> {
   const sent = await sendEmail(env, emailTemplate);
 
   if (sent) {
-    console.log(`[scheduled] Sent stale request reminder for ${staleRequests.length} request(s)`);
+    console.info(`[scheduled] Sent stale request reminder for ${staleRequests.length} request(s)`);
   } else {
     console.error('[scheduled] Failed to send stale request reminder email');
   }

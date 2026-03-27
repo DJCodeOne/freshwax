@@ -10,7 +10,7 @@ const sharedRules = {
   'no-dupe-args': 'error',
   'no-dupe-keys': 'error',
   'no-duplicate-case': 'error',
-  'no-empty': ['warn', { allowEmptyCatch: true }],
+  'no-empty': ['warn', { allowEmptyCatch: false }],
   'no-ex-assign': 'error',
   'no-extra-boolean-cast': 'warn',
   'no-func-assign': 'error',
@@ -38,7 +38,7 @@ const sharedRules = {
   'no-throw-literal': 'error',
   'no-unused-expressions': ['warn', { allowShortCircuit: true, allowTernary: true }],
   'prefer-promise-reject-errors': 'warn',
-  'no-console': ['warn', { allow: ['error'] }],
+  'no-console': ['warn', { allow: ['error', 'warn', 'info'] }],
 
   // --- TypeScript-specific: catch type errors ---
   // Disable base rules that conflict with TS versions
@@ -75,7 +75,7 @@ export default [
       'dist/**',
       'node_modules/**',
       '.astro/**',
-      'workers/**',
+      'workers/**/node_modules/**',
       'public/**',
       'scripts/**',
     ],
@@ -135,6 +135,24 @@ export default [
   // Apply shared rules but NOT type-aware (project parsing doesn't work on virtual files)
   {
     files: ['src/**/*.astro/*.ts'],
+    plugins: {
+      '@typescript-eslint': tseslint,
+    },
+    rules: {
+      ...sharedRules,
+    },
+  },
+
+  // Workers — shared rules only (no type-aware, separate tsconfig per worker)
+  {
+    files: ['workers/*/src/**/*.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+    },
     plugins: {
       '@typescript-eslint': tseslint,
     },

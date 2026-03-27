@@ -8,7 +8,7 @@ import type { Env, ProcessedMerch } from './types';
  */
 export async function sendProcessingCompleteEmail(product: ProcessedMerch, env: Env): Promise<void> {
   if (!product.email) {
-    console.log('[Email] No email address, skipping notification');
+    console.info('[Email] No email address, skipping notification');
     return;
   }
 
@@ -61,7 +61,7 @@ export async function sendProcessingCompleteEmail(product: ProcessedMerch, env: 
       `
     });
 
-    console.log(`[Email] Processing complete email sent to ${product.email}`);
+    console.info(`[Email] Processing complete email sent to ${product.email}`);
   } catch (error) {
     console.error('[Email] Failed to send processing complete email:', error);
   }
@@ -95,7 +95,7 @@ export async function sendProcessingFailedEmail(
       `
     });
 
-    console.log(`[Email] Processing failed email sent to admin`);
+    console.info(`[Email] Processing failed email sent to admin`);
   } catch (error) {
     console.error('[Email] Failed to send processing failed email:', error);
   }

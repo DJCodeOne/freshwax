@@ -85,7 +85,7 @@ export async function processArtwork(
   mixId: string,
   env: Env
 ): Promise<{ artworkUrl: string }> {
-  console.log(`[Image] Processing artwork: ${artworkKey}`);
+  console.info(`[Image] Processing artwork: ${artworkKey}`);
 
   // Download artwork from mixes bucket (mix-submissions/ folder)
   const artworkObj = await env.MIXES_BUCKET.get(artworkKey);
@@ -94,11 +94,11 @@ export async function processArtwork(
   }
 
   const artworkBuffer = await artworkObj.arrayBuffer();
-  console.log(`[Image] Downloaded artwork: ${artworkBuffer.byteLength} bytes`);
+  console.info(`[Image] Downloaded artwork: ${artworkBuffer.byteLength} bytes`);
 
   // Process artwork (1200x1200)
   const artwork = await processImageToSquareWebP(artworkBuffer, 1200, 85);
-  console.log(`[Image] Created artwork: ${artwork.buffer.byteLength} bytes (${artwork.format})`);
+  console.info(`[Image] Created artwork: ${artwork.buffer.byteLength} bytes (${artwork.format})`);
 
   // Upload to mixes bucket with dynamic extension based on chosen format
   const ext = imageExtension(artwork.format);
@@ -112,7 +112,7 @@ export async function processArtwork(
   });
 
   const artworkUrl = `${env.R2_PUBLIC_DOMAIN}/${artworkOutputKey}`;
-  console.log(`[Image] Uploaded artwork: ${artworkUrl}`);
+  console.info(`[Image] Uploaded artwork: ${artworkUrl}`);
 
   return { artworkUrl };
 }

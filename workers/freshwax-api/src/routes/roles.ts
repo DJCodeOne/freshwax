@@ -285,7 +285,7 @@ export async function approveRole(
   emailTemplate.to = user.email || '';
   await sendEmail(env, emailTemplate);
 
-  console.log(`[roles] Approved ${roleType} for ${uid} (${user.displayName})`);
+  console.info(`[roles] Approved ${roleType} for ${uid} (${user.displayName})`);
 
   return { success: true, message: 'Role approved' };
 }
@@ -335,7 +335,7 @@ export async function denyRole(
   emailTemplate.to = user.email || '';
   await sendEmail(env, emailTemplate);
 
-  console.log(`[roles] Denied ${roleType} for ${uid} (${user.displayName})`);
+  console.info(`[roles] Denied ${roleType} for ${uid} (${user.displayName})`);
 
   return { success: true, message: 'Role denied' };
 }
@@ -374,7 +374,7 @@ export async function revokeRole(
     }
   }
 
-  console.log(`[roles] Revoked ${roleType} for ${uid}`);
+  console.info(`[roles] Revoked ${roleType} for ${uid}`);
 
   return { success: true, message: 'Role revoked' };
 }
