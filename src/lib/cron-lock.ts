@@ -1,8 +1,8 @@
 // src/lib/cron-lock.ts
 // Simple D1-based distributed lock for preventing overlapping cron execution.
-// Lock expires after 10 minutes (TTL_MS) to prevent deadlocks from crashed jobs.
+// Lock expires after 15 minutes (TTL_MS) to prevent deadlocks from crashed jobs.
 
-const TTL_MS = 10 * 60 * 1000; // 10 minutes
+const TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
  * Try to acquire a lock for a cron job.

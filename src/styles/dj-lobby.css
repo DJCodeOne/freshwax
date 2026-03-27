@@ -706,8 +706,8 @@ button{ -webkit-user-select:none; user-select:none } }
 .ls-chat-plus-badge{ font-size:.9rem; margin-left:4px; vertical-align:middle }
 .ls-chat-bot-badge{ font-size:.6rem; padding:.1rem .35rem; background:#3b82f6; color:#fff; border-radius:4px; font-weight:600; margin-left:4px; vertical-align:middle }
 .ls-chat-time{ font-size:.7rem; color:#d1d5db; flex-shrink:0 }
-.ls-chat-text{ font-size:.9rem; color:#d1d5db; line-height:1.4; word-break:break-word; padding-left:calc(24px+.5rem); }
-.ls-chat-gif{ padding-left:calc(24px+.5rem); margin-top:.25rem }
+.ls-chat-text{ font-size:.9rem; color:#d1d5db; line-height:1.4; word-break:break-word; padding-left:calc(24px + .5rem); }
+.ls-chat-gif{ padding-left:calc(24px + .5rem); margin-top:.25rem }
 .ls-chat-gif img{ max-width:200px; max-height:150px; border-radius:8px; display:block }
 .ls-bot-message{ background:rgba(220,38,38,.08); border-left:var(--b5) }
 .ls-bot-message .ls-chat-username{ color:#f87171 }
@@ -808,9 +808,6 @@ button{ -webkit-user-select:none; user-select:none } }
 .init-check-item.connected .init-spinner,
 .init-check-item.disconnected .init-spinner,
 .tip-icon{ font-size:1rem }
-.init-back-btn,
-.init-back-btn:disabled,
-.init-back-text,
 @media (max-width:500px){ .init-modal-content{ min-width:auto; margin:1rem; padding:1.5rem }
 .init-check-item{ padding:.75rem }
 .init-modal-footer{ flex-direction:column; gap:.75rem }
@@ -881,8 +878,8 @@ body{ font-size:16px; }
 .ls-chat-avatar,
 .ls-chat-avatar-letter{ width:20px; height:20px }
 .ls-chat-username{ font-size:.8rem }
-.ls-chat-text{ font-size:.85rem; padding-left:calc(20px+.5rem) }
-.ls-chat-gif{ padding-left:calc(20px+.5rem) }
+.ls-chat-text{ font-size:.85rem; padding-left:calc(20px + .5rem) }
+.ls-chat-gif{ padding-left:calc(20px + .5rem) }
 .ls-chat-gif img{ max-width:150px; max-height:120px }
 .mobile-broadcast-layout{ padding:12px; height:calc(100vh - 60px); height:calc(100dvh - 60px); overflow:hidden }
 .mobile-chat-container{ min-height:0 }

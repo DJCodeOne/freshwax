@@ -2356,7 +2356,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } catch (e) {
         console.error('View Transition cleanup error:', e);
       }
-    });
+    }, { once: true });
   }
 
   // Call setup after initLobby

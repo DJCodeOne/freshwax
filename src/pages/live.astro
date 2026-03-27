@@ -3733,5 +3733,5 @@ try {
     if (hz) hz.remove();
     // Note: module-scoped intervals (fullscreenStats, takeover, countdown, etc.)
     // are cleaned up in their own module script blocks above.
-  });
+  }, { once: true });
 </script>
