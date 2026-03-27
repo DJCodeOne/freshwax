@@ -116,7 +116,7 @@ function getFirestoreUrl(env: Env, path: string): string {
 }
 
 // Convert JS value to Firestore value
-export function toFirestoreValue(value: any): FirestoreValue {
+export function toFirestoreValue(value: unknown): FirestoreValue {
   if (value === null || value === undefined) return { nullValue: null };
   if (typeof value === 'string') return { stringValue: value };
   if (typeof value === 'boolean') return { booleanValue: value };
@@ -142,7 +142,7 @@ export function toFirestoreValue(value: any): FirestoreValue {
 }
 
 // Convert Firestore value to JS value
-export function fromFirestoreValue(value: FirestoreValue): any {
+export function fromFirestoreValue(value: FirestoreValue): unknown {
   if ('stringValue' in value) return value.stringValue;
   if ('integerValue' in value) return parseInt(value.integerValue!, 10);
   if ('doubleValue' in value) return value.doubleValue;
@@ -153,7 +153,7 @@ export function fromFirestoreValue(value: FirestoreValue): any {
     return (value.arrayValue?.values || []).map(fromFirestoreValue);
   }
   if ('mapValue' in value) {
-    const result: Record<string, any> = {};
+    const result: Record<string, unknown> = {};
     const fields = value.mapValue?.fields || {};
     for (const [k, v] of Object.entries(fields)) {
       result[k] = fromFirestoreValue(v);
@@ -164,8 +164,8 @@ export function fromFirestoreValue(value: FirestoreValue): any {
 }
 
 // Convert Firestore document to plain object
-export function documentToObject(doc: FirestoreDocument): Record<string, any> {
-  const result: Record<string, any> = {};
+export function documentToObject(doc: FirestoreDocument): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
   const fields = doc.fields || {};
   for (const [key, value] of Object.entries(fields)) {
     result[key] = fromFirestoreValue(value);
@@ -185,7 +185,7 @@ export async function getDocument(
   env: Env,
   collection: string,
   docId: string
-): Promise<Record<string, any> | null> {
+): Promise<Record<string, unknown> | null> {
   const token = await getAccessToken(env);
   const url = getFirestoreUrl(env, `${collection}/${docId}`);
 
@@ -209,8 +209,8 @@ export async function setDocument(
   env: Env,
   collection: string,
   docId: string,
-  data: Record<string, any>
-): Promise<Record<string, any>> {
+  data: Record<string, unknown>
+): Promise<Record<string, unknown>> {
   const token = await getAccessToken(env);
   const url = getFirestoreUrl(env, `${collection}/${docId}`);
 
@@ -238,16 +238,16 @@ export async function setDocument(
 }
 
 // Helper to set nested value by dot-notation path
-function setNestedValue(obj: Record<string, any>, path: string, value: any): void {
+function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
   const parts = path.split('.');
-  let current = obj;
+  let current: Record<string, unknown> = obj;
 
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
     if (!(part in current)) {
       current[part] = {};
     }
-    current = current[part];
+    current = current[part] as Record<string, unknown>;
   }
 
   current[parts[parts.length - 1]] = value;
@@ -258,8 +258,8 @@ export async function updateDocument(
   env: Env,
   collection: string,
   docId: string,
-  data: Record<string, any>
-): Promise<Record<string, any>> {
+  data: Record<string, unknown>
+): Promise<Record<string, unknown>> {
   const token = await getAccessToken(env);
 
   // Build update mask - encode special characters in field paths
@@ -269,7 +269,7 @@ export async function updateDocument(
   const url = `${getFirestoreUrl(env, `${collection}/${docId}`)}?${updateMask}`;
 
   // Convert dot-notation keys into nested structure
-  const nestedData: Record<string, any> = {};
+  const nestedData: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     setNestedValue(nestedData, key, value);
   }
@@ -323,15 +323,15 @@ export async function queryCollection(
   env: Env,
   collection: string,
   options: {
-    filters?: Array<{ field: string; op: string; value: any }>;
+    filters?: Array<{ field: string; op: string; value: string | number | boolean }>;
     orderBy?: { field: string; direction?: 'ASCENDING' | 'DESCENDING' };
     limit?: number;
   } = {}
-): Promise<Record<string, any>[]> {
+): Promise<Record<string, unknown>[]> {
   const token = await getAccessToken(env);
   const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents:runQuery`;
 
-  const structuredQuery: any = {
+  const structuredQuery: Record<string, unknown> = {
     from: [{ collectionId: collection }]
   };
 
@@ -400,8 +400,8 @@ export async function queryCollection(
 export async function addDocument(
   env: Env,
   collection: string,
-  data: Record<string, any>
-): Promise<Record<string, any>> {
+  data: Record<string, unknown>
+): Promise<Record<string, unknown>> {
   const token = await getAccessToken(env);
   const url = `${getFirestoreUrl(env, collection)}`;
 
@@ -435,7 +435,7 @@ export async function batchWrite(
     type: 'set' | 'update' | 'delete';
     collection: string;
     docId: string;
-    data?: Record<string, any>;
+    data?: Record<string, unknown>;
   }>
 ): Promise<void> {
   const token = await getAccessToken(env);

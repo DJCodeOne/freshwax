@@ -11,8 +11,17 @@ export async function createMerchInFirebase(product: ProcessedMerch, env: Env): 
 
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/merch/${product.id}?key=${apiKey}`;
 
+  interface FirestoreFieldValue {
+    stringValue?: string;
+    integerValue?: string;
+    doubleValue?: number;
+    booleanValue?: boolean;
+    arrayValue?: { values: FirestoreFieldValue[] };
+    mapValue?: { fields: Record<string, FirestoreFieldValue> };
+  }
+
   // Convert product object to Firestore document format
-  const fields: Record<string, any> = {};
+  const fields: Record<string, FirestoreFieldValue> = {};
 
   for (const [key, value] of Object.entries(product)) {
     if (value === undefined || value === null) continue;
@@ -34,15 +43,15 @@ export async function createMerchInFirebase(product: ProcessedMerch, env: Env): 
       } else if (typeof value[0] === 'string') {
         fields[key] = {
           arrayValue: {
-            values: value.map(v => ({ stringValue: v }))
+            values: (value as string[]).map(v => ({ stringValue: v }))
           }
         };
       } else if (typeof value[0] === 'object') {
         // Handle array of objects (variants)
         fields[key] = {
           arrayValue: {
-            values: value.map(v => {
-              const mapFields: Record<string, any> = {};
+            values: (value as Array<Record<string, unknown>>).map(v => {
+              const mapFields: Record<string, FirestoreFieldValue> = {};
               for (const [k, val] of Object.entries(v)) {
                 if (typeof val === 'string') {
                   mapFields[k] = { stringValue: val };
@@ -63,8 +72,8 @@ export async function createMerchInFirebase(product: ProcessedMerch, env: Env): 
       }
     } else if (typeof value === 'object') {
       // Handle nested objects (dimensions)
-      const mapFields: Record<string, any> = {};
-      for (const [k, v] of Object.entries(value)) {
+      const mapFields: Record<string, FirestoreFieldValue> = {};
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
         if (typeof v === 'string') {
           mapFields[k] = { stringValue: v };
         } else if (typeof v === 'number') {

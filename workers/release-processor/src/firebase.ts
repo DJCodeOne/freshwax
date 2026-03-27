@@ -8,7 +8,18 @@ const PROJECT_ID = 'freshwax-store';
 /**
  * Convert JavaScript value to Firestore value format
  */
-function toFirestoreValue(value: any): any {
+interface FirestoreValue {
+  nullValue?: null;
+  stringValue?: string;
+  booleanValue?: boolean;
+  integerValue?: string;
+  doubleValue?: number;
+  timestampValue?: string;
+  arrayValue?: { values: FirestoreValue[] };
+  mapValue?: { fields: Record<string, FirestoreValue> };
+}
+
+function toFirestoreValue(value: unknown): FirestoreValue {
   if (value === null || value === undefined) return { nullValue: null };
   if (typeof value === 'string') return { stringValue: value };
   if (typeof value === 'boolean') return { booleanValue: value };
@@ -24,8 +35,8 @@ function toFirestoreValue(value: any): any {
     return { arrayValue: { values: value.map(toFirestoreValue) } };
   }
   if (typeof value === 'object') {
-    const mapValue: Record<string, any> = {};
-    for (const [k, v] of Object.entries(value)) {
+    const mapValue: Record<string, FirestoreValue> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       mapValue[k] = toFirestoreValue(v);
     }
     return { mapValue: { fields: mapValue } };
@@ -39,12 +50,12 @@ function toFirestoreValue(value: any): any {
 async function setDocument(
   collection: string,
   docId: string,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   env: Env
 ): Promise<{ success: boolean; id: string }> {
   const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${collection}/${docId}?key=${env.FIREBASE_API_KEY}`;
 
-  const fields: Record<string, any> = {};
+  const fields: Record<string, FirestoreValue> = {};
   for (const [key, value] of Object.entries(data)) {
     fields[key] = toFirestoreValue(value);
   }
@@ -72,7 +83,7 @@ async function getDocument(
   collection: string,
   docId: string,
   env: Env
-): Promise<any | null> {
+): Promise<Record<string, unknown> | null> {
   const url = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/(default)/documents/${collection}/${docId}?key=${env.FIREBASE_API_KEY}`;
 
   const response = await fetch(url);
@@ -87,19 +98,19 @@ async function getDocument(
     throw new Error(`Failed to get document: ${response.status}`);
   }
 
-  const doc = await response.json();
+  const doc = await response.json() as { fields?: Record<string, FirestoreValue> };
   return parseFirestoreDocument(doc);
 }
 
 /**
  * Parse Firestore document to plain JavaScript object
  */
-function parseFirestoreDocument(doc: any): any {
+function parseFirestoreDocument(doc: { fields?: Record<string, FirestoreValue> }): Record<string, unknown> | null {
   if (!doc.fields) return null;
 
-  const result: Record<string, any> = {};
+  const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(doc.fields)) {
-    result[key] = parseFirestoreValue(value as any);
+    result[key] = parseFirestoreValue(value);
   }
   return result;
 }
@@ -107,19 +118,19 @@ function parseFirestoreDocument(doc: any): any {
 /**
  * Parse Firestore value to JavaScript value
  */
-function parseFirestoreValue(value: any): any {
+function parseFirestoreValue(value: FirestoreValue): unknown {
   if ('stringValue' in value) return value.stringValue;
-  if ('integerValue' in value) return parseInt(value.integerValue, 10);
+  if ('integerValue' in value) return parseInt(value.integerValue!, 10);
   if ('doubleValue' in value) return value.doubleValue;
   if ('booleanValue' in value) return value.booleanValue;
   if ('nullValue' in value) return null;
-  if ('timestampValue' in value) return new Date(value.timestampValue);
+  if ('timestampValue' in value) return new Date(value.timestampValue!);
   if ('arrayValue' in value) {
-    return (value.arrayValue.values || []).map(parseFirestoreValue);
+    return (value.arrayValue?.values || []).map(parseFirestoreValue);
   }
   if ('mapValue' in value) {
-    const result: Record<string, any> = {};
-    for (const [k, v] of Object.entries(value.mapValue.fields || {})) {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value.mapValue?.fields || {})) {
       result[k] = parseFirestoreValue(v);
     }
     return result;
@@ -207,13 +218,13 @@ async function updateMasterReleasesList(
   // Get current master list
   const masterList = await getDocument('system', 'releases-master', env);
 
-  let releasesList: any[] = [];
-  if (masterList && masterList.releases) {
-    releasesList = masterList.releases;
+  let releasesList: Array<Record<string, unknown>> = [];
+  if (masterList && Array.isArray(masterList.releases)) {
+    releasesList = masterList.releases as Array<Record<string, unknown>>;
   }
 
   // Check if release already exists
-  const existingIndex = releasesList.findIndex((r: any) => r.id === release.id);
+  const existingIndex = releasesList.findIndex((r) => r.id === release.id);
 
   // Create summary for master list
   const releaseSummary = {

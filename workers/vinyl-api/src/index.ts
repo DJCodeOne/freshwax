@@ -38,7 +38,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 let _currentOrigin: string | null = null;
 
 // JSON response helper
-function json(data: any, status = 200): Response {
+function json(data: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json', ...getCorsHeaders(_currentOrigin) },
@@ -95,7 +95,7 @@ async function verifyAuth(request: Request, env: Env): Promise<{ userId: string 
       body: JSON.stringify({ idToken: token }),
     });
 
-    const data = await response.json() as any;
+    const data = await response.json() as { users?: Array<{ localId: string }> };
     if (data.users && data.users[0]) {
       return { userId: data.users[0].localId };
     }
@@ -147,8 +147,42 @@ interface VinylListing {
   deleted_at?: string;
 }
 
+interface VinylListingResponse {
+  id: string;
+  sellerId: string;
+  sellerName: string;
+  title: string;
+  artist: string;
+  label?: string;
+  catalogNumber?: string;
+  format: string;
+  releaseYear?: number;
+  genre?: string;
+  mediaCondition: string;
+  sleeveCondition: string;
+  conditionNotes?: string;
+  price: number;
+  originalPrice?: number;
+  discountPercent: number;
+  shippingCost: number;
+  dealType: string;
+  dealDescription?: string;
+  description?: string;
+  images: string[];
+  tracks: string[];
+  audioSampleUrl?: string;
+  audioSampleDuration?: number;
+  status: string;
+  featured: boolean;
+  views: number;
+  saves: number;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+}
+
 // Convert D1 row to API response format
-function rowToListing(row: VinylListing): any {
+function rowToListing(row: VinylListing): VinylListingResponse {
   return {
     id: row.id,
     sellerId: row.seller_id,
@@ -188,9 +222,9 @@ function rowToListing(row: VinylListing): any {
 async function getPublishedListings(
   db: D1Database,
   options: { sellerId?: string; genre?: string; limit?: number; offset?: number }
-): Promise<any[]> {
+): Promise<VinylListingResponse[]> {
   let query = `SELECT * FROM vinyl_listings WHERE status = 'published' AND deleted = 0`;
-  const params: any[] = [];
+  const params: (string | number)[] = [];
 
   if (options.sellerId) {
     query += ` AND seller_id = ?`;
@@ -217,11 +251,11 @@ async function getPublishedListings(
   const stmt = params.length > 0 ? db.prepare(query).bind(...params) : db.prepare(query);
   const { results } = await stmt.all();
 
-  return (results || []).map((row: any) => rowToListing(row));
+  return (results || []).map((row) => rowToListing(row as VinylListing));
 }
 
 // Get deals (listings with discounts)
-async function getDeals(db: D1Database, limit = 50): Promise<any[]> {
+async function getDeals(db: D1Database, limit = 50): Promise<VinylListingResponse[]> {
   const { results } = await db.prepare(`
     SELECT * FROM vinyl_listings
     WHERE status = 'published' AND deleted = 0 AND discount_percent > 0
@@ -229,11 +263,11 @@ async function getDeals(db: D1Database, limit = 50): Promise<any[]> {
     LIMIT ?
   `).bind(limit).all();
 
-  return (results || []).map((row: any) => rowToListing(row));
+  return (results || []).map((row) => rowToListing(row as VinylListing));
 }
 
 // Get single listing
-async function getListing(db: D1Database, id: string): Promise<any | null> {
+async function getListing(db: D1Database, id: string): Promise<VinylListingResponse | null> {
   const row = await db.prepare(`
     SELECT * FROM vinyl_listings WHERE id = ?
   `).bind(id).first();
@@ -242,17 +276,44 @@ async function getListing(db: D1Database, id: string): Promise<any | null> {
 }
 
 // Get seller's listings
-async function getSellerListings(db: D1Database, sellerId: string): Promise<any[]> {
+async function getSellerListings(db: D1Database, sellerId: string): Promise<VinylListingResponse[]> {
   const { results } = await db.prepare(`
     SELECT * FROM vinyl_listings WHERE seller_id = ? AND deleted = 0
     ORDER BY created_at DESC
   `).bind(sellerId).all();
 
-  return (results || []).map((row: any) => rowToListing(row));
+  return (results || []).map((row) => rowToListing(row as VinylListing));
+}
+
+// Listing input data for create/update operations
+interface VinylListingInput {
+  sellerId: string;
+  sellerName?: string;
+  title: string;
+  artist: string;
+  label?: string;
+  catalogNumber?: string;
+  format?: string;
+  releaseYear?: number;
+  genre?: string;
+  mediaCondition: string;
+  sleeveCondition: string;
+  conditionNotes?: string;
+  price: number;
+  originalPrice?: number;
+  discountPercent?: number;
+  shippingCost?: number;
+  dealType?: string;
+  dealDescription?: string;
+  description?: string;
+  images?: string[];
+  tracks?: string[];
+  audioSampleUrl?: string;
+  audioSampleDuration?: number;
 }
 
 // Create listing
-async function createListing(db: D1Database, data: any): Promise<string> {
+async function createListing(db: D1Database, data: VinylListingInput): Promise<string> {
   const id = generateListingId();
   const now = new Date().toISOString();
 
@@ -298,9 +359,9 @@ async function createListing(db: D1Database, data: any): Promise<string> {
 }
 
 // Update listing
-async function updateListing(db: D1Database, id: string, data: any): Promise<boolean> {
+async function updateListing(db: D1Database, id: string, data: Partial<VinylListingInput>): Promise<boolean> {
   const updates: string[] = ['updated_at = ?'];
-  const values: any[] = [new Date().toISOString()];
+  const values: (string | number | null)[] = [new Date().toISOString()];
 
   const fields: Record<string, string> = {
     title: 'title',
@@ -401,14 +462,14 @@ async function getGenres(db: D1Database): Promise<string[]> {
     ORDER BY genre
   `).all();
 
-  return (results || []).map((r: any) => r.genre);
+  return (results || []).map((r) => (r as { genre: string }).genre);
 }
 
 // =============================================
 // FIREBASE SYNC (backup)
 // =============================================
 
-async function syncToFirebase(env: Env, id: string, data: any): Promise<void> {
+async function syncToFirebase(env: Env, id: string, data: Record<string, unknown>): Promise<void> {
   if (!env.FIREBASE_PROJECT_ID || !env.FIREBASE_API_KEY) {
     console.warn('Firebase not configured, skipping sync');
     return;
@@ -595,13 +656,22 @@ async function handleGetListings(request: Request, env: Env): Promise<Response> 
         ORDER BY store_name
       `).all();
 
-      const collections = (results || []).map((row: any) => {
-        const data = JSON.parse(row.data || '{}');
+      interface VinylSellerRow {
+        id: string;
+        store_name?: string;
+        location?: string;
+        description?: string;
+        data?: string;
+      }
+
+      const collections = (results || []).map((row) => {
+        const sellerRow = row as VinylSellerRow;
+        const data = JSON.parse(sellerRow.data || '{}') as Record<string, string>;
         return {
-          id: row.id,
-          storeName: row.store_name || data.storeName,
-          location: row.location || data.location,
-          description: row.description || data.description,
+          id: sellerRow.id,
+          storeName: sellerRow.store_name || data.storeName,
+          location: sellerRow.location || data.location,
+          description: sellerRow.description || data.description,
           collectionNumber: data.collectionNumber,
         };
       });
@@ -661,7 +731,7 @@ async function handleCreateListing(request: Request, env: Env): Promise<Response
   }
 
   try {
-    const body = await request.json() as any;
+    const body = await request.json() as VinylListingInput;
 
     // Validate required fields
     if (!body.title || !body.artist || !body.mediaCondition || !body.sleeveCondition || !body.price) {
@@ -705,7 +775,7 @@ async function handleUpdateListing(request: Request, env: Env, id: string): Prom
       return error('Not authorized to edit this listing', 403);
     }
 
-    const body = await request.json() as any;
+    const body = await request.json() as Partial<VinylListingInput>;
     await updateListing(env.DB, id, body);
 
     const updated = await getListing(env.DB, id);

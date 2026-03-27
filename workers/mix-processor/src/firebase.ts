@@ -11,8 +11,17 @@ export async function createMixInFirebase(mix: ProcessedMix, env: Env): Promise<
 
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/dj-mixes/${mix.id}?key=${apiKey}`;
 
+  interface FirestoreFieldValue {
+    stringValue?: string;
+    integerValue?: string;
+    doubleValue?: number;
+    booleanValue?: boolean;
+    arrayValue?: { values: FirestoreFieldValue[] };
+    mapValue?: { fields: Record<string, FirestoreFieldValue> };
+  }
+
   // Convert mix object to Firestore document format
-  const fields: Record<string, any> = {};
+  const fields: Record<string, FirestoreFieldValue> = {};
 
   for (const [key, value] of Object.entries(mix)) {
     if (value === undefined || value === null) continue;
@@ -30,7 +39,7 @@ export async function createMixInFirebase(mix: ProcessedMix, env: Env): Promise<
     } else if (Array.isArray(value)) {
       fields[key] = {
         arrayValue: {
-          values: value.map(v => {
+          values: (value as Array<string | number>).map(v => {
             if (typeof v === 'string') return { stringValue: v };
             if (typeof v === 'number') return { integerValue: v.toString() };
             return { stringValue: String(v) };
@@ -39,8 +48,8 @@ export async function createMixInFirebase(mix: ProcessedMix, env: Env): Promise<
       };
     } else if (typeof value === 'object') {
       // Handle nested objects like ratings
-      const mapFields: Record<string, any> = {};
-      for (const [k, v] of Object.entries(value)) {
+      const mapFields: Record<string, FirestoreFieldValue> = {};
+      for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
         if (typeof v === 'string') {
           mapFields[k] = { stringValue: v };
         } else if (typeof v === 'number') {

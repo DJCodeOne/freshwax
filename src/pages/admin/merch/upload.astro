@@ -174,7 +174,7 @@ const nonce = Astro.locals.nonce || '';
           <p style="color: #666; font-size: 0.875rem; margin-bottom: 1rem;">
             <strong>Tip:</strong> Select colours below first, then upload images and match each image to its colour variant.
           </p>
-          <input type="file" id="imageInput" accept="image/*" multiple style="display: none;" />
+          <input type="file" id="imageInput" accept="image/*" multiple style="display: none;" aria-label="Upload product images" />
           <div class="image-upload-area" id="imageDropZone">
             <p style="font-size: 1.125rem; font-weight: 700; margin-bottom: 0.5rem;">📷 Drop images here or click to upload</p>
             <p style="color: #666; font-size: 0.875rem;">Max 10 images. Auto-converted to 800×800 WebP.</p>

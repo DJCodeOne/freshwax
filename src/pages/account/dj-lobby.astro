@@ -1677,6 +1677,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   let lobbyStreamKeyInterval = null;
   let lobbyAllSlotsInterval = null;
   let lobbyAudioPreviewObserver = null;
+  let lobbyVisibilityHandler = null; // One-shot handler for background-tab init
 
   // Broadcast mode: 'placeholder' or 'video' - determines what visual to show on live stream
   let broadcastMode = 'placeholder';
@@ -2240,22 +2241,46 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       document.getElementById('chatForm')?.classList.remove('hidden');
     }
 
-    // Load initial data from API
-    await loadAllSlots(); // Load all slots for consecutive slot detection
-    await loadStreamStatus();
+    // Load initial data from API — skip if page loaded in a background tab
+    if (!document.hidden) {
+      await loadAllSlots(); // Load all slots for consecutive slot detection
+      await loadStreamStatus();
 
-    // Detect orphaned live stream (DJ navigated away while live, stream still marked live in Firestore)
-    if (currentStream && currentUser && currentStream.djId === currentUser.uid) {
-      var headerBack = document.getElementById('headerBackToLive');
-      var headerEnd = document.getElementById('headerEndStreamBtn');
-      var statusText = document.getElementById('mobileStatusText');
-      if (headerBack) headerBack.style.display = 'none';
-      if (headerEnd) headerEnd.style.display = '';
-      if (statusText) statusText.textContent = 'Your stream is still live. End it from the header button.';
+      // Detect orphaned live stream (DJ navigated away while live, stream still marked live in Firestore)
+      if (currentStream && currentUser && currentStream.djId === currentUser.uid) {
+        var headerBack = document.getElementById('headerBackToLive');
+        var headerEnd = document.getElementById('headerEndStreamBtn');
+        var statusText = document.getElementById('mobileStatusText');
+        if (headerBack) headerBack.style.display = 'none';
+        if (headerEnd) headerEnd.style.display = '';
+        if (statusText) statusText.textContent = 'Your stream is still live. End it from the header button.';
+      }
+
+      await checkAndCleanupChat();
+      await loadMySlot();
+    } else {
+      // Tab opened in background — load data when user switches to this tab
+      lobbyVisibilityHandler = function() {
+        if (!document.hidden) {
+          document.removeEventListener('visibilitychange', lobbyVisibilityHandler);
+          loadAllSlots();
+          loadStreamStatus().then(function() {
+            // Check for orphaned stream after status loads
+            if (currentStream && currentUser && currentStream.djId === currentUser.uid) {
+              var headerBack = document.getElementById('headerBackToLive');
+              var headerEnd = document.getElementById('headerEndStreamBtn');
+              var statusText = document.getElementById('mobileStatusText');
+              if (headerBack) headerBack.style.display = 'none';
+              if (headerEnd) headerEnd.style.display = '';
+              if (statusText) statusText.textContent = 'Your stream is still live. End it from the header button.';
+            }
+          });
+          checkAndCleanupChat();
+          loadMySlot();
+        }
+      };
+      document.addEventListener('visibilitychange', lobbyVisibilityHandler);
     }
-
-    await checkAndCleanupChat();
-    await loadMySlot();
     
     // Initialize Pusher-based real-time features (replaces Firebase onSnapshot)
     // This handles: presence, chat, takeover, DMs
@@ -2317,6 +2342,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         lobbyStreamKeyInterval = null;
         lobbyAllSlotsInterval = null;
         lobbyViewersInterval = null;
+
+        // Remove one-shot visibility handler if it never fired
+        if (lobbyVisibilityHandler) {
+          document.removeEventListener('visibilitychange', lobbyVisibilityHandler);
+          lobbyVisibilityHandler = null;
+        }
 
         if (icecastCheckInterval) clearInterval(icecastCheckInterval);
         if (obsPreviewCheckInterval) clearInterval(obsPreviewCheckInterval);

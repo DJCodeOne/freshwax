@@ -20,6 +20,13 @@ import {
 } from './services/firebase';
 import { sendEmail, staleRequestsReminderEmail } from './services/email';
 
+// Query options for Firestore collection queries
+interface QueryOptions {
+  filters?: Array<{ field: string; op: string; value: string | number | boolean }>;
+  orderBy?: { field: string; direction?: 'ASCENDING' | 'DESCENDING' };
+  limit?: number;
+}
+
 // CORS headers
 function corsHeaders(origin: string, env: Env): HeadersInit {
   const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim());
@@ -225,7 +232,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         return jsonResponse({ success: false, error: 'Unauthorized' }, 403, origin, env);
       }
 
-      const body = await request.json() as Record<string, any>;
+      const body = await request.json() as Record<string, unknown>;
       // Don't allow updating sensitive fields directly
       delete body.roles;
       delete body.pendingRoles;
@@ -285,7 +292,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         return jsonResponse({ success: false, error: 'Unauthorized' }, 403, origin, env);
       }
 
-      const body = await request.json() as Record<string, any>;
+      const body = await request.json() as Record<string, unknown>;
       // Don't allow updating sensitive fields
       delete body.approved;
       delete body.suspended;
@@ -334,7 +341,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         return jsonResponse({ success: false, error: 'Unauthorized' }, 403, origin, env);
       }
 
-      const body = await request.json() as Record<string, any>;
+      const body = await request.json() as Record<string, unknown>;
       // Don't allow updating sensitive fields
       delete body.id;
       delete body.uid;
@@ -467,7 +474,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     // GET /releases - List all releases (with optional status filter)
     if (path === '/releases' && method === 'GET') {
       const status = query.get('status');
-      const options: any = {};
+      const options: QueryOptions = {};
 
       if (status) {
         options.filters = [{ field: 'status', op: 'EQUAL', value: status }];
@@ -565,7 +572,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         artistId?: string;
         status?: string;
         coverArtUrl?: string;
-        tracks?: any[];
+        tracks?: Array<{ title: string; url?: string; duration?: number }>;
       };
 
       const releaseId = `${body.artistName.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}`;
@@ -619,7 +626,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     // GET /mixes - List all DJ mixes
     if (path === '/mixes' && method === 'GET') {
       const published = query.get('published');
-      const options: any = {};
+      const options: QueryOptions = {};
 
       if (published === 'true') {
         options.filters = [{ field: 'published', op: 'EQUAL', value: true }];
@@ -675,7 +682,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     // GET /samplepacks - List all sample packs
     if (path === '/samplepacks' && method === 'GET') {
       const published = query.get('published');
-      const options: any = {};
+      const options: QueryOptions = {};
 
       if (published === 'true') {
         options.filters = [{ field: 'published', op: 'EQUAL', value: true }];
@@ -745,7 +752,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     // GET /merch - List all merch items
     if (path === '/merch' && method === 'GET') {
       const published = query.get('published');
-      const options: any = {};
+      const options: QueryOptions = {};
 
       if (published === 'true') {
         options.filters = [{ field: 'published', op: 'EQUAL', value: true }];
@@ -879,7 +886,7 @@ async function notifyStaleRequests(env: Env): Promise<void> {
   for (const user of users) {
     const pending = user.pendingRoles || {};
 
-    for (const [roleType, request] of Object.entries(pending) as [string, any][]) {
+    for (const [roleType, request] of Object.entries(pending) as [string, { status?: string; requestedAt?: string }][]) {
       if (request?.status === 'pending' && request.requestedAt && request.requestedAt < fortyEightHoursAgo) {
         const typeName = roleType === 'artist' ? 'Artist'
           : roleType === 'merchSeller' ? 'Merch Seller'
