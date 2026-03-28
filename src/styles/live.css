@@ -800,8 +800,8 @@ body.header-hidden .live-layout{ overflow:visible !important; height:auto !impor
 .stream-info-bar{ order:1; }
 .player-container{ order:2; }
 .dj-info-bar{ order:3; }
-.player-controls{ order:4; }
-.shoutout-bar{ order:5; }
+.shoutout-bar{ order:4; }
+.player-controls{ order:5; }
 .player-controls{ flex-direction:row; flex-wrap:wrap; gap:.5rem; padding:.4rem; background:#0a0a0a; border-radius:12px; }
 .player-controls>.play-btn{ order:1; }
 .inline-controls{ order:2; display:flex; gap:.5rem; padding:0; background:transparent; border-radius:0; }
@@ -832,9 +832,11 @@ body.header-hidden .live-layout{ overflow:visible !important; height:auto !impor
 .schedule-header h2{ font-size:1.75rem; }
 .sidebar-card h2,
 .sidebar-card h3{ font-size:1.25rem; }
-.shoutout-bar{ display:none; }
-.shoutout-left{ gap:.5rem; }
-.shoutout-label{ font-size:9px; letter-spacing:.5px; }
+.shoutout-bar{ display:flex; padding:.35rem .625rem; gap:.5rem; border-radius:8px; }
+.shoutout-left{ gap:.375rem; }
+.shoutout-label{ font-size:8px; letter-spacing:.5px; }
+.shoutout-btn{ width:20px; height:20px; }
+.shoutout-btn svg{ width:12px; height:12px; }
 .dj-info-bar{ padding:.375rem .5rem; gap:.375rem; flex-direction:column; align-items:center; }
 .dj-info-center{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.25rem .5rem; width:100%; }
 .dj-info-right{ display:none; }
