@@ -544,7 +544,10 @@ export function setChatEnabled(enabled) {
     chatInput.placeholder = enabled ? 'Message...' : 'Chat available when stream is live...';
   }
   if (sendBtn) sendBtn.disabled = !enabled;
-  if (loginPrompt) loginPrompt.style.display = enabled ? 'none' : '';
+  // Only hide login prompt if user is actually logged in (chatForm visible means logged in)
+  var chatForm = document.getElementById('chatForm');
+  var isLoggedIn = chatForm && !chatForm.classList.contains('hidden');
+  if (loginPrompt && isLoggedIn) loginPrompt.style.display = enabled ? 'none' : '';
 }
 
 function createFloatingEmojiFromBroadcast(emojis) {
