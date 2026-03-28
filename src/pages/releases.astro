@@ -288,19 +288,29 @@ const releaseItemList = {
       observer.disconnect();
     }, { once: true });
 
-    // Mobile label dropdown
-    var labelSelect = document.getElementById('label-select');
-    if (labelSelect) {
-      labelSelect.addEventListener('change', function() {
-        var val = labelSelect.value;
-        if (!val) return;
-        var el = document.getElementById(val);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          labelSelect.value = '';
-        }
-      });
+    // Mobile label dropdown — use event delegation for View Transitions compatibility
+    function initLabelDropdown() {
+      var labelSelect = document.getElementById('label-select');
+      if (labelSelect && !labelSelect.dataset.initialized) {
+        labelSelect.dataset.initialized = 'true';
+        labelSelect.addEventListener('change', function() {
+          var val = this.value;
+          if (!val) return;
+          var el = document.getElementById(val);
+          if (el) {
+            // Close any open mobile menus/keyboards first
+            this.blur();
+            // Small delay to let keyboard dismiss on mobile before scrolling
+            setTimeout(function() {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 150);
+            labelSelect.value = '';
+          }
+        });
+      }
     }
+    initLabelDropdown();
+    document.addEventListener('astro:page-load', initLabelDropdown);
 
     // Buy All Discography functionality — uses global FreshWaxCart from freshwax-cart.js
 
