@@ -349,14 +349,15 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       // Invalidate cache
       onlineDjsCache.delete('online-djs');
 
-      // Broadcast cleanup
-      for (const id of staleIds) {
-        await triggerPusher('dj-lobby', 'dj-left', {
+      // Broadcast cleanup in parallel instead of sequential N+1
+      const now = new Date().toISOString();
+      await Promise.allSettled(staleIds.map(id =>
+        triggerPusher('dj-lobby', 'dj-left', {
           id,
           reason: 'timeout',
-          timestamp: new Date().toISOString()
-        }, env);
-      }
+          timestamp: now
+        }, env)
+      ));
     }
 
     return successResponse({ cleaned: staleIds.length });

@@ -148,7 +148,7 @@ async function safeDelete(collection: string, docId: string): Promise<DeletionRe
   }
 }
 
-/** Query documents by field and delete each one */
+/** Query documents by field and delete each one (parallel batch) */
 async function deleteByQuery(collection: string, field: string, value: string): Promise<DeletionResult> {
   try {
     const docs = await queryCollection(collection, {
@@ -156,16 +156,17 @@ async function deleteByQuery(collection: string, field: string, value: string): 
       limit: 500,
       skipCache: true
     });
-    let count = 0;
-    for (const doc of docs) {
-      const docId = doc.id || doc.uid;
-      if (!docId) continue;
-      try {
-        await deleteDocument(collection, docId);
-        count++;
-      } catch (e: unknown) {
-        log.error(`[delete-account] Failed to delete ${collection}/${docId}`);
-      }
+    const docIds = docs.map(doc => doc.id || doc.uid).filter(Boolean);
+    if (docIds.length === 0) return { success: true, count: 0 };
+
+    // Delete all documents in parallel instead of sequential N+1
+    const results = await Promise.allSettled(
+      docIds.map(docId => deleteDocument(collection, docId))
+    );
+    const count = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    if (failed > 0) {
+      log.error(`[delete-account] Failed to delete ${failed}/${docIds.length} docs from ${collection}`);
     }
     return { success: true, count };
   } catch (e: unknown) {
@@ -174,7 +175,7 @@ async function deleteByQuery(collection: string, field: string, value: string): 
   }
 }
 
-/** Anonymize orders — keep financial data for tax/legal, strip all customer PII */
+/** Anonymize orders — keep financial data for tax/legal, strip all customer PII (parallel batch) */
 async function anonymizeOrders(userId: string, timestamp: string): Promise<DeletionResult> {
   try {
     const orders = await queryCollection('orders', {
@@ -182,21 +183,24 @@ async function anonymizeOrders(userId: string, timestamp: string): Promise<Delet
       limit: 500,
       skipCache: true
     });
-    let count = 0;
-    for (const order of orders) {
-      const orderId = order.id || order.uid;
-      if (!orderId) continue;
-      try {
-        await updateDocument('orders', orderId, {
+    const orderIds = orders.map(order => order.id || order.uid).filter(Boolean);
+    if (orderIds.length === 0) return { success: true, count: 0 };
+
+    // Anonymize all orders in parallel instead of sequential N+1
+    const results = await Promise.allSettled(
+      orderIds.map(orderId =>
+        updateDocument('orders', orderId, {
           customer: { userId: REDACTED, name: ANON, email: REDACTED },
           shipping: { name: ANON, address: {} },
           gdprAnonymized: true,
           gdprAnonymizedAt: timestamp
-        });
-        count++;
-      } catch (e: unknown) {
-        log.error(`[delete-account] Failed to anonymize order ${orderId}`);
-      }
+        })
+      )
+    );
+    const count = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    if (failed > 0) {
+      log.error(`[delete-account] Failed to anonymize ${failed}/${orderIds.length} orders`);
     }
     return { success: true, count };
   } catch (e: unknown) {
@@ -205,7 +209,7 @@ async function anonymizeOrders(userId: string, timestamp: string): Promise<Delet
   }
 }
 
-/** Anonymize comments — keep text for community, strip user identity */
+/** Anonymize comments — keep text for community, strip user identity (parallel batch) */
 async function anonymizeComments(userId: string): Promise<DeletionResult> {
   try {
     const comments = await queryCollection('comments', {
@@ -213,21 +217,24 @@ async function anonymizeComments(userId: string): Promise<DeletionResult> {
       limit: 500,
       skipCache: true
     });
-    let count = 0;
-    for (const comment of comments) {
-      const commentId = comment.id || comment.uid;
-      if (!commentId) continue;
-      try {
-        await updateDocument('comments', commentId, {
+    const commentIds = comments.map(comment => comment.id || comment.uid).filter(Boolean);
+    if (commentIds.length === 0) return { success: true, count: 0 };
+
+    // Anonymize all comments in parallel instead of sequential N+1
+    const results = await Promise.allSettled(
+      commentIds.map(commentId =>
+        updateDocument('comments', commentId, {
           userId: '',
           userName: ANON,
           avatarUrl: '',
           gdprAnonymized: true
-        });
-        count++;
-      } catch (e: unknown) {
-        log.error(`[delete-account] Failed to anonymize comment ${commentId}`);
-      }
+        })
+      )
+    );
+    const count = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    if (failed > 0) {
+      log.error(`[delete-account] Failed to anonymize ${failed}/${commentIds.length} comments`);
     }
     return { success: true, count };
   } catch (e: unknown) {

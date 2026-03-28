@@ -13,9 +13,9 @@ const log = createClientLogger('EmbedPlayer:Direct');
 export function buildAudioPlayerHTML(thumbnail: string, title: string): string {
   return `
     <div id="audio-container" style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); overflow: hidden;">
-      <img id="audio-thumbnail" src="${escapeHtml(thumbnail)}" alt="${escapeHtml(title)}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; filter: blur(3px) brightness(0.6);" onerror="this.style.display='none'" />
+      <img id="audio-thumbnail" src="${escapeHtml(thumbnail)}" alt="${escapeHtml(title)}" loading="eager" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; filter: blur(3px) brightness(0.6);" onerror="this.style.display='none'" />
       <div style="position: relative; z-index: 1; text-align: center; padding: 1rem; max-height: 100%; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-        <img src="${escapeHtml(thumbnail)}" alt="" role="presentation" style="display: block; width: min(150px, 40%); height: auto; aspect-ratio: 1; border-radius: 8px; object-fit: cover; box-shadow: 0 8px 32px rgba(0,0,0,0.4); margin-bottom: .75rem;" onerror="this.outerHTML='<div id=\\'audio-visualizer\\' style=\\'font-size: 4rem; animation: pulse-scale-embed 1.5s ease-in-out infinite;\\'>🎵</div>'" />
+        <img src="${escapeHtml(thumbnail)}" alt="" role="presentation" loading="eager" style="display: block; width: min(150px, 40%); height: auto; aspect-ratio: 1; border-radius: 8px; object-fit: cover; box-shadow: 0 8px 32px rgba(0,0,0,0.4); margin-bottom: .75rem;" onerror="this.outerHTML='<div id=\\'audio-visualizer\\' style=\\'font-size: 4rem; animation: pulse-scale-embed 1.5s ease-in-out infinite;\\'>🎵</div>'" />
         <div id="audio-title" style="color: #fff; font-size: 1rem; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,0.8); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(title)}</div>
         <div style="color: rgba(255,255,255,0.7); font-size: 0.75rem; margin-top: 0.25rem;">Auto-Play</div>
       </div>
