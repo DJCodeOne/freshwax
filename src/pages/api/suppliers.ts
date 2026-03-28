@@ -1,10 +1,35 @@
 // src/pages/api/suppliers.ts
 // Manage merch suppliers/consignment partners - uses Firebase REST API
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const CreateSupplierSchema = z.object({
+  name: z.string().min(1).max(200),
+  email: z.string().email().max(200).nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
+  type: z.string().min(1).max(100),
+  code: z.string().min(1).max(20),
+  defaultCut: z.number().min(0).max(100).optional(),
+  contactName: z.string().max(200).nullable().optional(),
+  address: z.string().max(500).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+  adminKey: z.string().optional(),
+});
+
+const UpdateSupplierSchema = z.object({
+  supplierId: z.string().min(1).max(200),
+  adminKey: z.string().optional(),
+}).passthrough();
+
+const DeleteSupplierSchema = z.object({
+  supplierId: z.string().min(1).max(200),
+  hardDelete: z.boolean().optional(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -232,6 +257,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
+    const parsed = CreateSupplierSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Name, type, and code are required');
+    }
+
     const {
       name,
       email,
@@ -242,11 +272,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       contactName,
       address,
       notes
-    } = body;
-
-    if (!name || !type || !code) {
-      return ApiErrors.badRequest('Name, type, and code are required');
-    }
+    } = parsed.data;
 
     // Generate supplier ID and access code
     const timestamp = Date.now();
@@ -304,11 +330,12 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { supplierId, ...updates } = body;
-
-    if (!supplierId) {
+    const parsed = UpdateSupplierSchema.safeParse(body);
+    if (!parsed.success) {
       return ApiErrors.badRequest('Supplier ID is required');
     }
+
+    const { supplierId, ...updates } = parsed.data as Record<string, unknown> & { supplierId: string };
 
     // Prevent updating certain fields
     delete updates.id;
@@ -349,11 +376,12 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { supplierId, hardDelete } = body;
-
-    if (!supplierId) {
+    const parsed = DeleteSupplierSchema.safeParse(body);
+    if (!parsed.success) {
       return ApiErrors.badRequest('Supplier ID is required');
     }
+
+    const { supplierId, hardDelete } = parsed.data;
 
     if (hardDelete) {
       await deleteDocument('merch-suppliers', supplierId);

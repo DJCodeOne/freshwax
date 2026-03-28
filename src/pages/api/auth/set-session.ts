@@ -5,9 +5,16 @@
 // which is not a secret, and are read by client-side JS for state management).
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyUserToken } from '../../../lib/firebase-rest';
 import { ApiErrors, successResponse } from '../../../lib/api-utils';
+
+const SetSessionSchema = z.object({
+  action: z.enum(['login', 'refresh', 'logout', 'set-partner']).optional().default('login'),
+  token: z.string().min(1).optional(),
+  isPartner: z.boolean().optional(),
+});
 
 export const prerender = false;
 
@@ -28,14 +35,19 @@ export const POST: APIRoute = async ({ request }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  let body: Record<string, unknown>;
+  let rawBody: unknown;
   try {
-    body = await request.json();
+    rawBody = await request.json();
   } catch (_e: unknown) {
     return ApiErrors.badRequest('Invalid JSON body');
   }
 
-  const action = (body.action as string) || 'login';
+  const parsed = SetSessionSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return ApiErrors.badRequest('Invalid request body');
+  }
+
+  const { action, token: bodyToken, isPartner } = parsed.data;
   const isSecure = request.url.startsWith('https');
 
   // --- LOGOUT: clear all auth cookies ---
@@ -49,10 +61,10 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   // All other actions require a valid Firebase ID token
-  const token = body.token as string | undefined;
-  if (!token || typeof token !== 'string') {
+  if (!bodyToken) {
     return ApiErrors.badRequest('Missing or invalid token');
   }
+  const token = bodyToken;
 
   // Verify the Firebase ID token
   const userId = await verifyUserToken(token);
@@ -73,7 +85,7 @@ export const POST: APIRoute = async ({ request }) => {
       cookies.push(buildCookie('customerId', userId, thirtyDays, isSecure, false));
 
       // Check if user has partner role and set partnerId cookie
-      if (body.isPartner === true) {
+      if (isPartner === true) {
         cookies.push(buildCookie('partnerId', userId, thirtyDays, isSecure, false));
       }
     }

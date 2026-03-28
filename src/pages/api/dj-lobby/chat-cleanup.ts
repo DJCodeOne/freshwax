@@ -1,9 +1,15 @@
 // src/pages/api/dj-lobby/chat-cleanup.ts
 // DJ Lobby chat cleanup - check and clean up old chat messages, record stream end times
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument, deleteDocument, queryCollection, verifyUserToken } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+
+const ChatCleanupSchema = z.object({
+  action: z.enum(['check-and-cleanup', 'record-stream-end']),
+  isCurrentlyLive: z.boolean().optional(),
+});
 
 const log = createLogger('dj-lobby/chat-cleanup');
 
@@ -52,8 +58,18 @@ export const POST: APIRoute = async ({ request }) => {
       return ApiErrors.forbidden('DJ or admin access required');
     }
 
-    const data = await request.json();
-    const { action } = data;
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch (_e: unknown) {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    const parsed = ChatCleanupSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request body');
+    }
+    const { action, isCurrentlyLive: isLive } = parsed.data;
 
     switch (action) {
       case 'check-and-cleanup': {
@@ -70,7 +86,7 @@ export const POST: APIRoute = async ({ request }) => {
           : 0;
         const now = Date.now();
         const twoHoursMs = 2 * 60 * 60 * 1000;
-        const isCurrentlyLive = data.isCurrentlyLive || false;
+        const isCurrentlyLive = isLive || false;
 
         if (isCurrentlyLive || lastStreamEndTime === 0 || (now - lastStreamEndTime) <= twoHoursMs) {
           return successResponse({ cleaned: false,

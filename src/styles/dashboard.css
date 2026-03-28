@@ -19,7 +19,6 @@
 .logout-btn{ padding:.5rem 1rem; background:linear-gradient( #1f2937, #111827); border:1px solid #374151; border-radius:6px; font-size:.8rem; font-weight:600; cursor:pointer; }
 .logout-btn:hover{ border-color:#dc2626; color:#dc2626; }
 .verify-banner{ display:flex; align-items:center; justify-content:space-between; gap:1rem; background:linear-gradient(135deg, #78350f, #92400e); border:1px solid #d97706; border-radius:12px; padding:.875rem 1.25rem; }
-.verify-banner.hidden{ display:none !important; }
 .verify-banner-content{ display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; flex:1; }
 .verify-banner-icon{ font-size:1.25rem; }
 .verify-banner-text{ color:#fef3c7; font-size:.875rem; line-height:1.4; }
@@ -135,7 +134,6 @@
 .modal-btn{ width:100%; }
 .orders-list .order-card{ padding:1rem; }
 .orders-list .order-header{ flex-direction:column; gap:.5rem; }
-.orders-list .order-header-right{ flex-direction:row; align-items:center; width:100%; justify-content:space-between; }
 .orders-list .order-number{ font-size:.9375rem; }
 .orders-list .order-date{ font-size:.75rem; }
 .orders-list .order-total{ font-size:1rem; }
@@ -194,10 +192,8 @@
 .section .empty-state p,
 .orders-list .empty-state p,
 .downloads-list .empty-state p{ margin:0 0 1.5rem 0; color:#fff !important; font-size:1.0625rem; }
-.empty-state .start-shopping-btn{ display:inline-block !important; padding:.75rem 1.5rem !important; background:#dc2626 !important; color:#fff !important; font-weight:600 !important; border-radius:8px !important; text-decoration:none !important; }
-.empty-state .start-shopping-btn:hover{ background:#b91c1c !important; }
 .avatar-upload-section{ display:flex; align-items:flex-start; gap:2rem; background:linear-gradient( #1f2937, #111827); padding:2rem; border-radius:12px; margin-bottom:1.5rem; }
-.avatar-preview-large{ width:120px; height:120px; min-width:120px; border-radius:50%; background:linear-gradient(135deg, #374151, #1f2937); display:flex; align-items:center; justify-content:center; font-size:3rem; font-weight:700; color:#fff; overflow:hidden; border:4px solid #374151; }
+.avatar-preview-large{ width:120px; height:120px; min-width:120px; border-radius:50%; background:linear-gradient(135deg, #374151, #1f2937); display:flex; align-items:center; justify-content:center; font-size:3rem; font-weight:700; color:#fff; overflow:hidden; border:4px solid #374151; cursor:default; position:relative; }
 .avatar-preview-large.is-pro{ background:linear-gradient(135deg, #dc2626, #991b1b); border-color:#dc2626; }
 .avatar-preview-large img{ width:100%; height:100%; object-fit:cover; }
 .avatar-upload-controls{ flex:1; }
@@ -209,7 +205,6 @@
 .btn-remove{ padding:.875rem 1.5rem; background:linear-gradient( #1f2937, #111827); color:#dc2626; border:2px solid #dc2626; border-radius:8px; font-size:1.0625rem; font-weight:600; cursor:pointer; }
 .btn-remove:hover{ background:#dc2626; color:#fff; }
 .avatar-specs{ font-size:1rem; color:#d1d5db; margin:0; }
-.avatar-preview-large{ cursor:default; position:relative; }
 .avatar-status{ margin-top:.75rem; font-size:.875rem; font-weight:500; }
 .avatar-status.success{ color:#10b981; }
 .avatar-status.error{ color:#dc2626; }
@@ -300,7 +295,6 @@
 .confirm-download-btn:hover{ background:#16a34a; }
 .confirm-download-btn:disabled{ background:#86efac; cursor:not-allowed; }
 .modal-overlay{ position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:9999; padding:1rem; }
-.modal-overlay.hidden{ display:none; }
 .modal-content{ background:linear-gradient( #1f2937, #111827); border-radius:16px; max-width:480px; width:100%; padding:2rem; box-shadow:0 20px 60px rgba(0,0,0,.3); }
 @keyframes modalSlide{ from { opacity:0; transform:translateY(-20px); }
 to { opacity:1; transform:translateY(0); } }
@@ -329,7 +323,6 @@ to { opacity:1; transform:translateY(0); } }
 #panel-downloads h2,
 #panel-profile h2{ font-family:'Inter',sans-serif; font-size:2.25rem; margin:0 0 1.5rem 0; color:#fff; }
 .downloads-list{ display:flex; flex-direction:column; gap:1rem; }
-.section-header-flex{ display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
 .btn-secondary-sm{ padding:.5rem 1rem; background:transparent; border:2px solid #4b5563; color:#fff; font-size:.8rem; font-weight:600; border-radius:6px; cursor:pointer; transition:border-color .2s, background .2s; }
 .btn-secondary-sm:hover{ border-color:#fff; background:rgba(255,255,255,.1); }
 .following-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:1.25rem; }
@@ -458,52 +451,27 @@ to { opacity:1; transform:translateY(0); } }
 .wishlist-btn-view:hover{ background:#4b5563; }
 .orders-list .order-card{ display:block; padding:1.25rem; background:linear-gradient( #1f2937, #111827); border:2px solid #374151; border-radius:12px; transition:border-color .2s, box-shadow .2s; text-decoration:none; color:inherit; }
 .orders-list .order-card:last-child{ margin-bottom:0; }
-.orders-list .order-card:hover{ border-color:#4b5563; box-shadow:0 4px 12px rgba(0,0,0,.3); }
 .orders-list .order-header{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem; padding-bottom:.875rem; border-bottom:1px solid #374151; gap:1rem; }
-.orders-list .order-header-left{ display:flex; flex-direction:column; gap:.25rem; }
 .orders-list .order-number{ font-weight:700; font-size:1rem; color:#fff; }
 .orders-list .order-date{ font-size:.8125rem; color:#d1d5db; }
-.orders-list .order-header-right{ display:flex; flex-direction:column; align-items:flex-end; gap:.375rem; }
 .orders-list .order-total{ font-weight:700; font-size:1.125rem; color:#fff; }
 .orders-list .order-status{ display:inline-block; padding:.25rem .75rem; border-radius:20px; font-size:.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:.02em; }
-.orders-list .status-completed{ background:#d1fae5; color:#059669; }
-.orders-list .status-processing{ background:#fef3c7; color:#d97706; }
-.orders-list .status-shipped{ background:#dbeafe; color:#2563eb; }
-.orders-list .order-items{ display:flex; flex-direction:column; gap:.75rem; }
 .orders-list .order-item{ display:flex; align-items:center; gap:.875rem; padding:.625rem; background:linear-gradient( #1f2937, #111827); border-radius:8px; }
 .orders-list .order-item-image{ width:48px; height:48px; min-width:48px; min-height:48px; max-width:48px; max-height:48px; border-radius:6px; object-fit:cover; background:#374151; }
-.orders-list .order-item-details{ flex:1; min-width:0; }
 .orders-list .order-item-name{ font-weight:600; font-size:.875rem; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.orders-list .order-item-meta{ display:flex; align-items:center; gap:.5rem; margin-top:.125rem; }
 .orders-list .order-item-type{ display:inline-block; padding:.125rem .5rem; font-size:.625rem; font-weight:700; text-transform:uppercase; border-radius:4px; letter-spacing:.02em; }
-.orders-list .order-item-type.digital{ background:#d1fae5; color:#059669; }
-.orders-list .order-item-type.vinyl{ background:#f3f4f6; color:#374151; }
-.orders-list .order-item-type.merch{ background:#e0e7ff; color:#4338ca; }
-.orders-list .order-item-type.track{ background:#fef3c7; color:#d97706; }
 .orders-list .order-item-qty{ font-size:.75rem; color:#d1d5db; }
 .orders-list .order-item-price{ font-weight:600; font-size:.875rem; color:#fff; flex-shrink:0; }
 .orders-list .order-view-link{ display:flex; align-items:center; justify-content:center; gap:.375rem; margin-top:1rem; padding:.625rem; background:#000; color:#fff; border-radius:8px; font-size:.8125rem; font-weight:600; text-decoration:none; }
-.orders-list .order-view-link:hover{ background:#333; }
 .downloads-list .download-card{ background:linear-gradient( #1f2937, #111827); border:2px solid #374151; border-radius:12px; padding:1.5rem; transition:border-color .2s; }
 .downloads-list .download-card:last-child{ margin-bottom:0; }
-.downloads-list .download-card:hover{ border-color:#fff; }
 .downloads-list .download-header{ display:grid; grid-template-columns:64px 1fr; gap:1rem; margin-bottom:1rem; }
 .downloads-list .download-art{ width:64px; height:64px; min-width:64px; min-height:64px; max-width:64px; max-height:64px; border-radius:8px; object-fit:cover; background:#374151; }
 .downloads-list .download-info h4{ font-size:1.25rem; font-weight:700; margin:0 0 .375rem 0; color:#fff; }
-.downloads-list .download-info p{ font-size:.875rem; color:#d1d5db; margin:0; text-transform:uppercase; }
-.downloads-list .track-list{ background:#f8f8f8; border-radius:8px; overflow:hidden; }
 .downloads-list .track-row{ display:flex; justify-content:space-between; align-items:center; padding:1rem 1.25rem; border-bottom:1px solid #374151; gap:1rem; }
-.downloads-list .track-row:last-child{ border-bottom:none; }
-.downloads-list .track-name{ font-size:1rem; font-weight:500; color:#333; }
 .downloads-list .track-name .num{ display:inline-block; width:28px; color:#ccc; font-weight:600; }
-.downloads-list .dl-buttons{ display:flex; gap:.5rem; flex-shrink:0; }
 .downloads-list .dl-btn{ display:inline-flex; align-items:center; gap:.375rem; padding:.5rem .875rem; border-radius:6px; font-size:.75rem; font-weight:700; text-transform:uppercase; cursor:pointer; transition:transform .2s; }
-.downloads-list .dl-btn svg{ width:14px; height:14px; }
-.downloads-list .dl-btn.mp3{ background:#22c55e; color:#fff; }
-.downloads-list .dl-btn.wav{ background:#333; color:#fff; }
-.downloads-list .dl-btn.art{ background:#2563eb; color:#fff; }
 .downloads-list .dl-btn:hover{ transform:translateY(-1px); }
-.downloads-list .dl-btn.downloading{ opacity:.6; pointer-events:none; }
 .downloads-list .artwork-dl{ margin-bottom:.75rem; }
 @media (prefers-reduced-motion:reduce){ *,
 *::before,

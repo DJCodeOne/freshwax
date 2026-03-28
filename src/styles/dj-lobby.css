@@ -8,10 +8,9 @@ body.dj-lobby-page{ --g1:linear-gradient(#1f2937,#111827);--g2:linear-gradient(1
 .bypass-icon,.status-icon,.quick-access-icon{font-size:2rem;flex-shrink:0}
 .end-stream-status,.takeover-attempts{margin-top:.5rem;font-size:.75rem;color:#d1d5db}
 .lobby-end-stream-btn,.share-btn-main{width:100%;display:flex;align-items:center;justify-content:center;gap:.5rem;color:#fff;font-weight:600;cursor:pointer}
-.dm-dj-avatar,.chat-message img{border-radius:50%;object-fit:cover;flex-shrink:0}
+.chat-message img{border-radius:50%;object-fit:cover;flex-shrink:0}
 .relay-station-card.selected,.dm-dj-item:hover{border-color:#dc2626;background:var(--a2)}
 .audio-toggle-btn,.mute-btn-panel{display:flex;flex-direction:column;align-items:center;border:var(--b6);border-radius:8px;cursor:pointer}
-.key-column,.main-column{display:flex;flex-direction:column;height:100%;overflow-y:auto}
 .setup-field select,.share-post-input{width:100%;padding:.6rem .75rem;background:#0d0d0d;border:var(--b1);border-radius:6px;color:#fff;font-family:var(--fi)}
 .bypass-header h4,.status-header h4,.quick-access-header h4,.init-modal-header h2{margin:0;color:#fff;font-size:1.5rem;font-weight:700}
 .relay-station-genre,.relay-source-genre,.init-check-status{font-size:.75rem;color:#bbb}
@@ -48,10 +47,6 @@ body.dj-lobby-page{ --g1:linear-gradient(#1f2937,#111827);--g2:linear-gradient(1
 .lobby-footer,
 .lobby-container.obs-mode .mobile-broadcast-layout,
 .lobby-container.chooser-active .lobby-footer{display:none!important}
-.auth-gate.hidden,
-.access-denied.hidden,
-.not-eligible.hidden,
-.lobby-container.hidden,
 .red{ color:#dc2626 }
 .auth-gate,
 .auth-content{ text-align:center; color:#d1d5db; display:flex; flex-direction:column; align-items:center; gap:1.5rem }
@@ -85,7 +80,6 @@ body.dj-lobby-page{ --g1:linear-gradient(#1f2937,#111827);--g2:linear-gradient(1
 .back-link:hover{ color:#fff; background:#333; border-color:#bbb }
 .header-left{ display:flex; align-items:center; justify-content:flex-start; gap:.75rem }
 .header-time-remaining{ display:flex; flex-direction:column; align-items:center; gap:.15rem; padding:.4rem .75rem; background:var(--ag); border:var(--b5); border-radius:6px; animation:fadeInTime .3s ease-out }
-.header-time-remaining.hidden{ display:none }
 @keyframes fadeInTime{ from{ opacity:0; transform:scale(.9) }
 to{ opacity:1; transform:scale(1) } }
 .header-time-value{ font-family:'JetBrains Mono','SF Mono','Fira Code',Consolas,monospace; font-weight:600; font-size:1.25rem; color:#dc2626; letter-spacing:0; line-height:1; min-width:8.5ch; text-align:center }
@@ -96,8 +90,6 @@ to{ opacity:1; transform:scale(1) } }
 .header-right .back-link{ font-size:.8rem; padding:.4rem .75rem; gap:.4rem }
 .header-center{ text-align:center }
 .header-center h1{ font-family:var(--fi); font-size:2rem; letter-spacing:.05em; color:#fff }
-.header-center p,
-.incoming-dj span{ }
 .go-live-btn{ display:flex; align-items:center; gap:.5rem; padding:.6rem 1.25rem; background:linear-gradient(135deg,#10b981,#059669); color:#fff; text-decoration:none; border-radius:8px; font-weight:600; font-size:.9rem; transition:background .2s,opacity .2s,box-shadow .2s; box-shadow:0 0 15px var(--a6),0 0 30px var(--ae) }
 @keyframes goLiveGlow{0%,100%{ box-shadow:0 0 15px var(--a6),0 0 30px var(--ae) }
 50%{ box-shadow:0 0 25px rgba(16,185,129,.8),0 0 50px var(--a6) } }
@@ -120,8 +112,6 @@ to{ opacity:1; transform:scale(1) } }
 .lobby-end-stream-btn:hover:not(.disabled){ transform:translateY(-1px); box-shadow:0 4px 12px var(--a0) }
 .lobby-end-stream-btn.disabled,
 .end-icon{ font-size:1.1rem }
-.end-stream-status,
-.takeover-attempts{}
 .end-stream-status.live{ color:#dc2626; font-weight:600 }
 .lobby-end-stream-btn.ending{ background:linear-gradient(135deg,#dc2626,#991b1b); animation:endingPulse 1s ease-in-out infinite }
 @keyframes endingPulse{0%,100%{ box-shadow:0 0 10px var(--ab) }
@@ -232,7 +222,6 @@ html, body{ height:100%; overflow:hidden }
 .led.led-orange.lit{ background:#f97316; opacity:1; box-shadow:0 0 6px #f97316,0 0 12px rgba(249,115,22,.5) }
 .led.led-red.lit{ background:#ef4444; opacity:1; box-shadow:0 0 6px #ef4444,0 0 12px rgba(239,68,68,.5) }
 .broadcast-audio-panel{ background:var(--g4); border:var(--b4); border-radius:8px; margin-top:.5rem; margin-bottom:1rem; overflow:hidden }
-.broadcast-audio-panel.hidden{ display:none }
 .broadcast-audio-panel.minimized .meters-container{ display:none }
 .panel-header{ display:flex; justify-content:space-between; align-items:center; padding:.4rem .75rem; background:var(--g3); border-bottom:1px solid #222 }
 .panel-title{ font-family:var(--fm); font-size:.7rem; font-weight:600; color:#22c55e; letter-spacing:2px; text-transform:uppercase }
@@ -249,7 +238,6 @@ html, body{ height:100%; overflow:hidden }
 .panel-btn:hover{ background:#222; color:#fff; border-color:#444 }
 .panel-btn .source-label{ color:#22c55e }
 .calibration-panel{ background:#1a1a1a; border-bottom:var(--b1); padding:.75rem 1rem }
-.calibration-panel.hidden{ display:none }
 .cal-row{ display:flex; align-items:center; gap:1rem; margin-bottom:.5rem }
 .cal-row:last-child{ margin-bottom:0; margin-top:.75rem }
 .cal-row label{ font-size:.75rem; color:#bbb; min-width:100px }
@@ -397,8 +385,6 @@ html, body{ height:100%; overflow:hidden }
 .relay-status.offline{ background:rgba(239,68,68,.2); color:#ef4444 }
 .relay-station-card{background:#222; border:var(--b6); cursor:pointer }
 .relay-station-card:hover{ background:#2a2a2a; border-color:#444 }
-.relay-station-card.selected,
-.dm-dj-item:hover{ }
 .relay-station-logo{background:#333 }
 .relay-station-name{ font-size:.9rem; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 .relay-station-genre,
@@ -455,11 +441,9 @@ code.url-scrolling .url-text{ display:inline-block; animation:scrollUrlIn 1.2s e
 .multi-stream-section.expanded .multi-stream-toggle{ transform:rotate(180deg) }
 .toggle-chevron{ display:block }
 .multi-stream-content{ padding-top:.75rem; margin-top:.75rem; border-top:var(--b1) }
-.multi-stream-content.hidden{ display:none }
 .multi-stream-icon-lg{ width:36px; height:36px; background:var(--g7); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#d1d5db }
 .multi-stream-title h3{ font-size:.95rem; font-weight:600; color:#fff; margin:0; font-family:var(--fi) }
 .modal-overlay{background:rgba(0,0,0,.8); z-index:1000; backdrop-filter:blur(4px) }
-.modal-overlay.hidden{ display:none }
 .modal-content{ background:#1a1a1a; border:var(--b1); border-radius:12px; max-width:500px; width:90%; max-height:80vh; display:flex; flex-direction:column }
 .relay-modal .modal-header{ display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom:var(--b1) }
 .relay-modal .modal-header h3{ margin:0; font-size:1.1rem; color:#fff; font-family:var(--fi) }
@@ -498,7 +482,6 @@ code.url-scrolling .url-text{ display:inline-block; animation:scrollUrlIn 1.2s e
 .stream-key-section code{ background:rgba(0,0,0,.5) }
 .stream-key-section input,
 .stream-key-section select{ background:rgba(17,24,39,.8); border:1px solid #4b5563; color:#fff }
-.cred-box .cred-value{ display:flex; gap:.4rem; align-items:center }
 .key-loading{ display:flex!important; align-items:center; gap:.25rem; color:#f59e0b!important; text-overflow:clip!important }
 .key-generating{ animation:keyPulse 2.5s ease-in-out infinite; text-shadow:0 0 8px rgba(245,158,11,.6) }
 .spawn-dots{ display:inline-flex; gap:3px; align-items:center; margin-right:2px }
@@ -627,7 +610,6 @@ code.url-scrolling .url-text{ display:inline-block; animation:scrollUrlIn 1.2s e
 .dj-item.is-ready::after{ content:'✓'; margin-left:.2rem; color:#10b981 }
 .empty-state{ color:#d1d5db; font-size:.8rem; font-style:italic }
 .relay-chat-section{border:2px solid #4f46e5; flex-direction:column }
-.relay-chat-section.hidden{ display:none }
 .relay-chat-header{ display:flex; justify-content:space-between; align-items:center; padding:.75rem 1rem; background:linear-gradient(135deg,#4f46e5,#7c3aed); flex-shrink:0 }
 .relay-chat-header h3{ margin:0; font-size:.9rem; font-weight:700; color:#fff; display:flex; align-items:center; gap:.4rem }
 .toggle-relay-chat-btn{ background:var(--aj); border:0; color:#fff; width:28px; height:28px; border-radius:6px; cursor:pointer; font-size:1.2rem; line-height:1; display:flex; align-items:center }
@@ -635,9 +617,7 @@ code.url-scrolling .url-text{ display:inline-block; animation:scrollUrlIn 1.2s e
 .relay-chat-container{ flex:1; min-height:250px; position:relative; transition:height .3s }
 .relay-chat-container.collapsed{ min-height:0; height:0; overflow:hidden }
 .relay-chat-frame{ width:100%; height:100%; min-height:250px; border:0; background:#111 }
-.relay-chat-frame.hidden{ display:none }
 .relay-chat-unsupported{ display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2rem; text-align:center; min-height:200px }
-.relay-chat-unsupported.hidden{ display:none }
 .relay-chat-unsupported p{ color:#d1d5db; margin-bottom:1rem }
 .open-chat-link{ color:#7c3aed; text-decoration:none; font-weight:600; padding:.5rem 1rem; background:rgba(124,58,237,.1); border-radius:8px; transition:background .2s }
 .open-chat-link:hover{ background:rgba(124,58,237,.2) }
@@ -659,8 +639,7 @@ code.url-scrolling .url-text{ display:inline-block; animation:scrollUrlIn 1.2s e
 .preview-player{ min-height:180px }
 .time-remaining{ top:.5rem; right:.5rem; padding:.4rem .6rem }
 .chat-section{ min-height:250px } }
-@media (hover:none) and (pointer:coarse){ .control-btn,.copy-btn,button{ min-height:44px }
-.control-btn:hover,
+@media (hover:none) and (pointer:coarse){ .copy-btn,button{ min-height:44px }
 .copy-btn:hover{ transform:none }
 .djs-list{ -webkit-overflow-scrolling:touch; scroll-behavior:smooth }
 button{ -webkit-user-select:none; user-select:none } }
@@ -672,8 +651,7 @@ button{ -webkit-user-select:none; user-select:none } }
 .chat-section,
 .djs-online-box{ display:none }
 .preview-section{ height:calc(100vh - 80px) } }
-@media (prefers-contrast:high){ .control-btn,
-.copy-btn{ border:2px solid currentColor } }
+@media (prefers-contrast:high){ .copy-btn{ border:2px solid currentColor } }
 .bypass-request-section,
 .bypass-header, .status-header{ display:flex; gap:.75rem; align-items:center; margin-bottom:.625rem }
 .bypass-icon, .status-icon,
@@ -730,8 +708,6 @@ button{ -webkit-user-select:none; user-select:none } }
 .pro-input-row{ display:flex; gap:.4rem }
 .pro-input-row input{ flex:1; padding:.5rem .65rem; background:#0d0d0d; border:var(--b1); border-radius:5px; color:#fff; font-size:.8rem; font-family:var(--fi) }
 .pro-input-row input::placeholder{ color:#555 }
-.pro-input-row input:focus,
-.share-post-input:focus{ }
 .pro-input-row.with-btn input{ border-radius:5px 0 0 5px }
 .pro-save-btn{ width:100%; padding:.5rem; border-radius:5px; font-size:.75rem; transition:background .2s; text-transform:uppercase }
 .pro-save-btn:hover,
@@ -786,7 +762,6 @@ button{ -webkit-user-select:none; user-select:none } }
 .butt-audio-preview .audio-placeholder-branding .brand-wax,
 .indicator.source-toggle{ cursor:pointer; padding:.2rem .4rem; border-radius:4px; transition:background .2s }
 .indicator.source-toggle:hover{ background:var(--ak) }
-.indicator.source-toggle.active{ background:rgba(220,38,38,.2); border:1px solid #dc2626 }
 .indicator.source-toggle.connected{ background:rgba(16,185,129,.2); border:1px solid #10b981 }
 .indicator.source-toggle.connected .indicator-label{ color:#10b981 }
 .indicator.source-toggle.disconnected{ background:rgba(107,114,128,.1); border:1px solid #4b5563 }
@@ -797,7 +772,6 @@ button{ -webkit-user-select:none; user-select:none } }
 .indicator.source-toggle.disabled:hover{ background:rgba(75,85,99,.1) }
 .indicator.source-toggle.disabled .indicator-label{ color:#4b5563 }
 .broadcast-mode-toggle{ display:flex; gap:.25rem; margin-left:.5rem }
-.broadcast-mode-toggle.hidden{ display:none }
 .broadcast-mode-toggle .indicator.source-toggle{ padding:.2rem .5rem; font-size:.7rem; cursor:pointer; background:rgba(30,30,30,.8); border:var(--b2); border-radius:4px }
 .broadcast-mode-toggle .indicator.source-toggle:hover{ background:rgba(50,50,50,.9); border-color:#dc2626 }
 .broadcast-mode-toggle .indicator-label{ font-size:.7rem; color:#d1d5db }
