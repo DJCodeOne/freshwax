@@ -6,10 +6,15 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { d1UpsertMix } from '../../../lib/d1-catalog';
 import { successResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const log = createLogger('admin/sync-mix-stats');
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`sync-mix-stats:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const authResult = await requireAdminAuth(request, locals);
   if (authResult) return authResult;
 

@@ -459,7 +459,7 @@ const nonce = Astro.locals.nonce || '';
   window._adminScheduleAC = _ac;
 
   document.addEventListener('astro:page-load', async () => {
-    if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e) { return; } }
+    if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e) { /* intentional: auth failed — abort page init */ return; } }
     loadSchedule();
     loadAllowances();
     setupEventListeners();

@@ -4,15 +4,19 @@
 import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const log = createLogger('giftcards/purchased');
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`giftcards-purchased:${clientId}`, RateLimiters.standard);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Initialize Firebase for Cloudflare runtime
   const env = locals.runtime.env;
-
 
   try {
     // SECURITY: Verify the requesting user's identity

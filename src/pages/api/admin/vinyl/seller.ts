@@ -3,8 +3,21 @@ import { getDocument, updateDocument, queryCollection } from '@lib/firebase-rest
 import { requireAdminAuth, initAdminEnv } from '@lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '@lib/api-utils';
+import { z } from 'zod';
 
 const log = createLogger('admin/vinyl/seller');
+
+const vinylSellerSchema = z.object({
+  action: z.enum(['update', 'suspend', 'unsuspend', 'delete']),
+  sellerId: z.string().min(1),
+  source: z.string().optional(),
+  storeName: z.string().optional(),
+  description: z.string().optional(),
+  location: z.string().optional(),
+  discogsUrl: z.string().optional(),
+  approved: z.boolean().optional(),
+  suspended: z.boolean().optional(),
+});
 
 export const prerender = false;
 
@@ -75,11 +88,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { action, sellerId, source } = body;
-
-    if (!sellerId) {
-      return ApiErrors.badRequest('Seller ID required');
+    const parsed = vinylSellerSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request: action and sellerId required');
     }
+
+    const { action, sellerId, source } = parsed.data;
 
     // Determine collection - check if seller exists in vinylSellers or users
     let seller = await getDocument('vinylSellers', sellerId);
@@ -99,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     switch (action) {
       case 'update': {
-        const { storeName, description, location, discogsUrl, approved, suspended } = body;
+        const { storeName, description, location, discogsUrl, approved, suspended } = parsed.data;
 
         if (collection === 'users') {
           // Update user document

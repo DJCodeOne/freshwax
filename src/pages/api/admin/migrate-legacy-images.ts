@@ -14,6 +14,7 @@ import { initFirebaseEnv, queryCollection, getDocument, updateDocument } from '.
 import { d1UpsertRelease, d1UpsertMix, d1UpsertMerch } from '../../../lib/d1-catalog';
 import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody, getR2Config } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { z } from 'zod';
 
 export const prerender = false;
 
@@ -24,6 +25,12 @@ const MAX_FILE_SIZE = 100 * 1024; // 100KB target
 
 const VALID_COLLECTIONS = ['releases', 'dj-mixes', 'merch'] as const;
 type CollectionName = typeof VALID_COLLECTIONS[number];
+
+const migrateSchema = z.object({
+  collection: z.enum(VALID_COLLECTIONS),
+  dryRun: z.boolean().optional(),
+  limit: z.number().int().positive().max(MAX_BATCH_SIZE).optional(),
+});
 
 interface MigrateRequest {
   collection: CollectionName;
@@ -170,11 +177,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`migrate-images:${getClientId(request)}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const { collection, dryRun = true, limit = 50 } = body;
-
-  if (!VALID_COLLECTIONS.includes(collection)) {
-    return ApiErrors.badRequest(`Invalid collection: ${collection}. Must be one of: ${VALID_COLLECTIONS.join(', ')}`);
+  const parsed = migrateSchema.safeParse(body);
+  if (!parsed.success) {
+    return ApiErrors.badRequest(`Invalid request: collection must be one of ${VALID_COLLECTIONS.join(', ')}`);
   }
+
+  const { collection, dryRun = true, limit = 50 } = parsed.data;
 
   const effectiveLimit = Math.min(limit, MAX_BATCH_SIZE);
   const env = locals.runtime.env;

@@ -1335,7 +1335,7 @@ try {
       if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt < 86400000) { /* valid */ }
       else { cachedAuth = null; sessionStorage.removeItem('fw_auth_cache'); }
     }
-  } catch (e) { /* ignore */ }
+  } catch (e) { /* intentional: sessionStorage auth cache read failed — proceed as anonymous */ }
 
   window.currentUserInfo = cachedAuth || { loggedIn: false, name: 'Anonymous', displayName: 'Anonymous', id: null };
 

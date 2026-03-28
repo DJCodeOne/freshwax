@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { queryCollection, deleteDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const addSubscriberSchema = z.object({
   email: z.string().email(),
@@ -31,7 +32,12 @@ export const prerender = false;
 // Max subscribers returned per request to prevent memory issues
 const MAX_SUBSCRIBERS_PER_PAGE = 500;
 
-export const GET: APIRoute = async ({ request, cookies, locals }) => {  try {
+export const GET: APIRoute = async ({ request, cookies, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`newsletter-subscribers:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
+  try {
     // Check admin auth via X-Admin-Key header
     const authError = await requireAdminAuth(request, locals);
     if (authError) return authError;
@@ -76,7 +82,12 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {  try {
 };
 
 // Add subscriber manually
-export const POST: APIRoute = async ({ request, cookies, locals }) => {  try {
+export const POST: APIRoute = async ({ request, cookies, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`newsletter-subscribers:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
+  try {
     const body = await request.json();
     const parseResult = addSubscriberSchema.safeParse(body);
     if (!parseResult.success) {
@@ -118,7 +129,12 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {  try {
 };
 
 // Delete subscriber
-export const DELETE: APIRoute = async ({ request, cookies, locals }) => {  try {
+export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`newsletter-subscribers:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
+  try {
     const body = await request.json();
     const delParseResult = deleteSubscriberSchema.safeParse(body);
     if (!delParseResult.success) {
@@ -140,7 +156,12 @@ export const DELETE: APIRoute = async ({ request, cookies, locals }) => {  try {
 };
 
 // Update subscriber status (unsubscribe/resubscribe)
-export const PATCH: APIRoute = async ({ request, cookies, locals }) => {  try {
+export const PATCH: APIRoute = async ({ request, cookies, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`newsletter-subscribers:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
+  try {
     const body = await request.json();
     const patchParseResult = updateSubscriberSchema.safeParse(body);
     if (!patchParseResult.success) {

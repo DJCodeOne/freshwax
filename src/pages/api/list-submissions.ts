@@ -4,10 +4,15 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../lib/admin';
 import { ApiErrors, createLogger, jsonResponse } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const log = createLogger('list-submissions');
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`list-submissions:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Admin-only: lists R2 submission folders containing artist names
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;

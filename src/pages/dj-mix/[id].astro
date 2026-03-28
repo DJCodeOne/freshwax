@@ -1583,7 +1583,7 @@ Artist - Track Title
             return true;
           }
           return false;
-        } catch (e) { return false; }
+        } catch (e) { /* intentional: profile fetch failed — will retry or use fallback */ return false; }
       }
       await new Promise(function(r) { setTimeout(r, 100); });
     }
@@ -1601,7 +1601,7 @@ Artist - Track Title
           return { name: displayName, avatarUrl: profile.avatarUrl || user.photoURL || '' };
         }
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) { /* intentional: cached profile read failed — use fallback display name */ }
     var fallbackName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
     return { name: fallbackName, avatarUrl: user.photoURL || '' };
   }

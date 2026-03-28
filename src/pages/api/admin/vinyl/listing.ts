@@ -3,8 +3,30 @@ import { getDocument, updateDocument } from '@lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '@lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '@lib/api-utils';
+import { z } from 'zod';
 
 const log = createLogger('admin/vinyl/listing');
+
+const vinylListingSchema = z.object({
+  action: z.enum(['update', 'approve', 'remove', 'delete']),
+  listingId: z.string().min(1),
+  artist: z.string().optional(),
+  title: z.string().optional(),
+  label: z.string().optional(),
+  catalogNumber: z.string().optional(),
+  format: z.string().optional(),
+  releaseYear: z.union([z.string(), z.number()]).optional(),
+  genre: z.string().optional(),
+  mediaCondition: z.string().optional(),
+  sleeveCondition: z.string().optional(),
+  conditionNotes: z.string().optional(),
+  price: z.number().optional(),
+  shippingCost: z.number().optional(),
+  status: z.string().optional(),
+  description: z.string().optional(),
+  featured: z.boolean().optional(),
+  reason: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -63,11 +85,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { action, listingId } = body;
-
-    if (!listingId) {
-      return ApiErrors.badRequest('Listing ID required');
+    const parsed = vinylListingSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request: action and listingId required');
     }
+
+    const { action, listingId } = parsed.data;
 
     const listing = await getDocument('vinylListings', listingId);
     if (!listing) {
@@ -85,8 +108,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ];
 
         fields.forEach(field => {
-          if (body[field] !== undefined) {
-            updateData[field] = body[field];
+          const val = (parsed.data as Record<string, unknown>)[field];
+          if (val !== undefined) {
+            updateData[field] = val;
           }
         });
 
@@ -106,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       case 'remove': {
-        const { reason } = body;
+        const { reason } = parsed.data;
 
         await updateDocument('vinylListings', listingId, {
           status: 'removed',

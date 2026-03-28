@@ -5,12 +5,22 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { d1MarkRoyaltiesPaid } from '../../../lib/d1-catalog';
 import { createLogger, successResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { z } from 'zod';
 
 const log = createLogger('mark-royalties-paid');
+
+const markPaidSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1),
+});
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`mark-royalties-paid:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
@@ -23,18 +33,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const body = await parseJsonBody(request);
-    const ids = body?.ids;
-
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return ApiErrors.badRequest('ids array required');
+    const parsed = markPaidSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('ids must be a non-empty array of strings');
     }
 
-    // Validate all IDs are strings
-    const validIds = ids.filter((id: unknown) => typeof id === 'string' && id.length > 0) as string[];
-
-    if (validIds.length === 0) {
-      return ApiErrors.badRequest('No valid IDs provided');
-    }
+    const validIds = parsed.data.ids;
 
     const updated = await d1MarkRoyaltiesPaid(db, validIds);
 

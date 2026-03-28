@@ -1018,7 +1018,7 @@ const firebaseConfig = {
     window._gtNavHooked = true;
 
     document.addEventListener('click', function(e) {
-      try { if (!localStorage.getItem('fw_translate_lang')) return; } catch (ex) { return; }
+      try { if (!localStorage.getItem('fw_translate_lang')) return; } catch (ex) { /* intentional: localStorage unavailable in private browsing — skip translation nav */ return; }
       var a = e.target.closest('a[href]');
       if (!a) return;
       var href = a.getAttribute('href');

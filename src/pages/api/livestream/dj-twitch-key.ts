@@ -6,6 +6,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const log = createLogger('livestream/dj-twitch-key');
 
@@ -19,6 +20,10 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`dj-twitch-key:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const env = locals?.runtime?.env;
 
   try {

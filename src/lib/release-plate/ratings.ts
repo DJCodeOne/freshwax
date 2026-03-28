@@ -126,7 +126,7 @@ function setupRatingClickHandlers() {
         if (window.firebaseAuth && window.firebaseAuth.currentUser) {
           idToken = await window.firebaseAuth.currentUser.getIdToken();
         }
-      } catch (e: unknown) { /* Ignore token errors */ }
+      } catch (e: unknown) { /* intentional: token refresh failed — proceed with unauthenticated rating */ }
 
       const card = document.querySelector('[data-release="' + releaseId + '"]');
 
@@ -199,7 +199,7 @@ export async function fetchUserRatings() {
     if (window.firebaseAuth && window.firebaseAuth.currentUser) {
       idToken = await window.firebaseAuth.currentUser.getIdToken();
     }
-  } catch (e: unknown) { /* Ignore */ }
+  } catch (e: unknown) { /* intentional: token refresh failed — will bail out below since idToken is null */ }
 
   if (!idToken) return;
 

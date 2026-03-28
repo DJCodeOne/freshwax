@@ -5,12 +5,17 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { scanTracklistForSupport } from '../../../lib/dj-support';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 const log = createLogger('admin-scan-tracklists');
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`scan-tracklists:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const body = await request.clone().json().catch(() => null);
   const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;

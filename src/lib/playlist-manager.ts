@@ -141,7 +141,7 @@ export class PlaylistManager {
 
   // Utility
   private generateId(): string { return Date.now().toString(36) + Math.random().toString(36).substring(2, 9); }
-  private async getAuthToken(): Promise<string | null> { try { const u = window.firebaseAuth?.currentUser; return u ? await u.getIdToken() : null; } catch (_e: unknown) { return null; } }
+  private async getAuthToken(): Promise<string | null> { try { const u = window.firebaseAuth?.currentUser; return u ? await u.getIdToken() : null; } catch (_e: unknown) { /* intentional: token refresh failed — proceed without auth */ return null; } }
 
   // Getters
   get queue(): GlobalPlaylistItem[] { return this.playlist.queue; }

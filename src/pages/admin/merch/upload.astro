@@ -444,7 +444,7 @@ const nonce = Astro.locals.nonce || '';
 
     // Initialize — no View Transitions on this page, so run directly
     (async () => {
-      if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e) { return; } }
+      if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e) { /* intentional: auth failed — abort page init */ return; } }
       loadSuppliers();
       setupEventListeners();
       updateTypeVisibility();

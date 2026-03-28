@@ -24,7 +24,7 @@ export const FWCache = {
         return null;
       }
       return data.v;
-    } catch (e: unknown) { return null; }
+    } catch (e: unknown) { /* intentional: localStorage read failed — treat as cache miss */ return null; }
   },
 
   set: function(key: string, value: unknown, ttl?: number): void {

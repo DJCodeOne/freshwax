@@ -920,7 +920,7 @@ const nonce = Astro.locals.nonce || '';
           return null;
         }
         return data.v;
-      } catch (e) { return null; }
+      } catch (e) { /* intentional: localStorage read failed — treat as cache miss */ return null; }
     },
     
     set: function(key, value, ttl) {

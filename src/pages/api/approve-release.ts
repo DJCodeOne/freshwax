@@ -9,6 +9,7 @@ import { invalidateReleasesKVCache } from '../../lib/kv-cache';
 import { createLogger, successResponse, ApiErrors } from '../../lib/api-utils';
 import { logActivity } from '../../lib/activity-feed';
 import { broadcastActivity } from '../../lib/pusher';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const ApproveReleaseSchema = z.object({
   releaseId: z.string().min(1),
@@ -20,6 +21,10 @@ export const prerender = false;
 const log = createLogger('approve-release');
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`approve-release:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Initialize Firebase env for write operations (Cloudflare runtime)
   const env = (locals as App.Locals).runtime?.env;
 

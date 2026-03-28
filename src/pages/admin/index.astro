@@ -1238,7 +1238,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   document.addEventListener('astro:page-load', async function() {
     // Wait for Firebase auth before making admin API calls
     if (window.getAdminToken) {
-      try { await window.getAdminToken(); } catch (e) { return; }
+      try { await window.getAdminToken(); } catch (e) { /* intentional: auth failed — abort page init */ return; }
     }
 
     const toggleMixCharts = document.getElementById('toggleMixCharts');

@@ -6,8 +6,23 @@ import { saGetDocument, saSetDocument, saUpdateDocument } from '../../../lib/fir
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { z } from 'zod';
 
 const log = createLogger('admin/fix-release-urls');
+
+const fixUrlsSchema = z.object({
+  releaseId: z.string().min(1).optional(),
+  oldPrefix: z.string().optional(),
+  newPrefix: z.string().optional(),
+  createNew: z.boolean().optional(),
+  releaseData: z.record(z.unknown()).optional(),
+  collection: z.string().optional(),
+  docId: z.string().optional(),
+  updateData: z.record(z.unknown()).optional(),
+}).refine(
+  (data) => data.releaseId || (data.collection && data.docId && data.updateData),
+  { message: 'Either releaseId or collection+docId+updateData required' }
+);
 
 export const prerender = false;
 
@@ -49,11 +64,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { releaseId, oldPrefix, newPrefix, createNew, releaseData, collection, docId, updateData } = body;
 
     // SECURITY: Require admin authentication
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
+
+    const parsed = fixUrlsSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request: releaseId or collection+docId+updateData required');
+    }
+
+    const { releaseId, oldPrefix, newPrefix, createNew, releaseData, collection, docId, updateData } = parsed.data;
 
     // Generic document update mode (for any collection)
     if (collection && docId && updateData) {

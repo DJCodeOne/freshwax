@@ -9,10 +9,20 @@ import { initFirebaseEnv, getDocument, updateDocument, invalidateReleasesCache, 
 import { d1UpsertRelease, d1UpsertMix, d1UpsertMerch } from '../../../lib/d1-catalog';
 import { createLogger, successResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { z } from 'zod';
 
 export const prerender = false;
 
 const log = createLogger('r2-image-sync');
+
+const syncRequestSchema = z.object({
+  results: z.array(z.object({
+    key: z.string().min(1),
+    newKey: z.string().min(1),
+    status: z.enum(['success', 'failed']),
+    thumbKey: z.string().optional(),
+  })).min(1),
+});
 
 interface SyncRequest {
   results: Array<{
@@ -199,11 +209,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`r2-sync:${getClientId(request)}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const { results } = body;
-
-  if (!Array.isArray(results) || results.length === 0) {
-    return ApiErrors.badRequest('results must be a non-empty array');
+  const parsed = syncRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return ApiErrors.badRequest('Invalid request: results must be a non-empty array of sync results');
   }
+
+  const { results } = parsed.data;
 
   // Initialize Firebase env for server-side calls
   const env = locals.runtime.env;

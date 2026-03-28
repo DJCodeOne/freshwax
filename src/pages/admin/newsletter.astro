@@ -802,7 +802,7 @@ Stay fresh! 🎵
       const res = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY || '' }, body: JSON.stringify({ subject: subj, content: cont, testEmail: email }) });
       const data = await res.json();
       alert(data.success ? `Test sent to ${email}` : (data.error || 'Failed'));
-    } catch (e) { alert('Error'); }
+    } catch (e) { console.error('[Newsletter] Send test error:', e); alert('Error'); }
     finally { btn.disabled = false; btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-loading').classList.add('hidden'); }
   }
   
@@ -838,9 +838,9 @@ Stay fresh! 🎵
       const data = await res.json();
       if (data.success) { closeModal('addSubscriberModal'); loadSubscribers(); }
       else alert(data.error || 'Failed');
-    } catch (e) { alert('Error'); }
+    } catch (e) { console.error('[Newsletter] Add subscriber error:', e); alert('Error'); }
   }
-  
+
   function editSubscriber(id) {
     const s = allSubscribers.find(x => x.id === id); if (!s) return;
     document.getElementById('editSubscriberId').value = id;
@@ -864,9 +864,9 @@ Stay fresh! 🎵
         document.getElementById('activeCount').textContent = allSubscribers.filter(s => s.status === 'active').length;
         document.getElementById('unsubscribedCount').textContent = allSubscribers.filter(s => s.status === 'unsubscribed').length;
       } else alert(data.error || 'Failed');
-    } catch (e) { alert('Error'); }
+    } catch (e) { console.error('[Newsletter] Save subscriber error:', e); alert('Error'); }
   }
-  
+
   function deleteSubscriber(id) {
     const s = allSubscribers.find(x => x.id === id); if (!s) return;
     document.getElementById('deleteSubscriberId').value = id;
@@ -888,7 +888,7 @@ Stay fresh! 🎵
         if (allSubscribers.length === 0) { document.getElementById('subscribersTable').style.display = 'none'; document.getElementById('emptyState').style.display = 'block'; }
         else renderSubscribers();
       } else alert(data.error || 'Failed');
-    } catch (e) { alert('Error'); }
+    } catch (e) { console.error('[Newsletter] Delete subscriber error:', e); alert('Error'); }
   }
 </script>
 

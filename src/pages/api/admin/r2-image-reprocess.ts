@@ -9,12 +9,18 @@ import { processImageToSquareWebP, processImageToWebP, imageExtension, imageCont
 import { requireAdminAuth } from '../../../lib/admin';
 import { createLogger, successResponse, ApiErrors, parseJsonBody, getR2Config } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { z } from 'zod';
 
 export const prerender = false;
 
 const log = createLogger('r2-image-reprocess');
 
 const MAX_BATCH_SIZE = 10;
+
+const reprocessSchema = z.object({
+  keys: z.array(z.string().min(1)).min(1).max(MAX_BATCH_SIZE),
+  deleteOriginals: z.boolean().optional(),
+});
 
 interface ReprocessRequest {
   keys: string[];
@@ -122,14 +128,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`r2-reprocess:${getClientId(request)}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const { keys, deleteOriginals = false } = body;
+  const parsed = reprocessSchema.safeParse(body);
+  if (!parsed.success) {
+    return ApiErrors.badRequest('Invalid request: keys must be a non-empty array of strings (max 10)');
+  }
 
-  if (!Array.isArray(keys) || keys.length === 0) {
-    return ApiErrors.badRequest('keys must be a non-empty array');
-  }
-  if (keys.length > MAX_BATCH_SIZE) {
-    return ApiErrors.badRequest(`Maximum ${MAX_BATCH_SIZE} keys per batch`);
-  }
+  const { keys, deleteOriginals = false } = parsed.data;
 
   // Validate keys don't contain path traversal
   for (const key of keys) {

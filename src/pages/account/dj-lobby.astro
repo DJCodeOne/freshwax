@@ -4421,7 +4421,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       var source = mode.split(':')[1] || 'obs';
       setTimeout(function() { setPreviewSource(source); }, 50);
     }
-    try { localStorage.setItem('fw_lobby_mode', mode); } catch (e) { /* ignore */ }
+    try { localStorage.setItem('fw_lobby_mode', mode); } catch (e) { /* intentional: localStorage unavailable — mode preference not persisted */ }
   }
 
   // Chooser button handlers
@@ -4446,7 +4446,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // On mobile, always use browser mode — OBS/advanced view is desktop-only
   var isMobile = window.innerWidth <= 768;
   var savedMode = null;
-  try { savedMode = localStorage.getItem('fw_lobby_mode'); } catch (e) { /* ignore */ }
+  try { savedMode = localStorage.getItem('fw_lobby_mode'); } catch (e) { /* intentional: localStorage unavailable — use default mode */ }
   if (isMobile) {
     applyMode('browser');
   } else if (savedMode) {

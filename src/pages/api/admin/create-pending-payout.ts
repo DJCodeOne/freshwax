@@ -7,8 +7,24 @@ import { saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-a
 import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { z } from 'zod';
 const log = createLogger('admin/create-pending-payout');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const pendingPayoutSchema = z.object({
+  payoutData: z.object({
+    artistId: z.string().min(1),
+    artistName: z.string().min(1),
+    artistEmail: z.string().email().optional(),
+    orderId: z.string().min(1),
+    orderNumber: z.string().optional(),
+    amount: z.number().positive(),
+    itemAmount: z.number().optional(),
+    currency: z.string().optional(),
+    notes: z.string().optional(),
+  }),
+  updateArtistBalance: z.boolean().optional(),
+});
 
 export const prerender = false;
 
@@ -29,11 +45,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   try {
-    const { payoutData, updateArtistBalance } = body;
-
-    if (!payoutData) {
-      return ApiErrors.badRequest('payoutData required');
+    const parsed = pendingPayoutSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request: payoutData with artistId, artistName, orderId, and amount required');
     }
+
+    const { payoutData, updateArtistBalance } = parsed.data;
 
     const now = new Date().toISOString();
     const pendingPayout = {

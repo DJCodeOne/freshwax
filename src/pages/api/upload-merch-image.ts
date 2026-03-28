@@ -9,6 +9,7 @@ import { createS3Client } from '../../lib/s3-client';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { requireAdminAuth } from '../../lib/admin';
 import { createLogger, errorResponse, successResponse, ApiErrors, getR2Config } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const log = createLogger('[upload-merch-image]');
 
@@ -23,6 +24,10 @@ const WEBP_QUALITY = 85; // Good balance of quality and size
 const MAX_MERCH_IMAGE_REQUEST_SIZE = 50 * 1024 * 1024;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`upload-merch-image:${clientId}`, RateLimiters.upload);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Admin authentication required
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;

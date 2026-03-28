@@ -4,9 +4,16 @@ import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 import { TIMEOUTS } from '../../../lib/timeouts';
+import { z } from 'zod';
 
 const log = createLogger('admin/partner-applications');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const partnerActionSchema = z.object({
+  action: z.enum(['approve', 'deny']),
+  applicationId: z.string().min(1),
+  source: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -157,11 +164,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   try {
-    const { action, applicationId, source } = body;
-
-    if (!applicationId) {
-      return ApiErrors.badRequest('Application ID required');
+    const parsed = partnerActionSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request: action (approve/deny) and applicationId required');
     }
+
+    const { action, applicationId, source } = parsed.data;
 
     // Try to find in pendingRoleRequests first, then partnerApplications
     let application = await getDocument('pendingRoleRequests', applicationId);

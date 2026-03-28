@@ -519,7 +519,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           // Backward compat: old string values
           if (raw === 'accepted') return { necessary: true, analytics: true, marketing: true };
           if (raw === 'rejected') return { necessary: true, analytics: false, marketing: false };
-          try { return JSON.parse(raw); } catch (e) { return null; }
+          try { return JSON.parse(raw); } catch (e) { /* intentional: malformed consent JSON — treat as no consent */ return null; }
         }
         // Helper to delete GA4 cookies
         function deleteAnalyticsCookies() {

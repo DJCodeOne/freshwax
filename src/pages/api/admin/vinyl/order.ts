@@ -5,8 +5,21 @@ import { requireAdminAuth, initAdminEnv } from '@lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
 import { escapeHtml } from '@lib/escape-html';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '@lib/api-utils';
+import { z } from 'zod';
 
 const log = createLogger('[vinyl-order]');
+
+const vinylOrderSchema = z.object({
+  action: z.enum(['update-status', 'add-tracking', 'refund', 'add-note']),
+  orderId: z.string().min(1),
+  status: z.string().optional(),
+  carrier: z.string().optional(),
+  trackingNumber: z.string().optional(),
+  refundAmount: z.union([z.number(), z.string(), z.null()]).optional(),
+  reason: z.string().optional(),
+  note: z.string().optional(),
+  adminId: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -65,11 +78,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { action, orderId } = body;
-
-    if (!orderId) {
-      return ApiErrors.badRequest('Order ID required');
+    const parsed = vinylOrderSchema.safeParse(body);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request: action and orderId required');
     }
+
+    const { action, orderId } = parsed.data;
 
     const order = await getDocument('vinylOrders', orderId);
     if (!order) {
@@ -78,7 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     switch (action) {
       case 'update-status': {
-        const { status } = body;
+        const { status } = parsed.data;
         const validStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
 
         if (!validStatuses.includes(status)) {
@@ -102,7 +116,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       case 'add-tracking': {
-        const { carrier, trackingNumber } = body;
+        const { carrier, trackingNumber } = parsed.data;
 
         await updateDocument('vinylOrders', orderId, {
           carrier: carrier || '',
@@ -150,7 +164,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         let refundAmountPence: number;
         let isFullRefund = false;
-        const { refundAmount, reason } = body;
+        const { refundAmount, reason } = parsed.data;
 
         if (refundAmount === undefined || refundAmount === null || refundAmount === 'full') {
           // Full refund of remaining amount
@@ -446,7 +460,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       case 'add-note': {
-        const { note, adminId } = body;
+        const { note, adminId } = parsed.data;
 
         const notes = order.adminNotes || [];
         notes.push({

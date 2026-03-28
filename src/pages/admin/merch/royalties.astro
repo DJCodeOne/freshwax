@@ -326,7 +326,7 @@ const nonce = Astro.locals.nonce || '';
       // Init
       (async function() {
         if (window.getAdminToken) {
-          try { await window.getAdminToken(); } catch (e) { return; }
+          try { await window.getAdminToken(); } catch (e) { /* intentional: auth failed — abort page init */ return; }
         }
         loadLedger();
       })();

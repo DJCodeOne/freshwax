@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { getDocument, setDocument } from '../../lib/firebase-rest';
 import { requireAdminAuth } from '../../lib/admin';
 import { createLogger, ApiErrors, jsonResponse, successResponse } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // passthrough() needed because the full release object (tracks, prices, etc.) is spread into Firestore
 const UpdateMasterJsonSchema = z.object({
@@ -26,6 +27,10 @@ export const prerender = false;
 const log = createLogger('update-master-json');
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`update-master-json:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
     const body = await request.json();
 

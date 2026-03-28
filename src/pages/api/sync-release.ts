@@ -4,6 +4,7 @@ import { processImageToSquareWebP, imageExtension, imageContentType } from '../.
 import { requireAdminAuth } from '../../lib/admin';
 import AdmZip from 'adm-zip';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -27,6 +28,10 @@ const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.aiff', '.aif', '.m4a'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 
 export const POST = async ({ request, locals }: { request: Request; locals: App.Locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`sync-release:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
     // SECURITY: Require admin authentication
     const authError = await requireAdminAuth(request, locals);

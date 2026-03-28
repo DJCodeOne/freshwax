@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -17,6 +18,10 @@ const log = createLogger('suppliers');
 
 // GET - List all suppliers or get specific supplier
 export const GET: APIRoute = async ({ request, url, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`suppliers:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initServices(locals);
 
   try {
@@ -214,6 +219,10 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
 // POST - Create new supplier (Admin only)
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`suppliers:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initServices(locals);
 
   try {
@@ -282,6 +291,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // PUT - Update supplier (Admin only)
 export const PUT: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`suppliers:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initServices(locals);
 
   try {
@@ -323,6 +336,10 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
 // DELETE - Deactivate or permanently delete supplier (Admin only)
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`suppliers:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initServices(locals);
 
   try {
