@@ -80,7 +80,8 @@ export function updateCreditDisplay(state: CheckoutState) {
   if (creditRow) {
     if (state.appliedCredit > 0) {
       creditRow.style.display = 'flex';
-      document.getElementById('appliedCreditAmount')!.textContent = `-\u00a3${state.appliedCredit.toFixed(2)}`;
+      const creditAmountEl = document.getElementById('appliedCreditAmount');
+      if (creditAmountEl) creditAmountEl.textContent = `-\u00a3${state.appliedCredit.toFixed(2)}`;
     } else {
       creditRow.style.display = 'none';
     }
@@ -135,25 +136,29 @@ export function toggleApplyCredit(state: CheckoutState, apply: boolean) {
 // Postcode lookup function - uses free postcodes.io API
 // Validates postcode and auto-fills city/county (street address entered manually)
 export async function lookupPostcode(state: CheckoutState) {
-  const postcodeInput = document.getElementById('postcodeSearch') as HTMLInputElement;
-  const findBtn = document.getElementById('findAddressBtn') as HTMLButtonElement;
-  const manualEntry = document.getElementById('manualAddressFields')!;
+  const postcodeInput = document.getElementById('postcodeSearch') as HTMLInputElement | null;
+  const findBtn = document.getElementById('findAddressBtn') as HTMLButtonElement | null;
+  const manualEntry = document.getElementById('manualAddressFields');
   const manualEntryLink = document.getElementById('manualEntryLink');
-  const lookupError = document.getElementById('lookupError')!;
+  const lookupError = document.getElementById('lookupError');
+
+  if (!postcodeInput || !findBtn) return;
 
   const postcode = postcodeInput.value.trim();
 
   if (!postcode) {
-    lookupError.textContent = 'Please enter a postcode';
-    lookupError.style.color = '#ff6b6b';
-    lookupError.style.display = 'block';
+    if (lookupError) {
+      lookupError.textContent = 'Please enter a postcode';
+      lookupError.style.color = '#ff6b6b';
+      lookupError.style.display = 'block';
+    }
     return;
   }
 
   // Update button state
   findBtn.disabled = true;
   findBtn.textContent = 'Validating...';
-  lookupError.style.display = 'none';
+  if (lookupError) lookupError.style.display = 'none';
 
   try {
     const controller = new AbortController();
@@ -171,17 +176,22 @@ export async function lookupPostcode(state: CheckoutState) {
 
 
     // Postcode validated! Auto-fill the location fields
-    (document.getElementById('postcode') as HTMLInputElement).value = data.postcode;
-    (document.getElementById('city') as HTMLInputElement).value = data.city || '';
-    (document.getElementById('county') as HTMLInputElement).value = data.county || '';
+    const postcodeField = document.getElementById('postcode') as HTMLInputElement | null;
+    const cityField = document.getElementById('city') as HTMLInputElement | null;
+    const countyField = document.getElementById('county') as HTMLInputElement | null;
+    if (postcodeField) postcodeField.value = data.postcode;
+    if (cityField) cityField.value = data.city || '';
+    if (countyField) countyField.value = data.county || '';
 
     // Show success message
-    lookupError.textContent = '\u2713 Postcode verified! Please enter your street address below.';
-    lookupError.style.color = '#22c55e';
-    lookupError.style.display = 'block';
+    if (lookupError) {
+      lookupError.textContent = '\u2713 Postcode verified! Please enter your street address below.';
+      lookupError.style.color = '#22c55e';
+      lookupError.style.display = 'block';
+    }
 
     // Show address fields for manual entry
-    manualEntry.style.display = 'block';
+    if (manualEntry) manualEntry.style.display = 'block';
     if (manualEntryLink) manualEntryLink.style.display = 'none';
 
     // Focus on address line 1 for quick entry
@@ -190,11 +200,13 @@ export async function lookupPostcode(state: CheckoutState) {
     }, 100);
 
   } catch (error: unknown) {
-    lookupError.textContent = (error instanceof Error ? error.message : null) || 'Failed to lookup postcode';
-    lookupError.style.color = '#ff6b6b';
-    lookupError.style.display = 'block';
+    if (lookupError) {
+      lookupError.textContent = (error instanceof Error ? error.message : null) || 'Failed to lookup postcode';
+      lookupError.style.color = '#ff6b6b';
+      lookupError.style.display = 'block';
+    }
     // Show manual fields on error so user can still proceed
-    manualEntry.style.display = 'block';
+    if (manualEntry) manualEntry.style.display = 'block';
     if (manualEntryLink) manualEntryLink.style.display = 'none';
   } finally {
     findBtn.disabled = false;
@@ -204,7 +216,8 @@ export async function lookupPostcode(state: CheckoutState) {
 
 // Show access denied message for non-customers
 export function showAccessDenied() {
-  const container = document.getElementById('checkout-content')!;
+  const container = document.getElementById('checkout-content');
+  if (!container) return;
   container.innerHTML = `
     <div style="text-align: center; padding: 4rem 2rem; background: #1a0a0a; border: 3px solid #dc2626; border-radius: 12px;">
       <h2 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 2.5rem; margin-bottom: 0.75rem; color: #ff6b6b;">CUSTOMER ACCOUNT REQUIRED</h2>
@@ -234,7 +247,8 @@ export function renderCheckout(
     setupPaymentMethods: () => void;
   }
 ) {
-  const container = document.getElementById('checkout-content')!;
+  const container = document.getElementById('checkout-content');
+  if (!container) return;
   const { cart, currentUser, customerData, creditBalance, duplicatePurchases } = state;
 
   if (cart.length === 0) {
@@ -597,8 +611,10 @@ export function renderCheckout(
 
   // Attach event listener for manual address entry link
   document.getElementById('manualEntryBtn')?.addEventListener('click', () => {
-    document.getElementById('manualAddressFields')!.style.display = 'block';
-    document.getElementById('manualEntryLink')!.style.display = 'none';
+    const manualFields = document.getElementById('manualAddressFields');
+    const manualLink = document.getElementById('manualEntryLink');
+    if (manualFields) manualFields.style.display = 'block';
+    if (manualLink) manualLink.style.display = 'none';
   });
 
   // Attach event listeners for payment method selection
@@ -610,7 +626,8 @@ export function renderCheckout(
     callbacks.toggleApplyCredit(this.checked);
   });
 
-  document.getElementById('checkoutForm')!.addEventListener('submit', callbacks.handleSubmit);
+  const checkoutForm = document.getElementById('checkoutForm');
+  if (checkoutForm) checkoutForm.addEventListener('submit', callbacks.handleSubmit);
 
   // Initialize PayPal buttons when PayPal is selected
   callbacks.setupPaymentMethods();

@@ -532,72 +532,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   });
 </script>
 
-<script is:inline nonce={nonce}>
-  // Admin check uses Firestore admins collection
-</script>
 <script type="module">
-  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  // Reuse Firebase app already initialized by AdminLayout (config set via window.FIREBASE_CONFIG)
-  const app = getApps()[0] || initializeApp(window.FIREBASE_CONFIG);
-  const auth = getAuth(app);
-
-  async function checkIsAdmin(user) {
-    try {
-      const idToken = await user.getIdToken();
-      const response = await fetch('/api/admin/check-access/', {
-        headers: { 'Authorization': `Bearer ${idToken}` }
-      });
-      if (!response.ok) return false;
-      const data = await response.json();
-      return data.success && data.isAdmin;
-    } catch (e){
-      console.error('Error checking admin:', e);
-    }
-    return false;
+  // Uses AdminLayout's Firebase auth (window.getAdminToken, window.ADMIN_KEY, window._firebaseUser)
+  // Server-side requireAdminAuth already gates access; this is defense-in-depth
+  try {
+    await window.getAdminToken();
+  } catch {
+    window.location.href = '/login/?redirect=/admin/ledger/';
   }
-
-  // Wait for Firebase auth to fully initialize before checking state
-  // This prevents redirect loops when navigating between admin pages
-  let authInitialized = false;
-  let redirectTimeout = null;
-
-  onAuthStateChanged(auth, async (user) => {
-    // Clear any pending redirect
-    if (redirectTimeout) {
-      clearTimeout(redirectTimeout);
-      redirectTimeout = null;
-    }
-
-    if (!user) {
-      if (!authInitialized) {
-        // First check - auth might still be loading cached state
-        // Check if there's evidence of a logged-in user (Firebase persistence)
-        const hasAuthPersistence = Object.keys(localStorage).some(key =>
-          key.startsWith('firebase:authUser:')
-        );
-
-        if (hasAuthPersistence) {
-          // User was logged in - wait for auth to fully load
-          authInitialized = true;
-          redirectTimeout = window.setTimeout(() => {
-            if (!auth.currentUser) {
-              window.location.href = '/login/?redirect=/admin/ledger/';
-            }
-          }, 2000);
-          return;
-        }
-      }
-      // No persistence or subsequent null - redirect to login
-      window.location.href = '/login/?redirect=/admin/ledger/';
-      return;
-    }
-
-    authInitialized = true;
-    const isAdmin = await checkIsAdmin(user);
-    if (!isAdmin) {
-      alert('Access denied. Admin privileges required.');
-      window.location.href = '/account/dashboard/';
-    }
-  });
 </script>

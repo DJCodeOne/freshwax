@@ -2,6 +2,53 @@
 // Live page — share modal and social sharing module
 
 var currentLiveInfo = null;
+var shareFocusTrapHandler = null;
+var sharePreviousFocus = null;
+
+// Focus trap helper for share modal
+function trapFocusInModal(modalEl) {
+  var selector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  var focusableEls = modalEl.querySelectorAll(selector);
+  if (focusableEls.length === 0) return;
+  var firstEl = focusableEls[0];
+  var lastEl = focusableEls[focusableEls.length - 1];
+
+  shareFocusTrapHandler = function(e) {
+    if (e.key !== 'Tab') return;
+    if (e.shiftKey) {
+      if (document.activeElement === firstEl) {
+        e.preventDefault();
+        lastEl.focus();
+      }
+    } else {
+      if (document.activeElement === lastEl) {
+        e.preventDefault();
+        firstEl.focus();
+      }
+    }
+  };
+  modalEl.addEventListener('keydown', shareFocusTrapHandler);
+}
+
+function removeFocusTrapFromModal(modalEl) {
+  if (shareFocusTrapHandler) {
+    modalEl.removeEventListener('keydown', shareFocusTrapHandler);
+    shareFocusTrapHandler = null;
+  }
+}
+
+function closeShareModal(modal, triggerEl) {
+  if (modal) {
+    removeFocusTrapFromModal(modal);
+    modal.classList.add('hidden');
+  }
+  if (sharePreviousFocus && typeof sharePreviousFocus.focus === 'function') {
+    sharePreviousFocus.focus();
+    sharePreviousFocus = null;
+  } else if (triggerEl && typeof triggerEl.focus === 'function') {
+    triggerEl.focus();
+  }
+}
 
 export function initShare() {
   // Open share modal
@@ -10,6 +57,7 @@ export function initShare() {
     shareBtn.addEventListener('click', function() {
       var modal = document.getElementById('shareModal');
       if (modal) {
+        sharePreviousFocus = document.activeElement;
         modal.classList.remove('hidden');
         var input = document.getElementById('shareLinkInput');
         if (input) input.value = getShareUrl();
@@ -19,6 +67,11 @@ export function initShare() {
           var nativeBtn = document.getElementById('nativeShare');
           if (nativeBtn) nativeBtn.classList.remove('hidden');
         }
+
+        // Focus the close button and trap focus
+        trapFocusInModal(modal);
+        var closeEl = document.getElementById('closeShareModal');
+        if (closeEl) closeEl.focus();
       }
     });
   }
@@ -28,7 +81,7 @@ export function initShare() {
   if (closeBtn) {
     closeBtn.addEventListener('click', function() {
       var modal = document.getElementById('shareModal');
-      if (modal) modal.classList.add('hidden');
+      closeShareModal(modal, shareBtn);
     });
   }
 
@@ -37,7 +90,7 @@ export function initShare() {
   if (overlay) {
     overlay.addEventListener('click', function() {
       var modal = document.getElementById('shareModal');
-      if (modal) modal.classList.add('hidden');
+      closeShareModal(modal, shareBtn);
     });
   }
 
@@ -46,8 +99,7 @@ export function initShare() {
     if (e.key === 'Escape') {
       var modal = document.getElementById('shareModal');
       if (modal && !modal.classList.contains('hidden')) {
-        modal.classList.add('hidden');
-        if (shareBtn) shareBtn.focus();
+        closeShareModal(modal, shareBtn);
       }
     }
   });
@@ -118,7 +170,7 @@ export function initShare() {
     nativeShareBtn.addEventListener('click', async function() {
       if (navigator.share) {
         var modal = document.getElementById('shareModal');
-        if (modal) modal.classList.add('hidden');
+        closeShareModal(modal, shareBtn);
         try {
           await navigator.share({
             title: 'Fresh Wax Live Stream',

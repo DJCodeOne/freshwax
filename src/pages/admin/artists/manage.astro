@@ -272,38 +272,24 @@ const nonce = Astro.locals.nonce || '';
   <Fragment slot="scripts">
     <script type="module">
       function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
-      import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-      import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-      // Reuse Firebase app already initialized by AdminLayout (config set via window.FIREBASE_CONFIG)
-      const app = getApps()[0] || initializeApp(window.FIREBASE_CONFIG);
-      const auth = getAuth(app);
-      
+      // Uses AdminLayout's Firebase auth (window.getAdminToken, window.ADMIN_KEY, window._firebaseUser)
+
       let allPartners = [];
       let currentFilter = 'all';
       let currentPartnerId = null;
 
-      // Get admin key from data attribute
-
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-          window.location.href = '/admin/login/';
-          return;
-        }
-        // Wait for AdminLayout to set ADMIN_KEY via getIdToken
-        // AdminLayout module may not have run yet, so poll briefly
-        for (var _w = 0; _w < 20 && !window.ADMIN_KEY && !window.getAdminToken; _w++) {
-          await new Promise(function(r) { setTimeout(r, 100); });
-        }
-        if (!window.ADMIN_KEY && window.getAdminToken) {
-          await window.getAdminToken();
-        }
+      // Wait for AdminLayout auth to be ready, then load data
+      try {
+        await window.getAdminToken();
         loadPartners();
-      });
+      } catch {
+        window.location.href = '/admin/login/';
+      }
 
       async function loadPartners() {
         try {
           // Use API to load partners from both users and artists collections
-          const adminUid = auth.currentUser?.uid;
+          const adminUid = window._firebaseUser?.uid;
           if (!adminUid) {
             throw new Error('Not authenticated');
           }
@@ -535,7 +521,7 @@ const nonce = Astro.locals.nonce || '';
           return;
         }
 
-        const adminUid = auth.currentUser?.uid;
+        const adminUid = window._firebaseUser?.uid;
         if (!adminUid) {
           showToast('Not authenticated', 'error');
           return;
@@ -548,7 +534,7 @@ const nonce = Astro.locals.nonce || '';
 
         try {
           // Get the admin's ID token for authenticated Firestore writes
-          const idToken = await auth.currentUser.getIdToken();
+          const idToken = await window.getAdminToken();
 
           const status = document.querySelector('input[name="editStatus"]:checked')?.value;
           const newIsArtist = document.getElementById('editRoleArtist').checked;
@@ -624,7 +610,7 @@ const nonce = Astro.locals.nonce || '';
         const partner = allPartners.find(p => p.id === currentPartnerId);
         try {
           // Approve partner via API (replaces client-side Firestore write)
-          const idToken = await auth.currentUser.getIdToken();
+          const idToken = await window.getAdminToken();
           const approveResp = await fetch('/api/admin/approve-partner/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
@@ -672,7 +658,7 @@ const nonce = Astro.locals.nonce || '';
         if (!currentPartnerId) return;
         try {
           // Delete partner via API (replaces client-side Firestore write)
-          const deleteToken = await auth.currentUser.getIdToken();
+          const deleteToken = await window.getAdminToken();
           const deleteResp = await fetch('/api/admin/delete-user/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${deleteToken}` },

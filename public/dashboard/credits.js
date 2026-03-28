@@ -33,6 +33,7 @@ export async function loadCreditBalance(userId) {
       signal: balanceController.signal
     });
     clearTimeout(balanceTimeout);
+    if (!response.ok) { console.error('[Dashboard] Credit balance request failed:', response.status); return; }
     var result = await response.json();
 
     if (result.success) {
@@ -154,6 +155,10 @@ export function initCreditTab() {
           signal: redeemController.signal
         });
         clearTimeout(redeemTimeout);
+        if (!response.ok) {
+          var errBody = await response.json().catch(function() { return {}; });
+          throw new Error(errBody.error || 'Redeem failed: ' + response.status);
+        }
 
         var result = await response.json();
 

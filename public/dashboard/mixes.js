@@ -37,6 +37,7 @@ export async function fetchMixes(userId, forceRefresh) {
       signal: mixesController.signal
     });
     clearTimeout(mixesTimeout);
+    if (!response.ok) { console.error('[Dashboard] Mixes request failed:', response.status); return; }
     var data = await response.json();
 
     if (data.success && data.mixes) {

@@ -130,13 +130,13 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
       const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && paypalConfig;
       const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
 
-      if (usePayPal) {
+      if (usePayPal && paypalConfig && payment.paypalEmail) {
         const paypalPayoutFee = payment.amount * 0.02;
         const paypalAmount = payment.amount - paypalPayoutFee;
 
         try {
-          const paypalResult = await createPayout(paypalConfig!, {
-            email: payment.paypalEmail!,
+          const paypalResult = await createPayout(paypalConfig, {
+            email: payment.paypalEmail,
             amount: paypalAmount,
             currency: 'GBP',
             note: `Fresh Wax supplier payout for order #${orderNumber}`,
@@ -197,12 +197,12 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
           });
         }
 
-      } else if (useStripe) {
+      } else if (useStripe && stripe && payment.stripeConnectId) {
         try {
-          const transfer = await stripe!.transfers.create({
+          const transfer = await stripe.transfers.create({
             amount: Math.round(payment.amount * 100),
             currency: 'gbp',
-            destination: payment.stripeConnectId!,
+            destination: payment.stripeConnectId,
             transfer_group: orderId,
             metadata: {
               orderId,

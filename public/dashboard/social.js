@@ -33,6 +33,7 @@ export async function loadWishlistCount(userId) {
       signal: wlCountController.signal
     });
     clearTimeout(wlCountTimeout);
+    if (!response.ok) return;
     var data = await response.json();
 
     if (data.success) {
@@ -65,6 +66,7 @@ export async function loadWishlist(userId) {
       signal: wlLoadController.signal
     });
     clearTimeout(wlLoadTimeout);
+    if (!response.ok) { console.error('[Dashboard] Wishlist request failed:', response.status); return; }
     var data = await response.json();
 
     if (data.success) {
@@ -255,6 +257,7 @@ export async function loadFollowingCount(userId) {
       signal: fCountController.signal
     });
     clearTimeout(fCountTimeout);
+    if (!response.ok) return;
     var data = await response.json();
 
     if (data.success) {
@@ -287,6 +290,7 @@ export async function loadFollowing(userId) {
       signal: fLoadController.signal
     });
     clearTimeout(fLoadTimeout);
+    if (!response.ok) { console.error('[Dashboard] Following request failed:', response.status); return; }
     var data = await response.json();
 
     if (data.success) {

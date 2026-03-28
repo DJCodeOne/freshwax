@@ -354,78 +354,33 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   }
 </style>
 
-<script is:inline nonce={nonce}>
-  // Admin check uses Firestore admins collection - no UIDs exposed to client
-</script>
 <script type="module">
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
-  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-
-  // Reuse Firebase app already initialized by AdminLayout (config set via window.FIREBASE_CONFIG)
-  const app = getApps()[0] || initializeApp(window.FIREBASE_CONFIG);
-  const auth = getAuth(app);
+  // Uses AdminLayout's Firebase auth (window.getAdminToken, window.ADMIN_KEY, window._firebaseUser)
 
   let allUsers = [];
   let currentEditUser = null;
 
-  // Check authentication - admin check
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      window.location.href = '/login/';
-      return;
-    }
-
-    // Check if admin via API
-    const isAdmin = await checkIsAdmin(user);
-    if (!isAdmin) {
-      alert('Access denied. Admin privileges required.');
-      window.location.href = '/account/dashboard/';
-      return;
-    }
-
+  // Wait for AdminLayout auth to be ready, then load data
+  try {
+    await window.getAdminToken();
     loadUsersAndOrders();
-  });
-
-  // Check if user is admin via API
-  async function checkIsAdmin(user) {
-    try {
-      const idToken = await user.getIdToken();
-      const response = await fetch('/api/admin/check-access/', {
-        headers: { 'Authorization': `Bearer ${idToken}` }
-      });
-      const data = await response.json();
-      return data.success && data.isAdmin;
-    } catch (error) {
-      console.error('Error checking admin status:', error);
-      return false;
-    }
+  } catch {
+    window.location.href = '/login/';
   }
 
   // Load all partners via API (server-side to bypass security rules)
   async function loadUsersAndOrders() {
     try {
-      const user = auth.currentUser;
-      if (!user) {
+      if (!window._firebaseUser) {
         throw new Error('Not authenticated');
       }
 
-      // Ensure we have an admin token for auth
-      if (!window.ADMIN_KEY) {
-        try {
-          if (window.getAdminToken) {
-            var _tok = await window.getAdminToken();
-            if (_tok) window.ADMIN_KEY = _tok;
-          }
-          if (!window.ADMIN_KEY) {
-            window.ADMIN_KEY = await user.getIdToken();
-          }
-        } catch (_e) { /* will try without */ }
-      }
+      const token = window.ADMIN_KEY || await window.getAdminToken();
 
       // Use server-side API to fetch partners
       const response = await fetch(`/api/admin/list-partners/`, {
-        headers: { 'Authorization': 'Bearer ' + (window.ADMIN_KEY || await user.getIdToken()) }
+        headers: { 'Authorization': 'Bearer ' + token }
       });
       if (!response.ok) throw new Error('List partners failed: ' + response.status);
       const data = await response.json();
@@ -820,11 +775,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     };
 
     try {
-      const user = auth.currentUser;
+      const user = window._firebaseUser;
       if (!user) {
         throw new Error('Not authenticated');
       }
-      
+
       // Use server-side API to update partner
       const response = await fetch('/api/admin/update-partner/', {
         method: 'POST',

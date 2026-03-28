@@ -212,27 +212,19 @@ const nonce = Astro.locals.nonce || '';
   <Fragment slot="scripts">
     <script type="module">
       function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
-      import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-      import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-      // Reuse Firebase app already initialized by AdminLayout (config set via window.FIREBASE_CONFIG)
-      const app = getApps()[0] || initializeApp(window.FIREBASE_CONFIG);
-      const auth = getAuth(app);
+      // Uses AdminLayout's Firebase auth (window.getAdminToken, window.ADMIN_KEY, window._firebaseUser)
 
       let allOrders = [];
       let currentFilter = 'all';
       let currentOrderId = null;
 
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-          window.location.href = '/admin/login/';
-          return;
-        }
-        // Wait for AdminLayout to set ADMIN_KEY via getIdToken
-        if (!window.ADMIN_KEY && window.getAdminToken) {
-          await window.getAdminToken();
-        }
+      // Wait for AdminLayout auth to be ready, then load data
+      try {
+        await window.getAdminToken();
         loadOrders();
-      });
+      } catch {
+        window.location.href = '/admin/login/';
+      }
 
       async function loadOrders() {
         try {

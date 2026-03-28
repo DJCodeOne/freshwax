@@ -283,9 +283,11 @@ export async function subscribeToPusher(
     // Subscribe to playlist channel
     ctx.pusherChannel = pusher.subscribe('live-playlist');
 
-    ctx.pusherChannel!.bind('playlist-update', (data: GlobalPlaylist) => {
-      handleRemoteUpdateFn(data);
-    });
+    if (ctx.pusherChannel) {
+      ctx.pusherChannel.bind('playlist-update', (data: GlobalPlaylist) => {
+        handleRemoteUpdateFn(data);
+      });
+    }
 
     ctx.isSubscribed = true;
   } catch (error: unknown) {

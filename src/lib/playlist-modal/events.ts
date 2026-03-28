@@ -108,8 +108,15 @@ export function setupEventListeners(state: ModalState): void {
   }
 
   document.addEventListener('keydown', function(e: KeyboardEvent) {
-    if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
-      closeModal();
+    if (e.key === 'Escape') {
+      // Close export modal first if it's open
+      if (exportModal && !exportModal.classList.contains('hidden')) {
+        closeExportModalFn();
+        return;
+      }
+      if (modal && !modal.classList.contains('hidden')) {
+        closeModal();
+      }
     }
   });
 
@@ -222,10 +229,16 @@ export function setupEventListeners(state: ModalState): void {
   const cancelClearBtn = document.getElementById('cancelClearBtn');
   const confirmClearBtn = document.getElementById('confirmClearBtn');
   const clearItemCountEl = document.getElementById('clearItemCount');
+  let exportPreviousFocus: Element | null = null;
 
   function closeExportModalFn() {
+    if (exportModal) removeFocusTrap(exportModal);
     exportModal?.classList.add('hidden');
     clearConfirmation?.classList.add('hidden');
+    if (exportPreviousFocus && typeof (exportPreviousFocus as HTMLElement).focus === 'function') {
+      (exportPreviousFocus as HTMLElement).focus();
+      exportPreviousFocus = null;
+    }
   }
 
   // Export Playlist button - opens modal
@@ -253,8 +266,10 @@ export function setupEventListeners(state: ModalState): void {
         clearItemCountEl.textContent = state.cachedPersonalItems.length.toString();
       }
 
+      exportPreviousFocus = document.activeElement;
       clearConfirmation?.classList.add('hidden');
       exportModal?.classList.remove('hidden');
+      if (exportModal) trapFocus(exportModal);
     });
   }
 
@@ -484,12 +499,7 @@ export function setupEventListeners(state: ModalState): void {
   const backToStreamBtn = document.getElementById('backToStreamBtn');
   if (backToStreamBtn && !backToStreamBtn.dataset.listenerAttached) {
     backToStreamBtn.dataset.listenerAttached = 'true';
-    backToStreamBtn.addEventListener('click', () => {
-      const modal = document.getElementById('playlistModal');
-      if (modal) {
-        modal.classList.add('hidden');
-      }
-    });
+    backToStreamBtn.addEventListener('click', closeModal);
   }
 
   if (urlInput && !urlInput.dataset.listenerAttached) {

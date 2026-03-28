@@ -336,6 +336,7 @@ function setupChatInput(streamId) {
           body: JSON.stringify({ userId: _currentUser.uid })
         });
         clearTimeout(timer);
+        if (!resp.ok) { console.error('[Chat] !skip request failed:', resp.status); return; }
         var result = await resp.json();
         if (!result.allowed) {
           var chatEl = document.getElementById('chatMessages');
@@ -412,6 +413,7 @@ function setupChatInput(streamId) {
           })
         });
         clearTimeout(timer3);
+        if (!cmdResp.ok) { console.error('[Chat] Plus command request failed:', cmdResp.status); return; }
         var cmdResult = await cmdResp.json();
         if (!cmdResult.allowed) {
           var chatEl3 = document.getElementById('chatMessages');
@@ -491,6 +493,7 @@ function setupChatInput(streamId) {
         body: JSON.stringify(body)
       });
       clearTimeout(timer5);
+      if (!resp5.ok) { console.error('[Chat] Send request failed:', resp5.status); return; }
       var result5 = await resp5.json();
       if (!result5.success) alert(result5.error || 'Failed to send');
     } catch (e) {

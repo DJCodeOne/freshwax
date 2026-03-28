@@ -33,6 +33,7 @@ async function runSpeedTest() {
       cache: 'no-store',
       mode: 'cors'
     });
+    if (!downloadResponse.ok) throw new Error('Download test failed: ' + downloadResponse.status);
     await downloadResponse.text();
     var downloadDuration = (performance.now() - downloadStart) / 1000;
 

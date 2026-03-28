@@ -14,14 +14,16 @@ export function initNYOPSystem() {
   const modal = document.getElementById('nyop-modal');
   if (!modal) return;
 
-  const modalArtwork = document.getElementById('nyop-modal-artwork') as HTMLImageElement;
+  const modalArtwork = document.getElementById('nyop-modal-artwork') as HTMLImageElement | null;
   const modalTitle = document.getElementById('nyop-modal-title');
   const modalArtist = document.getElementById('nyop-modal-artist');
-  const modalPrice = document.getElementById('nyop-modal-price') as HTMLInputElement;
+  const modalPrice = document.getElementById('nyop-modal-price') as HTMLInputElement | null;
   const modalMinText = document.getElementById('nyop-modal-min-text');
-  const modalError = document.getElementById('nyop-modal-error') as HTMLElement;
-  const modalAddCart = document.getElementById('nyop-modal-add-cart') as HTMLButtonElement;
+  const modalError = document.getElementById('nyop-modal-error');
+  const modalAddCart = document.getElementById('nyop-modal-add-cart') as HTMLButtonElement | null;
   const quickPrices = modal.querySelectorAll('.nyop-quick-price');
+
+  if (!modalPrice || !modalError || !modalAddCart) return;
 
   document.querySelectorAll('.nyop-open-modal').forEach(function(btn: Element) {
     if ((btn as HTMLElement).dataset.nyopInit === 'true') return;
@@ -45,7 +47,7 @@ export function initNYOPSystem() {
         isPreorder: (btn as HTMLElement).dataset.isPreorder === 'true'
       };
 
-      modalArtwork.src = nyopCurrentReleaseData.artwork || '/place-holder.webp';
+      if (modalArtwork) modalArtwork.src = nyopCurrentReleaseData.artwork || '/place-holder.webp';
       if (modalTitle) modalTitle.textContent = nyopCurrentReleaseData.title;
       if (modalArtist) modalArtist.textContent = nyopCurrentReleaseData.artist;
       modalPrice.value = suggestedPrice.toFixed(2);
@@ -57,9 +59,9 @@ export function initNYOPSystem() {
       updateQuickPriceButtons(suggestedPrice);
 
       nyopPreviousFocus = document.activeElement;
-      modal!.classList.remove('hidden');
+      modal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
-      if (modalPrice) modalPrice.focus();
+      modalPrice.focus();
     });
   });
 
@@ -69,7 +71,7 @@ export function initNYOPSystem() {
   let nyopPreviousFocus: Element | null = null;
 
   function closeModal() {
-    modal!.classList.add('hidden');
+    modal.classList.add('hidden');
     document.body.style.overflow = '';
     nyopCurrentReleaseData = null;
     if (nyopPreviousFocus && typeof (nyopPreviousFocus as HTMLElement).focus === 'function') {
@@ -80,7 +82,7 @@ export function initNYOPSystem() {
 
   modal.addEventListener('keydown', function(e: KeyboardEvent) {
     if (e.key !== 'Tab') return;
-    const focusableEls = modal!.querySelectorAll(
+    const focusableEls = modal.querySelectorAll(
       'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
     );
     if (focusableEls.length === 0) return;
@@ -104,7 +106,7 @@ export function initNYOPSystem() {
   });
 
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && !modal!.classList.contains('hidden')) {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
       closeModal();
     }
   });

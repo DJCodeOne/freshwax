@@ -347,7 +347,7 @@ async function sendHeartbeat(streamId) {
     if (user) { body.userId = user.uid; body.userName = user.displayName || (user.email && user.email.split('@')[0]) || 'User'; body.avatarUrl = user.photoURL || null; } else { body.userName = 'Viewer'; }
     var ctrl = new AbortController(); var timer = setTimeout(function() { ctrl.abort(); }, 15000);
     var resp = await fetch('/api/livestream/listeners/', { signal: ctrl.signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    clearTimeout(timer); var data = await resp.json(); var count = data.activeViewers || 0; var chatViewers = document.getElementById('chatViewers');
+    clearTimeout(timer); if (!resp.ok) { console.warn('[Heartbeat] Request failed:', resp.status); return; } var data = await resp.json(); var count = data.activeViewers || 0; var chatViewers = document.getElementById('chatViewers');
     if (chatViewers) { var label = currentStream ? 'watching' : 'listening'; chatViewers.textContent = count + ' ' + label; }
   } catch (e) { console.warn('[Heartbeat] Failed:', e); }
 }

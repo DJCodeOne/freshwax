@@ -532,13 +532,7 @@ Stay fresh! 🎵
 
 <script type="module">
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
-  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  // Reuse Firebase app already initialized by AdminLayout (config set via window.FIREBASE_CONFIG)
-  const app = getApps()[0] || initializeApp(window.FIREBASE_CONFIG);
-  const auth = getAuth(app);
-
-  // ADMIN_KEY is read lazily from window (set by AdminLayout auth listener)
+  // Uses AdminLayout's Firebase auth (window.getAdminToken, window.ADMIN_KEY, window._firebaseUser)
 
   let allSubscribers = [];
   let selectedIds = new Set();
@@ -603,20 +597,13 @@ Stay fresh! 🎵
     else if (btn.dataset.action === 'delete') deleteSubscriber(btn.dataset.id);
   });
   
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) { window.location.href = '/login/?redirect=/admin/newsletter/'; return; }
-    try {
-      const _idToken = await user.getIdToken();
-      // Ensure ADMIN_KEY is set (AdminLayout may not have set it yet)
-      if (!window.ADMIN_KEY) window.ADMIN_KEY = _idToken;
-      const res = await fetch(`/api/get-user-type/?uid=${user.uid}`, {
-        headers: { 'Authorization': `Bearer ${_idToken}` }
-      });
-      const data = await res.json();
-      if (!data.isAdmin) { alert('Admin access required'); window.location.href = '/account/dashboard/'; return; }
-    } catch (e) { console.error(e); }
+  // Wait for AdminLayout auth to be ready, then load data
+  try {
+    await window.getAdminToken();
     loadSubscribers();
-  });
+  } catch {
+    window.location.href = '/login/?redirect=/admin/newsletter/';
+  }
   
   document.querySelectorAll('.filter-tab').forEach(tab => {
     tab.addEventListener('click', () => {

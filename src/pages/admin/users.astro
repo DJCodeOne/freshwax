@@ -348,12 +348,7 @@ const nonce = Astro.locals.nonce || '';
     </style>
     <script type="module">
       function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
-      import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-      import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-
-      // Reuse Firebase app already initialized by AdminLayout (config set via window.FIREBASE_CONFIG)
-      const app = getApps()[0] || initializeApp(window.FIREBASE_CONFIG);
-      const auth = getAuth(app);
+      // Uses AdminLayout's Firebase auth (window.getAdminToken, window.ADMIN_KEY, window._firebaseUser)
 
       let allUsers = [];
       let currentFilter = 'all';
@@ -362,32 +357,14 @@ const nonce = Astro.locals.nonce || '';
       let currentAdminUid = null;
       let currentUserData = null;
 
-      onAuthStateChanged(auth, async (user) => {
-        if (!user) {
-          window.location.href = '/admin/login/';
-          return;
-        }
-        currentAdminUid = user.uid;
-        // Wait for AdminLayout to set ADMIN_KEY via getIdToken
-        // AdminLayout module may not have run yet, so poll briefly
-        for (var _w = 0; _w < 40 && !window.ADMIN_KEY && !window.getAdminToken; _w++) {
-          await new Promise(function(r) { setTimeout(r, 100); });
-        }
-        if (!window.ADMIN_KEY) {
-          try {
-            if (window.getAdminToken) {
-              var token = await window.getAdminToken();
-              if (token) window.ADMIN_KEY = token;
-            }
-            if (!window.ADMIN_KEY) {
-              window.ADMIN_KEY = await user.getIdToken();
-            }
-          } catch (e) {
-            console.error('[users] Failed to get admin token:', e);
-          }
-        }
+      // Wait for AdminLayout auth to be ready, then load data
+      try {
+        await window.getAdminToken();
+        currentAdminUid = window._firebaseUser?.uid || null;
         loadUsers();
-      });
+      } catch {
+        window.location.href = '/admin/login/';
+      }
 
       async function loadUsers() {
         try {

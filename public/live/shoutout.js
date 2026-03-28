@@ -4,6 +4,54 @@
 var escapeHtml = null;
 var shoutoutQueue = [];
 var isShoutoutPlaying = false;
+var shoutoutFocusTrapHandler = null;
+var shoutoutPreviousFocus = null;
+
+// Focus trap helper for shoutout modal
+function trapFocusInShoutout(modalEl) {
+  var selector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  var focusableEls = modalEl.querySelectorAll(selector);
+  if (focusableEls.length === 0) return;
+  var firstEl = focusableEls[0];
+  var lastEl = focusableEls[focusableEls.length - 1];
+
+  shoutoutFocusTrapHandler = function(e) {
+    if (e.key !== 'Tab') return;
+    if (e.shiftKey) {
+      if (document.activeElement === firstEl) {
+        e.preventDefault();
+        lastEl.focus();
+      }
+    } else {
+      if (document.activeElement === lastEl) {
+        e.preventDefault();
+        firstEl.focus();
+      }
+    }
+  };
+  modalEl.addEventListener('keydown', shoutoutFocusTrapHandler);
+}
+
+function removeFocusTrapFromShoutout(modalEl) {
+  if (shoutoutFocusTrapHandler) {
+    modalEl.removeEventListener('keydown', shoutoutFocusTrapHandler);
+    shoutoutFocusTrapHandler = null;
+  }
+}
+
+function closeShoutoutModal(modal, inputEl, charCountEl, sendBtn) {
+  if (modal) {
+    removeFocusTrapFromShoutout(modal);
+    modal.classList.add('hidden');
+  }
+  if (inputEl) inputEl.value = '';
+  if (charCountEl) charCountEl.textContent = '0';
+  if (sendBtn) sendBtn.disabled = true;
+  if (shoutoutPreviousFocus && typeof shoutoutPreviousFocus.focus === 'function') {
+    shoutoutPreviousFocus.focus();
+    shoutoutPreviousFocus = null;
+  }
+}
 
 export function initShoutout(deps) {
   escapeHtml = deps.escapeHtml;
@@ -23,7 +71,11 @@ export function initShoutout(deps) {
         alert('Please sign in to send a shoutout');
         return;
       }
-      if (shoutoutModal) shoutoutModal.classList.remove('hidden');
+      shoutoutPreviousFocus = document.activeElement;
+      if (shoutoutModal) {
+        shoutoutModal.classList.remove('hidden');
+        trapFocusInShoutout(shoutoutModal);
+      }
       if (shoutoutInput) shoutoutInput.focus();
     });
   }
@@ -31,10 +83,7 @@ export function initShoutout(deps) {
   // Close shoutout modal
   if (closeShoutoutModalBtn) {
     closeShoutoutModalBtn.addEventListener('click', function() {
-      if (shoutoutModal) shoutoutModal.classList.add('hidden');
-      if (shoutoutInput) shoutoutInput.value = '';
-      if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
-      if (sendShoutoutBtn) sendShoutoutBtn.disabled = true;
+      closeShoutoutModal(shoutoutModal, shoutoutInput, shoutoutCharCount, sendShoutoutBtn);
     });
   }
 
@@ -42,21 +91,14 @@ export function initShoutout(deps) {
   var overlay = shoutoutModal && shoutoutModal.querySelector('.modal-overlay');
   if (overlay) {
     overlay.addEventListener('click', function() {
-      if (shoutoutModal) shoutoutModal.classList.add('hidden');
-      if (shoutoutInput) shoutoutInput.value = '';
-      if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
-      if (sendShoutoutBtn) sendShoutoutBtn.disabled = true;
+      closeShoutoutModal(shoutoutModal, shoutoutInput, shoutoutCharCount, sendShoutoutBtn);
     });
   }
 
   // Close shoutout modal on Escape key
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && shoutoutModal && !shoutoutModal.classList.contains('hidden')) {
-      shoutoutModal.classList.add('hidden');
-      if (shoutoutInput) shoutoutInput.value = '';
-      if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
-      if (sendShoutoutBtn) sendShoutoutBtn.disabled = true;
-      if (shoutoutBtn) shoutoutBtn.focus();
+      closeShoutoutModal(shoutoutModal, shoutoutInput, shoutoutCharCount, sendShoutoutBtn);
     }
   });
 
@@ -124,12 +166,17 @@ export function initShoutout(deps) {
         console.error('Shoutout error:', e);
       }
 
-      // Close modal and reset
+      // Close modal, restore focus, and reset
+      if (shoutoutModal) removeFocusTrapFromShoutout(shoutoutModal);
       if (shoutoutModal) shoutoutModal.classList.add('hidden');
       if (shoutoutInput) shoutoutInput.value = '';
       if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
       sendShoutoutBtn.disabled = false;
       sendShoutoutBtn.innerHTML = '<span>Send Shoutout</span><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
+      if (shoutoutPreviousFocus && typeof shoutoutPreviousFocus.focus === 'function') {
+        shoutoutPreviousFocus.focus();
+        shoutoutPreviousFocus = null;
+      }
     });
   }
 
