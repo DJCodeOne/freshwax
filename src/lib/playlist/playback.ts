@@ -581,6 +581,9 @@ export async function playCurrent(
     } catch (e: unknown) { log.warn('Could not check duration, allowing track to play:', e); }
 
     renderUI();
+
+    // Start countdown/elapsed timer for the new track
+    updateDurationDisplay(ctx, ensurePlayerFn);
   } catch (error: unknown) {
     log.error('Error playing current:', error);
     await handleTrackEndedFn();
