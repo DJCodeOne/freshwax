@@ -158,16 +158,36 @@ const pendingReleases = releases.filter(r => r.status === 'pending');
 // Merch stats
 const merch = merchData;
 const lowStockMerch = merch.filter(m => {
-  if (m.variants && m.variants.length > 0) {
-    return m.variants.some(v => (v.stock || 0) <= 5 && (v.stock || 0) > 0);
+  // Use pre-computed flag from stock management system if available
+  if (m.isLowStock === true) return true;
+  // Fallback: check variantStock (primary) or variants (legacy) or top-level stock
+  if (m.variantStock && typeof m.variantStock === 'object') {
+    const total = Object.values(m.variantStock).reduce((sum: number, v: unknown) => {
+      const stock = typeof v === 'number' ? v : ((v as Record<string, unknown>)?.stock as number || 0);
+      return sum + stock;
+    }, 0);
+    return total <= 5 && total > 0;
   }
-  return (m.stock || 0) <= 5 && (m.stock || 0) > 0;
+  if (m.variants && Array.isArray(m.variants) && m.variants.length > 0) {
+    return m.variants.some((v: Record<string, unknown>) => ((v.stock as number) || 0) <= 5 && ((v.stock as number) || 0) > 0);
+  }
+  return ((m.totalStock as number) || (m.stock as number) || 0) <= 5 && ((m.totalStock as number) || (m.stock as number) || 0) > 0;
 });
 const outOfStockMerch = merch.filter(m => {
-  if (m.variants && m.variants.length > 0) {
-    return m.variants.every(v => (v.stock || 0) === 0);
+  // Use pre-computed flag from stock management system if available
+  if (m.isOutOfStock === true) return true;
+  if (m.isOutOfStock === false) return false;
+  // Fallback: check variantStock (primary) or variants (legacy) or top-level stock
+  if (m.variantStock && typeof m.variantStock === 'object') {
+    return Object.values(m.variantStock).every((v: unknown) => {
+      const stock = typeof v === 'number' ? v : ((v as Record<string, unknown>)?.stock as number || 0);
+      return stock === 0;
+    });
   }
-  return (m.stock || 0) === 0;
+  if (m.variants && Array.isArray(m.variants) && m.variants.length > 0) {
+    return m.variants.every((v: Record<string, unknown>) => ((v.stock as number) || 0) === 0);
+  }
+  return ((m.totalStock as number) || (m.stock as number) || 0) === 0;
 });
 
 // Blog posts stats
