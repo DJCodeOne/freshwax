@@ -22,21 +22,27 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const accessCode = url.searchParams.get('code');
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100);
 
-  if (!supplierId && !accessCode) {
-    return ApiErrors.badRequest('Supplier ID or access code required');
+  // SECURITY: Always require access code — supplierId alone is not authentication
+  if (!accessCode) {
+    return ApiErrors.unauthorized('Access code required');
   }
 
   const env = locals.runtime.env;
 
 
   try {
-    // Get supplier
+    // Get supplier — always verify access code
     let supplier: Record<string, unknown> | null = null;
     let supplierDocId = supplierId;
 
     if (supplierId) {
       supplier = await getDocument('merch-suppliers', supplierId);
-    } else if (accessCode) {
+      // SECURITY: Verify access code matches
+      if (supplier && supplier.accessCode !== accessCode) {
+        return ApiErrors.forbidden('Invalid access code');
+      }
+    } else {
+      // Look up by access code
       const suppliers = await queryCollection('merch-suppliers', { limit: 100 });
       const found = suppliers.find((s: Record<string, unknown>) => s.accessCode === accessCode);
       if (found) {

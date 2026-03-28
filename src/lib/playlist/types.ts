@@ -34,4 +34,5 @@ export interface PlaylistContext {
   isSubscribed: boolean;
   pusherChannel: { bind: (event: string, callback: (...args: unknown[]) => void) => void; unbind_all: () => void } | null;
   wasPausedForStream: boolean;
+  getAuthToken?: () => Promise<string | null>;
 }

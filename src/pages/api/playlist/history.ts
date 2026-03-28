@@ -159,6 +159,9 @@ export async function POST({ request, locals }: APIContext) {
 
 // DELETE - Remove blocked/unavailable video from history
 // This prevents the video from being auto-played again
+// AUTH: Intentionally public — called by client-side player when a YouTube video is
+// detected as blocked/unavailable. Removing broken entries from the shared autoplay
+// history benefits all users. Rate limited to 30/min to prevent abuse.
 export async function DELETE({ request, locals }: APIContext) {
   // Rate limit: write operations - 30 per minute
   const clientId2 = getClientId(request);

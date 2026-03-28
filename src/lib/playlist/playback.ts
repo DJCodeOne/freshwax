@@ -29,6 +29,18 @@ import {
 
 const log = createClientLogger('PlaylistPlayback');
 
+// Helper: build PUT headers with auth token when available
+async function buildPutHeaders(ctx: PlaylistContext): Promise<Record<string, string>> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (ctx.getAuthToken) {
+    try {
+      const token = await ctx.getAuthToken();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    } catch (_e: unknown) { /* intentional: proceed without auth if token fails */ }
+  }
+  return headers;
+}
+
 // ============================================
 // RECENTLY PLAYED
 // ============================================
@@ -114,7 +126,7 @@ export async function sendControlAction(
 
     const response = await fetch('/api/playlist/global/', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await buildPutHeaders(ctx),
       body: JSON.stringify({
         action,
         userId: ctx.userId
@@ -178,7 +190,7 @@ export async function startAutoPlay(
 
     const response = await fetch('/api/playlist/global/', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await buildPutHeaders(ctx),
       body: JSON.stringify({
         action: 'startAutoPlay'
       }),
@@ -246,7 +258,7 @@ export async function handleTrackEnded(
 
     const response = await fetch('/api/playlist/global/', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await buildPutHeaders(ctx),
       body: JSON.stringify({
         action: 'trackEnded',
         trackId: finishedItem.id,
@@ -277,7 +289,7 @@ export async function handleTrackEnded(
             try {
               const retryResponse = await fetch('/api/playlist/global/', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await buildPutHeaders(ctx),
                 body: JSON.stringify({ action: 'trackEnded' })
               });
               if (retryResponse.ok) {

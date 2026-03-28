@@ -330,7 +330,22 @@ export async function PUT({ request, locals }: APIContext) {
       return ApiErrors.badRequest('Invalid request');
     }
     const body = putParseResult.data;
-    const { action, userId, playlist: syncPlaylist } = body;
+    const { action, playlist: syncPlaylist } = body;
+
+    // SECURITY: Privileged actions require authentication.
+    // 'sync' can overwrite the entire playlist, 'next'/'play'/'pause'/'toggle' control playback.
+    // 'trackEnded', 'startAutoPlay', and 'react' are operational/broadcast-only — fired by
+    // all listeners (including anonymous) when tracks finish or auto-play triggers.
+    const PRIVILEGED_ACTIONS = ['sync', 'next', 'play', 'pause', 'toggle'];
+    const { userId: verifiedUserId } = await verifyRequestUser(request).catch(() => ({ userId: null }));
+
+    if (PRIVILEGED_ACTIONS.includes(action)) {
+      if (!verifiedUserId) {
+        return ApiErrors.unauthorized('Authentication required for playlist control');
+      }
+    }
+    // SECURITY: Use verified userId when available, ignore client-provided userId
+    const userId = verifiedUserId || body.userId;
 
     let playlist: GlobalPlaylist;
 

@@ -22,8 +22,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const supplierId = url.searchParams.get('supplierId');
   const accessCode = url.searchParams.get('code');
 
-  if (!supplierId && !accessCode) {
-    return ApiErrors.badRequest('Supplier ID or access code required');
+  // SECURITY: Always require access code — supplierId alone is not authentication
+  if (!accessCode) {
+    return ApiErrors.unauthorized('Access code required');
   }
 
   const env = locals.runtime.env;
@@ -37,13 +38,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
-    // Get supplier - either by ID or access code
+    // Get supplier — always verify access code
     let supplier: Record<string, unknown> | null = null;
     let supplierDocId = supplierId;
 
     if (supplierId) {
       supplier = await getDocument('merch-suppliers', supplierId);
-    } else if (accessCode) {
+      // SECURITY: Verify access code matches
+      if (supplier && supplier.accessCode !== accessCode) {
+        return ApiErrors.forbidden('Invalid access code');
+      }
+    } else {
+      // Look up by access code
       const suppliers = await queryCollection('merch-suppliers', { limit: 100 });
       const found = suppliers.find((s: Record<string, unknown>) => s.accessCode === accessCode);
       if (found) {

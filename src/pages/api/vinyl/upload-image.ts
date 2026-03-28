@@ -50,8 +50,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const formData = await request.formData();
 
     const file = formData.get('file') as File;
-    const sellerId = (formData.get('sellerId') as string)?.trim();
-    const listingId = (formData.get('listingId') as string)?.trim() || `temp_${Date.now()}`;
+    const sellerId = (formData.get('sellerId') as string)?.trim().slice(0, 200) || '';
+    const listingId = (formData.get('listingId') as string)?.trim().slice(0, 200) || `temp_${Date.now()}`;
     const imageIndex = parseInt(formData.get('imageIndex') as string || '0', 10);
 
     if (!file || file.size === 0) {

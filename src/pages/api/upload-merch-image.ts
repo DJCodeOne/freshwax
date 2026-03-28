@@ -46,11 +46,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const formData = await request.formData();
 
     const file = formData.get('file') as File;
-    const folder = (formData.get('folder') as string) || 'merch';
-    let filename = (formData.get('filename') as string) || file?.name || 'image.webp';
+    const folder = ((formData.get('folder') as string) || 'merch').slice(0, 200);
+    let filename = ((formData.get('filename') as string) || file?.name || 'image.webp').slice(0, 200);
 
     if (!file || file.size === 0) {
       return ApiErrors.badRequest('No file provided');
+    }
+
+    // Validate folder/filename don't contain path traversal
+    if (folder.includes('..') || filename.includes('..')) {
+      return ApiErrors.badRequest('Invalid folder or filename');
     }
 
     // Validate file type

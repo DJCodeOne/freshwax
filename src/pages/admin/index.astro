@@ -1555,6 +1555,19 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
 <script>
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
+
+  // Helper: build headers with admin auth for playlist API calls
+  async function getPlaylistAuthHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    try {
+      if (window.getAdminToken) {
+        const token = await window.getAdminToken();
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+      }
+    } catch (_e) { /* intentional: proceed without auth if token fails */ }
+    return headers;
+  }
+
   // Playlist Monitor functionality
   document.addEventListener('astro:page-load', function() {
     const PLAYLIST_SERVER = 'https://playlist.freshwax.co.uk';
@@ -1687,7 +1700,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       try {
         const response = await fetch('/api/playlist/global/', {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await getPlaylistAuthHeaders(),
           body: JSON.stringify({
             itemId: itemId,
             userId: addedBy || 'admin',
@@ -1713,7 +1726,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       try {
         const response = await fetch('/api/playlist/global/', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await getPlaylistAuthHeaders(),
           body: JSON.stringify({ action: 'next' })
         });
         if (response.ok) {
@@ -1734,7 +1747,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       try {
         const response = await fetch('/api/playlist/global/', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await getPlaylistAuthHeaders(),
           body: JSON.stringify({ action: 'startAutoPlay' })
         });
         if (response.ok) {
@@ -1755,7 +1768,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       try {
         const response = await fetch('/api/playlist/global/', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await getPlaylistAuthHeaders(),
           body: JSON.stringify({ action: 'pause' })
         });
         if (response.ok) {

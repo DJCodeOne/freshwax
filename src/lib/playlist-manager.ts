@@ -51,7 +51,12 @@ export class PlaylistManager {
     this.personalPlaylist = loadPersonalPlaylistFromStorage();
   }
 
-  private get ctx(): PlaylistContext { return this as unknown as PlaylistContext; }
+  private get ctx(): PlaylistContext {
+    const self = this as unknown as PlaylistContext;
+    // Attach getAuthToken so sub-modules can include auth headers in API calls
+    self.getAuthToken = () => this.getAuthToken();
+    return self;
+  }
 
   private async ensurePlayer(): Promise<EmbedPlayerManager> {
     if (this.player) return this.player;

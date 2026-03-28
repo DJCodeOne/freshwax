@@ -54,21 +54,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const rawFilename = formData.get('filename') as string;
-    const rawReleaseId = formData.get('releaseId') as string;
-    const fileType = formData.get('fileType') as string; // metadata, track, preview, artwork
+    const rawFilename = ((formData.get('filename') as string) || '').slice(0, 300);
+    const rawReleaseId = ((formData.get('releaseId') as string) || '').slice(0, 200);
+    const fileType = ((formData.get('fileType') as string) || '').slice(0, 20);
 
     if (!file || !rawReleaseId) {
       return ApiErrors.badRequest('Missing file or releaseId');
     }
 
+    // SECURITY: Validate fileType against allowed values
+    const ALLOWED_FILE_TYPES = ['metadata', 'track', 'preview', 'artwork', ''];
+    if (!ALLOWED_FILE_TYPES.includes(fileType)) {
+      return ApiErrors.badRequest('Invalid fileType');
+    }
+
     // SECURITY: Sanitize releaseId and filename to prevent path traversal
     const releaseId = rawReleaseId.replace(/[^a-zA-Z0-9_\-]/g, '');
-    const sanitizedName = (rawFilename || file.name).replace(/\.\./g, '').replace(/[\/\\]/g, '_');
+    const sanitizedName = (rawFilename || file.name).replace(/\.\./g, '').replace(/[\/\\]/g, '_').slice(0, 200);
     const filename = sanitizedName;
 
     if (!releaseId) {
       return ApiErrors.badRequest('Invalid releaseId');
+    }
+
+    if (!filename) {
+      return ApiErrors.badRequest('Invalid filename');
     }
 
     // Create S3 client for R2

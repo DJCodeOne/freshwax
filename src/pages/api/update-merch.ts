@@ -14,6 +14,27 @@ import { processImageToSquareWebP, processImageToWebP, imageExtension, imageCont
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 
+// Zod schemas for JSON fields parsed from FormData
+const FormDataSizesSchema = z.array(z.string().max(20)).max(20);
+const FormDataColorsSchema = z.array(z.object({
+  name: z.string().min(1).max(50),
+  hex: z.string().max(10),
+})).max(30);
+const FormDataDeleteImagesSchema = z.array(z.number().int().min(0).max(100)).max(20);
+
+// Max lengths for text fields from FormData
+const TEXT_FIELD_MAX_LENGTHS: Record<string, number> = {
+  name: 200,
+  description: 2000,
+  sku: 50,
+  category: 100,
+  categoryName: 100,
+  brandAccountId: 200,
+  supplierId: 200,
+  supplierName: 200,
+  supplierCode: 10,
+};
+
 const UpdateMerchJsonSchema = z.object({
   productId: z.string().min(1),
   images: z.array(z.unknown()).optional(),
@@ -216,7 +237,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     textFields.forEach(field => {
       const value = formData.get(field);
       if (value !== null) {
-        updates[field] = (value as string).trim();
+        const maxLen = TEXT_FIELD_MAX_LENGTHS[field] || 200;
+        updates[field] = (value as string).trim().slice(0, maxLen);
       }
     });
 
@@ -227,7 +249,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     numberFields.forEach(field => {
       const value = formData.get(field);
       if (value !== null && value !== '') {
-        updates[field] = parseFloat(value as string);
+        const num = parseFloat(value as string);
+        if (!Number.isFinite(num) || num < 0 || num > 99999) {
+          return; // skip invalid numbers silently — field is optional
+        }
+        updates[field] = num;
       }
     });
 
@@ -248,24 +274,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const sizesJson = formData.get('sizes');
     if (sizesJson) {
+      let sizesRaw: unknown;
       try {
-        updates.sizes = JSON.parse(sizesJson as string);
-        updates.hasSizes = updates.sizes.length > 0;
+        sizesRaw = JSON.parse(sizesJson as string);
       } catch (_e: unknown) {
-        // non-critical: client sent malformed sizes JSON
         return ApiErrors.badRequest('Invalid sizes format');
       }
+      const sizesResult = FormDataSizesSchema.safeParse(sizesRaw);
+      if (!sizesResult.success) {
+        return ApiErrors.badRequest('Invalid sizes: ' + sizesResult.error.errors[0]?.message);
+      }
+      updates.sizes = sizesResult.data;
+      updates.hasSizes = sizesResult.data.length > 0;
     }
 
     const colorsJson = formData.get('colors');
     if (colorsJson) {
+      let colorsRaw: unknown;
       try {
-        updates.colors = JSON.parse(colorsJson as string);
-        updates.hasColors = updates.colors.length > 0;
+        colorsRaw = JSON.parse(colorsJson as string);
       } catch (_e: unknown) {
-        // non-critical: client sent malformed colors JSON
         return ApiErrors.badRequest('Invalid colors format');
       }
+      const colorsResult = FormDataColorsSchema.safeParse(colorsRaw);
+      if (!colorsResult.success) {
+        return ApiErrors.badRequest('Invalid colors: ' + colorsResult.error.errors[0]?.message);
+      }
+      updates.colors = colorsResult.data;
+      updates.hasColors = colorsResult.data.length > 0;
     }
 
     const newImageCount = parseInt(formData.get('newImageCount') as string || '0');
@@ -274,13 +310,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let images = [...(existingProduct.images || [])];
 
     if (deleteImageIndexes) {
-      let indexesToDelete: number[];
+      let deleteRaw: unknown;
       try {
-        indexesToDelete = JSON.parse(deleteImageIndexes as string) as number[];
+        deleteRaw = JSON.parse(deleteImageIndexes as string);
       } catch (_e: unknown) {
-        // non-critical: client sent malformed deleteImages JSON
         return ApiErrors.badRequest('Invalid deleteImages format');
       }
+      const deleteResult = FormDataDeleteImagesSchema.safeParse(deleteRaw);
+      if (!deleteResult.success) {
+        return ApiErrors.badRequest('Invalid deleteImages: ' + deleteResult.error.errors[0]?.message);
+      }
+      const indexesToDelete = deleteResult.data;
 
       for (const idx of indexesToDelete) {
         const imageToDelete = images[idx];

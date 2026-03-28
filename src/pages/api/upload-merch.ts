@@ -4,6 +4,7 @@
 // Uses WASM-based image processing for Cloudflare Workers compatibility
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { createS3Client } from '../../lib/s3-client';
 import { getDocument, clearAllMerchCache } from '../../lib/firebase-rest';
@@ -52,6 +53,26 @@ const MAX_MERCH_REQUEST_SIZE = 50 * 1024 * 1024;
 // Max individual image file size: 10MB (before compression)
 const MAX_MERCH_IMAGE_FILE_SIZE = 10 * 1024 * 1024;
 
+// Zod schemas for JSON fields parsed from FormData
+const SizesSchema = z.array(z.string().max(20)).max(20);
+const ColorsSchema = z.array(z.object({
+  name: z.string().min(1).max(50),
+  hex: z.string().max(10),
+})).max(30);
+const VariantsSchema = z.array(z.object({
+  size: z.string().max(20).optional(),
+  color: z.string().max(50).optional(),
+  colorHex: z.string().max(10).optional(),
+  stock: z.number().int().min(0).max(99999).default(0),
+  sku: z.string().max(50).optional(),
+})).max(200);
+const ImageColorMapSchema = z.array(z.object({
+  index: z.number().int().min(0),
+  color: z.string().max(50).nullable(),
+  colorHex: z.string().max(10).nullable(),
+  keepOriginal: z.boolean().optional(),
+})).max(MAX_IMAGES);
+
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
   const authError = await requireAdminAuth(request, locals);
@@ -79,23 +100,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const formData = await request.formData();
 
-    const productName = (formData.get('productName') as string || '').trim();
-    const productType = (formData.get('productType') as string || '').trim();
-    const description = (formData.get('description') as string || '').trim();
-    const sku = (formData.get('sku') as string || '').trim();
+    const productName = (formData.get('productName') as string || '').trim().slice(0, 200);
+    const productType = (formData.get('productType') as string || '').trim().slice(0, 30);
+    const description = (formData.get('description') as string || '').trim().slice(0, 2000);
+    const sku = (formData.get('sku') as string || '').trim().slice(0, 50);
 
     const costPrice = parseFloat(formData.get('costPrice') as string || '0');
     const retailPrice = parseFloat(formData.get('retailPrice') as string || '0');
     const salePrice = parseFloat(formData.get('salePrice') as string || '0') || null;
 
-    const supplierId = (formData.get('supplierId') as string || '').trim();
-    const supplierName = (formData.get('supplierName') as string || '').trim();
-    const supplierCode = (formData.get('supplierCode') as string || 'FW').trim().toUpperCase();
+    const supplierId = (formData.get('supplierId') as string || '').trim().slice(0, 200);
+    const supplierName = (formData.get('supplierName') as string || '').trim().slice(0, 200);
+    const supplierCode = (formData.get('supplierCode') as string || 'FW').trim().toUpperCase().slice(0, 10);
     const supplierCut = parseFloat(formData.get('supplierCut') as string || '0');
 
-    const category = (formData.get('category') as string || 'freshwax').trim();
-    const categoryName = (formData.get('categoryName') as string || 'Fresh Wax').trim();
-    const brandAccountId = (formData.get('brandAccountId') as string || '').trim();
+    const category = (formData.get('category') as string || 'freshwax').trim().slice(0, 100);
+    const categoryName = (formData.get('categoryName') as string || 'Fresh Wax').trim().slice(0, 100);
+    const brandAccountId = (formData.get('brandAccountId') as string || '').trim().slice(0, 200);
 
     const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string || '5');
 
@@ -103,30 +124,42 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const colorsJson = formData.get('colors') as string || '[]';
     const variantsJson = formData.get('variants') as string || '[]';
 
-    let sizes: string[] = [];
-    let colors: Array<{name: string, hex: string}> = [];
-    let variants: Array<{size?: string, color?: string, colorHex?: string, stock: number, sku?: string}> = [];
-
+    // Parse and validate JSON fields with Zod
+    let sizesRaw: unknown;
     try {
-      sizes = JSON.parse(sizesJson);
+      sizesRaw = JSON.parse(sizesJson);
     } catch (_e: unknown) {
-      // non-critical: client sent malformed sizes JSON
       return ApiErrors.badRequest('Invalid sizes format');
     }
+    const sizesResult = SizesSchema.safeParse(sizesRaw);
+    if (!sizesResult.success) {
+      return ApiErrors.badRequest('Invalid sizes: ' + sizesResult.error.errors[0]?.message);
+    }
+    const sizes = sizesResult.data;
 
+    let colorsRaw: unknown;
     try {
-      colors = JSON.parse(colorsJson);
+      colorsRaw = JSON.parse(colorsJson);
     } catch (_e: unknown) {
-      // non-critical: client sent malformed colors JSON
       return ApiErrors.badRequest('Invalid colors format');
     }
+    const colorsResult = ColorsSchema.safeParse(colorsRaw);
+    if (!colorsResult.success) {
+      return ApiErrors.badRequest('Invalid colors: ' + colorsResult.error.errors[0]?.message);
+    }
+    const colors = colorsResult.data;
 
+    let variantsRaw: unknown;
     try {
-      variants = JSON.parse(variantsJson);
+      variantsRaw = JSON.parse(variantsJson);
     } catch (_e: unknown) {
-      // non-critical: client sent malformed variants JSON
       return ApiErrors.badRequest('Invalid variants format');
     }
+    const variantsResult = VariantsSchema.safeParse(variantsRaw);
+    if (!variantsResult.success) {
+      return ApiErrors.badRequest('Invalid variants: ' + variantsResult.error.errors[0]?.message);
+    }
+    const variants = variantsResult.data;
 
     const imageCount = parseInt(formData.get('imageCount') as string || '0');
 
@@ -142,6 +175,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (retailPrice <= 0) {
       return ApiErrors.badRequest('Retail price must be greater than 0');
+    }
+
+    if (!Number.isFinite(costPrice) || costPrice < 0 || costPrice > 99999) {
+      return ApiErrors.badRequest('Invalid cost price');
+    }
+
+    if (!Number.isFinite(retailPrice) || retailPrice > 99999) {
+      return ApiErrors.badRequest('Invalid retail price');
+    }
+
+    if (salePrice !== null && (!Number.isFinite(salePrice) || salePrice < 0 || salePrice > 99999)) {
+      return ApiErrors.badRequest('Invalid sale price');
     }
 
     if (imageCount === 0) {
@@ -160,16 +205,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[upload-merch] ID:', productId, 'SKU:', generatedSKU);
 
-    // Parse image-color mappings
-    let imageColorMap: Array<{index: number; color: string | null; colorHex: string | null; keepOriginal?: boolean}> = [];
+    // Parse and validate image-color mappings
+    let imageColorMap: z.infer<typeof ImageColorMapSchema> = [];
     const mapJson = formData.get('imageColorMap') as string;
     if (mapJson) {
+      let mapRaw: unknown;
       try {
-        imageColorMap = JSON.parse(mapJson);
+        mapRaw = JSON.parse(mapJson);
       } catch (_e: unknown) {
-        // non-critical: client sent malformed imageColorMap JSON
         return ApiErrors.badRequest('Invalid imageColorMap format');
       }
+      const mapResult = ImageColorMapSchema.safeParse(mapRaw);
+      if (!mapResult.success) {
+        return ApiErrors.badRequest('Invalid imageColorMap: ' + mapResult.error.errors[0]?.message);
+      }
+      imageColorMap = mapResult.data;
     }
 
     const uploadedImages: Array<{
