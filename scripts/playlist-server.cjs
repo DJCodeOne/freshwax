@@ -55,7 +55,7 @@ function hasValidToken(req) {
 
 // Signed URL generation and verification (HMAC-SHA256)
 // Media paths use signed URLs so browsers can access files without leaking the token
-const SIGNED_URL_TTL = 4 * 60 * 60; // 4 hours
+const SIGNED_URL_TTL = 7 * 24 * 60 * 60; // 7 days
 
 function generateSignedUrl(urlPath, ttlSeconds) {
   ttlSeconds = ttlSeconds || SIGNED_URL_TTL;

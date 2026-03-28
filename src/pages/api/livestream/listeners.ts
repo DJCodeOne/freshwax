@@ -12,9 +12,9 @@ import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils
 const listenerSchema = z.object({
   action: z.enum(['join', 'leave', 'heartbeat']).optional(),
   streamId: z.string().min(1),
-  userId: z.string().optional(),
-  userName: z.string().optional(),
-  avatarUrl: z.string().optional(),
+  userId: z.string().optional().nullable(),
+  userName: z.string().optional().nullable(),
+  avatarUrl: z.string().optional().nullable(),
 });
 
 const log = createLogger('livestream/listeners');
