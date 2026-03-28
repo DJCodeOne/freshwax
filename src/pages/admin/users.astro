@@ -483,7 +483,7 @@ const nonce = Astro.locals.nonce || '';
                 <div class="btn-group">
                   ${needsApproval ? `<button class="btn btn-sm btn-success" data-action="quickApprove" data-id="${u.id}" data-name="${escapeHtml(u.displayName)}" data-collection="${u.collection}">Approve</button>` : ''}
                   <button class="btn btn-sm btn-secondary" data-action="editUser" data-id="${u.id}">Edit</button>
-                  <button class="btn btn-sm btn-outline" data-action="deleteUser" data-id="${u.id}" data-name="${escapeHtml(u.displayName)}">🗑️</button>
+                  <button class="btn btn-sm btn-outline" data-action="deleteUser" data-id="${u.id}" data-name="${escapeHtml(u.displayName)}" aria-label="Delete user">🗑️</button>
                 </div>
               </td>
             </tr>

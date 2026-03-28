@@ -83,7 +83,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <thead>
             <tr>
               <th scope="col" style="width: 40px; text-align: center;">
-                <input type="checkbox" id="headerCheckbox" />
+                <input type="checkbox" id="headerCheckbox" aria-label="Select all issues" />
               </th>
               <th scope="col">Key</th>
               <th scope="col">Issue</th>
@@ -310,7 +310,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <tr data-index="${i}">
         <td class="text-center">
           ${issue.issue !== 'missing-thumb'
-            ? `<input type="checkbox" class="issue-checkbox" data-key="${escapeHtml(issue.key)}" />`
+            ? `<input type="checkbox" class="issue-checkbox" data-key="${escapeHtml(issue.key)}" aria-label="Select ${escapeHtml(issue.key)}" />`
             : ''}
         </td>
         <td class="cell-mono" style="font-size: 0.8rem; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(issue.key)}">${escapeHtml(issue.key)}</td>

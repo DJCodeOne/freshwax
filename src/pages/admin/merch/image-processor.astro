@@ -152,19 +152,19 @@ const nonce = Astro.locals.nonce || '';
     
     <div class="settings-row">
       <div class="setting-group">
-        <label class="setting-label">Main Size (px)</label>
+        <label class="setting-label" for="mainSize">Main Size (px)</label>
         <input type="number" class="setting-input" id="mainSize" value="800" min="400" max="1200">
       </div>
       <div class="setting-group">
-        <label class="setting-label">Thumbnail Size (px)</label>
+        <label class="setting-label" for="thumbSize">Thumbnail Size (px)</label>
         <input type="number" class="setting-input" id="thumbSize" value="400" min="200" max="600">
       </div>
       <div class="setting-group">
-        <label class="setting-label">Quality (%)</label>
+        <label class="setting-label" for="quality">Quality (%)</label>
         <input type="number" class="setting-input" id="quality" value="85" min="50" max="100">
       </div>
       <div class="setting-group">
-        <label class="setting-label">Folder Name</label>
+        <label class="setting-label" for="folderName">Folder Name</label>
         <input type="text" class="setting-input" id="folderName" placeholder="e.g., tshirt-black">
       </div>
     </div>
@@ -173,7 +173,7 @@ const nonce = Astro.locals.nonce || '';
       <div class="drop-zone-icon">📁</div>
       <div class="drop-zone-text">Drop images here</div>
       <div class="drop-zone-hint">or click to select files (PNG, JPG, JPEG, WebP)</div>
-      <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+      <input type="file" id="fileInput" multiple accept="image/*" style="display: none;" aria-label="Select image files">
     </div>
     
     <div class="processing-status" id="processingStatus">
@@ -425,7 +425,7 @@ const nonce = Astro.locals.nonce || '';
                 <span class="image-size-reduction">-${img.reduction}%</span>
               </div>
               <div class="image-url" id="url-${idx}" style="display: none;">
-                <input type="text" readonly id="urlInput-${idx}">
+                <input type="text" readonly id="urlInput-${idx}" aria-label="Image URL for ${escapeHtml(img.baseName)}">
                 <button class="copy-btn" data-action="copy-url" data-idx="${idx}">Copy URL</button>
               </div>
             </div>

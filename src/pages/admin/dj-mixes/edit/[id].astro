@@ -150,18 +150,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <div class="form-group">
             <label class="form-label" for="descriptionField">📢 Description / Shout Outs</label>
             <div class="emoji-toolbar">
-              <button type="button" class="emoji-btn" data-emoji="🔥">🔥</button>
-              <button type="button" class="emoji-btn" data-emoji="🎧">🎧</button>
-              <button type="button" class="emoji-btn" data-emoji="🎵">🎵</button>
-              <button type="button" class="emoji-btn" data-emoji="💯">💯</button>
-              <button type="button" class="emoji-btn" data-emoji="🙌">🙌</button>
-              <button type="button" class="emoji-btn" data-emoji="❤️">❤️</button>
-              <button type="button" class="emoji-btn" data-emoji="⭐">⭐</button>
-              <button type="button" class="emoji-btn" data-emoji="🎤">🎤</button>
-              <button type="button" class="emoji-btn" data-emoji="🎉">🎉</button>
-              <button type="button" class="emoji-btn" data-emoji="👊">👊</button>
-              <button type="button" class="emoji-btn" data-emoji="✨">✨</button>
-              <button type="button" class="emoji-btn" data-emoji="🚀">🚀</button>
+              <button type="button" class="emoji-btn" data-emoji="🔥" aria-label="Insert fire emoji">🔥</button>
+              <button type="button" class="emoji-btn" data-emoji="🎧" aria-label="Insert headphones emoji">🎧</button>
+              <button type="button" class="emoji-btn" data-emoji="🎵" aria-label="Insert music note emoji">🎵</button>
+              <button type="button" class="emoji-btn" data-emoji="💯" aria-label="Insert hundred points emoji">💯</button>
+              <button type="button" class="emoji-btn" data-emoji="🙌" aria-label="Insert raising hands emoji">🙌</button>
+              <button type="button" class="emoji-btn" data-emoji="❤️" aria-label="Insert red heart emoji">❤️</button>
+              <button type="button" class="emoji-btn" data-emoji="⭐" aria-label="Insert star emoji">⭐</button>
+              <button type="button" class="emoji-btn" data-emoji="🎤" aria-label="Insert microphone emoji">🎤</button>
+              <button type="button" class="emoji-btn" data-emoji="🎉" aria-label="Insert party popper emoji">🎉</button>
+              <button type="button" class="emoji-btn" data-emoji="👊" aria-label="Insert fist bump emoji">👊</button>
+              <button type="button" class="emoji-btn" data-emoji="✨" aria-label="Insert sparkles emoji">✨</button>
+              <button type="button" class="emoji-btn" data-emoji="🚀" aria-label="Insert rocket emoji">🚀</button>
             </div>
             <textarea name="description" id="descriptionField" class="form-textarea" maxlength="500" rows="3" placeholder="Shout outs, track info, etc..." aria-label="Mix description">{mix.description || mix.shoutOuts || ''}</textarea>
           </div>
@@ -238,7 +238,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         </div>
         <div class="card-body">
           <div class="audio-info">
-            <input type="text" class="form-input" value={mix.audioUrl || mix.mp3Url || ''} readonly />
+            <input type="text" class="form-input" value={mix.audioUrl || mix.mp3Url || ''} readonly aria-label="Audio file URL" />
             <span class="form-hint">Audio files cannot be changed. Upload a new mix to replace.</span>
           </div>
           {mix.audioUrl || mix.mp3Url ? (
@@ -260,7 +260,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           </div>
           <div class="meta-item">
             <span class="meta-label">User ID</span>
-            <input type="text" name="userId" class="form-input form-input-sm" value={mix.userId || ''} />
+            <input type="text" name="userId" class="form-input form-input-sm" value={mix.userId || ''} aria-label="User ID" />
           </div>
           <div class="meta-item">
             <span class="meta-label">Uploaded</span>

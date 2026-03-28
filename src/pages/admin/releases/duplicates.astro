@@ -215,10 +215,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                       return `
                         <tr data-id="${escapeHtml(item.id)}" data-group="${escapeHtml(groupKey)}">
                           <td style="text-align: center;">
-                            <input type="radio" name="keep-${escapeHtml(groupKey)}" value="${escapeHtml(item.id)}" class="keep-radio" ${isDefaultKeep ? 'checked' : ''} />
+                            <input type="radio" name="keep-${escapeHtml(groupKey)}" value="${escapeHtml(item.id)}" class="keep-radio" ${isDefaultKeep ? 'checked' : ''} aria-label="Keep ${escapeHtml(item.id)}" />
                           </td>
                           <td style="text-align: center;">
-                            <input type="checkbox" class="delete-checkbox" data-id="${escapeHtml(item.id)}" ${!isDefaultKeep ? 'checked' : ''} />
+                            <input type="checkbox" class="delete-checkbox" data-id="${escapeHtml(item.id)}" ${!isDefaultKeep ? 'checked' : ''} aria-label="Delete ${escapeHtml(item.id)}" />
                           </td>
                           <td>
                             ${item.coverArtUrl ? `<img src="${escapeHtml(item.coverArtUrl as string)}" alt="${escapeHtml(groupKey || 'Release artwork')}" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" loading="lazy" />` : '<div style="width:40px;height:40px;background:#333;border-radius:4px;"></div>'}

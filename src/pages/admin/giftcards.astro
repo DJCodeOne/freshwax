@@ -418,7 +418,7 @@ const nonce = Astro.locals.nonce || '';
           <td class="action-cell">
             <button class="action-btn small" data-action="viewCardDetails" data-card-id="${escapeHtml(card.id)}">View</button>
             <button class="action-btn small" data-action="copyCode" data-code="${escapeHtml(card.code)}">Copy</button>
-            ${card.isActive && !card.redeemedBy ? `<button class="action-btn small" data-action="resendCardEmail" data-card-id="${escapeHtml(card.id)}" data-code="${escapeHtml(card.code)}" data-email="${escapeHtml(card.recipientEmail || '')}">📧</button>` : ''}
+            ${card.isActive && !card.redeemedBy ? `<button class="action-btn small" data-action="resendCardEmail" data-card-id="${escapeHtml(card.id)}" data-code="${escapeHtml(card.code)}" data-email="${escapeHtml(card.recipientEmail || '')}" aria-label="Resend email">📧</button>` : ''}
             ${card.isActive && !card.redeemedBy ? `<button class="action-btn danger small" data-action="cancelCard" data-card-id="${escapeHtml(card.id)}">Cancel</button>` : ''}
             ${!card.isActive && !card.redeemedBy ? `<button class="action-btn success small" data-action="reactivateCard" data-card-id="${escapeHtml(card.id)}">Reactivate</button>` : ''}
           </td>

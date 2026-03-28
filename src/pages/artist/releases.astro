@@ -361,6 +361,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         placeholder="0.00"
                         min="0"
                         step="0.01"
+                        aria-label={`NYOP minimum price for ${release.releaseName || 'release'}`}
                       />
                     </div>
                     <div class="edit-field">
@@ -373,6 +374,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         placeholder="Optional"
                         min="0"
                         step="0.01"
+                        aria-label={`NYOP suggested price for ${release.releaseName || 'release'}`}
                       />
                     </div>
                   </div>
@@ -388,6 +390,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         data-release-id={release.id}
                         value={release.genre || 'Drum and Bass'}
                         placeholder="e.g. Drum and Bass"
+                        aria-label={`Genre for ${release.releaseName || 'release'}`}
                       />
                     </div>
                   </div>
@@ -409,6 +412,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                           data-track-index={index}
                           value={track.featured || ''}
                           placeholder="Feat."
+                          aria-label={`Featured artist for ${track.trackName || `Track ${index + 1}`}`}
                         />
                         <input
                           type="text"
@@ -416,6 +420,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                           data-track-index={index}
                           value={track.remixer || ''}
                           placeholder="Remixer"
+                          aria-label={`Remixer for ${track.trackName || `Track ${index + 1}`}`}
                         />
                         <input
                           type="number"
@@ -425,8 +430,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                           placeholder="BPM"
                           min="60"
                           max="300"
+                          aria-label={`BPM for ${track.trackName || `Track ${index + 1}`}`}
                         />
-                        <select class="track-key-input" data-track-index={index}>
+                        <select class="track-key-input" data-track-index={index} aria-label={`Musical key for ${track.trackName || `Track ${index + 1}`}`}>
                           <option value="">Key...</option>
                           {musicalKeys.map(key => (
                             <option value={key} selected={track.key === key}>{key}</option>
@@ -449,6 +455,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         class="edit-input original-date-input"
                         data-release-id={release.id}
                         value={release.originalReleaseDate ? release.originalReleaseDate.split('T')[0] : ''}
+                        aria-label={`Original release date for ${release.releaseName || 'release'}`}
                       />
                       <span class="field-hint">If previously released elsewhere</span>
                     </div>
@@ -460,6 +467,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         data-release-id={release.id}
                         value={release.recordingLocation || ''}
                         placeholder="e.g. London, UK"
+                        aria-label={`Recording location for ${release.releaseName || 'release'}`}
                       />
                     </div>
                     <div class="edit-field">
@@ -472,6 +480,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         placeholder="e.g. 2024"
                         min="1980"
                         max="2030"
+                        aria-label={`Recording year for ${release.releaseName || 'release'}`}
                       />
                     </div>
                   </div>
@@ -487,6 +496,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         data-release-id={release.id}
                         value={release.masteredBy || ''}
                         placeholder="e.g. Mastering Studio"
+                        aria-label={`Mastered by for ${release.releaseName || 'release'}`}
                       />
                     </div>
                     <div class="edit-field">
@@ -497,6 +507,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         data-release-id={release.id}
                         value={release.producer || ''}
                         placeholder="e.g. Producer name"
+                        aria-label={`Producer for ${release.releaseName || 'release'}`}
                       />
                     </div>
                     <div class="edit-field">
@@ -507,6 +518,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         data-release-id={release.id}
                         value={release.label || release.labelCode || ''}
                         placeholder="e.g. Fresh Wax"
+                        aria-label={`Label for ${release.releaseName || 'release'}`}
                       />
                     </div>
                   </div>

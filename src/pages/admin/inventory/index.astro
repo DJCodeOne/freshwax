@@ -475,8 +475,8 @@ const nonce = Astro.locals.nonce || '';
                         <div style="${labelStyle}">${escapeHtml(label || key)}</div>
                         <div style="${stockStyle}">${stock}</div>
                         <div style="${actionsStyle}">
-                          <button style="${btnBaseStyle} color: #dc2626; border-color: #dc2626;" data-action="quick-adjust" data-product="${product.productId}" data-variant="${key}" data-delta="-1">−</button>
-                          <button style="${btnBaseStyle} color: #22c55e; border-color: #22c55e;" data-action="quick-adjust" data-product="${product.productId}" data-variant="${key}" data-delta="1">+</button>
+                          <button style="${btnBaseStyle} color: #dc2626; border-color: #dc2626;" data-action="quick-adjust" data-product="${product.productId}" data-variant="${key}" data-delta="-1" aria-label="Decrease stock for ${escapeHtml(label || key)}">−</button>
+                          <button style="${btnBaseStyle} color: #22c55e; border-color: #22c55e;" data-action="quick-adjust" data-product="${product.productId}" data-variant="${key}" data-delta="1" aria-label="Increase stock for ${escapeHtml(label || key)}">+</button>
                         </div>
                       </div>
                     `;
@@ -490,7 +490,7 @@ const nonce = Astro.locals.nonce || '';
         return `
           <tr>
             <td style="width:30px; text-align: center;">
-              ${hasVariants ? `<button id="expand-btn-${product.productId}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem;" data-action="toggle-sizes" data-product="${product.productId}">▶</button>` : ''}
+              ${hasVariants ? `<button id="expand-btn-${product.productId}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem;" data-action="toggle-sizes" data-product="${product.productId}" aria-label="Expand variants" aria-expanded="false">▶</button>` : ''}
             </td>
             <td>
               <div style="display: flex; align-items: center; gap: 1rem;">
@@ -1035,22 +1035,24 @@ const nonce = Astro.locals.nonce || '';
                 <td style="${tdStyle} ${skuStyle}">${escapeHtml(product.sku || '-')}</td>
                 <td style="${tdStyle} text-align: center;">${stock}</td>
                 <td style="${tdStyle} text-align: center;">
-                  <input type="number" style="${inputStyle}" 
-                    data-product="${product.productId}" 
-                    data-variant="default" 
+                  <input type="number" style="${inputStyle}"
+                    data-product="${product.productId}"
+                    data-variant="default"
                     data-system="${stock}"
                     value="${counted}"
                     data-onchange="stock-take-change"
-                    placeholder="—">
+                    placeholder="—"
+                    aria-label="Counted stock for ${escapeHtml(product.name || product.productId)}">
                 </td>
                 <td style="${tdStyle} text-align: center; font-weight: 700; color: ${varianceColor};" class="variance">${variance !== '' ? (variance > 0 ? '+' : '') + variance : ''}</td>
                 <td style="${tdStyle}">
-                  <input type="text" style="${reasonInputStyle}" 
-                    data-product="${product.productId}" 
+                  <input type="text" style="${reasonInputStyle}"
+                    data-product="${product.productId}"
                     data-variant="default"
                     value="${reason}"
                     data-onchange="stock-take-reason"
-                    placeholder="Reason...">
+                    placeholder="Reason..."
+                    aria-label="Reason for ${escapeHtml(product.name || product.productId)}">
                 </td>
               </tr>
             `;
@@ -1089,22 +1091,24 @@ const nonce = Astro.locals.nonce || '';
                   <td style="${tdStyle} ${skuStyle}">${escapeHtml(variantSku)}</td>
                   <td style="${tdStyle} text-align: center;">${stock}</td>
                   <td style="${tdStyle} text-align: center;">
-                    <input type="number" style="${inputStyle}" 
-                      data-product="${product.productId}" 
-                      data-variant="${vKey}" 
+                    <input type="number" style="${inputStyle}"
+                      data-product="${product.productId}"
+                      data-variant="${vKey}"
                       data-system="${stock}"
                       value="${counted}"
                       data-onchange="stock-take-change"
-                      placeholder="—">
+                      placeholder="—"
+                      aria-label="Counted stock for ${escapeHtml(label)}">
                   </td>
                   <td style="${tdStyle} text-align: center; font-weight: 700; color: ${varianceColor};" class="variance">${variance !== '' ? (variance > 0 ? '+' : '') + variance : ''}</td>
                   <td style="${tdStyle}">
-                    <input type="text" style="${reasonInputStyle}" 
-                      data-product="${product.productId}" 
+                    <input type="text" style="${reasonInputStyle}"
+                      data-product="${product.productId}"
                       data-variant="${vKey}"
                       value="${reason}"
                       data-onchange="stock-take-reason"
-                      placeholder="Reason...">
+                      placeholder="Reason..."
+                      aria-label="Reason for ${escapeHtml(label)}">
                   </td>
                 </tr>
               `;

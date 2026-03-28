@@ -235,8 +235,8 @@ const nonce = Astro.locals.nonce || '';
           </div>
           </fieldset>
           <div class="custom-color-row">
-            <input type="color" id="customColorPicker" value="#000000" />
-            <input type="text" class="form-input" id="customColorName" placeholder="Custom colour name" style="flex: 1;" />
+            <input type="color" id="customColorPicker" value="#000000" aria-label="Custom colour picker" />
+            <input type="text" class="form-input" id="customColorName" placeholder="Custom colour name" style="flex: 1;" aria-label="Custom colour name" />
             <button type="button" class="btn btn-secondary btn-sm" id="addCustomColorBtn">Add</button>
           </div>
           </div>
@@ -296,7 +296,7 @@ const nonce = Astro.locals.nonce || '';
             </div>
             <div class="set-all-row">
               <span>Set All to...</span>
-              <input type="number" class="form-input" id="setAllStock" value="0" min="0" style="width: 80px;" />
+              <input type="number" class="form-input" id="setAllStock" value="0" min="0" style="width: 80px;" aria-label="Set all stock quantity" />
               <button type="button" class="btn btn-secondary btn-sm" id="setAllVariantStockBtn">Apply</button>
             </div>
             <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 0;">
@@ -389,7 +389,7 @@ const nonce = Astro.locals.nonce || '';
         </div>
         <div class="editor-controls">
           <div class="editor-control-row">
-            <label>Zoom</label>
+            <label for="zoomSlider">Zoom</label>
             <input type="range" id="zoomSlider" min="10" max="300" value="100" />
             <span class="value" id="zoomValue">100%</span>
           </div>
@@ -957,7 +957,7 @@ const nonce = Astro.locals.nonce || '';
             <div style="${cardStyle}">
               <div style="${labelStyle}">Default</div>
               <div style="${skuStyle}">default</div>
-              <input type="number" class="variant-stock-input" style="${inputStyle}" data-key="default" value="0" min="0" />
+              <input type="number" class="variant-stock-input" style="${inputStyle}" data-key="default" value="0" min="0" aria-label="Stock for default variant" />
             </div>
           </div>
         `;
@@ -979,7 +979,7 @@ const nonce = Astro.locals.nonce || '';
                 <div style="${swatchStyle} background: ${color.hex};"></div>
                 <div style="${labelStyle}">${size} - ${color.name}</div>
                 <div style="${skuStyle}">${key}</div>
-                <input type="number" class="variant-stock-input" style="${inputStyle}" data-key="${key}" data-size="${size}" data-color="${color.name}" data-hex="${color.hex}" value="0" min="0" />
+                <input type="number" class="variant-stock-input" style="${inputStyle}" data-key="${key}" data-size="${size}" data-color="${color.name}" data-hex="${color.hex}" value="0" min="0" aria-label="Stock for ${size} ${color.name}" />
               </div>
             `;
           });
@@ -992,7 +992,7 @@ const nonce = Astro.locals.nonce || '';
             <div style="${cardStyle}">
               <div style="${labelStyle}">${size}</div>
               <div style="${skuStyle}">${key}</div>
-              <input type="number" class="variant-stock-input" style="${inputStyle}" data-key="${key}" data-size="${size}" value="0" min="0" />
+              <input type="number" class="variant-stock-input" style="${inputStyle}" data-key="${key}" data-size="${size}" value="0" min="0" aria-label="Stock for ${size}" />
             </div>
           `;
         });
@@ -1005,7 +1005,7 @@ const nonce = Astro.locals.nonce || '';
               <div style="${swatchStyle} background: ${color.hex};"></div>
               <div style="${labelStyle}">${color.name}</div>
               <div style="${skuStyle}">${key}</div>
-              <input type="number" class="variant-stock-input" style="${inputStyle}" data-key="${key}" data-color="${color.name}" data-hex="${color.hex}" value="0" min="0" />
+              <input type="number" class="variant-stock-input" style="${inputStyle}" data-key="${key}" data-color="${color.name}" data-hex="${color.hex}" value="0" min="0" aria-label="Stock for ${color.name}" />
             </div>
           `;
         });

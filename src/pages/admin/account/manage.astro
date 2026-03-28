@@ -470,8 +470,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         </td>
         <td class="text-right">
           <div class="flex gap-1 justify-end">
-            <button class="btn btn-ghost btn-sm" data-action="view-user" data-id="${escapeHtml(user.id)}" title="View">👁️</button>
-            <button class="btn btn-secondary btn-sm" data-action="edit-user" data-id="${escapeHtml(user.id)}" title="Edit">✏️</button>
+            <button class="btn btn-ghost btn-sm" data-action="view-user" data-id="${escapeHtml(user.id)}" title="View" aria-label="View user">👁️</button>
+            <button class="btn btn-secondary btn-sm" data-action="edit-user" data-id="${escapeHtml(user.id)}" title="Edit" aria-label="Edit user">✏️</button>
           </div>
         </td>
       </tr>

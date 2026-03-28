@@ -390,8 +390,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                 </div>
                 <div class="add-color-row" style="margin-top: 0.75rem;">
                   <span class="form-hint" style="margin-right: 0.5rem;">Custom:</span>
-                  <input type="text" id="newColorName" class="form-input" placeholder="Colour name" style="width: 120px;" />
-                  <input type="color" id="newColorHex" class="form-input" value="#000000" style="width: 50px; padding: 2px;" />
+                  <input type="text" id="newColorName" class="form-input" placeholder="Colour name" style="width: 120px;" aria-label="Custom colour name" />
+                  <input type="color" id="newColorHex" class="form-input" value="#000000" style="width: 50px; padding: 2px;" aria-label="Custom colour picker" />
                   <button type="button" class="btn btn-secondary btn-sm" id="addColorBtn">+ Add</button>
                 </div>
               </div>
@@ -413,7 +413,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               <div class="form-group" id="variantStockSection" style="margin-top: 1.5rem; display: none;">
                 <label class="form-label">Stock by Variant</label>
                 <div class="apply-all-row">
-                  <label>Set All:</label>
+                  <label for="applyAllStock">Set All:</label>
                   <input type="number" id="applyAllStock" class="form-input" placeholder="0" min="0" />
                   <button type="button" class="btn btn-primary btn-sm" id="applyStockToAllBtn">Apply to All</button>
                 </div>
@@ -522,7 +522,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       </div>
       <div class="editor-controls">
         <div class="editor-control-row">
-          <label>Zoom</label>
+          <label for="zoomSlider">Zoom</label>
           <input type="range" id="zoomSlider" min="10" max="300" value="100" />
           <span class="value" id="zoomValue">100%</span>
         </div>
@@ -873,6 +873,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <input type="number" class="variant-stock-input"
             data-color="${colorName}" data-colorhex="${colorHex}" data-size="${size}"
             value="${stock}" min="0"
+            aria-label="Stock for ${size} ${colorName}"
             data-onchange="variant-stock" />
         </td>`;
       });
@@ -1316,9 +1317,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       div.innerHTML = `
         <img src="${img.url}" alt="Product image ${idx + 1}" width="200" height="200" loading="lazy" />
         <div class="image-overlay">
-          <button type="button" class="image-btn image-btn-edit" title="Edit image" data-action="edit">✏️</button>
-          <button type="button" class="image-btn image-btn-primary" title="Set as primary" data-action="primary">⭐</button>
-          <button type="button" class="image-btn image-btn-delete" title="Delete image" data-action="delete">🗑️</button>
+          <button type="button" class="image-btn image-btn-edit" title="Edit image" data-action="edit" aria-label="Edit image">✏️</button>
+          <button type="button" class="image-btn image-btn-primary" title="Set as primary" data-action="primary" aria-label="Set as primary image">⭐</button>
+          <button type="button" class="image-btn image-btn-delete" title="Delete image" data-action="delete" aria-label="Delete image">🗑️</button>
         </div>
         ${idx === 0 ? '<span class="primary-badge">Primary</span>' : ''}
         <div class="image-color-select">

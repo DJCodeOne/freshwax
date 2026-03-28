@@ -130,13 +130,13 @@ const nonce = Astro.locals.nonce || '';
           <h2>Add New Supplier</h2>
           <form id="supplierForm">
             <div class="form-group">
-              <label class="form-label">Supplier Name <span class="required">*</span></label>
+              <label class="form-label" for="supplierName">Supplier Name <span class="required">*</span></label>
               <input type="text" class="form-input" id="supplierName" placeholder="e.g., Runnin' Records" required maxlength="30" />
             </div>
-            
+
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Type <span class="required">*</span></label>
+                <label class="form-label" for="supplierType">Type <span class="required">*</span></label>
                 <select class="form-select" id="supplierType" required>
                   <option value="label">Label</option>
                   <option value="soundsystem">Sound System</option>
@@ -146,30 +146,30 @@ const nonce = Astro.locals.nonce || '';
                 </select>
               </div>
               <div class="form-group">
-                <label class="form-label">Code <span class="required">*</span></label>
+                <label class="form-label" for="supplierCode">Code <span class="required">*</span></label>
                 <input type="text" class="form-input" id="supplierCode" placeholder="e.g., RUN" maxlength="5" style="text-transform: uppercase;" required />
                 <div class="form-hint">Short code for SKUs (max 5 chars)</div>
               </div>
             </div>
-            
+
             <div class="form-group">
-              <label class="form-label">Default Cut (%)</label>
+              <label class="form-label" for="defaultCut">Default Cut (%)</label>
               <input type="number" class="form-input" id="defaultCut" value="50" min="0" max="100" />
               <div class="form-hint">Percentage they receive per sale</div>
             </div>
-            
+
             <div class="form-group">
-              <label class="form-label">Contact Name</label>
+              <label class="form-label" for="contactName">Contact Name</label>
               <input type="text" class="form-input" id="contactName" placeholder="Main contact person" maxlength="30" />
             </div>
-            
+
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Email</label>
+                <label class="form-label" for="supplierEmail">Email</label>
                 <input type="email" class="form-input" id="supplierEmail" placeholder="email@example.com" />
               </div>
               <div class="form-group">
-                <label class="form-label">Phone</label>
+                <label class="form-label" for="supplierPhone">Phone</label>
                 <input type="tel" class="form-input" id="supplierPhone" placeholder="07..." />
               </div>
             </div>

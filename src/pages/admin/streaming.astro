@@ -1488,7 +1488,7 @@ const nonce = Astro.locals.nonce || '';
           <h3>🎬 Active Streams</h3>
           <div class="panel-actions">
             <button id="kickAllStreamsBtn" class="action-btn danger small">End All</button>
-            <button id="refreshStreamsBtn" class="action-btn small">↻</button>
+            <button id="refreshStreamsBtn" class="action-btn small" aria-label="Refresh streams">↻</button>
           </div>
         </div>
         <div id="activeStreamsList" class="streams-list">
@@ -1550,7 +1550,7 @@ const nonce = Astro.locals.nonce || '';
       <div class="section-header">
         <h2>✅ Approved DJs</h2>
         <div class="header-buttons">
-          <button id="refreshDJsBtn" class="refresh-btn" title="Refresh">↻</button>
+          <button id="refreshDJsBtn" class="refresh-btn" title="Refresh" aria-label="Refresh DJ list">↻</button>
           <button id="addDJBtn" class="add-btn">+ Add DJ</button>
         </div>
       </div>
