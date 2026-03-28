@@ -334,7 +334,7 @@ function setupPlaylistSave() {
       try {
         var manager = window.playlistManager;
         if (manager) {
-          var result = await manager.addToPersonalPlaylist(currentPlaylistTrack.url);
+          var result = await manager.addToPersonalPlaylist(currentPlaylistTrack.url, currentPlaylistTrack.title, currentPlaylistTrack.thumbnail);
           if (result.success) {
             nowPlayingSaveBtn.classList.add('saved');
             nowPlayingSaveBtn.title = 'Already in My Playlist';
