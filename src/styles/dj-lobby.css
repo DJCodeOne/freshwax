@@ -1,4 +1,4 @@
-body.dj-lobby-page{ --g1:linear-gradient(#1f2937,#111827);--g2:linear-gradient(135deg,#dc2626,#b91c1c);--g3:linear-gradient(#1a1a1a,#111);--g4:linear-gradient(#0d0d0d,#080808);--g5:linear-gradient(#1a1a2e,#16162e);--g6:linear-gradient(135deg,#22c55e,#16a34a);--a0:rgba(220,38,38,.3);--a1:rgba(255,255,255,.05);--a2:rgba(220,38,38,.1);--a4:rgba(34,197,94,.6);--a6:rgba(16,185,129,.5);--a7:rgba(220,38,38,.5);--a8:rgba(0,0,0,.4);--ab:rgba(220,38,38,.4);--ac:rgba(220,38,38,.6);--ad:rgba(245,158,11,.4);--ae:rgba(16,185,129,.3);--ag:rgba(220,38,38,.15);--aj:rgba(255,255,255,.2);--ak:rgba(255,255,255,.1);--ap:rgba(255,255,255,.3);--g7:linear-gradient(135deg,#374151,#1f2937);--g8:linear-gradient(135deg,#1a1510,#141414);--g9:linear-gradient(135deg,#ea580c,#c2410c);--b1:1px solid #333;--b2:1px solid #374151;--b3:2px solid #374151;--b4:1px solid #1a1a1a;--b5:2px solid #dc2626;--b6:2px solid #333;--fi:'Inter',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'Bebas Neue','Bebas Fallback',sans-serif;--fmc:'JetBrains Mono',Consolas,monospace; font-family:'Inter','Inter Fallback',sans-serif!important; background:linear-gradient(#000,#0a0a1a,#111827)!important; color:#fff!important; min-height:100vh!important }
+body.dj-lobby-page{ --g1:linear-gradient(#1f2937,#111827);--g2:linear-gradient(135deg,#dc2626,#b91c1c);--g3:linear-gradient(#1a1a1a,#111);--g4:linear-gradient(#0d0d0d,#080808);--g5:linear-gradient(#1a1a2e,#16162e);--g6:linear-gradient(135deg,#22c55e,#16a34a);--a0:rgba(220,38,38,.3);--a1:rgba(255,255,255,.05);--a2:rgba(220,38,38,.1);--a4:rgba(34,197,94,.6);--a6:rgba(16,185,129,.5);--a7:rgba(220,38,38,.5);--a8:rgba(0,0,0,.4);--ab:rgba(220,38,38,.4);--ac:rgba(220,38,38,.6);--ad:rgba(245,158,11,.4);--ae:rgba(16,185,129,.3);--ag:rgba(220,38,38,.15);--aj:rgba(255,255,255,.2);--ak:rgba(255,255,255,.1);--ap:rgba(255,255,255,.3);--g7:linear-gradient(135deg,#374151,#1f2937);--g8:linear-gradient(135deg,#1a1510,#141414);--g9:linear-gradient(135deg,#ea580c,#c2410c);--b1:1px solid #333;--b2:1px solid #374151;--b3:2px solid #374151;--b4:1px solid #1a1a1a;--b5:2px solid #dc2626;--b6:2px solid #333;--fi:'Inter',sans-serif;--fm:'JetBrains Mono',monospace;--fb:'Bebas Neue','Bebas Fallback',sans-serif;--fmc:'JetBrains Mono',Consolas,monospace; font-family:'Inter','Inter Fallback',sans-serif!important; background:#1a1a1a!important; color:#fff!important; min-height:100vh!important }
 .chat-section,.djs-online-box{border:1px solid rgba(139,92,246,.2)}
 .preview-section,.takeover-section{background:var(--g1);border-radius:12px;border:var(--b3);padding:1rem}
 #dmInput,#chatInput{flex:1;background:none;border:0;color:#fff;outline:0}
@@ -144,13 +144,13 @@ html, body{ height:100%; overflow:hidden }
 .main-column{ order:1 } }
 .key-column{ display:flex; flex-direction:column; gap:.75rem; height:100%; overflow-y:auto }
 .main-column{ display:flex; flex-direction:column; gap:.25rem; height:100%; overflow-y:auto }
-.right-column{ display:flex; flex-direction:column; gap:.75rem; height:100%; overflow:hidden }
-.right-column .chat-section{ flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden }
+.right-column{ display:flex; flex-direction:column; gap:.75rem; height:100%; min-height:0; overflow:hidden }
+.right-column .chat-section{ flex:1; display:flex; flex-direction:column; min-height:0; max-height:100%; overflow:hidden }
 .right-column .chat-header{ padding:.625rem .75rem; border-bottom:1px solid #333; flex-shrink:0; display:flex; align-items:center; justify-content:space-between }
 .right-column .chat-header h2{ margin:0; font-size:.8rem; color:#fff; font-weight:700; text-transform:uppercase; letter-spacing:.5px }
 .right-column .chat-viewers{ font-size:.7rem; color:#888 }
 .right-column .chat-messages{ flex:1; overflow-y:auto; padding:.5rem; min-height:0 }
-.right-column .chat-input-section{ flex-shrink:0; padding:.5rem; border-top:1px solid #333 }
+.right-column .chat-input-section{ flex-shrink:0; flex-grow:0; padding:.5rem; border-top:1px solid #333 }
 .right-column .login-prompt{ text-align:center; padding:.5rem; font-size:.8rem }
 .right-column .login-prompt a{ color:#dc2626 }
 .right-column .chat-form{ display:flex; flex-direction:column; gap:.25rem }
