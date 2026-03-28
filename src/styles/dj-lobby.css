@@ -193,7 +193,7 @@ html, body{ height:100%; overflow:hidden }
 .player-panel .offline-state{ text-align:center; padding:1rem }
 .player-panel .offline-state .offline-icon{ font-size:1.5rem; margin-bottom:.3rem }
 .player-panel .offline-state h3{ font-size:.85rem; color:#aaa; margin:0 .2rem 0 }
-.player-panel .offline-state p{ font-size:.7rem; color:#555; margin:0 }
+.player-panel .offline-state p{ font-size:.7rem; color:#888; margin:0 }
 .obs-panel,
 .live-panel{border-color:#333}
 .obs-panel.streaming{ border-color:#fff; box-shadow:0 0 12px var(--aj) }
@@ -263,7 +263,7 @@ html, body{ height:100%; overflow:hidden }
 .center-meters-row{ display:flex; align-items:center; justify-content:center; gap:1.5rem }
 .meter-column.right-column{ flex-direction:row-reverse; align-items:stretch }
 .meter-section{ display:flex; flex-direction:column; gap:.25rem }
-.section-label{ font-family:var(--fm); font-size:.6rem; color:#555; letter-spacing:1px; text-align:center; text-transform:uppercase; font-weight:600 }
+.section-label{ font-family:var(--fm); font-size:.6rem; color:#888; letter-spacing:1px; text-align:center; text-transform:uppercase; font-weight:600 }
 .mute-section{ display:none; justify-content:center; padding:.5rem; background:linear-gradient(#111,#0a0a0a); border:var(--b4); border-radius:6px }
 .mute-btn-panel{gap:.3rem; background:#1a1a1a; padding:.6rem; transition:background-color .2s,border-color .2s,color .2s }
 .mute-btn-panel:hover{ background:#222; border-color:#444 }
@@ -280,10 +280,10 @@ html, body{ height:100%; overflow:hidden }
 .lufs-value.lufs-warning{ color:#eab308; text-shadow:0 0 20px rgba(234,179,8,.6) }
 .lufs-value.lufs-danger{ color:#ef4444; text-shadow:0 0 20px rgba(239,68,68,.6) }
 .lufs-value.lufs-quiet{ color:#aaa; text-shadow:none }
-.lufs-unit{ font-family:var(--fm); font-size:.7rem; color:#555; letter-spacing:1.5px; margin-top:.15rem }
+.lufs-unit{ font-family:var(--fm); font-size:.7rem; color:#888; letter-spacing:1.5px; margin-top:.15rem }
 .lufs-secondary{ display:flex; flex-direction:column; gap:.4rem; background:rgba(0,0,0,.3); padding:.5rem .75rem; border-radius:4px; border:1px solid #151515; width:100% }
 .lufs-item{ display:flex; justify-content:space-between; gap:1rem; font-family:var(--fm); font-size:.75rem }
-.lufs-label{ color:#555; font-weight:500; font-size:.7rem }
+.lufs-label{ color:#888; font-weight:500; font-size:.7rem }
 .lufs-val{ color:#ccc; font-weight:600; font-variant-numeric:tabular-nums; min-width:4ch; text-align:right; font-size:.85rem }
 .lufs-bar-track{ height:8px; background:linear-gradient(#0a0a0a,#111); border-radius:4px; position:relative; overflow:hidden; border:var(--b4); margin-top:auto }
 .lufs-bar-fill{ position:absolute; left:0; top:0; height:100%; width:0; background:linear-gradient(90deg,#14532d,#166534 20%,#22c55e 40%,#84cc16 55%,#eab308 70%,#f97316 85%,#dc2626); transition:width .1s; border-radius:4px }
@@ -758,7 +758,7 @@ button{ -webkit-user-select:none; user-select:none } }
 .share-post-section{margin-bottom:1rem}
 .share-thumb-preview{ width:100%; aspect-ratio:16/9; background:#0d0d0d; border:2px dashed #333; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:.5rem }
 .share-thumb-preview.has-image{ border-style:solid; border-color:#f59e0b }
-.share-thumb-placeholder{ display:flex; flex-direction:column; align-items:center; gap:.25rem; color:#555; font-size:.85rem }
+.share-thumb-placeholder{ display:flex; flex-direction:column; align-items:center; gap:.25rem; color:#888; font-size:.85rem }
 .share-thumb-placeholder span:first-child{ font-size:1.5rem; opacity:.6 }
 .share-thumb-preview img{ width:100%; height:100%; object-fit:cover }
 .share-action-btn{ flex:1; justify-content:center; gap:.4rem; padding:.5rem .75rem; border-radius:5px; font-size:.8rem; font-family:var(--fi); cursor:pointer }
@@ -769,7 +769,7 @@ button{ -webkit-user-select:none; user-select:none } }
 .share-post-section label{ display:block; color:#bbb; font-size:.75rem; margin-bottom:.35rem }
 .share-post-input{font-size:.85rem; font-family:var(--fi) }
 .share-post-input::placeholder{ color:#555 }
-.share-char-count{ display:block; text-align:right; color:#555; font-size:.7rem; margin-top:.25rem }
+.share-char-count{ display:block; text-align:right; color:#888; font-size:.7rem; margin-top:.25rem }
 .share-platform-btn{ display:flex; align-items:center; justify-content:center; gap:.6rem; padding:.75rem 1rem; border:0; border-radius:6px; font-size:.9rem; font-weight:600; font-family:var(--fi); cursor:pointer }
 .share-platform-btn.twitter{ background:#000; color:#fff; border:var(--b1) }
 .share-platform-btn.twitter:hover{ background:#1a1a1a; border-color:#555 }

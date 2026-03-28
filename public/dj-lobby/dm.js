@@ -82,7 +82,7 @@ export function populateDmDjList() {
 
     return '<div class="dm-dj-item" data-dj-id="' + dj.odamiMa + '" data-dj-name="' + escapeHtml(dj.name || 'DJ') + '" data-dj-avatar="' + escapeHtml(dj.avatar || '') + '" data-dj-letter="' + escapeHtml(avatarLetter) + '">' +
       (hasAvatar
-        ? '<img src="' + escapeHtml(dj.avatar) + '" alt="" width="40" height="40" loading="lazy" decoding="async" data-fallback="show-next" /><span class="dm-dj-avatar-letter" style="display:none;">' + escapeHtml(avatarLetter) + '</span>'
+        ? '<img src="' + escapeHtml(dj.avatar) + '" alt="' + escapeHtml(dj.name || 'DJ') + ' avatar" width="40" height="40" loading="lazy" decoding="async" data-fallback="show-next" /><span class="dm-dj-avatar-letter" style="display:none;">' + escapeHtml(avatarLetter) + '</span>'
         : '<span class="dm-dj-avatar-letter">' + escapeHtml(avatarLetter) + '</span>'
       ) +
       '<div class="dm-dj-info">' +

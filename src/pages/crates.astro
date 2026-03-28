@@ -1718,8 +1718,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               <div class="track-list">
                 ${trackCount > 0 ? tracks.map((track, i) => `
                   <div class="track-item">
-                    <button class="track-play-btn">
-                      <svg fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <button class="track-play-btn" aria-label="Play ${escapeHtml(track.name || track.title || 'Untitled')}">
+                      <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
                     </button>
                     <span class="track-name"><span class="track-num">${i + 1}</span> ${escapeHtml(track.name || track.title || 'Untitled')}</span>
                   </div>

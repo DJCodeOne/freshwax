@@ -283,7 +283,7 @@ export function buildMerchSaleEmail(orderNumber: string, order: Record<string, u
     const details = [item.size ? 'Size: ' + escapeHtml(item.size) : '', escapeHtml(item.color) || ''].filter(Boolean).join(' • ');
     itemsHtml += '<tr>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; color: #fff;">' +
-      (item.image ? '<img src="' + escapeHtml(item.image) + '" width="50" height="50" style="border-radius: 4px; margin-right: 10px; vertical-align: middle;">' : '') +
+      (item.image ? '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(item.name) + '" width="50" height="50" style="border-radius: 4px; margin-right: 10px; vertical-align: middle;">' : '') +
       escapeHtml(item.name) + (details ? '<br><span style="font-size: 12px; color: #d1d5db;">' + details + '</span>' : '') + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: center; color: #fff;">' + item.quantity + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: right; font-weight: 600; color: #fff;">' + formatPrice(item.price * item.quantity) + '</td>' +

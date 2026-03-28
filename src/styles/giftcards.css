@@ -605,7 +605,7 @@
   }
   
   .payment-note {
-    color: #666;
+    color: #9ca3af;
     font-size: 0.875rem;
     margin: 1rem 0 0 0;
   }
@@ -745,7 +745,7 @@
   }
   
   .purchased-list .empty-state {
-    color: #666;
+    color: #9ca3af;
     text-align: center;
     padding: 2rem;
   }
