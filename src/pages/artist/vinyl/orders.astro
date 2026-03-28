@@ -96,16 +96,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 <script type="module">
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
 
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-  const firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store"
-  };
-
-  const app = initializeApp(firebaseConfig);
+  const app = getApps()[0] || initializeApp(window.FIREBASE_CONFIG);
   const auth = getAuth(app);
 
   let currentUser = null;
