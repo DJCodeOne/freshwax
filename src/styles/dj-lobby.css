@@ -159,8 +159,9 @@ html, body{ height:100%; overflow:hidden; margin:0 }
 .right-column .chat-input-wrapper{ display:flex; align-items:center; gap:.25rem }
 .right-column .chat-input-wrapper input{ flex:1; padding:.4rem .5rem; background:#1a1a2e; border:1px solid #333; border-radius:6px; color:#fff; font-size:.8rem }
 .right-column .chat-input-wrapper button{ background:transparent; border:none; color:#bbb; cursor:pointer; padding:.25rem; font-size:.8rem }
-.right-column .chat-input-wrapper #sendBtn{ color:#dc2626 }
-.right-column .chat-input-wrapper #sendBtn svg{ width:16px; height:16px }
+.right-column .chat-send-btn{ display:flex; align-items:center; justify-content:center; width:36px; height:36px; background:linear-gradient(135deg,#dc2626,#b91c1c)!important; border:none!important; border-radius:8px!important; color:#fff!important; cursor:pointer; flex-shrink:0; transition:background .15s,transform .1s }
+.right-column .chat-send-btn:hover{ background:linear-gradient(135deg,#ef4444,#dc2626)!important; transform:scale(1.05) }
+.right-column .chat-send-btn svg{ width:16px; height:16px; fill:#fff }
 .right-column .djs-online-box{ flex-shrink:0; max-height:200px; overflow-y:auto }
 .multi-stream-content,
 .relay-station-info,

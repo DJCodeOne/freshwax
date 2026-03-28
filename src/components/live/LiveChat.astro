@@ -36,12 +36,11 @@
       </div>
 
       <div class="chat-input-wrapper">
-        <label for="chatInput" class="sr-only">Chat message</label>
         <input type="text" id="chatInput" placeholder="Message..." maxlength="500" autocomplete="off" aria-label="Chat message" />
         <button type="button" id="openEmojiPanel" class="chat-tool-btn" title="Emojis" aria-label="Open emoji picker">😀</button>
         <button type="button" id="openGifModal" class="chat-tool-btn" title="GIFs" aria-label="Search for GIFs">GIF</button>
-        <button type="submit" id="sendBtn" aria-label="Send message">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        <button type="submit" id="sendBtn" class="chat-send-btn" aria-label="Send message">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
     </div>
