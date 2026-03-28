@@ -1,0 +1,61 @@
+name: D1 Database Backup
+
+on:
+  schedule:
+    # Weekly on Sunday at 3 AM UTC
+    - cron: "0 3 * * SUN"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate timestamp
+        id: timestamp
+        run: echo "ts=$(date -u +'%Y-%m-%dT%H%M%SZ')" >> "$GITHUB_OUTPUT"
+
+      - name: Export D1 database
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 export freshwax-db --remote --output=backup.sql
+
+      - name: Verify backup file
+        run: |
+          if [ ! -s backup.sql ]; then
+            echo "::error::Backup file is empty or missing"
+            exit 1
+          fi
+          SIZE=$(wc -c < backup.sql)
+          LINES=$(wc -l < backup.sql)
+          echo "Backup size: ${SIZE} bytes, ${LINES} lines"
+          echo "## D1 Backup Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Timestamp:** ${{ steps.timestamp.outputs.ts }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Size:** ${SIZE} bytes" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Lines:** ${LINES}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: d1-backup-${{ steps.timestamp.outputs.ts }}
+          path: backup.sql
+          retention-days: 30

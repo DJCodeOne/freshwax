@@ -1,13 +1,90 @@
 version: 2
 updates:
+  # ─────────────────────────────────────────────
+  # npm dependencies — security patches + minor updates
+  # ─────────────────────────────────────────────
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+      day: "monday"
+    target-branch: "main"
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    # Ignore major bumps on packages that need manual testing
+    # (breaking changes in Astro/adapter/Stripe require full validation)
+    ignore:
+      - dependency-name: "astro"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@astrojs/cloudflare"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "stripe"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@tailwindcss/vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+    # Group minor+patch updates together to reduce PR noise
+    groups:
+      aws-sdk:
+        patterns:
+          - "@aws-sdk/*"
+      astro-ecosystem:
+        patterns:
+          - "astro"
+          - "@astrojs/*"
+        update-types:
+          - "minor"
+          - "patch"
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "@playwright/test"
+          - "@lhci/cli"
+      linting:
+        patterns:
+          - "eslint"
+          - "eslint-plugin-*"
+          - "@typescript-eslint/*"
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+        exclude-patterns:
+          - "@aws-sdk/*"
+          - "astro"
+          - "@astrojs/*"
+          - "vitest"
+          - "@vitest/*"
+          - "@playwright/test"
+          - "@lhci/cli"
+          - "eslint"
+          - "eslint-plugin-*"
+          - "@typescript-eslint/*"
+
+  # ─────────────────────────────────────────────
+  # GitHub Actions — keep workflow actions up to date
+  # ─────────────────────────────────────────────
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    target-branch: "main"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+    groups:
+      actions:
+        patterns:
+          - "*"
