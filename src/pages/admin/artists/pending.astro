@@ -71,8 +71,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   <Fragment slot="scripts"><script is:inline nonce={nonce}>/* Admin check via API */</script><script type="module">
     import{initializeApp,getApps}from'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import{FIREBASE_API_KEY}from'../../../lib/constants';
-    const app=getApps().length?getApps()[0]:initializeApp({apiKey:FIREBASE_API_KEY,authDomain:"freshwax-store.firebaseapp.com",projectId:"freshwax-store"});
+    // Reuse Firebase app already initialized by AdminLayout (config set via window.FIREBASE_CONFIG)
+    const app=getApps()[0]||initializeApp(window.FIREBASE_CONFIG);
     const auth=getAuth(app);
     onAuthStateChanged(auth,async u=>{if(!u){window.location.href='/admin/login/';return;}try{const t=await u.getIdToken();const r=await fetch('/api/admin/check-access/',{headers:{'Authorization':'Bearer '+t}});const d=await r.json();if(!d.success||!d.isAdmin)window.location.href='/admin/login/';}catch (e){window.location.href='/admin/login/';}});
     const tbl=document.getElementById('tbl');
