@@ -100,7 +100,18 @@ export async function loadPersonalPlaylistFromServer(
   }
 
   try {
-    const response = await fetch(`/api/playlist/personal/?userId=${encodeURIComponent(userId)}`);
+    // Get Firebase auth token for authorization
+    const currentUser = window.firebaseAuth?.currentUser;
+    const idToken = currentUser ? await currentUser.getIdToken() : null;
+
+    const fetchHeaders: Record<string, string> = {};
+    if (idToken) {
+      fetchHeaders['Authorization'] = `Bearer ${idToken}`;
+    }
+
+    const response = await fetch(`/api/playlist/personal/?userId=${encodeURIComponent(userId)}`, {
+      headers: fetchHeaders
+    });
     if (!response.ok) {
       throw new Error(`Request failed: ${response.status}`);
     }
