@@ -297,16 +297,16 @@ html, body{ height:100%; overflow:hidden; margin:0 }
 .lufs-target-marker{ position:absolute; top:-2px; bottom:-2px; width:2px; background:#fff; box-shadow:0 0 3px rgba(255,255,255,.5) }
 .vu-meters{ display:flex; justify-content:center; gap:.5rem }
 .vu-meter{ display:flex; flex-direction:column; align-items:center }
-.vu-display{ width:220px; height:130px; background:linear-gradient(#2a2a2a,#222 50%,#1a1a1a); border-radius:12px; padding:8px; box-shadow:inset 0 2px 8px var(--a8),inset 0 -1px 3px rgba(255,255,255,.05),0 4px 12px rgba(0,0,0,.5); border:3px solid #444 }
-.vu-display::before{ content:''; position:absolute; inset:-3px; border-radius:14px; background:linear-gradient(135deg,#555,#333 25%,#444 50%,#555 75%,#333); z-index:-1 }
+.vu-display{ width:220px; height:130px; background:linear-gradient(#3a3a3a,#2e2e2e 50%,#252525); border-radius:12px; padding:8px; box-shadow:inset 0 2px 8px var(--a8),inset 0 -1px 3px rgba(255,255,255,.08),0 4px 12px rgba(0,0,0,.5); border:3px solid #555 }
+.vu-display::before{ content:''; position:absolute; inset:-3px; border-radius:14px; background:linear-gradient(135deg,#666,#444 25%,#555 50%,#666 75%,#444); z-index:-1 }
 .vu-scale-arc{ position:relative; width:100%; height:100% }
 .vu-svg{ width:100%; height:100% }
 .vu-text{ font-family:Georgia,serif; font-size:7px; fill:#4a3c2a; font-weight:600 }
 .vu-zero{ font-weight:700; fill:#2d1f0f }
 .vu-red{ fill:#8b2500 }
 .vu-needle{ position:absolute; bottom:15px; left:50%; width:3px; height:80px; background:linear-gradient(#1a1209,#3d2b1a 50%,#2d1f0f); transform-origin:bottom center; transform:translateX(-50%) rotate(-45deg); transition:transform .15s ease-out; border-radius:1px }
-.vu-needle::after{ content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:10px; height:10px; background:radial-gradient(circle at 30% 30%,#888,#555); border-radius:50% }
-.vu-needle-pivot{ position:absolute; bottom:10px; left:50%; transform:translateX(-50%); width:18px; height:18px; background:radial-gradient(circle at 35% 35%,#888,#666 40%,#444); border-radius:50%; box-shadow:0 2px 4px rgba(0,0,0,.5),inset 0 1px 2px rgba(255,255,255,.15) }
+.vu-needle::after{ content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:10px; height:10px; background:radial-gradient(circle at 30% 30%,#bbb,#777); border-radius:50% }
+.vu-needle-pivot{ position:absolute; bottom:10px; left:50%; transform:translateX(-50%); width:18px; height:18px; background:radial-gradient(circle at 35% 35%,#bbb,#888 40%,#555); border-radius:50%; box-shadow:0 2px 4px rgba(0,0,0,.5),inset 0 1px 2px rgba(255,255,255,.25) }
 .vu-label{ font-family:Georgia,serif; font-size:.85rem; color:#8b7355; margin-top:.3rem; font-weight:600; text-transform:uppercase; letter-spacing:.1em }
 .peak-section,
 .ppm-section{ display:flex; gap:.2rem; background:linear-gradient(#111,#0a0a0a); border:var(--b4); border-radius:8px; padding:.5rem .75rem }
