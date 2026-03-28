@@ -4,13 +4,18 @@
 import type { PlaylistItem } from './types';
 
 /** Inline platform name helper (avoids importing url-parser.ts in synchronous render paths) */
-export function platformName(platform: string): string {
+export function platformName(platform: string, url?: string, title?: string): string {
+  if (platform === 'direct') {
+    // Detect YouTube origin from filename [videoId] pattern in URL or title
+    const hasYtId = /\[[a-zA-Z0-9_-]{11}\]/.test(url || '') || /\[[a-zA-Z0-9_-]{11}\]/.test(title || '');
+    if (hasYtId) return 'YouTube';
+    return 'MP3';
+  }
   switch (platform) {
     case 'youtube': return 'YouTube';
     case 'vimeo': return 'Vimeo';
     case 'soundcloud': return 'SoundCloud';
-    case 'direct': return 'Direct';
-    default: return 'Unknown';
+    default: return platform || 'Unknown';
   }
 }
 

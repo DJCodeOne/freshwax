@@ -334,16 +334,9 @@ function setupPlaylistSave() {
       try {
         var manager = window.playlistManager;
         if (manager) {
-          // Extract YouTube ID from filename (e.g. "Track Name [dQw4w9WgXcQ].mp3")
-          var saveUrl = currentPlaylistTrack.url;
-          var saveTitle = currentPlaylistTrack.title || '';
-          var ytMatch = saveTitle.match(/\[([a-zA-Z0-9_-]{11})\]/) || saveUrl.match(/\[([a-zA-Z0-9_-]{11})\]/);
-          if (ytMatch) {
-            saveUrl = 'https://www.youtube.com/watch?v=' + ytMatch[1];
-            // Clean title — remove the [videoId] suffix
-            saveTitle = saveTitle.replace(/\s*\[[a-zA-Z0-9_-]{11}\]/, '').trim();
-          }
-          var result = await manager.addToPersonalPlaylist(saveUrl, saveTitle, currentPlaylistTrack.thumbnail);
+          // Clean title — remove [videoId] suffix if present
+          var saveTitle = (currentPlaylistTrack.title || '').replace(/\s*\[[a-zA-Z0-9_-]{11}\]/, '').trim();
+          var result = await manager.addToPersonalPlaylist(currentPlaylistTrack.url, saveTitle || currentPlaylistTrack.title, currentPlaylistTrack.thumbnail);
           if (result.success) {
             nowPlayingSaveBtn.classList.add('saved');
             nowPlayingSaveBtn.title = 'Already in My Playlist';

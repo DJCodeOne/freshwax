@@ -112,17 +112,11 @@ export function renderQueue(
   queueDiv.querySelectorAll('.playlist-save-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const el = e.currentTarget as HTMLElement;
-      let url = el.dataset.url;
+      const url = el.dataset.url;
+      // Clean title — remove [videoId] suffix if present
       let title = el.dataset.title;
+      if (title) title = title.replace(/\s*\[[a-zA-Z0-9_-]{11}\]/, '').trim();
       const thumbnail = el.dataset.thumbnail;
-      // Convert playlist server MP3s back to YouTube URLs if they contain a video ID
-      if (url && title) {
-        const ytMatch = title.match(/\[([a-zA-Z0-9_-]{11})\]/) || url.match(/\[([a-zA-Z0-9_-]{11})\]/);
-        if (ytMatch) {
-          url = `https://www.youtube.com/watch?v=${ytMatch[1]}`;
-          title = title.replace(/\s*\[[a-zA-Z0-9_-]{11}\]/, '').trim();
-        }
-      }
       if (url && state.playlistManager) {
         const button = e.currentTarget as HTMLButtonElement;
         const originalHTML = button.innerHTML;
@@ -357,7 +351,7 @@ export function renderPersonalPlaylistPage(
       <div class="personal-item-info">
         <div class="personal-item-title">${escapeHtml(item.title || 'Untitled')}</div>
         <div class="personal-item-meta">
-          <span class="personal-item-platform">${platformName(item.platform)}</span>
+          <span class="personal-item-platform">${platformName(item.platform, item.url, item.title)}</span>
           ${item.addedAt ? `<span class="personal-item-date">${formatAddedDate(item.addedAt)}</span>` : ''}
         </div>
       </div>
