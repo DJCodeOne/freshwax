@@ -379,11 +379,21 @@ const nonce = Astro.locals.nonce || '';
         currentAdminUid = user.uid;
         // Wait for AdminLayout to set ADMIN_KEY via getIdToken
         // AdminLayout module may not have run yet, so poll briefly
-        for (var _w = 0; _w < 20 && !window.ADMIN_KEY && !window.getAdminToken; _w++) {
+        for (var _w = 0; _w < 40 && !window.ADMIN_KEY && !window.getAdminToken; _w++) {
           await new Promise(function(r) { setTimeout(r, 100); });
         }
-        if (!window.ADMIN_KEY && window.getAdminToken) {
-          await window.getAdminToken();
+        if (!window.ADMIN_KEY) {
+          try {
+            if (window.getAdminToken) {
+              var token = await window.getAdminToken();
+              if (token) window.ADMIN_KEY = token;
+            }
+            if (!window.ADMIN_KEY) {
+              window.ADMIN_KEY = await user.getIdToken();
+            }
+          } catch (e) {
+            console.error('[users] Failed to get admin token:', e);
+          }
         }
         loadUsers();
       });

@@ -418,11 +418,27 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       if (!user) {
         throw new Error('Not authenticated');
       }
-      
+
+      // Ensure we have an admin token for auth
+      if (!window.ADMIN_KEY) {
+        try {
+          if (window.getAdminToken) {
+            var _tok = await window.getAdminToken();
+            if (_tok) window.ADMIN_KEY = _tok;
+          }
+          if (!window.ADMIN_KEY) {
+            window.ADMIN_KEY = await user.getIdToken();
+          }
+        } catch (_e) { /* will try without */ }
+      }
+
       // Use server-side API to fetch partners
-      const response = await fetch(`/api/admin/list-partners/?uid=${encodeURIComponent(user.uid)}`);
+      const response = await fetch(`/api/admin/list-partners/`, {
+        headers: { 'Authorization': 'Bearer ' + (window.ADMIN_KEY || await user.getIdToken()) }
+      });
+      if (!response.ok) throw new Error('List partners failed: ' + response.status);
       const data = await response.json();
-      
+
       if (!data.success) {
         throw new Error(data.error || 'Failed to load partners');
       }
