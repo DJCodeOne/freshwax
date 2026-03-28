@@ -69,7 +69,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
         <div class="hero-content">
           <h1 class="main-title" translate="no">
             FRESH <span class="text-red">WAX</span>
-            <span class="hero-h1-sub">Jungle & Drum and Bass Music Store</span>
+            <span class="hero-h1-sub">Jungle and Drum & Bass<br class="mobile-break" /> Music Store</span>
           </h1>
           <div class="glass-panel nav-links-desktop" data-animate="fade-up">
             <a href="/crates/" class="nav-item">Vinyl</a>
@@ -239,6 +239,9 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     text-shadow: none;
     line-height: 1.4;
   }
+
+  .mobile-break { display: inline; }
+  @media (min-width: 640px) { .mobile-break { display: none; } }
 
   @media (min-width: 375px) {
     .hero-section {
