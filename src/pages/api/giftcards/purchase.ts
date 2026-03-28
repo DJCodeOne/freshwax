@@ -152,7 +152,7 @@ async function sendGiftCardEmail(
       title: isGift ? "You've Received a Gift Card!" : 'Your Gift Card is Ready!',
       hideHeader: true,
       lightTheme: true,
-      footerBrand: 'Fresh Wax - Underground Jungle & Drum and Bass',
+      footerBrand: 'Fresh Wax - Underground Jungle and Drum & Bass',
     });
 
     const sent = await sendEmail(toEmail, subject, html);

@@ -62,6 +62,6 @@ export function buildGiftCardEmail(params: {
     title: 'Your Gift Card Code',
     hideHeader: true,
     lightTheme: true,
-    footerBrand: 'Fresh Wax - Underground Jungle & Drum and Bass',
+    footerBrand: 'Fresh Wax - Underground Jungle and Drum & Bass',
   });
 }

@@ -29,7 +29,7 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
 const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/cover.webp') ? firstArtwork.replace('/cover.webp', '/thumb.webp') : null);
 ---
 
-<Layout title="Jungle & Drum and Bass Vinyl, Downloads & Mixes" description="Fresh Wax is an independent UK jungle and drum & bass record label and music store. Shop vinyl records, digital downloads, DJ mixes, and merch." image={firstArtwork || undefined}>
+<Layout title="Jungle and Drum & Bass Vinyl, Downloads & Mixes" description="Fresh Wax is an independent UK jungle and drum & bass record label and music store. Shop vinyl records, digital downloads, DJ mixes, and merch." image={firstArtwork || undefined}>
   {firstArtwork && firstThumb ? (
     <link rel="preload" as="image" imagesrcset={`${firstThumb.replace(/ /g, '%20')} 400w, ${firstArtwork.replace(/ /g, '%20')} 800w`} imagesizes="(min-width: 768px) 256px, 200px" slot="head" />
   ) : firstArtwork ? (

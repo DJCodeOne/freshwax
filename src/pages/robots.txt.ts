@@ -9,7 +9,7 @@ export const GET = () => {
   const robotsTxt = `# ===========================================
 # Fresh Wax Robots.txt
 # ${SITE_URL}
-# Independent Jungle & Drum and Bass Music Store
+# Independent Jungle and Drum & Bass Music Store
 # ===========================================
 
 # Allow all legitimate search engine crawlers

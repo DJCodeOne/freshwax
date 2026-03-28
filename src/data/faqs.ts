@@ -10,7 +10,7 @@ export interface FAQ {
 export const generalFAQs: FAQ[] = [
   {
     question: "What is Fresh Wax?",
-    answer: "Fresh Wax is an independent UK-based online music store specialising in jungle & drum and bass music. We offer digital downloads, limited edition vinyl pressings, exclusive DJ mixes, Live streams and official merchandise."
+    answer: "Fresh Wax is an independent UK-based online music store specialising in jungle and drum & bass music. We offer digital downloads, limited edition vinyl pressings, exclusive DJ mixes, Live streams and official merchandise."
   },
   {
     question: "What genres do you stock?",
