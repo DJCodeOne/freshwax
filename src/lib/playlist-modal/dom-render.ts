@@ -407,25 +407,11 @@ export function renderPersonalPlaylistPage(
     btn.addEventListener('click', (e) => {
       const button = e.currentTarget as HTMLElement;
       const itemId = button.dataset.id;
-      if (!itemId || !state.playlistManager) return;
+      if (!itemId || !state.playlistManager || button.classList.contains('deleting')) return;
 
-      if (button.classList.contains('confirming')) {
-        state.playlistManager.removeFromPersonalPlaylist(itemId);
-        return;
-      }
-
-      button.classList.add('confirming');
-      const originalHTML = button.innerHTML;
-      button.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-      button.title = 'Click again to confirm';
-
-      setTimeout(() => {
-        if (button.classList.contains('confirming')) {
-          button.classList.remove('confirming');
-          button.innerHTML = originalHTML;
-          button.title = 'Remove from playlist';
-        }
-      }, TIMEOUTS.TOAST);
+      button.classList.add('deleting');
+      button.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      state.playlistManager.removeFromPersonalPlaylist(itemId);
     });
   });
 }
