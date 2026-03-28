@@ -4,7 +4,7 @@
 
 import type { APIContext } from 'astro';
 import { z } from 'zod';
-import { getDocument } from '../../../lib/firebase-rest';
+import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, TIER_LIMITS } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
@@ -47,6 +47,12 @@ export async function GET({ request, locals }: APIContext) {
   }
 
   try {
+    // SECURITY: Verify the requesting user matches the requested userId
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return ApiErrors.unauthorized('Authentication required');
+    }
+
     initEnv(locals);
     const env = locals.runtime.env;
     const db = env?.DB;
@@ -56,6 +62,10 @@ export async function GET({ request, locals }: APIContext) {
 
     if (!userId) {
       return ApiErrors.badRequest('Missing userId');
+    }
+
+    if (verifiedUserId !== userId) {
+      return ApiErrors.forbidden('You can only view your own playlist');
     }
 
     // Get user tier info
