@@ -240,8 +240,8 @@ html, body{ overflow:auto; }
 .shoutout-bar{ display:flex; align-items:center; justify-content:space-between; padding:.5rem 1rem; background:#111; border:2px solid #333; border-radius:10px; gap:.75rem; overflow:hidden; }
 .shoutout-left{ display:flex; align-items:center; gap:1.5rem; flex-shrink:0; }
 .shoutout-label{ font-size:10px; font-weight:700; color:#aaa; text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
-.shoutout-btn{ display:flex; align-items:center; justify-content:center; width:24px; height:24px; background:linear-gradient(135deg,#ea580c,#c2410c); border:0; border-radius:50%; color:#fff; cursor:pointer; }
-.shoutout-btn:hover{ background:linear-gradient(135deg,#f97316,#ea580c); transform:scale(1.1); }
+.shoutout-btn{ display:flex; align-items:center; justify-content:center; width:24px; height:24px; background:linear-gradient(135deg,#d97706,#b45309)!important; border:0; border-radius:50%; color:#fff; cursor:pointer; }
+.shoutout-btn:hover{ background:linear-gradient(135deg,#f59e0b,#d97706)!important; transform:scale(1.1); }
 .shoutout-marquee{ flex:1; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; min-height:24px; }
 .shoutout-track{ display:inline-block; white-space:nowrap; animation:none; }
 .shoutout-track.scrolling{ position:absolute; left:100%; top:50%; transform:translateY(-50%); animation:shoutout-scroll 30s linear forwards; text-align:left; }
@@ -855,7 +855,7 @@ body.header-hidden .live-layout{ overflow:visible !important; height:auto !impor
 .shoutout-bar{ display:flex!important; padding:.35rem .625rem; gap:.5rem; border-radius:8px; background:#111; border:1px solid #333; min-height:28px; }
 .shoutout-left{ gap:.375rem; }
 .shoutout-label{ display:none; }
-#shoutoutBtn.shoutout-btn{ width:36px!important; height:36px!important; min-width:36px!important; background:linear-gradient(135deg,#ea580c,#c2410c)!important; border:2px solid #f97316!important; border-radius:10px!important; box-shadow:0 0 10px rgba(234,88,12,.4),inset 0 1px 0 rgba(255,255,255,.2)!important; color:#fff!important; display:flex!important; align-items:center!important; justify-content:center!important; padding:0!important; }
+#shoutoutBtn.shoutout-btn{ width:36px!important; height:36px!important; min-width:36px!important; background:linear-gradient(135deg,#d97706,#b45309)!important; border:2px solid #f59e0b!important; border-radius:10px!important; box-shadow:0 0 10px rgba(217,119,6,.4),inset 0 1px 0 rgba(255,255,255,.2)!important; color:#fff!important; display:flex!important; align-items:center!important; justify-content:center!important; padding:0!important; }
 #shoutoutBtn.shoutout-btn:active{ transform:scale(.9)!important; }
 #shoutoutBtn.shoutout-btn svg{ width:20px!important; height:20px!important; stroke:#fff!important; stroke-width:3!important; fill:none!important; }
 .shoutout-placeholder{ font-size:.75rem; }
