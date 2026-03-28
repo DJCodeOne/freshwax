@@ -11,7 +11,7 @@ const log = createLogger('user/dashboard-access');
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`dashboard-access:${clientId}`, RateLimiters.standard);
@@ -26,17 +26,27 @@ export const GET: APIRoute = async ({ request }) => {
       return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
-    // Check admin status
-    let isAdmin = false;
-    try {
-      const adminDoc = await getDocument('admins', userId);
-      if (adminDoc) isAdmin = true;
-    } catch (e: unknown) {
-      log.error('Failed to check admin status:', e instanceof Error ? e.message : e);
+    // Check admin status — env UIDs first (no Firestore read), then admins collection
+    const env = locals?.runtime?.env;
+    const { initAdminEnv, getAdminUids } = await import('../../../lib/admin');
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+    let isAdmin = getAdminUids().includes(userId);
+    if (!isAdmin) {
+      try {
+        const adminDoc = await getDocument('admins', userId);
+        if (adminDoc) isAdmin = true;
+      } catch (e: unknown) {
+        log.error('Failed to check admin status:', e instanceof Error ? e.message : e);
+      }
     }
 
-    // Get user document
-    const userData = await getDocument('users', userId);
+    // Get user document (may return null if Firestore quota exhausted)
+    let userData: Record<string, unknown> | null = null;
+    try {
+      userData = await getDocument('users', userId);
+    } catch (e: unknown) {
+      log.error('Failed to fetch user data:', e instanceof Error ? e.message : e);
+    }
     const roles = userData?.roles || {};
     const pendingRoles = userData?.pendingRoles || {};
     const subscription = userData?.subscription || {};
