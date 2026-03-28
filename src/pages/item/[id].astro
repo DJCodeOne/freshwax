@@ -19,8 +19,21 @@ let error = null;
 let parallelSupportersResult: [Awaited<ReturnType<typeof getSupportersForRelease>>, {follower_count: number} | null] | null = null;
 
 try {
-  // Direct Firestore read instead of self-fetch (middleware already initializes Firebase)
-  const doc = await getDocument('releases', id!);
+  // Try D1 first (faster, always has full data), fall back to Firestore
+  const db = (Astro.locals as App.Locals).runtime?.env?.DB;
+  let doc: Record<string, unknown> | null = null;
+  if (db) {
+    try {
+      const row = await db.prepare('SELECT data FROM releases_v2 WHERE id = ?').bind(id!).first();
+      if (row && (row as Record<string, unknown>).data) {
+        doc = JSON.parse((row as Record<string, unknown>).data as string) as Record<string, unknown>;
+        doc.id = doc.id || id;
+      }
+    } catch (_e: unknown) { /* D1 failed, try Firestore */ }
+  }
+  if (!doc) {
+    doc = await getDocument('releases', id!);
+  }
 
   if (doc) {
     const normalized = normalizeRelease(doc, id);
