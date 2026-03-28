@@ -835,12 +835,12 @@ body.header-hidden .live-layout{ overflow:visible !important; height:auto !impor
 .shoutout-bar{ display:flex!important; padding:.35rem .625rem; gap:.5rem; border-radius:8px; background:#111; border:1px solid #333; min-height:28px; }
 .shoutout-left{ gap:.375rem; }
 .shoutout-label{ display:none; }
-.shoutout-btn{ width:32px; height:32px; background:linear-gradient(135deg,#dc2626,#b91c1c)!important; border:2px solid #ef4444!important; border-radius:8px!important; box-shadow:0 0 8px rgba(220,38,38,.3); color:#fff!important; display:flex!important; align-items:center!important; justify-content:center!important; }
-.shoutout-btn:active{ transform:scale(.9); }
-.shoutout-btn svg{ width:16px; height:16px; stroke:#fff!important; }
+#shoutoutBtn.shoutout-btn{ width:32px!important; height:32px!important; background:linear-gradient(135deg,#dc2626,#b91c1c)!important; border:2px solid #ef4444!important; border-radius:8px!important; box-shadow:0 0 8px rgba(220,38,38,.3); color:#fff!important; display:flex!important; align-items:center!important; justify-content:center!important; padding:0!important; }
+#shoutoutBtn.shoutout-btn:active{ transform:scale(.9); }
+#shoutoutBtn.shoutout-btn svg{ width:18px!important; height:18px!important; stroke:#fff!important; fill:none!important; }
 .shoutout-placeholder{ font-size:.75rem; }
-.inline-controls .inline-btn svg{ width:22px!important; height:22px!important; }
-.inline-controls .inline-btn.share-btn svg{ width:20px!important; height:20px!important; } }
+.inline-controls .inline-btn svg{ width:24px!important; height:24px!important; }
+.inline-controls .inline-btn.save-btn svg{ width:22px!important; height:22px!important; } }
 @media (max-width:400px){ .mobile-tab{ padding:.6rem .25rem; }
 .mobile-tab span{ font-size:.6rem; }
 .player-controls{ padding:.5rem; gap:.375rem; }
