@@ -271,7 +271,7 @@ html, body{ overflow:auto; }
 .shoutout-input-wrapper input:focus-visible{ outline:2px solid #60a5fa; outline-offset:2px; }
 .shoutout-char-count{ position:absolute; right:1rem; top:50%; transform:translateY(-50%); font-size:.875rem; color:#aaa; }
 .shoutout-emoji-row{ display:flex; justify-content:center; gap:.625rem; margin-bottom:1.25rem; }
-.shoutout-emoji{ width:44px; height:44px; background:#1a1a1a; border:2px solid #333; border-radius:10px; font-size:1.5rem; cursor:pointer; transition:background-color .2s, color .2s, border-color .2s, box-shadow .2s; display:flex; align-items:center; }
+.shoutout-emoji{ width:44px; height:44px; background:#1a1a1a; border:2px solid #333; border-radius:10px; font-size:1.5rem; cursor:pointer; transition:background-color .2s, color .2s, border-color .2s, box-shadow .2s; display:flex; align-items:center; justify-content:center; text-align:center; }
 .send-shoutout-btn{ width:100%; display:flex; align-items:center; justify-content:center; gap:.5rem; padding:1rem 1.25rem; background:#dc2626; border:0; border-radius:10px; color:#fff; font-size:1.25rem; font-weight:700; font-family:'Inter',sans-serif; letter-spacing:1px; cursor:pointer; }
 .send-shoutout-btn:hover:not(:disabled){ background:#b91c1c; }
 .send-shoutout-btn:disabled{ background:#333; cursor:not-allowed; opacity:.7; }
@@ -831,14 +831,7 @@ body.header-hidden .live-layout{ overflow:visible !important; height:auto !impor
 .stereo-meters-wrapper{ display:none; }
 .sound-wave-wrapper{ display:none !important; }
 #volumeSlider{ width:100%; height:8px; -webkit-appearance:none; appearance:none; background:#333; border-radius:4px; }
-#volumeSlider::-webkit-slider-thumb{ -webkit-appearance:none; width:24px; height:24px; background:#dc2626; border-radius:50%; cursor:pointer; } }
-@media (max-width:400px){ .mobile-tab{ padding:.6rem .25rem; }
-.mobile-tab span{ font-size:.6rem; }
-.player-controls{ padding:.5rem; gap:.375rem; }
-.schedule-header h1,
-.schedule-header h2{ font-size:1.75rem; }
-.sidebar-card h2,
-.sidebar-card h3{ font-size:1.25rem; }
+#volumeSlider::-webkit-slider-thumb{ -webkit-appearance:none; width:24px; height:24px; background:#dc2626; border-radius:50%; cursor:pointer; }
 .shoutout-bar{ display:flex!important; padding:.35rem .625rem; gap:.5rem; border-radius:8px; background:#111; border:1px solid #333; min-height:28px; }
 .shoutout-left{ gap:.375rem; }
 .shoutout-label{ display:none; }
@@ -846,6 +839,15 @@ body.header-hidden .live-layout{ overflow:visible !important; height:auto !impor
 .shoutout-btn:active{ transform:scale(.9); }
 .shoutout-btn svg{ width:16px; height:16px; stroke:#fff!important; }
 .shoutout-placeholder{ font-size:.75rem; }
+.inline-controls .inline-btn svg{ width:22px!important; height:22px!important; }
+.inline-controls .inline-btn.share-btn svg{ width:20px!important; height:20px!important; } }
+@media (max-width:400px){ .mobile-tab{ padding:.6rem .25rem; }
+.mobile-tab span{ font-size:.6rem; }
+.player-controls{ padding:.5rem; gap:.375rem; }
+.schedule-header h1,
+.schedule-header h2{ font-size:1.75rem; }
+.sidebar-card h2,
+.sidebar-card h3{ font-size:1.25rem; }
 .dj-info-bar{ padding:.375rem .5rem; gap:.375rem; flex-direction:column; align-items:center; }
 .dj-info-center{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.25rem .5rem; width:100%; }
 .dj-info-right{ display:none; }
