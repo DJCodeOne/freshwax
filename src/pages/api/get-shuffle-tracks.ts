@@ -23,6 +23,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   // Initialize Firebase for Cloudflare runtime
   const env = locals.runtime.env;
+  const db = env?.DB as D1Database | undefined;
 
   const startTime = Date.now();
   
@@ -49,7 +50,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     pendingRequest = (async () => {
       log.info('[get-shuffle-tracks] Fetching fresh data');
 
-      const releases = await getLiveReleases(50);
+      const releases = await getLiveReleases(50, db);
+      log.info('[get-shuffle-tracks] Got', releases.length, 'releases');
+      if (releases.length > 0) {
+        const first = releases[0];
+        const trackCount = Array.isArray(first.tracks) ? first.tracks.length : 0;
+        log.info('[get-shuffle-tracks] First release tracks:', trackCount, 'keys:', Object.keys(first).slice(0, 10).join(','));
+      }
       const allTracks = extractTracksFromReleases(releases);
       
       cachedResult = {
