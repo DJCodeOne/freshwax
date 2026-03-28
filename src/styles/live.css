@@ -832,11 +832,12 @@ body.header-hidden .live-layout{ overflow:visible !important; height:auto !impor
 .schedule-header h2{ font-size:1.75rem; }
 .sidebar-card h2,
 .sidebar-card h3{ font-size:1.25rem; }
-.shoutout-bar{ display:flex; padding:.35rem .625rem; gap:.5rem; border-radius:8px; }
+.shoutout-bar{ display:flex!important; padding:.35rem .625rem; gap:.5rem; border-radius:8px; background:#111; border:1px solid #333; min-height:28px; }
 .shoutout-left{ gap:.375rem; }
 .shoutout-label{ font-size:8px; letter-spacing:.5px; }
 .shoutout-btn{ width:20px; height:20px; }
 .shoutout-btn svg{ width:12px; height:12px; }
+.shoutout-placeholder{ font-size:.75rem; }
 .dj-info-bar{ padding:.375rem .5rem; gap:.375rem; flex-direction:column; align-items:center; }
 .dj-info-center{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.25rem .5rem; width:100%; }
 .dj-info-right{ display:none; }
