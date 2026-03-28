@@ -170,7 +170,7 @@ html, body{ overflow:auto; }
 .btn-icon svg{ width:18px; height:18px; }
 .btn-content{ display:flex; flex-direction:column; align-items:flex-start; gap:0; min-width:0; }
 .btn-label{ font-size:.8rem; font-weight:700; letter-spacing:.01em; }
-.sidebar-card{ background:linear-gradient( #374151, #111827); }
+.sidebar-card{ background:linear-gradient( #374151, #111827); border-radius:12px; border:1px solid #4b5563; padding:1.25rem; }
 .sidebar-card h2,
 .sidebar-card h3{ margin:0 0 1rem 0; font-family:'Bebas Neue','Bebas Fallback',sans-serif; font-size:1.5rem; font-weight:400; color:#fff; display:flex; align-items:center; gap:.5rem; }
 .sidebar-card h2 .red,
