@@ -482,6 +482,13 @@ export async function addToPersonalPlaylist(
       title = title || metadata.title;
       thumbnail = thumbnail || metadata.thumbnail;
     }
+    // Fallback: extract readable name from URL if title is still empty
+    if (!title) {
+      try {
+        const urlPath = decodeURIComponent(new URL(url.trim()).pathname.split('/').pop() || '');
+        title = urlPath.replace(/\.[^.]+$/, '').replace(/\s*\[[a-zA-Z0-9_-]{11}\]/, '').replace(/[_-]+/g, ' ').trim();
+      } catch { /* ignore URL parse errors */ }
+    }
     if (!thumbnail && parsed.platform === 'youtube' && parsed.embedId) {
       thumbnail = `https://img.youtube.com/vi/${parsed.embedId}/mqdefault.jpg`;
     }

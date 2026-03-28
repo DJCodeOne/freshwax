@@ -6,7 +6,9 @@ import type { PlaylistItem } from './types';
 /** Inline platform name helper (avoids importing url-parser.ts in synchronous render paths) */
 export function platformName(platform: string, url?: string, title?: string): string {
   if (platform === 'direct') {
-    // Detect YouTube origin from filename [videoId] pattern in URL or title
+    // All playlist server tracks originate from YouTube
+    // Show "YouTube" for tracks from the playlist server, "MP3" only for other direct URLs
+    if (url && url.includes('playlist.freshwax.co.uk')) return 'YouTube';
     const hasYtId = /\[[a-zA-Z0-9_-]{11}\]/.test(url || '') || /\[[a-zA-Z0-9_-]{11}\]/.test(title || '');
     if (hasYtId) return 'YouTube';
     return 'MP3';

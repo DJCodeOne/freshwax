@@ -409,6 +409,8 @@ export function renderPersonalPlaylistPage(
       const itemId = button.dataset.id;
       if (!itemId || !state.playlistManager || button.classList.contains('deleting')) return;
 
+      if (!confirm('Remove this track from your playlist?')) return;
+
       button.classList.add('deleting');
       button.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
       state.playlistManager.removeFromPersonalPlaylist(itemId);
