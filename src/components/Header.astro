@@ -1969,6 +1969,8 @@ const firebaseConfig = {
     font-weight: 500;
     text-decoration: none;
     transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
+    position: relative;
+    z-index: 1;
   }
 
   #freshwax-header .fwx-nav-btn:hover {
@@ -1980,6 +1982,8 @@ const firebaseConfig = {
   #freshwax-header .fwx-nav-icon {
     width: 1.25rem;
     height: 1.25rem;
+    pointer-events: none;
+    flex-shrink: 0;
   }
   
   /* LIVE Button */
