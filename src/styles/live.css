@@ -561,7 +561,15 @@ html, body{ overflow:auto; }
 .queue-icon{ display:inline-block; background:#f59e0b; color:#fff; padding:.5rem 1.5rem; border-radius:20px; font-weight:700; font-size:.875rem; margin-bottom:1rem; }
 .queue-info-box p{ margin:0 0 .5rem 0; color:#92400e; font-size:.9375rem; }
 .queue-note{ font-size:.8125rem !important; color:#b45309 !important; font-style:italic; }
-.share-modal-content{ max-width:420px; }
+.share-modal-content{ max-width:420px; width:100%; box-sizing:border-box; }
+@media (max-width:900px){ .share-modal-content{ max-width:calc(100vw - 2rem); }
+.share-modal-content *{ box-sizing:border-box; max-width:100%; }
+.share-modal-content .modal-body{ padding:1rem; overflow-x:hidden; }
+.share-link-box{ flex-wrap:wrap; }
+.share-link-box input{ min-width:0; width:100%; }
+.share-buttons{ grid-template-columns:1fr 1fr; }
+.share-preview-dj img{ width:44px; height:44px; }
+.share-preview-info h3{ font-size:1rem; } }
 .share-header{ background:linear-gradient(135deg, #dc2626, #b91c1c); border-bottom:none; }
 .share-header h2{ color:#fff; }
 .share-header .modal-close{ color:#fff; }
