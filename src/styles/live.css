@@ -277,6 +277,9 @@ html, body{ overflow:auto; }
 .stream-stats .stat:last-of-type{ min-width:3.5rem; }
 .live-badge{ display:flex; align-items:center; gap:.5rem; padding:.5rem 1rem; background:#333; border-radius:8px; box-shadow:none; color:#bbb; font-weight:700; font-size:.875rem; }
 .live-badge.is-live{ background:#dc2626; color:#fff; }
+.live-badge.is-playlist{ background:linear-gradient(135deg,#1e3a5f,#1d4ed8); color:#fff; box-shadow:0 0 12px rgba(59,130,246,.4),0 0 24px rgba(59,130,246,.2); }
+.live-badge.is-playlist .live-dot{ background:#60a5fa; box-shadow:0 0 6px #60a5fa,0 0 12px rgba(96,165,250,.6); animation:pulse-dot 1.5s ease-in-out infinite; }
+.live-badge.is-playlist #liveStatusText{ color:#fff; }
 .live-badge.is-loading{ background:#4b5563; color:#d1d5db; animation:pulse-opacity-60 1.5s ease-in-out infinite; }
 .live-badge.is-loading .live-dot{ background:#9ca3af; animation:pulse-dot 1s infinite; }
 .live-badge .live-dot{ width:8px; height:8px; background:#666; border-radius:50%; }
