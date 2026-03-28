@@ -538,16 +538,12 @@ export async function sendGiphyMessage(giphyUrl, giphyId) {
 export function setChatEnabled(enabled) {
   var chatInput = document.getElementById('chatInput');
   var sendBtn = document.getElementById('sendChat');
-  var loginPrompt = document.getElementById('loginPrompt');
   if (chatInput) {
     chatInput.disabled = !enabled;
     chatInput.placeholder = enabled ? 'Message...' : 'Chat available when stream is live...';
   }
   if (sendBtn) sendBtn.disabled = !enabled;
-  // Only hide login prompt if user is actually logged in (chatForm visible means logged in)
-  var chatForm = document.getElementById('chatForm');
-  var isLoggedIn = chatForm && !chatForm.classList.contains('hidden');
-  if (loginPrompt && isLoggedIn) loginPrompt.style.display = enabled ? 'none' : '';
+  // Never touch loginPrompt visibility here — auth handler manages it
 }
 
 function createFloatingEmojiFromBroadcast(emojis) {
