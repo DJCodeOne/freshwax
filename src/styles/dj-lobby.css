@@ -845,8 +845,21 @@ button{ -webkit-user-select:none; user-select:none } }
 .header-end-stream-btn:hover{ background:rgba(185,28,28,.6); border-color:rgba(220,38,38,.8) }
 .header-end-stream-btn:disabled{ opacity:.5; cursor:not-allowed }
 .mobile-status-text{ font-size:.75rem; color:#d1d5db; text-align:center; min-height:1.2em; margin:0 }
-.mobile-chat-container{ flex:1; min-height:200px; overflow:hidden; border-radius:10px }
-.mobile-chat-container .chat-section{ height:100%; max-height:100%; display:flex; flex-direction:column }
+.mobile-chat-container{ flex:1; min-height:0; overflow:hidden; border-radius:10px }
+.mobile-chat-container .chat-section{ height:100%; max-height:100%; display:flex; flex-direction:column; min-height:0; overflow:hidden; background:var(--g5); border:1px solid rgba(139,92,246,.2); border-radius:10px }
+.mobile-chat-container .chat-header{ padding:.5rem .75rem; border-bottom:1px solid #333; flex-shrink:0; display:flex; align-items:center; justify-content:space-between }
+.mobile-chat-container .chat-header h2{ margin:0; font-size:.8rem; color:#fff; font-weight:700; text-transform:uppercase; letter-spacing:.5px }
+.mobile-chat-container .chat-viewers{ font-size:.7rem; color:#888 }
+.mobile-chat-container .chat-messages{ flex:1; overflow-y:auto; padding:.5rem; min-height:0 }
+.mobile-chat-container .chat-input-section{ flex-shrink:0; padding:.5rem; border-top:1px solid #333 }
+.mobile-chat-container .login-prompt{ text-align:center; padding:.5rem; font-size:.8rem }
+.mobile-chat-container .login-prompt a{ color:#dc2626 }
+.mobile-chat-container .chat-form{ display:flex; flex-direction:column; gap:.25rem }
+.mobile-chat-container .chat-input-wrapper{ display:flex; align-items:center; gap:.25rem }
+.mobile-chat-container .chat-input-wrapper input{ flex:1; padding:.4rem .5rem; background:#1a1a2e; border:1px solid #333; border-radius:6px; color:#fff; font-size:.875rem }
+.mobile-chat-container .chat-input-wrapper button{ background:transparent; border:none; color:#bbb; cursor:pointer; padding:.25rem }
+.mobile-chat-container .chat-send-btn{ display:flex; align-items:center; justify-content:center; width:36px; height:36px; background:linear-gradient(135deg,#dc2626,#b91c1c)!important; border:none!important; border-radius:8px!important; color:#fff!important; cursor:pointer; flex-shrink:0 }
+.mobile-chat-container .chat-send-btn svg{ width:16px; height:16px; fill:#fff }
 @media (max-width:768px){ .audio-controls-bar{ flex-direction:column }
 .control-group{ flex-wrap:wrap }
 .led-meter{ min-width:150px }
