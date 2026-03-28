@@ -168,7 +168,7 @@ const { nonce = '' } = Astro.props;
                 self.wasPlaying = false;
                 self.resumeTime = 0;
               }).catch(function(err) {
-                console.warn('[AudioManager] Resume failed:', err.message);
+                /* resume failed */
                 self.mode = 'idle';
                 self.shouldResumeAfterPreview = false;
                 self.wasPlaying = false;

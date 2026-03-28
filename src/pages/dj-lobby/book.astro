@@ -741,14 +741,12 @@ const firebaseConfig = {
       // First check if Header has shared its auth instance
       if (window.firebaseAuth) {
         auth = window.firebaseAuth;
-        console.debug('[Book] Using shared auth from Header');
         return;
       }
 
       // Otherwise use existing app or create new one
       const app = getApps().length ? getApps()[0] : initializeApp(window.FIREBASE_CONFIG);
       auth = getAuth(app);
-      console.debug('[Book] Initialized Firebase (apps:', getApps().length, ')');
     }
 
     initFirebase();
@@ -778,7 +776,6 @@ const firebaseConfig = {
       return new Promise((resolve) => {
         // If auth.currentUser is already set, use it immediately
         if (auth.currentUser) {
-          console.debug('[Book] Auth already available:', auth.currentUser.uid);
           resolve(auth.currentUser);
           return;
         }
@@ -786,18 +783,14 @@ const firebaseConfig = {
         // Wait for auth state change
         const unsubscribe = onAuthStateChanged(auth, (user) => {
           unsubscribe(); // Only need first result
-          console.debug('[Book] onAuthStateChanged resolved:', user?.uid);
 
           // If Firebase says no user but we have cached UID, wait a bit more
           // This handles View Transitions timing issues
           if (!user && cachedUid) {
-            console.debug('[Book] No user but have cached UID, waiting for sync...');
             setTimeout(() => {
               if (auth.currentUser) {
-                console.debug('[Book] Auth synced after delay:', auth.currentUser.uid);
                 resolve(auth.currentUser);
               } else {
-                console.debug('[Book] Still no user after delay');
                 resolve(null);
               }
             }, 500);
@@ -810,7 +803,6 @@ const firebaseConfig = {
 
     // Main initialization function
     async function initPage() {
-      console.debug('[Book] initPage called');
 
       // Get DOM elements fresh each time
       loadingGate = document.getElementById('loadingGate');
@@ -829,7 +821,6 @@ const firebaseConfig = {
 
       // Wait for auth state
       const user = await waitForAuth();
-      console.debug('[Book] Auth resolved, user:', user?.uid);
 
       if (!user) {
         // No user - redirect to login
@@ -870,7 +861,6 @@ const firebaseConfig = {
       // Check subscription tier for booking limits
       const isPlus = userData.subscription?.isPlus || false;
       maxAdvanceDays = isPlus ? 30 : 7; // Plus: 1 month, Standard: 1 week
-      console.debug('[Book] Subscription tier:', isPlus ? 'Plus' : 'Standard', '- max advance days:', maxAdvanceDays);
 
       // All registered users are DJs by default
       const isDJ = userData.roles?.dj === true || true;
@@ -908,7 +898,6 @@ const firebaseConfig = {
       updateDateDisplay();
       loadDayBookings();
       loadMyBookings();
-      console.debug('[Book] Page fully initialized');
     }
 
     // Start initialization immediately
@@ -916,7 +905,6 @@ const firebaseConfig = {
 
     // Also handle View Transitions navigation
     document.addEventListener('astro:page-load', () => {
-      console.debug('[Book] astro:page-load fired');
       // Re-init Firebase in case Header's auth is now available
       initFirebase();
       initPage();

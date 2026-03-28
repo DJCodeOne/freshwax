@@ -112,7 +112,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <!-- LEFT: Images + Buy Button (like ReleasePlate) -->
           <div class="images-section">
             <div class="main-image" id="mainImage">
-              <img src={pageImage || '/place-holder.webp'} alt={pageBreadcrumbName} id="mainImageImg" width="350" height="350" fetchpriority="high" decoding="async" />
+              <img src={pageImage || '/place-holder.webp'} alt={pageBreadcrumbName} id="mainImageImg" width="350" height="350" loading="eager" fetchpriority="high" decoding="async" />
               <div class="sale-badge" id="saleBadge" style="display: none;">SALE</div>
             </div>
             <div class="image-thumbnails" id="imageThumbnails"></div>

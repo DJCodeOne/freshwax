@@ -3,6 +3,9 @@
 // Fresh Wax Payments Admin - Disputes, Refunds, and Failed Payouts
 // Ledger: D1 primary, Firebase backup
 import { requireAdminAuth } from '../../lib/admin';
+import { createLogger } from '../../lib/api-utils';
+
+const log = createLogger('admin-payments');
 
 // Server-side admin auth check
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
@@ -29,8 +32,6 @@ const serviceAccountKey = (clientEmail && privateKey) ? JSON.stringify({
   auth_uri: 'https://accounts.google.com/o/oauth2/auth',
   token_uri: 'https://oauth2.googleapis.com/token'
 }) : null;
-
-console.debug('[payments] Service account configured:', !!serviceAccountKey);
 
 // Fetch disputes
 const saQuery = (c: string, o: Record<string, unknown>) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
@@ -60,19 +61,19 @@ const [disputes, refunds, pendingPayouts, manualPendingPayoutsResult, pendingSup
     ? saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingPayouts', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }],
         limit: 100
-      }).catch((err: unknown) => { console.error('[payments] Error fetching manualPendingPayouts:', err); return [] as Record<string, unknown>[]; })
+      }).catch((err: unknown) => { log.error('Error fetching manualPendingPayouts:', err); return [] as Record<string, unknown>[]; })
     : Promise.resolve([] as Record<string, unknown>[]),
   // Pending supplier payouts
   serviceAccountKey
     ? saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSupplierPayouts', {
         limit: 100
-      }).catch(() => { console.debug('[payments] No pending supplier payouts collection'); return [] as Record<string, unknown>[]; })
+      }).catch(() => [] as Record<string, unknown>[])
     : Promise.resolve([] as Record<string, unknown>[]),
   // Pending seller payouts (vinyl crate)
   serviceAccountKey
     ? saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSellerPayouts', {
         limit: 100
-      }).catch(() => { console.debug('[payments] No pending seller payouts collection'); return [] as Record<string, unknown>[]; })
+      }).catch(() => [] as Record<string, unknown>[])
     : Promise.resolve([] as Record<string, unknown>[]),
 ]);
 
@@ -81,15 +82,8 @@ const pendingSupplierPayouts = pendingSupplierPayoutsResult;
 const pendingSellerPayouts = pendingSellerPayoutsResult;
 
 if (!serviceAccountKey) {
-  console.warn('[payments] No service account key - cannot fetch pending payouts');
-  console.debug('[payments] clientEmail:', !!clientEmail, 'privateKey:', !!privateKey);
+  log.warn('No service account key - cannot fetch pending payouts');
 }
-if (manualPendingPayouts.length > 0) {
-  console.debug('[payments] Found', manualPendingPayouts.length, 'pending artist payouts');
-  console.debug('[payments] Pending payout orderIds:', manualPendingPayouts.map(p => p.orderId).join(', '));
-}
-console.debug('[payments] Found', pendingSupplierPayouts.length, 'pending supplier payouts');
-console.debug('[payments] Found', pendingSellerPayouts.length, 'pending seller payouts');
 
 // Define payee type for unified tracking
 type PayeeInfo = {
@@ -184,14 +178,6 @@ for (const payout of pendingSellerPayouts) {
 // Legacy: keep orderArtistMap for backwards compatibility
 const orderArtistMap = orderPayeesMap;
 
-// Debug: log which orders have pending payouts mapped
-console.debug('[payments] Orders with pending payouts:', Object.keys(orderPayeesMap).length);
-if (Object.keys(orderPayeesMap).length > 0) {
-  for (const [orderId, payees] of Object.entries(orderPayeesMap)) {
-    console.debug(`[payments] Order ${orderId}:`, (payees as PayeeInfo[]).map(p => `${p.name}: £${p.amount.toFixed(2)}`).join(', '));
-  }
-}
-
 // Fetch completed payouts, recent orders, ledger, artists, and releases in parallel
 const db = runtimeEnv?.DB;
 const [completedPayouts, recentOrders, ledgerEntriesRaw, artists, releases] = await Promise.all([
@@ -199,7 +185,7 @@ const [completedPayouts, recentOrders, ledgerEntriesRaw, artists, releases] = aw
   saQueryCollection(serviceAccountKey, projectId, 'payouts', {
     orderBy: { field: 'createdAt', direction: 'DESCENDING' },
     limit: 100
-  }).catch((err: unknown) => { console.error('[payments] Error fetching payouts:', err); return [] as Record<string, unknown>[]; }),
+  }).catch((err: unknown) => { log.error('Error fetching payouts:', err); return [] as Record<string, unknown>[]; }),
   // Recent orders
   saQuery('orders', {
     orderBy: { field: 'createdAt', direction: 'DESCENDING' },
@@ -214,17 +200,15 @@ const [completedPayouts, recentOrders, ledgerEntriesRaw, artists, releases] = aw
           orderBy: { field: 'timestamp', direction: 'DESCENDING' },
           limit: 500
         });
-        console.debug('[payments] Firebase:', entries.length, 'ledger entries');
       } catch (fbErr) {
-        console.error('[payments] Firebase failed, trying D1:', fbErr);
+        log.error('Firebase failed, trying D1:', fbErr);
       }
     }
     if (entries.length === 0 && db) {
       try {
         entries = await d1GetLedgerEntries(db, { limit: 500 });
-        console.debug('[payments] D1 fallback:', entries.length, 'ledger entries');
       } catch (d1Error) {
-        console.error('[payments] D1 also failed:', d1Error);
+        log.error('D1 also failed:', d1Error);
       }
     }
     return entries;

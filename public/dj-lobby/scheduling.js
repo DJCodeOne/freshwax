@@ -30,10 +30,6 @@ export function getAllDjSlots() {
   return allDjSlots;
 }
 
-export function setAllDjSlots(val) {
-  allDjSlots = val;
-}
-
 export function getCurrentStreamKey() {
   return currentStreamKey;
 }
@@ -42,21 +38,6 @@ export function setCurrentStreamKey(val) {
   currentStreamKey = val;
 }
 
-export function getStreamKeyDisplayed() {
-  return streamKeyDisplayed;
-}
-
-export function setStreamKeyDisplayed(val) {
-  streamKeyDisplayed = val;
-}
-
-export function getCurrentEventSession() {
-  return currentEventSession;
-}
-
-export function setCurrentEventSession(val) {
-  currentEventSession = val;
-}
 
 export async function loadMySlot() {
   var currentUser = ctx ? ctx.getCurrentUser() : null;
@@ -678,41 +659,26 @@ export async function handleGoLiveReady() {
   var broadcastMeterAnimationId = ctx ? ctx.getBroadcastMeterAnimationId() : null;
 
   var relayAudio = document.getElementById('relayAudio');
-  console.debug('[GoLive] Relay audio element:', relayAudio, 'paused:', relayAudio ? relayAudio.paused : 'N/A');
-  console.debug('[GoLive] currentPreviewSource:', currentPreviewSource);
-  console.debug('[GoLive] icecastAudioContext:', icecastAudioContext ? icecastAudioContext.state : 'N/A');
-  console.debug('[GoLive] icecastAnalyserL:', !!icecastAnalyserL, 'icecastAnalyserR:', !!icecastAnalyserR);
-  console.debug('[GoLive] icecastGainNode:', !!icecastGainNode);
 
   if (relayAudio && !relayAudio.paused) {
     if (icecastGainNode) {
       icecastGainNode.gain.value = 0;
-      console.debug('[GoLive] Set GainNode to 0 (audio still flows to analyser)');
     } else {
       relayAudio.volume = 0;
-      console.debug('[GoLive] Fallback: Set relay audio volume to 0');
     }
 
     if (icecastAudioContext && icecastAudioContext.state === 'suspended') {
       await icecastAudioContext.resume();
-      console.debug('[GoLive] Resumed icecast audio context, new state:', icecastAudioContext.state);
     }
 
     if (icecastAnalyserL && icecastAnalyserR) {
-      console.debug('[GoLive] Analysers available, liveMeterAnimationId:', liveMeterAnimationId, 'broadcastMeterAnimationId:', broadcastMeterAnimationId);
       if (!liveMeterAnimationId && animateLiveMeters) {
         animateLiveMeters();
-        console.debug('[GoLive] Started live meters for relay');
       }
       if (!broadcastMeterAnimationId && initBroadcastMeters) {
         initBroadcastMeters();
-        console.debug('[GoLive] Started broadcast meters for relay');
       }
-    } else {
-      console.warn('[GoLive] Icecast analysers not available');
     }
-  } else {
-    console.debug('[GoLive] Relay audio not playing or not found');
   }
 
   var title, genre;
@@ -720,7 +686,6 @@ export async function handleGoLiveReady() {
   var isRelayMode = currentStreamMode === 'relay';
   var userRelayUrl = isRelayMode && selectedRelaySource ? (selectedRelaySource.playbackUrl || 'https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8') : null;
   var relaySourceName = selectedRelaySource ? (selectedRelaySource.name || 'External Source') : 'External Source';
-  console.debug('[GoLive] Relay mode:', isRelayMode, 'URL:', userRelayUrl);
 
   if (isRelayMode && selectedRelaySource && selectedRelaySource.nowPlaying) {
     title = selectedRelaySource.nowPlaying;

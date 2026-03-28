@@ -307,14 +307,14 @@ export async function endStream(token, force) {
               authToken = await user.getIdToken(true);
             }
           } catch (refreshErr) {
-            console.warn('[Broadcast] Token refresh failed:', refreshErr);
+            /* token refresh failed */
           }
         } else {
-          console.warn('[Broadcast] endStream API returned', resp.status);
+          /* endStream API returned error */
           break;
         }
       } catch (fetchErr) {
-        console.warn('[Broadcast] endStream API failed:', fetchErr);
+        /* endStream API failed */
         break;
       }
     }

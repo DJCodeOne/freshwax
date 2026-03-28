@@ -117,7 +117,6 @@ export async function startRelayChecks() {
     if (response.ok) {
       var result = await response.json();
       isRelayLive = result.isLive || false;
-      console.debug('[Relay] Live check:', selectedRelaySource.name, isRelayLive ? 'LIVE' : 'offline');
     }
   } catch (err) {
     isRelayLive = true;

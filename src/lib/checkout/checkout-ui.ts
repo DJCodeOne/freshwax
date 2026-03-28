@@ -301,7 +301,7 @@ export function renderCheckout(
               return `
               <article class="checkout-item">
                 <div class="checkout-item-thumb">
-                  <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">
+                  <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async">
                 </div>
                 <div class="checkout-item-info">
                   <h3 class="checkout-item-title">${escapeHtml(item.name)}</h3>

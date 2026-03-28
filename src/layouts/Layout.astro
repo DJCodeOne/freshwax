@@ -233,7 +233,7 @@ const csrfToken = Astro.locals.csrfToken || '';
               x.open('POST', '/api/log-error/', true);
               x.setRequestHeader('Content-Type', 'application/json');
               x.send(JSON.stringify(batch[i]));
-            } catch (e) { console.warn('[Layout] Error report failed'); }
+            } catch (e) { /* error report failed */ }
           }
           sending = false;
         }

@@ -223,8 +223,6 @@ export async function startRelayAudioPreview(stationUrl) {
   var relayDot = document.getElementById('relayDot');
   var previewRelayDot = document.getElementById('previewRelayDot');
 
-  console.debug('[RelayPreview] Starting relay audio preview:', stationUrl);
-
   if (!relayAudio) {
     console.error('[RelayPreview] relayAudio element not found');
     return;
@@ -241,13 +239,11 @@ export async function startRelayAudioPreview(stationUrl) {
   }
 
   relayAudio.onplaying = function() {
-    console.debug('[RelayPreview] Audio connected and playing, volume:', relayAudio.volume, 'muted:', relayAudio.muted);
     if (relayDot) { relayDot.classList.remove('disconnected'); relayDot.classList.add('connected'); }
     if (previewRelayDot) { previewRelayDot.classList.remove('disconnected'); previewRelayDot.classList.add('connected'); }
 
     if (!ctx.getIcecastAudioContext()) {
       ctx.setupIcecastAnalysers(relayAudio);
-      console.debug('[RelayPreview] Icecast analysers initialized');
     }
     ctx.setCurrentPreviewSource('relay');
     setTimeout(function() {
@@ -270,7 +266,6 @@ export async function startRelayAudioPreview(stationUrl) {
   relayAudio.muted = false;
 
   if (stationUrl.includes('.m3u8')) {
-    console.debug('[RelayPreview] Using HLS.js for m3u8 stream');
     if (typeof Hls === 'undefined') {
       try {
         await new Promise(function(resolve, reject) {
@@ -282,7 +277,7 @@ export async function startRelayAudioPreview(stationUrl) {
           document.head.appendChild(s);
         });
       } catch (err) {
-        console.warn('[RelayPreview] HLS.js load failed:', err);
+        /* HLS.js load failed */
       }
     }
     if (typeof Hls !== 'undefined' && Hls.isSupported()) {
@@ -293,7 +288,6 @@ export async function startRelayAudioPreview(stationUrl) {
       relayHlsPlayer.loadSource(stationUrl);
       relayHlsPlayer.attachMedia(relayAudio);
       relayHlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
-        console.debug('[RelayPreview] HLS manifest parsed, playing...');
         relayAudio.play().catch(function(e) {
           console.error('[RelayPreview] HLS play failed:', e.name, e.message);
         });
@@ -309,13 +303,11 @@ export async function startRelayAudioPreview(stationUrl) {
     }
   } else {
     relayAudio.src = stationUrl;
-    console.debug('[RelayPreview] Set src, attempting to play...');
     relayAudio.play().then(function() {
-      console.debug('[RelayPreview] Play started successfully');
+      /* play started */
     }).catch(function(e) {
       console.error('[RelayPreview] Audio play failed:', e.name, e.message);
       if (e.name === 'NotAllowedError') {
-        console.debug('[RelayPreview] Autoplay blocked - user interaction needed');
       }
     });
   }
@@ -374,7 +366,6 @@ export function renderInlineRelayStations() {
       log('[Relay] Selected station:', selectedRelaySource.name, 'Live:', selectedRelaySource.isLive, 'Now playing:', selectedRelaySource.nowPlaying);
       updateRelayPreview();
       var previewUrl = selectedRelaySource.playbackUrl || 'https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8';
-      console.debug('[Relay] Using preview URL:', previewUrl);
       startRelayAudioPreview(previewUrl);
       document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
       var relayAudio = document.getElementById('relayAudio');

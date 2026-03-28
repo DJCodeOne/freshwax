@@ -123,7 +123,7 @@ export async function setupLiveStatusListener(deps) {
     // chat-handler.js — no duplicate subscription here.
 
   } catch (err) {
-    console.warn('[Presence] Failed to setup Pusher:', err);
+    /* Pusher setup failed */
   }
 }
 
@@ -138,7 +138,7 @@ export async function waitForPusherAndSetup(deps) {
   if (window.Pusher) {
     setupLiveStatusListener(deps);
   } else {
-    console.warn('[LiveStatus] Pusher not available after waiting');
+    /* Pusher not available after waiting */
   }
 }
 
@@ -182,7 +182,7 @@ export async function registerStreamView(deps) {
       if (chatViewers) chatViewers.textContent = data.activeViewers + ' watching';
     }
   } catch (e) {
-    console.warn('[Viewers] Registration failed:', e);
+    /* viewer registration failed */
   }
 }
 

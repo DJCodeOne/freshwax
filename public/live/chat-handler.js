@@ -115,7 +115,7 @@ export async function setupChat(streamId) {
       }
     }
   } catch (e) {
-    console.warn('[Chat] Failed to load initial messages:', e);
+    /* failed to load initial messages */
   }
 
   // Subscribe to channel

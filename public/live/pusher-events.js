@@ -21,7 +21,7 @@ export async function loadPusherScript() {
       document.head.appendChild(s);
     });
   } catch (e) {
-    console.warn('[Pusher] Failed to load script:', e);
+    /* Pusher load failed */
   }
 }
 
@@ -68,7 +68,7 @@ export async function setupLiveStatusPusher(deps) {
       if (typeof window.refreshSchedule === 'function') window.refreshSchedule();
     });
   } catch (e) {
-    console.warn('[LiveStatus] Pusher setup failed, falling back to polling:', e);
+    /* Pusher setup failed, falling back to polling */
   }
 }
 

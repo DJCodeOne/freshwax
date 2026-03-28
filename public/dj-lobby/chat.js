@@ -31,7 +31,6 @@ export function setChannel(ch) {
 export async function initLivestreamChat(streamId) {
   if (!streamId) return;
 
-  console.debug('[LivestreamChat] Initializing chat for stream:', streamId);
   window.livestreamChatInitialized = true;
 
   try {
@@ -62,17 +61,13 @@ export async function initLivestreamChat(streamId) {
     }
 
     var channelName = 'stream-' + streamId;
-    console.debug('[LivestreamChat] Subscribing to channel:', channelName);
-
     livestreamChatChannel = window.livestreamPusher.subscribe(channelName);
 
     livestreamChatChannel.bind('new-message', function(data) {
-      console.debug('[LivestreamChat] New message:', data);
       appendLivestreamMessage(data);
     });
 
     livestreamChatChannel.bind('viewer-update', function(data) {
-      console.debug('[LivestreamChat] Viewer update:', data);
       var viewerCount = data.count ?? data.currentViewers ?? data.totalViews ?? 0;
       if (ctx && ctx.updateCenterStats) {
         ctx.updateCenterStats({ viewers: viewerCount });
@@ -282,7 +277,6 @@ export function setupLivestreamChatSend(streamId) {
         var err = await response.json();
         console.error('[LivestreamChat] Send failed:', err);
         if (err.error === 'Stream is not live' && activeStreamId !== 'playlist-global') {
-          console.debug('[LivestreamChat] Stream ended, switching to playlist-global');
           staleStreamIds.add(activeStreamId);
           window.currentStreamId = 'playlist-global';
           cleanupLivestreamChat();
@@ -346,5 +340,4 @@ export function cleanupLivestreamChat() {
   window.livestreamChatInitialized = false;
   window.currentStreamId = 'playlist-global';
   initLivestreamChat('playlist-global');
-  console.debug('[LivestreamChat] Switched to playlist-global for DJ waitlist monitoring');
 }

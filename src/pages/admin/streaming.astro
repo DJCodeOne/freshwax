@@ -1931,7 +1931,7 @@ const nonce = Astro.locals.nonce || '';
             totalReadersIn += p.source ? 1 : 0;
           });
         }
-      } catch (e) { console.warn('[Streaming] Icecast JSON parse error:', e); }
+      } catch (e) { /* Icecast JSON parse error */ }
 
       dot.className = 'status-dot online';
       statusText.textContent = 'Online';
@@ -2703,7 +2703,7 @@ const nonce = Astro.locals.nonce || '';
       } else {
         // Fallback: try the force-end-streams server action if slots endpoint fails
         if (result.error === 'No active stream found' || result.error === 'Authentication required') {
-          console.warn('[endStream] Slots endpoint failed, trying force-end-streams fallback:', result.error);
+          /* slots endpoint failed, trying force-end-streams fallback */
           const fallbackResult = await serverAction('force-end-streams');
           if (fallbackResult.success) {
             alert('Stream force-ended: ' + fallbackResult.message);

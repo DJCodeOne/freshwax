@@ -17,7 +17,6 @@ export function getDmChannelId(uid1, uid2) {
 }
 
 export function openDmModal() {
-  console.debug('[DM] openDmModal called');
   try {
     var modal = document.getElementById('dmModal');
     var selectView = document.getElementById('dmSelectView');
@@ -28,12 +27,10 @@ export function openDmModal() {
       return;
     }
 
-    console.debug('[DM] Modal found, removing hidden class');
     modal.classList.remove('hidden');
     if (selectView) selectView.classList.remove('hidden');
     if (chatView) chatView.classList.add('hidden');
     populateDmDjList();
-    console.debug('[DM] Modal opened successfully');
   } catch (e) {
     console.error('[DM] Error opening modal:', e);
   }

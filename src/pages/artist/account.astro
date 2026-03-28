@@ -7,6 +7,9 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, getDocumentsBatch, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { createLogger } from '../../lib/api-utils';
+
+const log = createLogger('artist-account');
 
 type AnyRecord = Record<string, unknown>;
 
@@ -98,7 +101,7 @@ if (partnerId) {
         ? saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
             orderBy: { field: 'timestamp', direction: 'DESCENDING' },
             limit: 500
-          }).catch((err: unknown) => { console.error('Error fetching ledger entries:', err); return [] as Record<string, unknown>[]; })
+          }).catch((err: unknown) => { log.error('Error fetching ledger entries:', err); return [] as Record<string, unknown>[]; })
         : Promise.resolve([] as Record<string, unknown>[]);
 
       const pendingPayoutsPromise = serviceAccountKey
@@ -108,7 +111,7 @@ if (partnerId) {
               { field: 'status', op: 'EQUAL', value: 'pending' }
             ],
             limit: 100
-          }).catch((err: unknown) => { console.error('Error fetching pending payouts:', err); return [] as Record<string, unknown>[]; })
+          }).catch((err: unknown) => { log.error('Error fetching pending payouts:', err); return [] as Record<string, unknown>[]; })
         : Promise.resolve([] as Record<string, unknown>[]);
 
       const ordersPromise = queryCollection('orders', {
@@ -458,7 +461,7 @@ if (partnerId) {
       }
     }
   } catch (e) {
-    console.error('Error fetching account data:', e);
+    log.error('Error fetching account data:', e);
   }
 }
 

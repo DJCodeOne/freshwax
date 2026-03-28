@@ -47,7 +47,7 @@ self.addEventListener('install', (event) => {
             await cache.add(asset);
           } catch (err) {
             if (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1') {
-              console.warn('[SW] Failed to pre-cache:', asset);
+              /* failed to pre-cache */
             }
           }
         }

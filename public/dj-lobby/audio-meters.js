@@ -65,7 +65,6 @@ export function initBroadcastMeters() {
       panel.classList.remove('minimized');
       btn.textContent = '\u2212';
       if (!broadcastMeterAnimationId) {
-        console.debug('[BroadcastMeters] Restarting meters after panel expand');
         animateBroadcastMeters();
       }
     } else {
@@ -83,20 +82,17 @@ export function initBroadcastMeters() {
       var hasIcecastAnalysers = state.icecastAnalyserL && state.icecastAnalyserR;
 
       if (!hasIcecastAnalysers && !hasLiveAnalysers) {
-        console.debug('[AudioToggle] Cannot toggle - no analysers available');
         return;
       }
 
       if (broadcastAudioSource === 'preview' && !hasLiveAnalysers) {
         var liveAudio = document.getElementById('audioElement');
         if (liveAudio && !liveAudio.paused && ctx && ctx.setupAudioMeter) {
-          console.debug('[AudioToggle] Setting up live analysers for relay mode');
           ctx.setupAudioMeter(liveAudio, 'LiveAudio');
         }
       }
     }
     broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
-    console.debug('[AudioToggle] Switched to:', broadcastAudioSource);
     var label = document.querySelector('#audioSourceToggle .source-label');
     if (label) label.textContent = broadcastAudioSource.toUpperCase();
 
@@ -171,7 +167,6 @@ export function initBroadcastMeters() {
     if (document.visibilityState === 'visible') {
       var panel = document.getElementById('broadcastAudioPanel');
       if (panel && !panel.classList.contains('hidden') && !broadcastMeterAnimationId) {
-        console.debug('[BroadcastMeters] Restarting meters after tab visible');
         animateBroadcastMeters();
       }
     }
@@ -198,7 +193,6 @@ export function animateBroadcastMeters() {
     var currentPreviewSource = ctx ? ctx.getCurrentPreviewSource() : 'obs';
 
     if (state.icecastAudioContext && state.icecastAudioContext.state === 'suspended') {
-      console.debug('[BroadcastMeters] Resuming suspended icecastAudioContext');
       state.icecastAudioContext.resume().catch(function() { /* non-critical: AudioContext resume may fail if not user-gesture */ });
     }
 
@@ -216,18 +210,6 @@ export function animateBroadcastMeters() {
         peakL = Math.max.apply(null, testDataL);
         peakR = Math.max.apply(null, testDataR);
       }
-      console.debug('[BroadcastMeters] Status:', {
-        frames: broadcastMeterFrameCount,
-        animationId: broadcastMeterAnimationId,
-        icecastState: state.icecastAudioContext?.state,
-        hasIcecastAnalysers: !!(state.icecastAnalyserL && state.icecastAnalyserR),
-        currentPreviewSource: currentPreviewSource,
-        broadcastAudioSource: broadcastAudioSource,
-        audioPlaying: audioPlaying,
-        audioCurrentTime: relayAudio?.currentTime?.toFixed(1),
-        peakL: peakL,
-        peakR: peakR
-      });
       lastBroadcastDebugTime = now;
       broadcastMeterFrameCount = 0;
     }
@@ -356,7 +338,6 @@ function updatePPMMeter(channel, db) {
   lastPPMValue[channel] = percentage;
   var ppmNow = Date.now();
   if (ppmNow - lastPPMDebugTime > 5000 && channel === 'L') {
-    console.debug('[PPM Debug]', { updates: ppmUpdateCount, fillElExists: !!fillEl, peakElExists: !!peakEl, ppmL: lastPPMValue.L?.toFixed(1), ppmR: lastPPMValue.R?.toFixed(1), dbL: db?.toFixed(1) });
     lastPPMDebugTime = ppmNow;
     ppmUpdateCount = 0;
   }

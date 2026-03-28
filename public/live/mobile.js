@@ -340,7 +340,7 @@ function setupPlaylistSave() {
             nowPlayingSaveBtn.title = 'Already in My Playlist';
           }
         } else {
-          console.warn('[NowPlaying] Playlist manager not available');
+          /* playlist manager not available */
         }
       } catch (err) {
         console.error('[NowPlaying] Error saving track:', err);

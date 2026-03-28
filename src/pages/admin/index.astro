@@ -7,7 +7,10 @@ import { requireAdminAuth } from '../../lib/admin';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { createLogger } from '../../lib/api-utils';
 import '../../styles/admin/index.css';
+
+const log = createLogger('admin-dashboard');
 
 // Server-side admin auth check
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
@@ -81,7 +84,7 @@ try {
   ledgerData = results[10].status === 'fulfilled' ? results[10].value : [];
   blogPostsData = results[11].status === 'fulfilled' ? results[11].value : [];
 } catch (error) {
-  console.error('[Admin Dashboard] Error fetching data:', error);
+  log.error('Error fetching data:', error);
 }
 
 // Fetch R2 pending submissions count using native R2 binding
@@ -111,7 +114,7 @@ try {
     }
   }
 } catch (error) {
-  console.error('[Admin Dashboard] Error fetching R2 submissions:', error);
+  log.error('Error fetching R2 submissions:', error);
 }
 
 // Process orders - sort by createdAt desc

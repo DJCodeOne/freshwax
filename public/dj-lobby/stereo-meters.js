@@ -98,7 +98,6 @@ export function setupAudioMeter(videoElement, prefix) {
       ctx.setLiveKWeightedAnalysers(kWeightedAnalyserL, kWeightedAnalyserR);
     }
 
-    console.debug('[' + prefix + '] Audio meter with K-weighting and limiter initialized');
     return { audioContext: audioContext, analyserL: analyserL, analyserR: analyserR, kWeightedAnalyserL: kWeightedAnalyserL, kWeightedAnalyserR: kWeightedAnalyserR };
   } catch (e) {
     console.error('[' + prefix + '] Audio meter setup error:', e);
@@ -211,11 +210,9 @@ export function updateAudioSourceUI() {
     if (relayAudio) relayAudio.muted = false;
     if (icecastGainNode) {
       icecastGainNode.gain.value = 1;
-      console.debug('[Audio Toggle] Set icecastGainNode gain to 1 (unmuted)');
     }
     if (liveVid) liveVid.muted = true;
     if (liveAudio) liveAudio.muted = true;
-    console.debug('[Audio Toggle] Switched to PREVIEW - relayAudio muted:', relayAudio ? relayAudio.muted : 'N/A', 'liveAudio muted:', liveAudio ? liveAudio.muted : 'N/A');
   } else {
     if (leftArrow) leftArrow.classList.remove('active');
     if (rightArrow) rightArrow.classList.add('active');
@@ -225,11 +222,9 @@ export function updateAudioSourceUI() {
     if (relayAudio) relayAudio.muted = true;
     if (icecastGainNode) {
       icecastGainNode.gain.value = 0;
-      console.debug('[Audio Toggle] Set icecastGainNode gain to 0 (muted)');
     }
     if (liveVid) liveVid.muted = false;
     if (liveAudio) liveAudio.muted = false;
-    console.debug('[Audio Toggle] Switched to LIVE - relayAudio muted:', relayAudio ? relayAudio.muted : 'N/A', 'liveAudio muted:', liveAudio ? liveAudio.muted : 'N/A');
   }
 }
 
@@ -242,8 +237,7 @@ export function setupStereoMeters() {
   window.startPreviewMeterAnimation = function() {
     if (!obsMeterAnimationId) {
       animateObsMeters();
-      console.debug('[Audio] Preview LED meter animation started');
-    }
+      }
   };
 
   window.forceStartPreviewMeters = function() {
@@ -252,7 +246,6 @@ export function setupStereoMeters() {
       obsMeterAnimationId = null;
     }
     animateObsMeters();
-    console.debug('[Audio] Preview LED meters force-started');
   };
 
   window.forceStartLiveMeters = function() {
@@ -262,7 +255,6 @@ export function setupStereoMeters() {
       ctx.setLiveMeterAnimationId(null);
     }
     animateLiveMeters();
-    console.debug('[Audio] Live LED meters force-started');
   };
 
   // OBS video play/pause handlers
@@ -273,7 +265,6 @@ export function setupStereoMeters() {
         if (result) {
           obsAudioContext = result.audioContext;
           ctx.setObsAnalysers(result.analyserL, result.analyserR);
-          console.debug('[Audio] OBS analysers initialized');
         }
       }
       if (obsAudioContext && obsAudioContext.state === 'suspended') {
@@ -302,7 +293,6 @@ export function setupStereoMeters() {
         if (result) {
           liveAudioContext = result.audioContext;
           ctx.setLiveAnalysers(result.analyserL, result.analyserR);
-          console.debug('[Audio] Live analysers initialized');
         }
       }
       if (liveAudioContext && liveAudioContext.state === 'suspended') {
@@ -333,7 +323,6 @@ export function setupStereoMeters() {
         if (result) {
           liveAudioContext = result.audioContext;
           ctx.setLiveAnalysers(result.analyserL, result.analyserR);
-          console.debug('[Audio] Live audio analysers initialized from audioElement');
         }
       }
       if (liveAudioContext && liveAudioContext.state === 'suspended') {
@@ -342,7 +331,6 @@ export function setupStereoMeters() {
       var liveMeterAnimationId = ctx.getLiveMeterAnimationId();
       if (!liveMeterAnimationId) {
         animateLiveMeters();
-        console.debug('[Audio] Started live meters from audioElement play');
       }
     });
     audioEl.addEventListener('pause', function() {
@@ -362,27 +350,22 @@ export function setupStereoMeters() {
   setTimeout(function() {
     var ae = document.getElementById('audioElement');
     if (ae && !ae.paused && !liveAudioContext) {
-      console.debug('[Audio] audioElement already playing, setting up live analysers');
       var result = setupAudioMeter(ae, 'LiveAudio');
       if (result) {
         liveAudioContext = result.audioContext;
         ctx.setLiveAnalysers(result.analyserL, result.analyserR);
-        console.debug('[Audio] Live audio analysers initialized from delayed check');
       }
       var liveMeterAnimationId = ctx.getLiveMeterAnimationId();
       if (!liveMeterAnimationId) {
         animateLiveMeters();
-        console.debug('[Audio] Started live meters from delayed check');
       }
     }
 
     var relayAudio = document.getElementById('relayAudio');
     if (relayAudio && !relayAudio.paused && !ctx.getIcecastAudioContext()) {
-      console.debug('[Audio] relayAudio already playing, setting up icecast analysers');
       ctx.setupIcecastAnalysers(relayAudio);
       if (!obsMeterAnimationId) {
         animateObsMeters();
-        console.debug('[Audio] Started preview meters from delayed check');
       }
     }
   }, 1000);
@@ -416,16 +399,13 @@ export function setupStereoMeters() {
     if ((currentPreviewSource === 'relay' || currentPreviewSource === 'butt') && activeAudioSource === 'preview') {
       var relayAudio = document.getElementById('relayAudio');
       if (relayAudio && relayAudio.paused && relayAudio.src) {
-        console.debug('[Audio Toggle] Starting relay audio playback');
         relayAudio.play().catch(function() {});
       }
       if (relayAudio && !relayAudio.paused && !ctx.getIcecastAudioContext()) {
-        console.debug('[Audio Toggle] Setting up icecast analysers for relay audio');
         ctx.setupIcecastAnalysers(relayAudio);
       }
       if (!obsMeterAnimationId) {
         animateObsMeters();
-        console.debug('[Audio Toggle] Started preview LED meters');
       }
       if (!ctx.getBroadcastMeterAnimationId()) {
         ctx.animateBroadcastMeters();
@@ -435,11 +415,9 @@ export function setupStereoMeters() {
     if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && activeAudioSource === 'live') {
       var liveAudioEl = document.getElementById('audioElement');
       if (liveAudioEl && liveAudioEl.paused && liveAudioEl.src) {
-        console.debug('[Audio Toggle] Starting live audio playback');
         liveAudioEl.play().catch(function() {});
       }
       if (liveAudioEl && !liveAudioEl.paused && !liveAudioContext) {
-        console.debug('[Audio Toggle] Setting up live analysers for audioElement');
         var result = setupAudioMeter(liveAudioEl, 'LiveAudio');
         if (result) {
           liveAudioContext = result.audioContext;
@@ -449,7 +427,6 @@ export function setupStereoMeters() {
       var liveMeterAnimationId = ctx.getLiveMeterAnimationId();
       if (!liveMeterAnimationId) {
         animateLiveMeters();
-        console.debug('[Audio Toggle] Started live LED meters');
       }
       if (!obsMeterAnimationId) {
         animateObsMeters();
@@ -461,21 +438,6 @@ export function setupStereoMeters() {
 
     var relayEl = document.getElementById('relayAudio');
     var liveEl = document.getElementById('audioElement');
-    console.debug('[Audio Toggle] Complete state:', {
-      mode: currentPreviewSource,
-      source: activeAudioSource,
-      icecastCtx: ctx.getIcecastAudioContext() ? ctx.getIcecastAudioContext().state : null,
-      liveCtx: liveAudioContext ? liveAudioContext.state : null,
-      icecastGain: ctx.getIcecastGainNode() ? ctx.getIcecastGainNode().gain.value : null,
-      hasIcecastAnalysers: !!(ctx.getAnalyserState().icecastAnalyserL && ctx.getAnalyserState().icecastAnalyserR),
-      hasLiveAnalysers: !!(ctx.getAnalyserState().liveAnalyserL && ctx.getAnalyserState().liveAnalyserR),
-      relayPlaying: relayEl ? !relayEl.paused : 'no element',
-      relayMuted: relayEl ? relayEl.muted : null,
-      livePlaying: liveEl ? !liveEl.paused : 'no element',
-      liveMuted: liveEl ? liveEl.muted : null,
-      obsMeterRunning: !!obsMeterAnimationId,
-      liveMeterRunning: !!ctx.getLiveMeterAnimationId()
-    });
   });
 
   // Initialize audio source state
@@ -484,6 +446,5 @@ export function setupStereoMeters() {
   // Auto-start preview LED meters on page load
   if (!obsMeterAnimationId) {
     animateObsMeters();
-    console.debug('[Audio] Preview LED meters auto-started on page load');
   }
 }

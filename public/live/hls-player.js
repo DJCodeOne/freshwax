@@ -75,7 +75,7 @@ export function initGlobalAudioAnalyzer(mediaEl) {
   if (!globalAudioContext || !globalMediaSource || globalMediaElement !== mediaEl) {
     if (globalAudioContext && globalMediaElement !== mediaEl) {
       try { globalAudioContext.close(); } catch (e) {
-        console.warn('[Audio] Error closing old context:', e);
+        /* error closing old context */
       }
       globalAudioContext = null;
       globalMediaSource = null;
@@ -277,7 +277,7 @@ export async function setupHlsPlayer(streamData, deps) {
   var setLiveStreamPlaying = deps.setLiveStreamPlaying;
 
   await loadHlsLibrary().catch(function(err) {
-    console.warn('[HLS] Failed to load library:', err);
+    /* HLS library load failed */
   });
 
   var audioPlayer = document.getElementById('audioPlayer');
@@ -549,7 +549,7 @@ export async function setupAudioPlayer(streamData, deps) {
   var setLiveStreamPlaying = deps.setLiveStreamPlaying;
 
   await loadHlsLibrary().catch(function(err) {
-    console.warn('[HLS] Failed to load for audio:', err);
+    /* HLS load failed for audio */
   });
 
   var audioPlayerEl = document.getElementById('audioPlayer');
@@ -598,7 +598,7 @@ export async function setupAudioPlayer(streamData, deps) {
         initGlobalAudioAnalyzer(audioEl);
         startGlobalMeters();
       } catch (e) {
-        if (e.name !== 'AbortError') console.warn('[Audio] Autoplay blocked:', e.name);
+        /* autoplay may be blocked */
         var pi2 = document.getElementById('playIcon');
         var pa2 = document.getElementById('pauseIcon');
         if (pi2) pi2.classList.remove('hidden');
