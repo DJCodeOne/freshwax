@@ -102,8 +102,10 @@ export async function getLiveReleases(limit?: number, db?: D1Database): Promise<
     CACHE_CONFIG.RELEASES
   );
 
-  // Backfill in-memory cache
-  setCache(cacheKey, result, CACHE_TTL.RELEASES_LIST);
+  // Backfill in-memory cache — skip empty results to avoid caching failures
+  if (result && result.length > 0) {
+    setCache(cacheKey, result, CACHE_TTL.RELEASES_LIST);
+  }
   return result;
 }
 
@@ -170,8 +172,10 @@ export async function getLiveDJMixes(limit?: number, db?: D1Database): Promise<R
     CACHE_CONFIG.DJ_MIXES
   );
 
-  // Backfill in-memory cache
-  setCache(cacheKey, result, CACHE_TTL.DJ_MIXES_LIST);
+  // Backfill in-memory cache — skip empty results to avoid caching failures
+  if (result && result.length > 0) {
+    setCache(cacheKey, result, CACHE_TTL.DJ_MIXES_LIST);
+  }
   return result;
 }
 
@@ -239,8 +243,10 @@ export async function getLiveMerch(limit?: number, db?: D1Database, skipCache?: 
     CACHE_CONFIG.MERCH
   );
 
-  // Backfill in-memory cache
-  setCache(cacheKey, result, CACHE_TTL.MERCH_LIST);
+  // Backfill in-memory cache — skip empty results to avoid caching failures
+  if (result && result.length > 0) {
+    setCache(cacheKey, result, CACHE_TTL.MERCH_LIST);
+  }
   return result;
 }
 
