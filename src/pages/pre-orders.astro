@@ -23,9 +23,10 @@ const now = new Date();
 
 let preorders: Record<string, unknown>[] = [];
 
+const db = (Astro.locals as App.Locals).runtime?.env?.DB;
 try {
   // Get all live releases - D1 first, Firebase fallback
-  const allReleases = await getLiveReleases();
+  const allReleases = await getLiveReleases(undefined, db);
 
   // Filter to releases with future release dates (pre-orders)
   preorders = allReleases

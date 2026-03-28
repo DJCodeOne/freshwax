@@ -22,7 +22,20 @@ let catalogMatchesRaw: Awaited<ReturnType<typeof getSupportsForMix>> = [];
 const env = (Astro.locals as App.Locals).runtime?.env;
 const mixDb = env?.DB;
 
-const docPromise = getDocument('dj-mixes', id!);
+// Try D1 first, fall back to Firestore
+const docPromise = (async () => {
+  if (mixDb && id) {
+    try {
+      const row = await mixDb.prepare('SELECT data FROM dj_mixes WHERE id = ?').bind(id).first();
+      if (row && (row as Record<string, unknown>).data) {
+        const doc = JSON.parse((row as Record<string, unknown>).data as string) as Record<string, unknown>;
+        doc.id = doc.id || id;
+        return doc;
+      }
+    } catch (_e: unknown) { /* D1 failed, try Firestore */ }
+  }
+  return getDocument('dj-mixes', id!);
+})();
 const supportsPromise = (mixDb && id)
   ? getSupportsForMix(mixDb, id).catch((err: unknown) => {
       log.debug('[DJ-MIX PAGE] Could not fetch catalog matches:', err);

@@ -14,8 +14,22 @@ const { id } = Astro.params;
 let product = null;
 let error = null;
 
+const db = (Astro.locals as App.Locals).runtime?.env?.DB;
 try {
-  const item = await getDocument('merch', id);
+  // Try D1 first, fall back to Firestore
+  let item: Record<string, unknown> | null = null;
+  if (db && id) {
+    try {
+      const row = await db.prepare('SELECT data FROM merch WHERE id = ?').bind(id).first();
+      if (row && (row as Record<string, unknown>).data) {
+        item = JSON.parse((row as Record<string, unknown>).data as string) as Record<string, unknown>;
+        item.id = item.id || id;
+      }
+    } catch (_e: unknown) { /* D1 failed, try Firestore */ }
+  }
+  if (!item) {
+    item = await getDocument('merch', id);
+  }
 
   if (item) {
     // Process images
