@@ -394,7 +394,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         )}
 
         <!-- Comments Section -->
-        <div id="comments-section" class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-2 sm:p-3 md:p-6 mb-3 sm:mb-4 md:mb-6">
+        <div id="comments-section" class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-2 sm:p-3 md:p-6 mb-3 sm:mb-4 md:mb-6 overflow-hidden max-w-full box-border">
           <h2 class="text-base sm:text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-2 sm:mb-3 md:mb-4 pb-2 sm:pb-3 md:pb-4 border-b-2 border-red-600 flex items-center gap-2 drop-shadow-lg">
             <svg class="w-4 h-4 sm:w-5 sm:h-5 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
@@ -478,7 +478,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   <button 
                     id="submit-comment-btn" 
                     data-mix-id={id}
-                    class="px-4 md:px-6 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 border-2 border-white shadow-lg transition-[color,background-color,transform] font-black uppercase rounded transform hover:scale-105 active:scale-95 text-xs md:text-sm"
+                    class="px-4 md:px-6 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 border-2 border-white shadow-lg transition-colors transition-transform font-black uppercase rounded transform hover:scale-105 active:scale-95 text-xs md:text-sm flex-shrink-0"
                   >
                     Post Comment
                   </button>
