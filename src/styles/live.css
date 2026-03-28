@@ -567,7 +567,8 @@ html, body{ overflow:auto; }
 .share-modal-content .modal-body{ padding:1rem; overflow-x:hidden; }
 .share-link-box{ flex-wrap:wrap; }
 .share-link-box input{ min-width:0; width:100%; }
-.share-buttons{ grid-template-columns:1fr 1fr; }
+.share-buttons{ grid-template-columns:1fr 1fr; width:100%; overflow:hidden; }
+.share-social-btn{ padding:.625rem .5rem; font-size:.8rem; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .share-preview-dj img{ width:44px; height:44px; }
 .share-preview-info h3{ font-size:1rem; } }
 .share-header{ background:linear-gradient(135deg, #dc2626, #b91c1c); border-bottom:none; }
