@@ -53,14 +53,14 @@ export async function sendAbandonedCartEmail(
                         <td style="padding: 12px 0; border-bottom: 1px solid #262626;" class="border-subtle">
                           <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                             <tr>
-                              <td width="60" style="vertical-align: top;">
-                                <img src="${esc(imgSrc)}" alt="${itemName}" width="50" height="50" style="border-radius: 6px; object-fit: cover; display: block;" />
+                              <td width="60" style="vertical-align: top; max-width: 60px; width: 60px;">
+                                <img src="${esc(imgSrc)}" alt="${itemName}" width="50" height="50" style="border-radius: 6px; object-fit: cover; display: block; max-width: 50px; height: auto;" />
                               </td>
-                              <td style="vertical-align: top; padding-left: 12px;">
-                                <p style="color: #ffffff; font-size: 14px; font-weight: 600; margin: 0 0 4px;" class="text-primary">${itemName}</p>
+                              <td style="vertical-align: top; padding-left: 12px; word-break: break-word; overflow: hidden;">
+                                <p style="color: #ffffff; font-size: 14px; font-weight: 600; margin: 0 0 4px; word-break: break-word;" class="text-primary">${itemName}</p>
                                 <p style="color: #737373; font-size: 13px; margin: 0;" class="text-muted">Qty: ${qty}</p>
                               </td>
-                              <td width="80" align="right" style="vertical-align: top;">
+                              <td width="70" align="right" style="vertical-align: top; white-space: nowrap;">
                                 <p style="color: #ffffff; font-size: 14px; font-weight: 600; margin: 0;" class="text-primary">\u00a3${price.toFixed(2)}</p>
                               </td>
                             </tr>
