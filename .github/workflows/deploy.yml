@@ -97,19 +97,24 @@ jobs:
       staging-url: ${{ steps.staging-deploy.outputs.deployment-url }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@latest
+
       - name: Deploy to staging branch
         id: staging-deploy
         run: |
-          OUTPUT=$(npx wrangler pages deploy dist --project-name=freshwax --branch=staging 2>&1)
+          OUTPUT=$(wrangler pages deploy dist --project-name=freshwax --branch=staging 2>&1)
           echo "$OUTPUT"
           URL=$(echo "$OUTPUT" | grep -oP 'https://[a-z0-9-]+\.freshwax\.pages\.dev' | tail -1)
           echo "deployment-url=$URL" >> "$GITHUB_OUTPUT"
@@ -228,13 +233,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@latest
 
       - name: Get previous deployment ID
         id: prev-deploy
         run: |
           PREV_ID=$(CLOUDFLARE_API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}" \
-            npx wrangler pages deployment list \
+            wrangler pages deployment list \
               --project-name=freshwax \
               --environment=production \
               --json 2>/dev/null \
@@ -246,7 +253,7 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         id: deploy
-        run: npx wrangler pages deploy dist --project-name=freshwax
+        run: wrangler pages deploy dist --project-name=freshwax
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
