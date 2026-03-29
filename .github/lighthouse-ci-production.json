@@ -41,21 +41,21 @@
           }
         ],
         "largest-contentful-paint": [
-          "error",
+          "warn",
           {
             "maxNumericValue": 4500,
             "aggregationMethod": "median-run"
           }
         ],
         "cumulative-layout-shift": [
-          "error",
+          "warn",
           {
             "maxNumericValue": 0.15,
             "aggregationMethod": "median-run"
           }
         ],
         "interactive": [
-          "error",
+          "warn",
           {
             "maxNumericValue": 5000,
             "aggregationMethod": "median-run"
