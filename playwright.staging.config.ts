@@ -16,7 +16,7 @@ export default defineConfig({
   reporter: [['list'], ['github']],
   timeout: 60000, // 60s per test — staging cold starts can be slow
   use: {
-    baseURL: process.env.STAGING_URL || 'https://staging.freshwax.pages.dev',
+    baseURL: process.env.STAGING_URL || 'https://freshwax.co.uk',
     trace: 'on-first-retry',
     ignoreHTTPSErrors: true,
   },
