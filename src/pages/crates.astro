@@ -167,6 +167,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   .crates-main {
     min-height: 100vh;
     position: relative;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  .crates-main *, .crates-main *::before, .crates-main *::after {
+    box-sizing: border-box;
   }
 
   /* Background Image — animated fade-in like releases page */
@@ -721,9 +726,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     border: 2px solid #ffffff;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-    padding: 1.5rem;
+    padding: 1rem;
     margin-bottom: 0;
     width: 100%;
+    max-width: 100%;
+  }
+  @media (min-width: 640px) {
+    .vinyl-card { padding: 1.5rem; }
   }
 
   .vinyl-card:hover {
