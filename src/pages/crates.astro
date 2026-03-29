@@ -687,26 +687,65 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   /* Mobile fix for JS-rendered vinyl cards (scoped CSS can't target them) */
   @media (max-width: 768px) {
     .vinyl-card {
-      margin-left: 0.75rem !important;
-      margin-right: 0.75rem !important;
+      margin: 0 0.75rem !important;
       padding: 0.75rem !important;
+      width: calc(100% - 1.5rem) !important;
+      max-width: calc(100% - 1.5rem) !important;
+      overflow: hidden !important;
+      box-sizing: border-box !important;
+    }
+    .vinyl-card-inner {
+      width: 100% !important;
+      overflow: hidden !important;
     }
     .seller-section {
-      padding-left: 0.75rem !important;
-      padding-right: 0.75rem !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+    .seller-header {
+      margin: 0 0.75rem 1rem !important;
+    }
+    .seller-listings {
+      overflow: hidden !important;
     }
     .release-divider {
-      margin-left: 0.75rem !important;
-      margin-right: 0.75rem !important;
+      margin: 1rem 0.75rem !important;
+    }
+    .vinyl-left-col {
+      width: 100% !important;
+    }
+    .vinyl-artwork {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
     }
     .vinyl-buttons {
       width: 100% !important;
     }
+    .vinyl-middle-col {
+      width: 100% !important;
+      overflow: hidden !important;
+    }
+    .vinyl-title {
+      white-space: normal !important;
+      overflow: visible !important;
+      font-size: 1.5rem !important;
+    }
+    .vinyl-artist {
+      white-space: normal !important;
+      overflow: visible !important;
+    }
     .vinyl-tags-row {
       flex-wrap: wrap !important;
+      overflow: visible !important;
     }
     .vinyl-conditions-row {
       flex-wrap: wrap !important;
+      overflow: visible !important;
+    }
+    .vinyl-right-col {
+      width: 100% !important;
+      overflow: hidden !important;
     }
   }
 
