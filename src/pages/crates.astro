@@ -172,7 +172,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   }
   .crates-main *, .crates-main *::before, .crates-main *::after {
     box-sizing: border-box;
-    max-width: 100%;
   }
   @media (max-width: 640px) {
     html, body {
@@ -276,6 +275,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     margin: 0 auto;
     width: 100%;
     padding: 2rem 1rem;
+    overflow-x: hidden;
   }
 
   @media (min-width: 640px) {
@@ -450,10 +450,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
   .filter-scroll {
     display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
-    overflow-x: auto;
     padding-bottom: 0.5rem;
-    -webkit-overflow-scrolling: touch;
   }
 
   .filter-btn {
