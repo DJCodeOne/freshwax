@@ -1059,6 +1059,27 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     margin: 0;
     line-height: 1.6;
   }
+
+  @media (max-width: 768px) {
+    .listing-header {
+      text-align: center;
+    }
+    .listing-header h1 {
+      text-align: center;
+    }
+    .vinyl-artist {
+      text-align: center;
+    }
+    .price-section {
+      text-align: center;
+    }
+    .price-row {
+      justify-content: center;
+    }
+    .shipping-info {
+      text-align: center;
+    }
+  }
 </style>
 
 <script is:inline define:vars={{ listingId: id, serverDataLoaded: hasServerData }} nonce={nonce}>
