@@ -82,7 +82,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       <!-- Main Listings Content -->
       <section class="listings-section" style="width:100%;max-width:100vw;overflow-x:hidden;padding-left:1rem;padding-right:1rem;box-sizing:border-box;">
         <!-- Page Header -->
-        <div class="crates-header" style="margin-left:12px;margin-right:12px;">
+        <div class="crates-header">
           <div class="crates-title-row">
             <div class="crates-header-line"></div>
             <h1 class="crates-title">Dig The <span class="red">Crates</span></h1>
@@ -94,7 +94,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         </div>
 
         <!-- Action Buttons -->
-        <div class="action-buttons" style="margin-left:12px;margin-right:12px;">
+        <div class="action-buttons">
           <button class="condition-guide-btn" id="conditionKeyToggle">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -134,7 +134,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         </div>
 
         <!-- Mobile Collection Filter -->
-        <div class="collection-filter-mobile" style="margin-left:12px;margin-right:12px;">
+        <div class="collection-filter-mobile">
           <div class="filter-scroll" id="mobileFilters">
             <button class="filter-btn active" data-collection="all">All</button>
             <button class="filter-btn deals-filter" data-collection="deals">🔥 Deals</button>
@@ -684,6 +684,32 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 </style>
 
 <style is:global>
+  /* Mobile fix for JS-rendered vinyl cards (scoped CSS can't target them) */
+  @media (max-width: 768px) {
+    .vinyl-card {
+      margin-left: 0.75rem !important;
+      margin-right: 0.75rem !important;
+      padding: 0.75rem !important;
+    }
+    .seller-section {
+      padding-left: 0.75rem !important;
+      padding-right: 0.75rem !important;
+    }
+    .release-divider {
+      margin-left: 0.75rem !important;
+      margin-right: 0.75rem !important;
+    }
+    .vinyl-buttons {
+      width: 100% !important;
+    }
+    .vinyl-tags-row {
+      flex-wrap: wrap !important;
+    }
+    .vinyl-conditions-row {
+      flex-wrap: wrap !important;
+    }
+  }
+
   /* Collection Box Styles - Global for JS-generated content */
   .collection-box {
     width: 100%;
@@ -1593,7 +1619,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       const hiddenCount = sellerListings.length - maxVisible;
 
       const sellerHeader = `
-        <div class="seller-section" id="seller-${sellerKey}" data-seller-key="${sellerKey}" style="padding-left:12px;padding-right:12px;">
+        <div class="seller-section" id="seller-${sellerKey}" data-seller-key="${sellerKey}">
           <div class="seller-header">
             <div class="label-header">
               <div class="label-title-row">
@@ -1612,7 +1638,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <div class="seller-listings" data-expanded="false">
             ${visibleListings.map((listing, index, arr) => {
               const card = renderVinylCard(listing, index);
-              const divider = index < arr.length - 1 ? '<div class="release-divider" style="margin-left:12px;margin-right:12px;"></div>' : '';
+              const divider = index < arr.length - 1 ? '<div class="release-divider"></div>' : '';
               return card + divider;
             }).join('')}
           </div>
@@ -1654,7 +1680,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         // Render all listings
         listingsContainer.innerHTML = seller.listings.map((listing, index, arr) => {
           const card = renderVinylCard(listing, index);
-          const divider = index < arr.length - 1 ? '<div class="release-divider" style="margin-left:12px;margin-right:12px;"></div>' : '';
+          const divider = index < arr.length - 1 ? '<div class="release-divider"></div>' : '';
           return card + divider;
         }).join('');
 
@@ -1681,7 +1707,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     const displayPrice = (listing.price || 0).toFixed(2);
 
     return `
-        <article class="vinyl-card" style="margin-left:12px;margin-right:12px;">
+        <article class="vinyl-card">
           <div class="vinyl-card-inner">
             <!-- LEFT COLUMN: Artwork + Buttons -->
             <div class="vinyl-left-col">
