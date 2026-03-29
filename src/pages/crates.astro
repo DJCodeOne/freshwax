@@ -725,23 +725,49 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     .vinyl-middle-col {
       width: 100% !important;
       overflow: hidden !important;
+      text-align: center !important;
+      align-items: center !important;
     }
     .vinyl-title {
       white-space: normal !important;
       overflow: visible !important;
       font-size: 1.5rem !important;
+      text-align: center !important;
     }
     .vinyl-artist {
       white-space: normal !important;
       overflow: visible !important;
+      text-align: center !important;
+    }
+    .vinyl-seller-line {
+      text-align: center !important;
     }
     .vinyl-tags-row {
       flex-wrap: wrap !important;
       overflow: visible !important;
+      justify-content: center !important;
     }
     .vinyl-conditions-row {
       flex-wrap: wrap !important;
       overflow: visible !important;
+      justify-content: center !important;
+    }
+    .vinyl-meta-footer {
+      justify-content: center !important;
+      flex-wrap: wrap !important;
+      gap: 1rem !important;
+    }
+    .track-count-label {
+      position: absolute !important;
+      right: 0.75rem !important;
+      top: 0.75rem !important;
+      background: rgba(255,255,255,0.1) !important;
+      padding: 0.25rem 0.5rem !important;
+      border-radius: 4px !important;
+      font-size: 0.75rem !important;
+    }
+    .vinyl-card {
+      position: relative !important;
     }
     .vinyl-right-col {
       width: 100% !important;
