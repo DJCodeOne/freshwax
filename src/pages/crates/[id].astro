@@ -224,7 +224,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
             <!-- Deal Description -->
             <div class="deal-section" id="dealSection" style="display: none;">
-              <div class="deal-badge">SPECIAL DEAL</div>
+              <div class="deal-badge" id="dealBadge">SPECIAL DEAL</div>
               <p id="dealDescription"></p>
             </div>
           </div>
@@ -1079,6 +1079,18 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     .shipping-info {
       text-align: center;
     }
+    .deal-section {
+      text-align: center;
+    }
+    .deal-badge {
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      width: fit-content;
+    }
+    .deal-section p {
+      text-align: center;
+    }
   }
 </style>
 
@@ -1402,8 +1414,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     document.getElementById('sellerLink').href = `/crates?collection=${listing.sellerId}`;
 
     // Deal description
-    if (listing.dealDescription) {
-      document.getElementById('dealDescription').textContent = listing.dealDescription;
+    if (listing.dealDescription || listing.dealType) {
+      var dealBadge = document.getElementById('dealBadge');
+      var dealDesc = document.getElementById('dealDescription');
+      if (dealBadge && listing.dealType) {
+        dealBadge.textContent = listing.dealType.toUpperCase();
+      }
+      if (dealDesc && listing.dealDescription) {
+        dealDesc.textContent = listing.dealDescription;
+      }
       document.getElementById('dealSection').style.display = 'block';
     }
 
