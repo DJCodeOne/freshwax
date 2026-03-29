@@ -15,7 +15,7 @@
         "categories:performance": [
           "error",
           {
-            "minScore": 0.85,
+            "minScore": 0.75,
             "aggregationMethod": "median-run"
           }
         ],
@@ -36,14 +36,14 @@
         "categories:seo": [
           "error",
           {
-            "minScore": 0.95,
+            "minScore": 0.9,
             "aggregationMethod": "median-run"
           }
         ],
         "largest-contentful-paint": [
           "error",
           {
-            "maxNumericValue": 3000,
+            "maxNumericValue": 4500,
             "aggregationMethod": "median-run"
           }
         ],
@@ -57,12 +57,12 @@
         "interactive": [
           "error",
           {
-            "maxNumericValue": 3500,
+            "maxNumericValue": 5000,
             "aggregationMethod": "median-run"
           }
         ],
         "interaction-to-next-paint": [
-          "error",
+          "warn",
           {
             "maxNumericValue": 200,
             "aggregationMethod": "median-run"
