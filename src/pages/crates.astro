@@ -34,12 +34,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   <PageLoader nonce={nonce} />
   <Header />
 
-  <div class="crates-main">
+  <div class="crates-main" style="width:100%;max-width:100vw;overflow-x:hidden;">
     <!-- Background -->
     <div class="bg-image-overlay"></div>
 
     <!-- Main Content with Sidebar -->
-    <div class="crates-layout">
+    <div class="crates-layout" style="width:100%;max-width:100vw;overflow-x:hidden;">
       <!-- Collections Sidebar - Desktop -->
       <aside class="collections-sidebar">
         <div class="sidebar-inner">
@@ -80,7 +80,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       </aside>
 
       <!-- Main Listings Content -->
-      <section class="listings-section">
+      <section class="listings-section" style="width:100%;max-width:100vw;overflow-x:hidden;padding-left:1rem;padding-right:1rem;box-sizing:border-box;">
         <!-- Page Header -->
         <div class="crates-header">
           <div class="crates-title-row">
