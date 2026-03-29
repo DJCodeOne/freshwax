@@ -224,7 +224,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
             <!-- Deal Description -->
             <div class="deal-section" id="dealSection" style="display: none;">
-              <div class="deal-badge" id="dealBadge">SPECIAL DEAL</div>
+              <div class="deal-badge">SPECIAL DEAL</div>
+              <p class="deal-type" id="dealType"></p>
               <p id="dealDescription"></p>
             </div>
           </div>
@@ -1054,6 +1055,16 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     border: 2px solid #fff;
   }
 
+  .deal-type {
+    color: #f59e0b;
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.5rem 0;
+    display: none;
+  }
+
   .deal-section p {
     color: #d1d5db;
     margin: 0;
@@ -1087,6 +1098,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       margin-left: auto;
       margin-right: auto;
       width: fit-content;
+    }
+    .deal-type {
+      text-align: center;
     }
     .deal-section p {
       text-align: center;
@@ -1415,10 +1429,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
     // Deal description
     if (listing.dealDescription || listing.dealType) {
-      var dealBadge = document.getElementById('dealBadge');
+      var dealType = document.getElementById('dealType');
       var dealDesc = document.getElementById('dealDescription');
-      if (dealBadge && listing.dealType) {
-        dealBadge.textContent = listing.dealType.toUpperCase();
+      if (dealType && listing.dealType) {
+        dealType.textContent = listing.dealType;
+        dealType.style.display = 'block';
       }
       if (dealDesc && listing.dealDescription) {
         dealDesc.textContent = listing.dealDescription;
