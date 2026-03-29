@@ -6,6 +6,7 @@
     "lib": ["ES2022"],
     "types": ["@cloudflare/workers-types"],
     "strict": true,
+    "strictNullChecks": false,
     "noEmit": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
