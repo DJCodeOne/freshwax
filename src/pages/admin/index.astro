@@ -734,14 +734,32 @@ Astro.response.headers.set('Pragma', 'no-cache');
       <div class="playlist-monitor-section" id="playlistMonitorSection">
         <h4>🎵 Playlist Monitor</h4>
 
-        <!-- Server Status -->
+        <!-- Infrastructure Status -->
         <div class="playlist-status-row">
           <div class="playlist-server-status">
             <span class="status-label">Playlist Server:</span>
             <span class="status-badge" id="playlistServerStatus">Checking...</span>
             <span class="track-count" id="playlistTrackCount"></span>
           </div>
-          <button type="button" id="refreshPlaylistStatus" class="btn-icon" title="Refresh Status" aria-label="Refresh playlist status">🔄</button>
+          <button type="button" id="refreshPlaylistStatus" class="btn-icon" title="Refresh all services" aria-label="Refresh service status">🔄</button>
+        </div>
+        <div class="playlist-status-row">
+          <div class="playlist-server-status">
+            <span class="status-label">Cloudflare Tunnel:</span>
+            <span class="status-badge" id="tunnelStatus">Checking...</span>
+          </div>
+        </div>
+        <div class="playlist-status-row">
+          <div class="playlist-server-status">
+            <span class="status-label">MediaMTX (HLS):</span>
+            <span class="status-badge" id="mediamtxStatus">Checking...</span>
+          </div>
+        </div>
+        <div class="playlist-status-row">
+          <div class="playlist-server-status">
+            <span class="status-label">Icecast:</span>
+            <span class="status-badge" id="icecastStatus">Checking...</span>
+          </div>
         </div>
 
         <!-- Now Playing -->
@@ -1609,29 +1627,79 @@ Astro.response.headers.set('Pragma', 'no-cache');
     // Check if playlist monitor elements exist
     if (!serverStatus) return;
 
-    // Check server health via our own API (avoids cross-origin 401 console noise)
-    async function checkPlaylistServer() {
-      serverStatus.textContent = 'Checking...';
-      serverStatus.className = 'status-badge checking';
+    const tunnelStatus = document.getElementById('tunnelStatus');
+    const mediamtxStatus = document.getElementById('mediamtxStatus');
+    const icecastStatus = document.getElementById('icecastStatus');
 
+    // Check a service by URL, return true if reachable
+    async function checkService(url, timeout) {
       try {
-        // Check if playlist API has tracks from the local server
-        const response = await fetch('/api/playlist/global/');
-        if (response.ok) {
-          const result = await response.json();
-          const currentTrack = result.playlist?.queue?.[0];
-          const isFromServer = currentTrack?.url?.includes('playlist.freshwax.co.uk');
-          serverStatus.textContent = isFromServer ? 'ONLINE' : 'ONLINE';
-          serverStatus.className = 'status-badge online';
-        } else {
-          throw new Error('API error');
-        }
-      } catch (error) {
-        serverStatus.textContent = 'OFFLINE';
-        serverStatus.className = 'status-badge offline';
-        trackCount.textContent = '';
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), timeout || 5000);
+        const resp = await fetch(url, { signal: ctrl.signal, mode: 'no-cors' });
+        clearTimeout(timer);
+        return true;
+      } catch (_e) {
+        return false;
       }
     }
+
+    // Check all infrastructure services
+    async function checkAllServices() {
+      // Playlist server — check via our API proxy
+      serverStatus.textContent = 'Checking...';
+      serverStatus.className = 'status-badge checking';
+      try {
+        const resp = await fetch('/api/admin/health-check/', {
+          headers: { 'X-Admin-Key': window.ADMIN_KEY }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const ps = data.checks?.playlistServer;
+          if (ps?.status === 'ok') {
+            serverStatus.textContent = 'ONLINE';
+            serverStatus.className = 'status-badge online';
+            if (ps.fileCount) trackCount.textContent = `(${ps.fileCount} tracks)`;
+          } else {
+            serverStatus.textContent = 'OFFLINE';
+            serverStatus.className = 'status-badge offline';
+          }
+
+          // Tunnel — if playlist server is reachable, tunnel is working
+          if (tunnelStatus) {
+            const tunnelOk = ps?.status === 'ok';
+            tunnelStatus.textContent = tunnelOk ? 'ONLINE' : 'OFFLINE';
+            tunnelStatus.className = 'status-badge ' + (tunnelOk ? 'online' : 'offline');
+          }
+
+          // MediaMTX
+          if (mediamtxStatus) {
+            const mtx = data.checks?.mediaServer;
+            mediamtxStatus.textContent = mtx?.status === 'ok' ? 'ONLINE' : 'OFFLINE';
+            mediamtxStatus.className = 'status-badge ' + (mtx?.status === 'ok' ? 'online' : 'offline');
+          }
+
+          // Icecast
+          if (icecastStatus) {
+            const ice = data.checks?.icecast;
+            icecastStatus.textContent = ice?.status === 'ok' ? 'ONLINE' : 'OFFLINE';
+            icecastStatus.className = 'status-badge ' + (ice?.status === 'ok' ? 'online' : 'offline');
+          }
+        } else {
+          serverStatus.textContent = 'ERROR';
+          serverStatus.className = 'status-badge offline';
+        }
+      } catch (_e) {
+        serverStatus.textContent = 'OFFLINE';
+        serverStatus.className = 'status-badge offline';
+        if (tunnelStatus) { tunnelStatus.textContent = 'UNKNOWN'; tunnelStatus.className = 'status-badge checking'; }
+        if (mediamtxStatus) { mediamtxStatus.textContent = 'UNKNOWN'; mediamtxStatus.className = 'status-badge checking'; }
+        if (icecastStatus) { icecastStatus.textContent = 'UNKNOWN'; icecastStatus.className = 'status-badge checking'; }
+      }
+    }
+
+    // Legacy alias
+    function checkPlaylistServer() { checkAllServices(); }
 
     // Fetch playlist state
     async function fetchPlaylistState() {
