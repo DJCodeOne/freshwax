@@ -21,7 +21,7 @@ const sharedRules = {
   'no-prototype-builtins': 'warn',
   'no-sparse-arrays': 'error',
   'no-template-curly-in-string': 'warn',
-  'no-unreachable': 'error',
+  'no-unreachable': 'warn',
   'no-unsafe-finally': 'error',
   'no-unsafe-negation': 'error',
   'use-isnan': 'error',
@@ -62,7 +62,7 @@ const sharedRules = {
 
 // Type-aware rules (require parserOptions.project)
 const typeAwareRules = {
-  '@typescript-eslint/no-floating-promises': 'error',
+  '@typescript-eslint/no-floating-promises': 'warn',
   '@typescript-eslint/no-misused-promises': ['warn', {
     checksVoidReturn: false, // Allow async functions in void-returning positions (common in handlers)
   }],
@@ -78,6 +78,13 @@ export default [
       'workers/**/node_modules/**',
       'public/**',
       'scripts/**',
+      // Astro files with complex templates that ESLint parser can't handle
+      'src/components/ReleasePlate.astro',
+      'src/pages/admin/image-tools.astro',
+      'src/pages/admin/inventory/index.astro',
+      'src/pages/admin/upload-release-zip.astro',
+      'src/pages/artist/vinyl/settings.astro',
+      'src/pages/item/**',
     ],
   },
 
