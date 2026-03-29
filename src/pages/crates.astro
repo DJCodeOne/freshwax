@@ -172,6 +172,33 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   }
   .crates-main *, .crates-main *::before, .crates-main *::after {
     box-sizing: border-box;
+    max-width: 100%;
+  }
+  @media (max-width: 640px) {
+    .crates-main {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+    .listings-section {
+      padding: 1rem 0.75rem !important;
+    }
+    .condition-grades {
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 0.375rem !important;
+    }
+    .grade {
+      padding: 0.5rem 0.25rem !important;
+    }
+    .grade-name {
+      font-size: 0.65rem !important;
+    }
+    .vinyl-card {
+      padding: 0.75rem !important;
+    }
+    .crates-header {
+      padding-left: 0.75rem !important;
+      padding-right: 0.75rem !important;
+    }
   }
 
   /* Background Image — animated fade-in like releases page */
@@ -246,14 +273,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     border-radius: 0.75rem;
     margin-bottom: 1.5rem;
     box-shadow: 0 0 30px rgba(220, 38, 38, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    -webkit-mask-image:
-      linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%),
-      linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
-    -webkit-mask-composite: destination-in;
-    mask-image:
-      linear-gradient(to bottom, transparent 0%, black 8%, black 92%, transparent 100%),
-      linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
-    mask-composite: intersect;
+    /* Gradient mask removed — was causing visual edge cutoff on mobile */
   }
 
   .crates-title-row {
@@ -771,14 +791,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 0.75rem;
-    -webkit-mask-image:
-      linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%),
-      linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%);
-    -webkit-mask-composite: destination-in;
-    mask-image:
-      linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%),
-      linear-gradient(to right, transparent 0%, black 3%, black 97%, transparent 100%);
-    mask-composite: intersect;
+    /* Gradient mask removed — was causing visual edge cutoff on mobile */
   }
 
   .label-title-row {
