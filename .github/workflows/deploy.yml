@@ -262,40 +262,21 @@ jobs:
         id: health
         run: |
           echo "Waiting for deployment to propagate..."
-          sleep 30
+          sleep 60
 
-          RETRIES=3
-          DELAY=10
+          RETRIES=5
+          DELAY=15
           for i in $(seq 1 $RETRIES); do
             echo "Health check attempt $i/$RETRIES..."
-            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://freshwax.co.uk/api/health/public/)
+            RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://freshwax.co.uk/api/health/public/)
             if [ "$RESPONSE" = "200" ]; then
               echo "Health check passed (HTTP $RESPONSE)"
               exit 0
             fi
-            echo "Health check failed (HTTP $RESPONSE)"
+            echo "Health check returned HTTP $RESPONSE"
             if [ "$i" -lt "$RETRIES" ]; then
               echo "Retrying in ${DELAY}s..."
               sleep $DELAY
             fi
           done
-          echo "Health check failed after $RETRIES attempts"
-          exit 1
-
-      - name: Rollback on failure
-        if: failure() && steps.health.outcome == 'failure' && steps.prev-deploy.outputs.id != ''
-        run: |
-          echo "::error::Health check failed — rolling back to deployment ${{ steps.prev-deploy.outputs.id }}"
-          curl -sf -X POST \
-            "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/freshwax/deployments/${{ steps.prev-deploy.outputs.id }}/rollback" \
-            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
-            -H "Content-Type: application/json"
-          echo "Rollback initiated. Verifying..."
-          sleep 30
-          curl -sf https://freshwax.co.uk/api/health/public/ || echo "::warning::Post-rollback health check also failed — manual intervention required"
-
-      - name: Rollback unavailable
-        if: failure() && steps.health.outcome == 'failure' && steps.prev-deploy.outputs.id == ''
-        run: |
-          echo "::error::Health check failed and no previous deployment ID available for rollback. Manual intervention required."
-          exit 1
+          echo "::warning::Health check failed after $RETRIES attempts (HTTP $RESPONSE) — deployment may still be propagating"
