@@ -1558,7 +1558,7 @@ const firebaseConfig = {
     listEl.innerHTML = '<div class="loading-sources">Loading stations...</div>';
 
     try {
-      const response = await fetch('/api/relay-sources/');
+      const response = await fetch('/api/livestream/relay-sources/');
       if (!response.ok) throw new Error('Relay sources fetch failed: ' + response.status);
       const data = await response.json();
 

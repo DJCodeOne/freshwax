@@ -100,13 +100,13 @@ export const blogPosts: BlogPost[] = [
       <p>To use browser streaming, you need:</p>
       <ul>
         <li>An approved DJ account — either by hitting the required number of likes on your mixes, having a live code, or being approved by an admin</li>
-        <li>A booked time slot on the <a href="/live/schedule/">schedule</a></li>
+        <li>A booked time slot on the <a href="/schedule/">schedule</a></li>
         <li>A phone or tablet with a working microphone</li>
         <li>A modern browser (Chrome, Safari, Firefox, Edge)</li>
       </ul>
       <p>That's it. No downloads, no config files, no port forwarding, no paid subscription required. Just book your slot, open the link, and go live.</p>
 
-      <p>Head to the <a href="/live/">Live</a> section to see what's streaming now, or check the <a href="/live/schedule/">schedule</a> to book your next set.</p>
+      <p>Head to the <a href="/live/">Live</a> section to see what's streaming now, or check the <a href="/schedule/">schedule</a> to book your next set.</p>
     `
   },
   {
