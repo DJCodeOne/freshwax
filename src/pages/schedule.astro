@@ -22,6 +22,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         <p>See who's going live on Fresh Wax</p>
       </div>
 
+      <!-- Schedule Description -->
+      <div class="schedule-description">
+        <p>
+          The Fresh Wax live stream schedule shows every upcoming DJ set across jungle, drum &amp; bass, breakbeat, and beyond. Our free-to-watch streams feature both resident and guest DJs broadcasting live from studios and bedrooms around the world. Browse the 24-hour grid below to see who's on air now, who's coming up next, and which slots are still open. Any registered DJ can book a slot and go live using professional streaming software or directly from a mobile browser &mdash; no expensive gear required. Tune in, discover new selectors, and join the chat while the music plays.
+        </p>
+      </div>
+
       <!-- Day Navigation -->
       <div class="day-nav">
         <button id="prevDay" class="nav-btn" aria-label="Previous day">←</button>
@@ -119,6 +126,19 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   .schedule-header p {
     color: #666;
     font-size: 0.9rem;
+  }
+
+  .schedule-description {
+    max-width: 720px;
+    margin: 0 auto 1.5rem;
+    text-align: center;
+  }
+
+  .schedule-description p {
+    color: #999;
+    font-size: 0.875rem;
+    line-height: 1.7;
+    margin: 0;
   }
 
   .day-nav {

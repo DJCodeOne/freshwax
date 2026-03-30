@@ -32,7 +32,7 @@ Astro.response.status = 404;
       <p class="error-message">This page seems to have slipped out of the crate.</p>
       <p class="error-sub">The page you were looking for doesn't exist, may have been moved, or the URL might be misspelt.</p>
 
-      <!-- Search box -->
+      <h2>Search the Store</h2>
       <div class="error-search">
         <form action="/releases/" method="get" role="search" aria-label="Search the store">
           <div class="search-wrapper">
@@ -136,6 +136,15 @@ Astro.response.status = 404;
     color: #777;
     margin: 0 0 2rem;
     line-height: 1.5;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #999;
+    margin: 0 0 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   /* Search box */

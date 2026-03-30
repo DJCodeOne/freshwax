@@ -27,6 +27,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
       <p class="error-message">Sorry, something went wrong on our end.</p>
       <p class="error-sub">This isn't your fault. Our team has been notified and we're working to fix it. Please try again in a moment.</p>
 
+      <h2>What You Can Do</h2>
       <div class="error-actions">
         <button type="button" class="cta-btn" id="retryBtn">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -118,6 +119,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
     color: #777;
     margin: 0 0 2rem;
     line-height: 1.5;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #999;
+    margin: 0 0 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   /* Action buttons */
