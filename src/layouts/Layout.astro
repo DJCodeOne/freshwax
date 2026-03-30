@@ -168,15 +168,11 @@ const csrfToken = Astro.locals.csrfToken || '';
     <meta name="msapplication-TileColor" content="#8b5cf6" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
 
-    <!-- Preconnect for performance (critical origins used on every page) -->
+    <!-- Preconnect for performance (only origins used on every page) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.freshwax.co.uk" crossorigin />
-    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
-    <!-- Pusher preconnect moved to pages that use it (live, dj-lobby) -->
-    <link rel="preconnect" href="https://api.stripe.com" crossorigin />
-    <link rel="preconnect" href="https://www.paypal.com" crossorigin />
-    <!-- DNS prefetch fallback for browsers that don't support preconnect -->
+    <!-- DNS prefetch for origins used on some pages (lighter than preconnect) -->
     <link rel="dns-prefetch" href="https://cdn.freshwax.co.uk" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
