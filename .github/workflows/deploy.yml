@@ -71,6 +71,7 @@ jobs:
           name: dist
           path: dist/
           retention-days: 1
+          include-hidden-files: true
 
       - name: CI Summary
         if: always()
