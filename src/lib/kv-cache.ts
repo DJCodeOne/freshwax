@@ -123,8 +123,8 @@ export const CACHE_CONFIG = {
 /** Invalidate all KV-cached release listings */
 export async function invalidateReleasesKVCache(): Promise<void> {
   await Promise.allSettled([
-    kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES),
-    kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES),
+    kvDelete('live-releases-v6:20', CACHE_CONFIG.RELEASES),
+    kvDelete('live-releases-v6:all', CACHE_CONFIG.RELEASES),
   ]);
 }
 

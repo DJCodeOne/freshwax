@@ -19,7 +19,7 @@ import { queryCollection } from './queries';
 // Now supports D1 as primary source with Firebase fallback
 // Cache tiers: 1) in-memory (~0ms) -> 2) KV (~30ms) -> 3) D1/Firebase (~300-900ms)
 export async function getLiveReleases(limit?: number, db?: D1Database): Promise<Record<string, unknown>[]> {
-  const cacheKey = `live-releases-v3:${limit || 'all'}`;
+  const cacheKey = `live-releases-v6:${limit || 'all'}`;
 
   // Tier 1: in-memory cache (same worker process, ~0ms)
   const cached = getCached(cacheKey);
