@@ -621,7 +621,8 @@ const articleSchema = article ? {
 <title>{serpTitle}</title>
 <meta name="title" content={serpTitle} />
 <meta name="description" content={description} />
-<link rel="canonical" href={canonicalUrl} />
+{/* Don't emit canonical on noindex pages — conflicting signals per Google guidelines */}
+{!noindex && <link rel="canonical" href={canonicalUrl} />}
 
 <!-- Robots -->
 {noindex ? (
