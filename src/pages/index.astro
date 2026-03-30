@@ -16,7 +16,7 @@ const log = createLogger('homepage');
 const db = (Astro.locals as App.Locals).runtime?.env?.DB;
 let featuredReleases: Record<string, unknown>[] = [];
 try {
-  featuredReleases = await getLiveReleases(20, db);
+  featuredReleases = await getLiveReleases(10, db);
 } catch (e: unknown) {
   log.error('Failed to fetch featured releases:', e);
 }
