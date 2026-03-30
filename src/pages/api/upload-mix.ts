@@ -374,7 +374,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         actorName: djName || 'Unknown DJ',
         targetId: mixId,
         targetType: 'mix',
-        targetName: title,
+        targetName: mixTitle,
         targetImage: artworkUrl || undefined,
         targetUrl: `/dj-mix/${mixId}/`,
         metadata: { genre, durationSeconds, trackCount: tracklistArray.length },
@@ -384,7 +384,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       broadcastActivity({
         eventType: 'new_mix',
         actorName: djName || 'Unknown DJ',
-        targetName: title,
+        targetName: mixTitle,
         targetUrl: `/dj-mix/${mixId}/`,
       }, env).catch(() => { /* pusher non-critical */ });
 

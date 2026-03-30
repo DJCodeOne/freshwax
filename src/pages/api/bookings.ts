@@ -257,7 +257,7 @@ export const POST: APIRoute = async ({ request }) => {
       const requestedHours = durationType === '2hr' ? 2 : slotDates.length;
 
       if (usedHours + requestedHours > MAX_DAILY_HOURS) {
-        return ApiErrors.badRequest('You only have ${MAX_DAILY_HOURS - usedHours} hours remaining today');
+        return ApiErrors.badRequest(`You only have ${MAX_DAILY_HOURS - usedHours} hours remaining today`);
       }
 
       // Validate slots are available

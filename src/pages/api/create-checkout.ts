@@ -60,8 +60,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {
-      log.info('[create-checkout] Stripe not configured - Plus upgrades not available');
-      return errorResponse('Plus upgrades are coming soon! Payment system is being configured.', 503);
+      log.error('[create-checkout] STRIPE_SECRET_KEY not configured');
+      return errorResponse('Payment system is temporarily unavailable. Please try again later.', 503);
     }
 
     // Validate referral code if provided
