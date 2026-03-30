@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fresh Wax - Comprehensive Website Report</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0a0a0a; color: #e5e5e5; line-height: 1.7; }
+
+    .hero { background: linear-gradient(135deg, #1a0000 0%, #0a0a0a 40%, #0a0a1a 100%); padding: 4rem 2rem; text-align: center; border-bottom: 2px solid #dc2626; }
+    .hero h1 { font-size: 3.5rem; font-weight: 900; letter-spacing: 2px; }
+    .hero .fresh { color: #fff; }
+    .hero .wax { color: #dc2626; }
+    .hero .subtitle { color: #888; font-size: 1.1rem; margin-top: 0.75rem; font-weight: 300; letter-spacing: 1px; }
+    .hero .date { color: #555; font-size: 0.85rem; margin-top: 1.5rem; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+
+    section { padding: 3rem 0; border-bottom: 1px solid #1a1a1a; }
+    h2 { font-size: 1.75rem; color: #fff; margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid #dc2626; display: inline-block; }
+    h3 { font-size: 1.25rem; color: #dc2626; margin: 1.5rem 0 0.75rem; }
+    p { margin-bottom: 1rem; color: #bbb; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin: 1.5rem 0; }
+    .stat-card { background: linear-gradient(135deg, #1a1a1a, #111); border: 1px solid #333; border-radius: 12px; padding: 1.5rem; text-align: center; }
+    .stat-value { font-size: 2.5rem; font-weight: 900; color: #dc2626; line-height: 1.2; }
+    .stat-label { font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.25rem; }
+
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+    .feature-card { background: #111; border: 1px solid #222; border-radius: 12px; padding: 1.75rem; transition: border-color 0.2s; }
+    .feature-card:hover { border-color: #dc2626; }
+    .feature-card .icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .feature-card h4 { color: #fff; font-size: 1.1rem; margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.9rem; color: #999; margin-bottom: 0; }
+
+    .comparison-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.9rem; }
+    .comparison-table th { background: #1a1a1a; color: #dc2626; padding: 1rem; text-align: left; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #dc2626; }
+    .comparison-table td { padding: 0.875rem 1rem; border-bottom: 1px solid #1a1a1a; color: #bbb; }
+    .comparison-table tr:hover td { background: rgba(220, 38, 38, 0.05); }
+    .comparison-table .check { color: #22c55e; font-weight: 700; }
+    .comparison-table .cross { color: #ef4444; }
+    .comparison-table .partial { color: #f59e0b; }
+    .comparison-table .highlight { background: rgba(220, 38, 38, 0.08); }
+
+    .tech-stack { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0; }
+    .tech-badge { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.85rem; color: #ccc; font-weight: 500; }
+
+    .timeline { margin: 1.5rem 0; }
+    .timeline-item { display: flex; gap: 1.25rem; padding: 1rem 0; border-left: 2px solid #333; padding-left: 1.5rem; margin-left: 0.5rem; position: relative; }
+    .timeline-item::before { content: ''; position: absolute; left: -6px; top: 1.25rem; width: 10px; height: 10px; background: #dc2626; border-radius: 50%; }
+    .timeline-date { color: #dc2626; font-weight: 700; min-width: 100px; font-size: 0.85rem; }
+    .timeline-content { flex: 1; }
+    .timeline-content h4 { color: #fff; font-size: 0.95rem; margin-bottom: 0.25rem; }
+    .timeline-content p { font-size: 0.85rem; color: #888; margin-bottom: 0; }
+
+    .score-bar { display: flex; align-items: center; gap: 1rem; margin: 0.5rem 0; }
+    .score-label { min-width: 120px; font-size: 0.85rem; color: #999; }
+    .score-track { flex: 1; height: 8px; background: #1a1a1a; border-radius: 4px; overflow: hidden; }
+    .score-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+    .score-fill.green { background: linear-gradient(90deg, #16a34a, #22c55e); }
+    .score-fill.yellow { background: linear-gradient(90deg, #ca8a04, #eab308); }
+    .score-fill.red { background: linear-gradient(90deg, #dc2626, #ef4444); }
+    .score-value { min-width: 40px; text-align: right; font-weight: 700; font-size: 0.85rem; }
+
+    .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
+    .pros, .cons { background: #111; border-radius: 12px; padding: 1.5rem; }
+    .pros { border: 1px solid #22c55e; }
+    .cons { border: 1px solid #ef4444; }
+    .pros h4 { color: #22c55e; }
+    .cons h4 { color: #ef4444; }
+    .pros li, .cons li { margin: 0.5rem 0; font-size: 0.9rem; color: #bbb; }
+    ul { padding-left: 1.5rem; }
+
+    .callout { background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(220, 38, 38, 0.05)); border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; }
+    .callout p { color: #ccc; margin-bottom: 0; }
+    .callout strong { color: #dc2626; }
+
+    .footer { text-align: center; padding: 3rem 2rem; color: #555; font-size: 0.85rem; border-top: 1px solid #1a1a1a; }
+    .footer .brand { font-size: 1.5rem; font-weight: 900; margin-bottom: 0.5rem; }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2.25rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .feature-grid { grid-template-columns: 1fr; }
+      .pros-cons { grid-template-columns: 1fr; }
+      .comparison-table { font-size: 0.8rem; }
+      .comparison-table th, .comparison-table td { padding: 0.625rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1><span class="fresh">FRESH </span><span class="wax">WAX</span></h1>
+  <p class="subtitle">Comprehensive Website Report</p>
+  <p class="date">Generated: March 2026</p>
+</div>
+
+<div class="container">
+
+<!-- EXECUTIVE SUMMARY -->
+<section>
+  <h2>Executive Summary</h2>
+  <p>Fresh Wax is a full-stack e-commerce platform purpose-built for the jungle and drum &amp; bass music community. It combines a record label, digital music store, vinyl marketplace, DJ streaming platform, and social community into a single cohesive experience.</p>
+  <p>The platform was designed and built from November 2025 to March 2026 using modern web technologies, with a focus on performance, security, and accessibility. It runs entirely on Cloudflare's edge network, meaning pages load in milliseconds from servers closest to each visitor worldwide.</p>
+
+  <div class="callout">
+    <p><strong>In plain English:</strong> Fresh Wax is like having Bandcamp + Discogs + Mixcloud + Twitch all rolled into one website, but specifically built for the jungle and drum &amp; bass scene. Artists can sell music, DJs can stream live, collectors can trade vinyl, and fans can discover new tracks &mdash; all in one place.</p>
+  </div>
+</section>
+
+<!-- KEY STATISTICS -->
+<section>
+  <h2>Key Statistics</h2>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">235,661</div>
+      <div class="stat-label">Lines of Code</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1,745</div>
+      <div class="stat-label">Git Commits</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">301</div>
+      <div class="stat-label">API Endpoints</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">142</div>
+      <div class="stat-label">Pages</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1,098</div>
+      <div class="stat-label">Automated Tests</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1,060+</div>
+      <div class="stat-label">Tasks Completed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">4</div>
+      <div class="stat-label">Months Build Time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">~800</div>
+      <div class="stat-label">Estimated Dev Hours</div>
+    </div>
+  </div>
+
+  <h3>Development Timeline</h3>
+  <div class="timeline">
+    <div class="timeline-item">
+      <span class="timeline-date">Nov 2025</span>
+      <div class="timeline-content">
+        <h4>Project Inception</h4>
+        <p>Initial architecture, Astro + Cloudflare setup, Firebase integration, core e-commerce features</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <span class="timeline-date">Dec 2025</span>
+      <div class="timeline-content">
+        <h4>Core Platform</h4>
+        <p>Stripe/PayPal payments, user accounts, release uploads, DJ mix hosting, cart and checkout</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <span class="timeline-date">Jan 2026</span>
+      <div class="timeline-content">
+        <h4>Livestreaming &amp; Social</h4>
+        <p>Live DJ streaming (HLS/WebRTC/WHIP), real-time chat, vinyl marketplace, merch store</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <span class="timeline-date">Feb 2026</span>
+      <div class="timeline-content">
+        <h4>Polish &amp; Hardening</h4>
+        <p>Security audit (pen test), SEO optimisation, GDPR compliance, performance tuning, 40+ waves of improvements across 690+ agents</p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <span class="timeline-date">Mar 2026</span>
+      <div class="timeline-content">
+        <h4>Production &amp; Refinement</h4>
+        <p>Activity feeds, DJ support tracking, mobile UX overhaul, health score 96/100, D1 database primary, Firestore fallback</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECHNOLOGY STACK -->
+<section>
+  <h2>Technology Stack</h2>
+  <p>The website is built with modern, production-grade technologies chosen for performance, reliability, and cost efficiency. Everything runs on Cloudflare's global edge network &mdash; no traditional servers to maintain.</p>
+
+  <h3>Frontend (What Users See)</h3>
+  <div class="tech-stack">
+    <span class="tech-badge">Astro 5.14</span>
+    <span class="tech-badge">Tailwind CSS</span>
+    <span class="tech-badge">TypeScript</span>
+    <span class="tech-badge">Vanilla JavaScript</span>
+    <span class="tech-badge">HLS.js</span>
+    <span class="tech-badge">Pusher (Real-time)</span>
+  </div>
+
+  <h3>Backend (Server &amp; APIs)</h3>
+  <div class="tech-stack">
+    <span class="tech-badge">Cloudflare Workers</span>
+    <span class="tech-badge">Cloudflare Pages</span>
+    <span class="tech-badge">Cloudflare D1 (SQL)</span>
+    <span class="tech-badge">Cloudflare R2 (Storage)</span>
+    <span class="tech-badge">Cloudflare KV (Cache)</span>
+    <span class="tech-badge">Firebase (Auth + Firestore)</span>
+  </div>
+
+  <h3>Payments &amp; Services</h3>
+  <div class="tech-stack">
+    <span class="tech-badge">Stripe</span>
+    <span class="tech-badge">PayPal</span>
+    <span class="tech-badge">Resend (Email)</span>
+    <span class="tech-badge">GIPHY API</span>
+    <span class="tech-badge">MediaMTX (Streaming)</span>
+    <span class="tech-badge">Cloudflared Tunnel</span>
+  </div>
+
+  <h3>DevOps &amp; Quality</h3>
+  <div class="tech-stack">
+    <span class="tech-badge">GitHub Actions CI/CD</span>
+    <span class="tech-badge">Vitest (1,098 tests)</span>
+    <span class="tech-badge">Playwright E2E</span>
+    <span class="tech-badge">Lighthouse CI</span>
+    <span class="tech-badge">Dependabot</span>
+    <span class="tech-badge">Automated D1 Backups</span>
+  </div>
+
+  <div class="callout">
+    <p><strong>Why this matters:</strong> Running on Cloudflare's edge means the website loads from the server nearest to the visitor &mdash; whether they're in London, Berlin, or Tokyo. There are no cold starts, no server maintenance bills, and the site can handle traffic spikes without breaking a sweat. The entire infrastructure costs a fraction of a traditional server setup.</p>
+  </div>
+</section>
+
+<!-- WEBSITE SECTIONS -->
+<section>
+  <h2>Website Sections</h2>
+  <p>Fresh Wax is organised into distinct sections, each serving a specific purpose within the music ecosystem.</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon">🎵</div>
+      <h4>All Releases (Digital Store)</h4>
+      <p>Browse and buy digital releases grouped by record label. Each release has track previews (60-second clips), artwork, and instant download in MP3/WAV after purchase. Supports "Name Your Own Price" for artists who want flexible pricing. Releases are sorted by label with a quick-jump dropdown.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">📀</div>
+      <h4>Vinyl Crates (Marketplace)</h4>
+      <p>A Discogs-style marketplace where collectors and sellers list physical vinyl records. Sellers manage their own store with listings, pricing, and order fulfilment. Buyers browse by condition, label, and price. Each listing has images, condition grading, and shipping costs.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">🎧</div>
+      <h4>DJ Mixes</h4>
+      <p>A dedicated section for DJ mixes with streaming playback, artwork, tracklists, and download options. DJs upload their sets with cover art and the system generates 400x400 thumbnails. Mixes can be liked, commented on (with GIF support), and shared to social media.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">📡</div>
+      <h4>Live Streaming</h4>
+      <p>Watch live DJ sets with real-time chat, emoji reactions, shoutouts, and viewer counts. Supports HLS video (via OBS), Icecast audio (via BUTT), external relay stations (like Underground Lair), and browser-based streaming (WebRTC/WHIP for mobile DJs). Includes a fullscreen mode with its own chat.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">🎛️</div>
+      <h4>DJ Lobby</h4>
+      <p>A private backstage area for DJs. Book streaming slots, see who's up next, monitor audio levels with VU meters, preview your stream before going live, and chat with other DJs. Supports OBS, BUTT, relay, and browser broadcast modes.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">🔀</div>
+      <h4>Playlist &amp; Shuffle</h4>
+      <p>A global playlist system that plays 60-second preview clips from the music catalogue when no DJ is streaming. Users can add YouTube videos to the queue, save personal playlists, and the system auto-plays random tracks with artist/title display and countdown timers.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">👕</div>
+      <h4>Merchandise Store</h4>
+      <p>Official jungle and drum &amp; bass merchandise &mdash; t-shirts, hoodies, hats. Supports multiple sizes, colours, and variants with stock management. Colour swatches with thumbnail sync, brand filtering, and supplier management for dropshipping partners.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">📊</div>
+      <h4>Charts &amp; Pre-Orders</h4>
+      <p>Weekly sales charts showing trending releases, and a pre-orders section for upcoming music. Charts update automatically based on sales data. Pre-orders display countdown timers to release date.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">🎁</div>
+      <h4>Gift Cards</h4>
+      <p>Digital gift cards that can be purchased and redeemed against any store purchase. Custom amounts, personalised messages, and email delivery. Balance tracked per user account with secure redemption codes.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">📝</div>
+      <h4>Blog</h4>
+      <p>News, interviews, and scene updates. Blog posts support rich formatting, images, and are fully SEO-optimised with structured data for search engines.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">👤</div>
+      <h4>User Dashboard</h4>
+      <p>Manage your profile, view order history, track downloads, manage social connections (followers/following), view wishlist, and handle subscription (Plus tier for cloud playlist sync and extra features).</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="icon">⚙️</div>
+      <h4>Admin Dashboard</h4>
+      <p>Full back-office with user management, partner management, inventory control, order processing, sales reports, royalty tracking, error monitoring, streaming management, and newsletter tools.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HEALTH SCORES -->
+<section>
+  <h2>Quality Scores</h2>
+  <p>The website has been through 48 waves of improvements and 11 comprehensive health audits. The final audit (March 2026) achieved an overall score of 96/100.</p>
+
+  <div style="margin: 2rem 0;">
+    <div class="score-bar">
+      <span class="score-label">Security</span>
+      <div class="score-track"><div class="score-fill green" style="width: 98%;"></div></div>
+      <span class="score-value" style="color: #22c55e;">98</span>
+    </div>
+    <div class="score-bar">
+      <span class="score-label">Accessibility</span>
+      <div class="score-track"><div class="score-fill green" style="width: 98%;"></div></div>
+      <span class="score-value" style="color: #22c55e;">98</span>
+    </div>
+    <div class="score-bar">
+      <span class="score-label">Error Handling</span>
+      <div class="score-track"><div class="score-fill green" style="width: 98%;"></div></div>
+      <span class="score-value" style="color: #22c55e;">98</span>
+    </div>
+    <div class="score-bar">
+      <span class="score-label">Infrastructure</span>
+      <div class="score-track"><div class="score-fill green" style="width: 98%;"></div></div>
+      <span class="score-value" style="color: #22c55e;">98</span>
+    </div>
+    <div class="score-bar">
+      <span class="score-label">SEO</span>
+      <div class="score-track"><div class="score-fill green" style="width: 97%;"></div></div>
+      <span class="score-value" style="color: #22c55e;">97</span>
+    </div>
+    <div class="score-bar">
+      <span class="score-label">Performance</span>
+      <div class="score-track"><div class="score-fill green" style="width: 93%;"></div></div>
+      <span class="score-value" style="color: #22c55e;">93</span>
+    </div>
+    <div class="score-bar">
+      <span class="score-label">Code Quality</span>
+      <div class="score-track"><div class="score-fill green" style="width: 93%;"></div></div>
+      <span class="score-value" style="color: #22c55e;">93</span>
+    </div>
+  </div>
+
+  <h3>What These Scores Mean</h3>
+  <ul style="margin: 1rem 0;">
+    <li><strong>Security (98):</strong> All API endpoints have authentication, rate limiting, input validation (Zod schemas), CSRF protection, and SQL injection prevention. Payment amounts are always verified server-side. Two critical IDOR vulnerabilities were found and fixed during audit.</li>
+    <li><strong>Accessibility (98):</strong> Screen reader compatible, keyboard navigable, WCAG AA colour contrast, focus traps on all 123+ modals, proper ARIA attributes, skip navigation links.</li>
+    <li><strong>Error Handling (98):</strong> Zero empty catch blocks, all fetch calls check response status, enterprise-grade error logging with webhook alerts, automatic 30-day cleanup.</li>
+    <li><strong>SEO (97):</strong> 11 types of structured data (JSON-LD), dynamic sitemap, comprehensive robots.txt, unique meta descriptions, Open Graph tags for social sharing.</li>
+    <li><strong>Performance (93):</strong> Edge-served globally, lazy-loaded images, async fonts, N+1 query batching, KV caching. CSS could be further optimised but is page-specific by design.</li>
+  </ul>
+</section>
+
+<!-- COMPARISON WITH COMPETITORS -->
+<section>
+  <h2>Comparison with Similar Platforms</h2>
+  <p>Fresh Wax combines features from multiple platforms into a single, genre-focused experience. Here's how it compares to the established players.</p>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th class="highlight">Fresh Wax</th>
+        <th>Bandcamp</th>
+        <th>Discogs</th>
+        <th>Mixcloud</th>
+        <th>Twitch</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Digital music sales</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+      </tr>
+      <tr>
+        <td>Vinyl marketplace</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="partial">Limited</td>
+        <td class="check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+      </tr>
+      <tr>
+        <td>DJ mix hosting</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+      </tr>
+      <tr>
+        <td>Live streaming</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="check">&#10003;</td>
+        <td class="check">&#10003;</td>
+      </tr>
+      <tr>
+        <td>Real-time chat</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="check">&#10003;</td>
+      </tr>
+      <tr>
+        <td>Merchandise store</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="partial">Merch shelf</td>
+      </tr>
+      <tr>
+        <td>Name your own price</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+      </tr>
+      <tr>
+        <td>Gift cards</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="check">&#10003;</td>
+      </tr>
+      <tr>
+        <td>Genre-focused community</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+      </tr>
+      <tr>
+        <td>DJ booking system</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+      </tr>
+      <tr>
+        <td>Mobile streaming (browser)</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="partial">App only</td>
+      </tr>
+      <tr>
+        <td>Artist royalty tracking</td>
+        <td class="highlight check">&#10003;</td>
+        <td class="check">&#10003;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+        <td class="cross">&#10007;</td>
+      </tr>
+      <tr>
+        <td>Platform fee</td>
+        <td class="highlight" style="color: #22c55e;">Custom</td>
+        <td style="color: #f59e0b;">10-15%</td>
+        <td style="color: #f59e0b;">8% + fees</td>
+        <td style="color: #ef4444;">Free tier limited</td>
+        <td style="color: #ef4444;">50% sub split</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="pros-cons">
+    <div class="pros">
+      <h4>Fresh Wax Advantages</h4>
+      <ul>
+        <li>All-in-one platform (no need for 4-5 separate services)</li>
+        <li>Built specifically for the jungle and drum &amp; bass community</li>
+        <li>No monthly hosting costs (Cloudflare free/pay-as-you-go)</li>
+        <li>Full ownership of customer data and relationships</li>
+        <li>Custom commission rates per artist</li>
+        <li>Live streaming with no external platform needed</li>
+        <li>Mobile browser streaming (no app required)</li>
+        <li>Real-time features: chat, reactions, shoutouts</li>
+        <li>GDPR compliant with data export/deletion</li>
+      </ul>
+    </div>
+    <div class="cons">
+      <h4>Current Limitations</h4>
+      <ul>
+        <li>Smaller existing audience compared to established platforms</li>
+        <li>No native mobile app (progressive web app instead)</li>
+        <li>No iOS-optimised streaming app</li>
+        <li>Fewer payment methods than Amazon/eBay</li>
+        <li>Single-genre focus (by design, but limits market size)</li>
+        <li>No algorithm-driven music discovery (yet)</li>
+        <li>Dependent on Cloudflare infrastructure</li>
+        <li>New platform &mdash; building trust takes time</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- COST ANALYSIS -->
+<section>
+  <h2>Cost Analysis</h2>
+  <p>Building a platform of this scope from scratch would typically cost between <strong>&pound;80,000 - &pound;200,000</strong> at UK agency rates, or take a solo developer 12-18 months. Fresh Wax was built in 4 months using AI-assisted development.</p>
+
+  <h3>Estimated Agency Costs (UK Market)</h3>
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Hours</th>
+        <th>Agency Rate</th>
+        <th>Estimated Cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>E-commerce platform (releases, cart, checkout, payments)</td>
+        <td>200</td>
+        <td>&pound;100/hr</td>
+        <td>&pound;20,000</td>
+      </tr>
+      <tr>
+        <td>Vinyl marketplace (listings, seller portal, orders)</td>
+        <td>120</td>
+        <td>&pound;100/hr</td>
+        <td>&pound;12,000</td>
+      </tr>
+      <tr>
+        <td>Live streaming platform (HLS, WebRTC, chat, reactions)</td>
+        <td>160</td>
+        <td>&pound;120/hr</td>
+        <td>&pound;19,200</td>
+      </tr>
+      <tr>
+        <td>DJ lobby &amp; scheduling system</td>
+        <td>80</td>
+        <td>&pound;100/hr</td>
+        <td>&pound;8,000</td>
+      </tr>
+      <tr>
+        <td>Admin dashboard &amp; management tools</td>
+        <td>100</td>
+        <td>&pound;100/hr</td>
+        <td>&pound;10,000</td>
+      </tr>
+      <tr>
+        <td>Security, SEO, accessibility, testing</td>
+        <td>80</td>
+        <td>&pound;110/hr</td>
+        <td>&pound;8,800</td>
+      </tr>
+      <tr>
+        <td>Design, UX, mobile optimisation</td>
+        <td>60</td>
+        <td>&pound;90/hr</td>
+        <td>&pound;5,400</td>
+      </tr>
+      <tr>
+        <td style="font-weight: 700; color: #fff;">Total</td>
+        <td style="font-weight: 700; color: #fff;">800</td>
+        <td></td>
+        <td style="font-weight: 700; color: #dc2626;">&pound;83,400</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Monthly Running Costs</h3>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" style="font-size: 1.5rem;">&pound;0</div>
+      <div class="stat-label">Hosting (Cloudflare Free)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="font-size: 1.5rem;">&pound;0</div>
+      <div class="stat-label">Database (D1 Free Tier)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="font-size: 1.5rem;">Pay-per-use</div>
+      <div class="stat-label">Firebase (Blaze Plan)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" style="font-size: 1.5rem;">2.9% + 30p</div>
+      <div class="stat-label">Stripe Per Transaction</div>
+    </div>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section>
+  <h2>Security Measures</h2>
+  <p>The platform handles real money, stock inventory, and customer personal data. Security has been a priority from day one, with a full penetration test completed in February 2026.</p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon">🔐</div>
+      <h4>Authentication</h4>
+      <p>Firebase Auth with Google Sign-In. All API endpoints verify identity via signed tokens. Admin endpoints require additional admin key verification.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">💳</div>
+      <h4>Payment Security</h4>
+      <p>All prices recalculated server-side (never trust the client). Stripe webhook signature verification with timing-safe comparison. PayPal capture amount validation.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🛡️</div>
+      <h4>Data Protection</h4>
+      <p>CSRF double-submit cookies, rate limiting on all endpoints (5-120 req/min depending on sensitivity), parameterised SQL queries, input validation with Zod schemas.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📋</div>
+      <h4>GDPR Compliance</h4>
+      <p>Cookie consent with granular controls, data export, account deletion, double opt-in newsletter, age gate, privacy policy. Users can request full data export or deletion.</p>
+    </div>
+  </div>
+</section>
+
+<!-- INFRASTRUCTURE -->
+<section>
+  <h2>Infrastructure &amp; DevOps</h2>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon">🚀</div>
+      <h4>CI/CD Pipeline</h4>
+      <p>4 GitHub Actions workflows: lint &rarr; typecheck &rarr; test &rarr; build &rarr; deploy to staging &rarr; E2E smoke tests &rarr; production deploy with health check and automatic rollback.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">💾</div>
+      <h4>Database Strategy</h4>
+      <p>D1 (SQLite at edge) as primary data source for fast reads. Firebase Firestore as fallback. 12 D1 tables with 13 versioned migrations. Weekly automated SQL backups to GitHub.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📊</div>
+      <h4>Error Monitoring</h4>
+      <p>Errors logged to D1 with fingerprinting and deduplication. Webhook alerts when error rate spikes (10+/hour). 30-day automatic retention cleanup. Admin dashboard for error review.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">⚡</div>
+      <h4>Caching</h4>
+      <p>Three-tier cache: in-memory (~0ms) &rarr; Cloudflare KV (~30ms) &rarr; D1/Firebase (~300ms). Releases, mixes, and merch cached for 30 minutes. Empty results never cached to prevent stale data.</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="footer">
+  <div class="brand"><span style="color: #fff;">FRESH </span><span style="color: #dc2626;">WAX</span></div>
+  <p>Jungle and Drum &amp; Bass Music Store</p>
+  <p style="margin-top: 0.5rem;">Report generated March 2026 &bull; freshwax.co.uk</p>
+</div>
+
+</body>
+</html>
