@@ -310,8 +310,8 @@ describe('invalidateReleasesKVCache', () => {
 
     await invalidateReleasesKVCache();
     expect(mockKV.delete).toHaveBeenCalledTimes(2);
-    expect(mockKV.delete).toHaveBeenCalledWith('releases:live-releases-v2:20');
-    expect(mockKV.delete).toHaveBeenCalledWith('releases:live-releases-v2:all');
+    expect(mockKV.delete).toHaveBeenCalledWith('releases:live-releases-v6:20');
+    expect(mockKV.delete).toHaveBeenCalledWith('releases:live-releases-v6:all');
   });
 });
 

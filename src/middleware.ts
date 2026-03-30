@@ -219,7 +219,10 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     url.hostname = siteHostname;
     return new Response(null, {
       status: 301,
-      headers: { 'Location': url.toString() }
+      headers: {
+        'Location': url.toString(),
+        'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+      }
     });
   }
 
@@ -237,7 +240,10 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     const isGetOrHead = request.method === 'GET' || request.method === 'HEAD';
     return new Response(null, {
       status: isGetOrHead ? 301 : 308,
-      headers: { 'Location': url.toString() }
+      headers: {
+        'Location': url.toString(),
+        'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+      }
     });
   }
 

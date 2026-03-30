@@ -15,6 +15,7 @@ interface Props {
   imageHeight?: number;
   type?: 'website' | 'article' | 'product' | 'music.album' | 'profile' | 'video.other';
   noindex?: boolean;
+  nofollow?: boolean;
   
   // Product (vinyl, merch)
   product?: {
@@ -121,6 +122,7 @@ const {
   imageHeight,
   type = 'website',
   noindex = false,
+  nofollow = false,
   product,
   music,
   audio,
@@ -146,6 +148,13 @@ const SITE = {
 const fullTitle = title === 'Home'
   ? `${SITE.tagline} | ${SITE.name}`
   : `${title} | ${SITE.name}`;
+
+// SERP title: truncate to 60 chars max to avoid Google truncation
+const SERP_MAX = 60;
+const SUFFIX = ` | ${SITE.name}`; // " | Fresh Wax" = 13 chars
+const serpTitle = fullTitle.length <= SERP_MAX
+  ? fullTitle
+  : title.substring(0, SERP_MAX - SUFFIX.length - 3) + `...${SUFFIX}`;
 
 // Normalize pathname: ensure trailing slash to match Cloudflare's canonical URL
 const normalizedPath = Astro.url.pathname === '/'
@@ -609,17 +618,17 @@ const articleSchema = article ? {
 ---
 
 <!-- Essential Meta -->
-<title>{fullTitle}</title>
-<meta name="title" content={fullTitle} />
+<title>{serpTitle}</title>
+<meta name="title" content={serpTitle} />
 <meta name="description" content={description} />
 <link rel="canonical" href={canonicalUrl} />
 
 <!-- Robots -->
 {noindex ? (
   <>
-    <meta name="robots" content="noindex, nofollow" />
-    <meta name="googlebot" content="noindex, nofollow" />
-    <meta name="bingbot" content="noindex, nofollow" />
+    <meta name="robots" content={`noindex, ${nofollow ? 'nofollow' : 'follow'}`} />
+    <meta name="googlebot" content={`noindex, ${nofollow ? 'nofollow' : 'follow'}`} />
+    <meta name="bingbot" content={`noindex, ${nofollow ? 'nofollow' : 'follow'}`} />
   </>
 ) : (
   <>
