@@ -174,7 +174,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // Partial refund
           refundAmountPence = Math.round(parseFloat(refundAmount) * 100);
           if (refundAmountPence > maxRefundable) {
-            return ApiErrors.badRequest('Refund amount exceeds maximum refundable (\u00a3${(maxRefundable / 100).toFixed(2)})');
+            return ApiErrors.badRequest(`Refund amount exceeds maximum refundable (£${(maxRefundable / 100).toFixed(2)})`);
           }
           isFullRefund = refundAmountPence === maxRefundable && previouslyRefunded === 0;
         }

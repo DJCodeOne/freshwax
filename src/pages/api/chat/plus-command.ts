@@ -264,7 +264,7 @@ export async function POST({ request, locals }: APIContext) {
         break;
 
       default:
-        return ApiErrors.badRequest('Unknown command: ${command}');
+        return ApiErrors.badRequest(`Unknown command: ${command}`);
     }
 
     return successResponse({ allowed: true, response, type, command });

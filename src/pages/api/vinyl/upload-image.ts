@@ -80,7 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Validate image index
     if (imageIndex < 0 || imageIndex >= MAX_IMAGES_PER_LISTING) {
-      return ApiErrors.badRequest('Image index must be between 0 and ${MAX_IMAGES_PER_LISTING - 1}');
+      return ApiErrors.badRequest(`Image index must be between 0 and ${MAX_IMAGES_PER_LISTING - 1}`);
     }
 
     // Validate file type

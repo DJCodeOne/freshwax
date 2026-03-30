@@ -78,18 +78,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      return ApiErrors.badRequest('File too large. Maximum ${MAX_FILE_SIZE / (1024 * 1024)}MB allowed (90 seconds at 128kbps).');
+      return ApiErrors.badRequest(`File too large. Maximum ${MAX_FILE_SIZE / (1024 * 1024)}MB allowed (90 seconds at 128kbps).`);
     }
 
     // Validate duration if provided
     if (duration > 0 && duration > MAX_DURATION_SECONDS) {
-      return ApiErrors.badRequest('Audio too long. Maximum ${MAX_DURATION_SECONDS} seconds (1:30) allowed.');
+      return ApiErrors.badRequest(`Audio too long. Maximum ${MAX_DURATION_SECONDS} seconds (1:30) allowed.`);
     }
 
     // Estimate duration from file size as backup check
     const estimatedDuration = estimateDuration(file.size, EXPECTED_BITRATE);
     if (estimatedDuration > MAX_DURATION_SECONDS * 1.5) { // 50% tolerance for bitrate variance
-      return ApiErrors.badRequest('Audio appears to be too long (estimated ${Math.round(estimatedDuration)}s). Maximum 90 seconds allowed.');
+      return ApiErrors.badRequest(`Audio appears to be too long (estimated ${Math.round(estimatedDuration)}s). Maximum 90 seconds allowed.`);
     }
 
     const audioBuffer = await file.arrayBuffer();

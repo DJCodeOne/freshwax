@@ -75,7 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     
     // Validate file size (max 500KB for safety, should be under 200KB from client)
     if (artworkFile.size > 500 * 1024) {
-      return ApiErrors.badRequest('Artwork file too large (${Math.round(artworkFile.size / 1024)}KB, max 500KB)');
+      return ApiErrors.badRequest(`Artwork file too large (${Math.round(artworkFile.size / 1024)}KB, max 500KB)`);
     }
     
     // Process artwork to WebP and upload to R2

@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!entity) {
-      return ApiErrors.notFound('${entityType} not found');
+      return ApiErrors.notFound(`${entityType} not found`);
     }
 
     // Update with PayPal info using service account auth
@@ -204,7 +204,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     if (!entity) {
-      return ApiErrors.notFound('${entityType} not found');
+      return ApiErrors.notFound(`${entityType} not found`);
     }
 
     return successResponse({ paypalEmail: entity.paypalEmail || null,

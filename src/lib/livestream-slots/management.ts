@@ -206,7 +206,7 @@ export async function handleGetStreamKey(
   const graceEnd = new Date(slotStart.getTime() + settings.gracePeriodMinutes * 60 * 1000);
 
   if (now < keyAvailableAt) {
-    return ApiErrors.badRequest('Stream key available ${settings.streamKeyRevealMinutes} minutes before your slot');
+    return ApiErrors.badRequest(`Stream key available ${settings.streamKeyRevealMinutes} minutes before your slot`);
   }
 
   if (now > graceEnd && slot.status === 'scheduled') {

@@ -122,7 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Validate all file types
     for (const file of files) {
       if (!ALLOWED_TYPES[file.contentType]) {
-        return ApiErrors.badRequest('Unsupported file type: ${file.contentType}. Supported: MP3, WAV, FLAC, AIFF, M4A, JPG, PNG, WEBP, ZIP');
+        return ApiErrors.badRequest(`Unsupported file type: ${file.contentType}. Supported: MP3, WAV, FLAC, AIFF, M4A, JPG, PNG, WEBP, ZIP`);
       }
     }
 

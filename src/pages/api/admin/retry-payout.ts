@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Check status is retryable
     if (pendingPayout.status !== 'retry_pending' && pendingPayout.status !== 'awaiting_connect') {
-      return ApiErrors.badRequest('Cannot retry payout with status: ${pendingPayout.status}');
+      return ApiErrors.badRequest(`Cannot retry payout with status: ${pendingPayout.status}`);
     }
 
     // Get the artist to check their Stripe Connect status

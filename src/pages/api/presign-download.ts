@@ -142,7 +142,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } else {
           // Full release - validate trackIndex bounds
           if (trackIndex >= orderTracks.length) {
-            return ApiErrors.badRequest('Track index ${trackIndex} out of bounds (release has ${orderTracks.length} tracks)');
+            return ApiErrors.badRequest(`Track index ${trackIndex} out of bounds (release has ${orderTracks.length} tracks)`);
           }
           const orderTrack = orderTracks[trackIndex];
           if (orderTrack) {
@@ -180,7 +180,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } else {
           // Validate trackIndex bounds against release tracks
           if (trackIndex >= tracks.length) {
-            return ApiErrors.badRequest('Track index ${trackIndex} out of bounds (release has ${tracks.length} tracks)');
+            return ApiErrors.badRequest(`Track index ${trackIndex} out of bounds (release has ${tracks.length} tracks)`);
           }
           // For full release purchases, use trackIndex
           const track = tracks[trackIndex];
@@ -193,7 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!fileUrl) {
       log.error('[presign-download] File URL not found:', { releaseId, trackIndex, fileType });
-      return ApiErrors.notFound('${fileType} file not available for this item');
+      return ApiErrors.notFound(`${fileType} file not available for this item`);
     }
 
     const config = getR2Config(env);

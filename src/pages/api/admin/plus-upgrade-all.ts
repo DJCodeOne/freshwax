@@ -123,7 +123,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           emailId: result.id });
       } else {
         const error = await response.text();
-        return ApiErrors.serverError('Failed to send test email: ${error}');
+        return ApiErrors.serverError(`Failed to send test email: ${error}`);
       }
     }
 

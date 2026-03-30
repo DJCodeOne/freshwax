@@ -195,7 +195,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Safety limit on image count to prevent runaway uploads
     if (imageCount > MAX_IMAGES) {
-      return ApiErrors.badRequest('Maximum ${MAX_IMAGES} images allowed per product');
+      return ApiErrors.badRequest(`Maximum ${MAX_IMAGES} images allowed per product`);
     }
 
     const timestamp = Date.now();
@@ -240,7 +240,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Validate individual image file size
       if (imageFile.size > MAX_MERCH_IMAGE_FILE_SIZE) {
-        return errorResponse('Image ${i + 1} exceeds 10MB limit (${(imageFile.size / 1024 / 1024).toFixed(1)}MB). Please compress or resize the image.', 413);
+        return errorResponse(`Image ${i + 1} exceeds 10MB limit (${(imageFile.size / 1024 / 1024).toFixed(1)}MB). Please compress or resize the image.`, 413);
       }
 
       log.info('[upload-merch] Processing image', i + 1);

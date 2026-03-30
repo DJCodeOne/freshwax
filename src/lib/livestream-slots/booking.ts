@@ -79,7 +79,7 @@ export async function handleBook(
     const maxBookingDate = new Date(now.getTime() + maxAdvanceDays * 24 * 60 * 60 * 1000);
     if (slotStart > maxBookingDate) {
       const upgradeMsg = !isPlus ? ' Go Plus to book up to 1 month in advance.' : '';
-      return ApiErrors.badRequest('Cannot book more than ${maxAdvanceDays} days in advance.${upgradeMsg}');
+      return ApiErrors.badRequest(`Cannot book more than ${maxAdvanceDays} days in advance.${upgradeMsg}`);
     }
 
     // Get the date of the booking to check for approved events

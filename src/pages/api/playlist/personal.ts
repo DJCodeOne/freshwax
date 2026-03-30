@@ -142,7 +142,7 @@ export async function POST({ request, locals }: APIContext) {
 
     if (items.length > trackLimit) {
       const upgradeMsg = !isPlus ? ' Go Plus for up to 1,000 tracks.' : '';
-      return ApiErrors.badRequest('Playlist exceeds ${trackLimit} track limit.${upgradeMsg}');
+      return ApiErrors.badRequest(`Playlist exceeds ${trackLimit} track limit.${upgradeMsg}`);
     }
 
     // Save to D1

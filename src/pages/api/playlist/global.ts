@@ -149,7 +149,7 @@ export async function POST({ request, locals }: APIContext) {
 
     // Check queue size
     if (playlist.queue.length >= MAX_QUEUE_SIZE) {
-      return ApiErrors.badRequest('Queue is full (${MAX_QUEUE_SIZE} items max)');
+      return ApiErrors.badRequest(`Queue is full (${MAX_QUEUE_SIZE} items max)`);
     }
 
     // DJ Waitlist: Check if user already has max tracks in queue (2 tracks per DJ)

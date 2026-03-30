@@ -108,7 +108,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!entity) {
-      return ApiErrors.notFound('${entityType} not found');
+      return ApiErrors.notFound(`${entityType} not found`);
     }
 
     // Verify the chosen method is available

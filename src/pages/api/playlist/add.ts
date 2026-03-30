@@ -105,7 +105,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Check max queue size
     if (currentQueue.length >= MAX_QUEUE_SIZE) {
-      return ApiErrors.badRequest('Queue is full (${MAX_QUEUE_SIZE} items max). Wait for the current track to end before trying again.');
+      return ApiErrors.badRequest(`Queue is full (${MAX_QUEUE_SIZE} items max). Wait for the current track to end before trying again.`);
     }
 
     // Fetch video metadata (title, thumbnail)
