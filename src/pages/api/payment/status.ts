@@ -7,7 +7,7 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../../lib/kv-cache';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('payment/status');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';

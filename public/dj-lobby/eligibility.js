@@ -25,6 +25,8 @@ export function showNotEligible(eligibility) {
   var actions = document.querySelector('.eligibility-actions');
   var whySection = document.querySelector('.eligibility-why');
 
+  if (!icon || !title || !requirements || !actions || !whySection) return;
+
   // Handle banned status
   if (eligibility.reason === 'banned') {
     icon.textContent = '\uD83D\uDEAB';

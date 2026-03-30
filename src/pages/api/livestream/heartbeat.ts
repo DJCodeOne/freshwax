@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 import { TIMEOUTS } from '../../../lib/timeouts';
 
 const log = createLogger('livestream/heartbeat');
