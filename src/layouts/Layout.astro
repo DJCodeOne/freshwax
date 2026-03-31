@@ -9,11 +9,12 @@ import AudioCoordinator from '../components/AudioCoordinator.astro';
 import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
 import SEO from '../components/SEO.astro';
 import Analytics from '../components/Analytics.astro';
+import { PUSHER_KEY, PUSHER_CLUSTER } from '../lib/constants';
 
-// Pusher config for client-side (PUBLIC_ prefixed vars are safe to expose)
+// Pusher config for client-side
 const pusherConfig = {
-  key: import.meta.env.PUBLIC_PUSHER_KEY || '',
-  cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu'
+  key: import.meta.env.PUBLIC_PUSHER_KEY || PUSHER_KEY,
+  cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || PUSHER_CLUSTER
 };
 
 interface Props {

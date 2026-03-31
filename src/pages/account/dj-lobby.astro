@@ -4,13 +4,13 @@
 import '../../styles/dj-lobby.css';
 import '../../styles/dj-lobby-modals.css';
 import LiveChat from '../../components/live/LiveChat.astro';
-import { FIREBASE_API_KEY } from '../../lib/constants';
+import { FIREBASE_API_KEY, PUSHER_KEY, PUSHER_CLUSTER } from '../../lib/constants';
 export const prerender = false;
 
-// Pusher config for client-side (PUBLIC_ prefixed vars are safe to expose)
+// Pusher config for client-side
 const pusherConfig = {
-  key: import.meta.env.PUBLIC_PUSHER_KEY || '',
-  cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu'
+  key: import.meta.env.PUBLIC_PUSHER_KEY || PUSHER_KEY,
+  cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || PUSHER_CLUSTER
 };
 
 // Firebase config for client-side
@@ -2176,7 +2176,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       setBroadcastAudioSource: function(s) { broadcastAudioSource = s; },
       getBroadcastAudioSource: function() { return broadcastAudioSource; },
       setupIcecastAnalysers: function(el) { return setupIcecastAnalysers(el); },
-      setCurrentPreviewSource: function(s) { videoPlayer.setCurrentPreviewSource ? videoPlayer.setCurrentPreviewSource(s) : null; currentPreviewSource = s; }
+      setCurrentPreviewSource: function(s) { videoPlayer.setCurrentPreviewSource ? videoPlayer.setCurrentPreviewSource(s) : null; currentPreviewSource = s; },
+      checkIcecastStatus: function() { return videoPlayer.checkIcecastStatus(); }
     };
 
     audioMeters.init(sharedCtx);
