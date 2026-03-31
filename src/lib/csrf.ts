@@ -43,6 +43,9 @@ const CSRF_SKIP = new Set([
   // not the global fetch() interceptor, so it lacks the X-CSRF-Token header.
   // The endpoints validate session auth independently.
   '/api/dj-lobby/pusher-auth/',
+  '/api/dj-lobby/presence/',
+  '/api/dj-lobby/takeover/',
+  '/api/dj-lobby/broadcast-mode/',
   '/api/pusher/auth/',
   // Error logging & consent logging are fire-and-forget from inline scripts
   // that run before the meta tag is available (e.g. Layout.astro error handler).
