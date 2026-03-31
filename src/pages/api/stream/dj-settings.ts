@@ -15,7 +15,7 @@ const DjSettingsSchema = z.object({
   djName: z.string().max(200).nullish(),
   twitchChannel: z.string().max(200).nullish(),
   isApproved: z.boolean().nullish(),
-  adminKey: z.string().min(1).max(500),
+  adminKey: z.string().min(1).max(2000),
 }).strip();
 
 export const prerender = false;
