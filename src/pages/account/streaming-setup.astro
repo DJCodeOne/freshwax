@@ -1,13 +1,14 @@
 ---
 // src/pages/account/streaming-setup.astro
 // Streaming setup guide with OBS/BUTT instructions and speed test
+import { FIREBASE_API_KEY } from '../../lib/constants';
 export const prerender = false;
 const nonce = Astro.locals.nonce || '';
 const csrfToken = Astro.locals.csrfToken || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 
 const firebaseConfig = {
-  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || FIREBASE_API_KEY,
   authDomain: "freshwax-store.firebaseapp.com",
   projectId: "freshwax-store"
 };
