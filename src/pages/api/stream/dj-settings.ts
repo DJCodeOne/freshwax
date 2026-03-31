@@ -7,7 +7,7 @@ import { saSetDocument, saUpdateDocument, saDeleteDocument, getServiceAccountKey
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[dj-settings]');
-import { verifyAdminKey } from '../../../lib/admin';
+import { requireAdminAuth } from '../../../lib/admin';
 
 const DjSettingsSchema = z.object({
   userId: z.string().max(500).nullish(),
@@ -15,7 +15,7 @@ const DjSettingsSchema = z.object({
   djName: z.string().max(200).nullish(),
   twitchChannel: z.string().max(200).nullish(),
   isApproved: z.boolean().nullish(),
-  adminKey: z.string().min(1).max(2000),
+  adminKey: z.string().max(2000).nullish(),
 }).strip();
 
 export const prerender = false;
@@ -71,12 +71,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!parseResult.success) {
       return ApiErrors.badRequest('Invalid request');
     }
-    const { userId: providedUserId, email: providedEmail, djName, twitchChannel, isApproved, adminKey } = parseResult.data;
+    const { userId: providedUserId, email: providedEmail, djName, twitchChannel, isApproved } = parseResult.data;
 
-    // Timing-safe admin key check
-    if (!verifyAdminKey(adminKey, locals)) {
-      return ApiErrors.unauthorized('Unauthorized');
-    }
+    // Admin auth check — supports static admin key OR Firebase token from admin user
+    const authError = await requireAdminAuth(request, locals, rawBody);
+    if (authError) return authError;
 
     // Look up user by email if no userId provided
     let userId = providedUserId;
