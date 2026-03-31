@@ -1119,18 +1119,23 @@ const firebaseConfig = {
     }
   }
 
-  function setCachedUserType(userType, isAdmin, avatarUrl = null, displayName = null) {
+  function setCachedUserType(userType, isAdmin, avatarUrl = null, displayName = null, uid = null) {
     try {
       sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify({
         userType,
         isAdmin,
         avatarUrl,
         displayName,
+        uid,
         timestamp: Date.now()
       }));
     } catch (e) {
       /* intentional: sessionStorage write failure is non-critical */
     }
+  }
+
+  function clearCachedUserType() {
+    try { sessionStorage.removeItem(USER_CACHE_KEY); } catch (e) { /* non-critical */ }
   }
 
   // Debounced search with request cancellation
@@ -1590,7 +1595,12 @@ const firebaseConfig = {
     const logoLinks = document.querySelectorAll('.fwx-logo-link');
     
     if (user) {
-      const cachedData = getCachedUserType() || { userType: 'customer', isAdmin: false };
+      let cachedData = getCachedUserType() || { userType: 'customer', isAdmin: false };
+      // Invalidate cache if user changed (e.g. logged in as different account)
+      if (cachedData.uid && cachedData.uid !== user.uid) {
+        clearCachedUserType();
+        cachedData = { userType: 'customer', isAdmin: false };
+      }
       const displayName = cachedData.displayName || user.displayName || user.email?.split('@')[0] || 'Account';
       
       accountNames.forEach(el => el.textContent = displayName);
@@ -1643,8 +1653,9 @@ const firebaseConfig = {
             sessionStorage.removeItem(USER_CACHE_KEY);
             // Clear auth cookies (HttpOnly — must go via server API)
             if (window.__setAuthCookies) await window.__setAuthCookies({ action: 'logout' });
-            // Clear auth cache for live page
+            // Clear all auth caches
             sessionStorage.removeItem('fw_auth_cache');
+            clearCachedUserType();
             if (signOutFn && auth) await signOutFn(auth);
             window.location.href = '/';
           } catch (e){
@@ -1681,7 +1692,7 @@ const firebaseConfig = {
           if (!response.ok) throw new Error('Failed to fetch user type');
           const data = await response.json();
           if (data.success) {
-            setCachedUserType(data.isArtist ? 'artist' : 'customer', data.isAdmin, data.avatarUrl || null, data.displayName || data.name || null);
+            setCachedUserType(data.isArtist ? 'artist' : 'customer', data.isAdmin, data.avatarUrl || null, data.displayName || data.name || null, user.uid);
             // Set __session cookie with ID token for SSR admin page auth (HttpOnly)
             if (data.isAdmin && window.__setAuthCookies) {
               window.__setAuthCookies({ token: idToken, action: 'login', isPartner: data.isArtist || false });
