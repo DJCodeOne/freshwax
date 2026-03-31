@@ -41,8 +41,8 @@ describe('FIREBASE_API_KEY', () => {
     expect(typeof FIREBASE_API_KEY).toBe('string');
   });
 
-  it('defaults to empty string when env var is not set', () => {
-    // In test environment, PUBLIC_FIREBASE_API_KEY is not set
-    expect(FIREBASE_API_KEY).toBe('');
+  it('has a valid Firebase API key', () => {
+    // Hardcoded fallback ensures key is always available (public key, safe to expose)
+    expect(FIREBASE_API_KEY).toMatch(/^AIza/);
   });
 });
