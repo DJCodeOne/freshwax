@@ -63,9 +63,12 @@ export function initPlaylistModal() {
   // Wire up auth event listener
   setupAuthListener(state);
 
-  // Wire up playlistUpdate event listener
+  // Wire up playlistUpdate event listener (use stable ref to avoid duplicate listeners)
+  if ((window as Record<string, unknown>)._playlistModalUpdateHandler) {
+    window.removeEventListener('playlistUpdate', (window as Record<string, unknown>)._playlistModalUpdateHandler as EventListener);
+  }
   const playlistUpdateHandler = (event: Event) => handlePlaylistUpdate(state, event);
-  window.removeEventListener('playlistUpdate', playlistUpdateHandler);
+  (window as Record<string, unknown>)._playlistModalUpdateHandler = playlistUpdateHandler;
   window.addEventListener('playlistUpdate', playlistUpdateHandler);
 
   // Wire up lifecycle events for View Transitions

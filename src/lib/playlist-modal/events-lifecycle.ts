@@ -60,10 +60,11 @@ export function setupLifecycleEvents(
 
 /** Wire up playlistUpdate event listener */
 export function setupPlaylistUpdateListener(state: ModalState): void {
-  const handler = (event: Event) => handlePlaylistUpdate(state, event);
-  window.removeEventListener('playlistUpdate', handler);
-  // Use a stable reference via state so we can clean up properly
+  // Remove previous handler using stable reference stored on state
+  if ((state as Record<string, unknown>)._playlistUpdateHandler) {
+    window.removeEventListener('playlistUpdate', (state as Record<string, unknown>)._playlistUpdateHandler as EventListener);
+  }
   const stableHandler = (event: Event) => handlePlaylistUpdate(state, event);
-  window.removeEventListener('playlistUpdate', stableHandler);
+  (state as Record<string, unknown>)._playlistUpdateHandler = stableHandler;
   window.addEventListener('playlistUpdate', stableHandler);
 }
