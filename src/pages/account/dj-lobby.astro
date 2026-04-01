@@ -277,12 +277,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     <!-- Mobile Broadcast Layout (visible <=768px only) -->
     <div class="mobile-broadcast-layout" id="mobileBroadcastLayout">
-      <!-- Video: offline placeholder + camera preview + live overlay -->
+      <!-- Video: offline placeholder + background video + camera preview + live overlay -->
       <div class="mobile-video-container">
         <div id="mobileOfflineState" class="mobile-offline-state">
           <div class="mobile-offline-brand"><span class="fresh">FRESH</span><span class="wax">WAX</span></div>
           <p class="mobile-offline-text">Offline</p>
         </div>
+        <video id="mobileStreamBgVideo" class="mobile-stream-bg-video stream-bg-video" autoplay muted loop playsinline preload="none" aria-hidden="true" style="display:none; position:absolute; inset:0; width:100%; height:100%; object-fit:cover;" data-sources="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm,https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg-2.webm" data-src-index="0">
+          <source src="https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev/videos/stream-bg.webm" type="video/webm" />
+        </video>
         <video id="mobilePreviewVideo" class="mobile-preview-video" autoplay muted playsinline aria-hidden="true"></video>
         <div id="mobileLiveOverlay" class="mobile-live-overlay" style="display:none">
           <div class="mobile-live-top">
@@ -2631,6 +2634,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           audioPreview?.classList.remove('hidden');
           videoPreview?.classList.add('hidden');
           offlineState?.classList.add('hidden'); // Ensure offline state is hidden
+          showMobileStreamBg(); // Show background video on mobile too
           // Remove any fade overlay classes (they cover content with z-index: 5)
           // For audio streams, just remove the classes directly without fade-in animation
           const playerWrapper = document.querySelector('.preview-player');
@@ -4624,6 +4628,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
   });
 
+  // Show background video on mobile for relay/BUTT modes (audio-only streams)
+  function showMobileStreamBg() {
+    var bgVideo = document.getElementById('mobileStreamBgVideo');
+    var offlineState = document.getElementById('mobileOfflineState');
+    if (bgVideo) { bgVideo.style.display = ''; bgVideo.play().catch(function(){}); }
+    if (offlineState) offlineState.style.display = 'none';
+  }
+  function hideMobileStreamBg() {
+    var bgVideo = document.getElementById('mobileStreamBgVideo');
+    if (bgVideo) { bgVideo.style.display = 'none'; bgVideo.pause(); }
+  }
+
   function resetMobileToOffline() {
     var offlineState = document.getElementById('mobileOfflineState');
     var videoEl = document.getElementById('mobilePreviewVideo');
@@ -4635,6 +4651,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (offlineState) offlineState.style.display = '';
     if (videoEl) { videoEl.classList.remove('active'); videoEl.srcObject = null; }
     if (liveOverlay) liveOverlay.style.display = 'none';
+    hideMobileStreamBg();
     if (readyBtn) { readyBtn.style.display = ''; readyBtn.disabled = false; readyBtn.classList.remove('mobile-is-ready'); }
     if (readyBtnText) readyBtnText.textContent = "I'm Ready";
     if (goLiveBtn) goLiveBtn.style.display = 'none';
