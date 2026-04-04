@@ -358,6 +358,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[PayPal] Order created:', result.orderNumber);
 
+    // Activate Plus membership if order contains Plus items
+    const plusItems = ((orderData.items as Record<string, unknown>[]) || []).filter(
+      (item: Record<string, unknown>) => item.type === 'plus'
+    );
+    if (plusItems.length > 0 && orderData.customer?.userId) {
+      try {
+        const { activateSubscription } = await import('../../../lib/stripe-webhook/subscription-helpers');
+        await activateSubscription({
+          userId: orderData.customer.userId as string,
+          email: (orderData.customer.email || '') as string,
+          userName: (orderData.customer.displayName || orderData.customer.firstName || '') as string,
+          subscriptionId: `paypal:${paypalOrderId}`,
+          promoCode: (plusItems[0] as Record<string, unknown>).promoCode as string || null,
+          referralCardId: null,
+          isKvCode: false,
+          env,
+          requestUrl: request.url,
+          startTime: Date.now(),
+          eventType: 'paypal.capture.completed',
+          eventId: captureId || paypalOrderId
+        });
+        log.info('[PayPal] Plus membership activated via cart checkout for:', orderData.customer.userId);
+      } catch (plusErr: unknown) {
+        log.error('[PayPal] Failed to activate Plus from cart:', plusErr);
+      }
+    }
+
     // Convert stock reservation (payment succeeded)
     if (paypalReservationId) {
       try {

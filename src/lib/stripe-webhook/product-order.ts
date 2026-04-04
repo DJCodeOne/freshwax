@@ -321,6 +321,31 @@ export async function handleProductOrder(
 
   log.info('[Stripe Webhook] Order created:', result.orderNumber, result.orderId);
 
+  // Activate Plus membership if order contains Plus items
+  const plusItems = items.filter((i: Record<string, unknown>) => i.type === 'plus');
+  if (plusItems.length > 0 && metadata.customer_userId) {
+    try {
+      const { activateSubscription } = await import('./subscription-helpers');
+      await activateSubscription({
+        userId: metadata.customer_userId,
+        email: metadata.customer_email,
+        userName: metadata.customer_displayName || metadata.customer_firstName,
+        subscriptionId: (session.payment_intent as string) || session.id,
+        promoCode: (plusItems[0] as Record<string, unknown>).promoCode as string || null,
+        referralCardId: null,
+        isKvCode: false,
+        env,
+        requestUrl,
+        startTime,
+        eventType,
+        eventId
+      });
+      log.info('[Stripe Webhook] Plus membership activated via cart checkout for:', metadata.customer_userId);
+    } catch (plusErr: unknown) {
+      log.error('[Stripe Webhook] Failed to activate Plus from cart:', plusErr);
+    }
+  }
+
   // D1: Mark pending order as completed with Firebase order ID
   if (db) {
     try {
