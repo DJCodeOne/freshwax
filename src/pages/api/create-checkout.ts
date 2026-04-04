@@ -15,7 +15,7 @@ const CreateCheckoutSchema = z.object({
   priceId: z.string().min(1, 'Price ID required'),
   userId: z.string().min(1, 'User ID required'),
   email: z.string().email('Valid email required'),
-  promoCode: z.string().max(50).optional(),
+  promoCode: z.string().max(50).nullable().optional(),
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
 }).strip();
@@ -32,14 +32,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = locals.runtime.env;
     // Verify user authentication
-    const hasAuthHeader = !!request.headers.get('Authorization');
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      log.error('Auth failed:', { hasAuthHeader, authError });
-      return new Response(
-        JSON.stringify({ success: false, error: authError || 'Authentication required', hasAuthHeader }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     let rawBody;

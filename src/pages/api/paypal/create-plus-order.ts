@@ -14,7 +14,7 @@ import { getPayPalBaseUrl, getPayPalAccessToken, paypalFetchWithRetry } from '..
 // Zod schema for PayPal Plus order creation
 const PayPalPlusOrderSchema = z.object({
   email: z.string().email('Valid email required'),
-  promoCode: z.string().max(50).optional(),
+  promoCode: z.string().max(50).nullable().optional(),
 }).strip();
 
 export const prerender = false;
