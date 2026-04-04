@@ -32,9 +32,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = locals.runtime.env;
     // Verify user authentication
+    const hasAuthHeader = !!request.headers.get('Authorization');
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return ApiErrors.unauthorized('Authentication required');
+      log.error('Auth failed:', { hasAuthHeader, authError });
+      return new Response(
+        JSON.stringify({ success: false, error: authError || 'Authentication required', hasAuthHeader }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     let rawBody;
