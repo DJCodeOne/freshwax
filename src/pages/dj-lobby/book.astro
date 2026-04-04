@@ -1279,9 +1279,8 @@ const firebaseConfig = {
             })
           });
 
-          if (!response.ok) throw new Error('Booking request failed: ' + response.status);
           const result = await response.json();
-          if (!result.success) {
+          if (!response.ok || !result.success) {
             throw new Error(result.error || 'Booking failed');
           }
         } else {
@@ -1307,9 +1306,8 @@ const firebaseConfig = {
               })
             });
 
-            if (!response.ok) throw new Error('Booking request failed: ' + response.status);
             const result = await response.json();
-            if (!result.success) {
+            if (!response.ok || !result.success) {
               throw new Error(result.error || 'Booking failed');
             }
           }

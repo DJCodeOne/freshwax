@@ -1724,13 +1724,12 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             ),
             body: JSON.stringify(requestBody)
           }).then(function(response) {
-            if (!response.ok) { throw new Error('Server error'); }
-            return response.json();
-          }).then(function(data) {
-            if (!data.success) {
-              throw new Error(data.error || 'Booking failed');
-            }
-            return { slot: slot, data: data };
+            return response.json().then(function(data) {
+              if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Booking failed');
+              }
+              return { slot: slot, data: data };
+            });
           });
         });
 

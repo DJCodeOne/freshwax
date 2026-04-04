@@ -13,6 +13,7 @@ import {
   generateStreamKey,
   invalidateCache,
   generateId,
+  checkDjEligible,
 } from './helpers';
 
 const log = createLogger('[livestream-slots]');
@@ -33,6 +34,12 @@ export async function handleBook(
   // Verify the authenticated user matches the DJ booking
   if (authUserId !== djId) {
     return ApiErrors.forbidden('Not authorized to book for this DJ');
+  }
+
+  // Check DJ eligibility before allowing booking
+  const eligibility = await checkDjEligible(djId as string);
+  if (!eligibility.eligible) {
+    return ApiErrors.forbidden(eligibility.reason || 'You are not approved to book DJ slots yet');
   }
 
   if (!djId || !startTime || !duration || !djName) {
