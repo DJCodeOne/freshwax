@@ -120,9 +120,10 @@ export const CACHE_CONFIG = {
   DJ_MIXES: { prefix: 'dj-mixes', ttl: 120 },       // 2 minutes for DJ mixes
 } as const;
 
-/** Invalidate all KV-cached release listings */
+/** Invalidate all KV-cached release listings (covers all known limit variants) */
 export async function invalidateReleasesKVCache(): Promise<void> {
   await Promise.allSettled([
+    kvDelete('live-releases-v6:10', CACHE_CONFIG.RELEASES),
     kvDelete('live-releases-v6:20', CACHE_CONFIG.RELEASES),
     kvDelete('live-releases-v6:all', CACHE_CONFIG.RELEASES),
   ]);
