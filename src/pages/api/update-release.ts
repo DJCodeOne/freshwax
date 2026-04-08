@@ -1,7 +1,7 @@
 // src/pages/api/update-release.ts
 // Firebase-based release update API - uses service account for writes
 import { z } from 'zod';
-import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, verifyRequestUser, invalidateReleasesCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, getServiceAccountKey } from '../../lib/firebase-service-account';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
@@ -148,6 +148,11 @@ export async function POST({ request, locals }: { request: Request; locals: App.
     // Update in Firestore using service account auth
     await saUpdateDocument(serviceAccountKey, projectId, 'releases', id, cleanedData);
     log.info('[update-release] Updated in Firestore');
+
+    // Invalidate in-memory doc cache so subsequent reads get fresh data.
+    // saUpdateDocument bypasses the regular mutations.ts cache busting
+    // because it uses service account auth, so we have to clear it manually.
+    invalidateReleasesCache();
 
     // Dual-write to D1 (secondary, non-blocking)
     const db = env?.DB;
