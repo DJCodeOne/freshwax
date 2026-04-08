@@ -331,6 +331,17 @@ function setupPlaylistSave() {
       if (!currentPlaylistTrack) return;
       if (nowPlayingSaveBtn.classList.contains('saved')) return;
 
+      // Auth check — must be logged in to save
+      var currentUser = window.firebaseAuth && window.firebaseAuth.currentUser;
+      if (!currentUser) {
+        if (window.showToast) {
+          window.showToast('Please log in to add tracks to your playlist');
+        } else {
+          alert('Please log in to add tracks to your playlist');
+        }
+        return;
+      }
+
       try {
         var manager = window.playlistManager;
         if (manager) {
