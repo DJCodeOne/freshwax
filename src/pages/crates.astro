@@ -211,21 +211,16 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     width: 100%;
     height: 100%;
     background-color: #000;
-    background-image: url('/shop.webp');
-    background-size: 180%;
+    background-image: url('/freshwax-bg-releases.webp');
+    background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     opacity: 0;
     z-index: -1;
     pointer-events: none;
-    filter: blur(3px);
+    filter: blur(3px) brightness(0.4);
+    transform: scale(1.05);
     animation: bgFadeIn045 2s ease-out 0.3s forwards;
-  }
-
-  @media (min-width: 640px) {
-    .bg-image-overlay {
-      background-size: cover;
-    }
   }
 
   /* Layout — single centered column (no sidebar) */
@@ -269,14 +264,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     text-align: center;
     gap: 0.35rem;
     padding: 1.75rem 1.5rem;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 0, 0, 0.85) 50%, rgba(0, 0, 0, 0.8));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(220, 38, 38, 0.15);
-    border-radius: 0.75rem;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.25) 50%, transparent 80%);
     margin-bottom: 1.5rem;
-    box-shadow: 0 0 30px rgba(220, 38, 38, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    /* Gradient mask removed — was causing visual edge cutoff on mobile */
   }
 
   .crates-title-row {
@@ -304,6 +293,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     margin: 0;
     line-height: 1;
     white-space: nowrap;
+    text-shadow:
+      0 0 20px rgba(0, 0, 0, 0.95),
+      0 0 40px rgba(0, 0, 0, 0.8),
+      0 2px 4px rgba(0, 0, 0, 0.9),
+      0 0 60px rgba(220, 38, 38, 0.3);
   }
 
   .crates-title .red {
@@ -311,19 +305,21 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   }
 
   .crates-subtitle {
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.75);
     font-size: 0.8rem;
     margin: 0;
     font-weight: 400;
     letter-spacing: 0.05em;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8);
   }
 
   .crates-count {
-    color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 0.85rem;
     margin: 0;
     font-weight: 400;
     letter-spacing: 0.05em;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8);
   }
 
   .crates-divider {
@@ -872,20 +868,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     margin-bottom: 1.5rem;
   }
 
-  /* Label Header — glassmorphism container for seller sections */
+  /* Label Header — soft radial gradient blending into background */
   .label-header {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
     gap: 0.25rem;
-    padding: 1.75rem 1.25rem;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 0.75rem;
-    /* Gradient mask removed — was causing visual edge cutoff on mobile */
+    padding: 1.5rem 1.25rem;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.2) 50%, transparent 80%);
   }
 
   .label-title-row {
@@ -912,14 +903,19 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     text-transform: uppercase;
     margin: 0;
     line-height: 1;
+    text-shadow:
+      0 0 16px rgba(0, 0, 0, 0.95),
+      0 0 32px rgba(0, 0, 0, 0.8),
+      0 2px 4px rgba(0, 0, 0, 0.9);
   }
 
   .label-count {
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 0.75rem;
     margin: 0;
     font-weight: 400;
     letter-spacing: 0.05em;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8);
   }
 
   .label-divider {
