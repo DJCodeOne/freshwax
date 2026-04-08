@@ -1797,10 +1797,15 @@ Artist - Track Title
     submitCommentBtn.disabled = true;
     submitCommentBtn.textContent = 'Posting...';
 
+    const commentHeaders = { 'Content-Type': 'application/json' };
+    try {
+      const _t = currentUser ? await currentUser.getIdToken() : null;
+      if (_t) commentHeaders['Authorization'] = 'Bearer ' + _t;
+    } catch (e) { console.error('Failed to get auth token:', e); }
 
     fetch('/api/add-mix-comment/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: commentHeaders,
       body: JSON.stringify({
         mixId: mixId,
         userName: userName,
@@ -2276,32 +2281,38 @@ Artist - Track Title
   }
   
   // Select a GIF - immediately post it
-  function selectGif(url) {
+  async function selectGif(url) {
     if (!currentUser) {
       alert('Please login to post GIFs');
       closeGiphyModal();
       return;
     }
-    
+
     const userName = currentUserName || commentUsername?.value?.trim();
     if (!userName) {
       alert('Please login to post GIFs');
       closeGiphyModal();
       return;
     }
-    
+
     closeGiphyModal();
-    
+
     // Show posting indicator
     if (submitCommentBtn) {
       submitCommentBtn.disabled = true;
       submitCommentBtn.textContent = 'Posting GIF...';
     }
-    
+
+    const gifHeaders = { 'Content-Type': 'application/json' };
+    try {
+      const _t = await currentUser.getIdToken();
+      if (_t) gifHeaders['Authorization'] = 'Bearer ' + _t;
+    } catch (e) { console.error('Failed to get auth token:', e); }
+
     // Immediately post the GIF
     fetch('/api/add-mix-comment/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: gifHeaders,
       body: JSON.stringify({
         mixId: mixId,
         userName: userName,
