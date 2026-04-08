@@ -1695,9 +1695,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             descView.textContent = data.releaseDescription || 'No description';
           }
 
-          // Update stats row (Plays, Sales, Price, Rating)
+          // Update stats row — order: Sales, Price, Rating, Comments
           const statValues = card.querySelectorAll('.stats-row .stat-value');
-          if (statValues[2]) statValues[2].textContent = data.pricePerSale ? `£${data.pricePerSale.toFixed(2)}` : '£0.00';
+          if (statValues[1]) statValues[1].textContent = data.pricePerSale ? `£${data.pricePerSale.toFixed(2)}` : '£0.00';
 
           // Update sale badge
           updateSaleBadge(card, data.saleDiscount);
