@@ -2054,8 +2054,9 @@ Artist - Track Title
     editTracklistSave.textContent = 'Saving...';
 
     try {
-      // Get current user ID for authentication
+      // Get current user ID + token for authentication
       let userId = '';
+      let idToken = '';
       try {
         const firebaseApp = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
         const firebaseAuth = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
@@ -2080,14 +2081,18 @@ Artist - Track Title
         }
         if (user) {
           userId = user.uid;
+          try { idToken = await user.getIdToken(); } catch (_e) { /* token fetch failed */ }
         }
       } catch (authErr) {
         console.error('[Tracklist] Auth error:', authErr);
       }
 
+      const updateMixHeaders = { 'Content-Type': 'application/json' };
+      if (idToken) updateMixHeaders['Authorization'] = 'Bearer ' + idToken;
+
       const response = await fetch('/api/update-mix/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: updateMixHeaders,
         body: JSON.stringify({
           mixId: mixId,
           tracklist: newTracklist,
