@@ -68,7 +68,11 @@ export function initShoutout(deps) {
     shoutoutBtn.addEventListener('click', function() {
       var isLoggedIn = window.currentUserInfo && window.currentUserInfo.loggedIn;
       if (!isLoggedIn) {
-        alert('Please sign in to send a shoutout');
+        if (window.showToast) {
+          window.showToast('Please log in to send a shoutout');
+        } else {
+          alert('Please log in to send a shoutout');
+        }
         return;
       }
       shoutoutPreviousFocus = document.activeElement;

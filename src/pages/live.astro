@@ -1048,10 +1048,10 @@ try {
 
 <script is:inline type="module">
   import { initSpeedTest } from '/live/speed-test.js';
-  import { initReactions } from '/live/reactions.js?v=20260408';
+  import { initReactions } from '/live/reactions.js?v=20260408b';
   import { initFullscreen, stopFullscreenStats } from '/live/fullscreen.js';
   import { initShare } from '/live/share.js';
-  import { initShoutout } from '/live/shoutout.js?v=20260408';
+  import { initShoutout } from '/live/shoutout.js?v=20260408b';
 
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
 
@@ -2276,7 +2276,11 @@ try {
     const slotId = takeoverSection?.dataset.slotId;
     
     if (!slotId || !currentUser) {
-      alert('Please log in to request a takeover');
+      if (window.showToast) {
+        window.showToast('Please log in to request a takeover');
+      } else {
+        alert('Please log in to request a takeover');
+      }
       return;
     }
     
@@ -3605,7 +3609,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260408"></script>
+<script type="module" src="/live-stream.js?v=20260408b"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page

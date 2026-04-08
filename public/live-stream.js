@@ -500,8 +500,8 @@ window.checkLiveStatus = checkLiveStatus;
 
 // --- GIF sending (global) ---
 window.sendGifMessage = async function(url, id) {
-  if (!currentUser) { console.error('[GIF] No current user - not logged in'); alert('Please log in to send GIFs'); return; }
-  if (!currentStream) { console.error('[GIF] No current stream'); alert('No active stream'); return; }
+  if (!currentUser) { console.error('[GIF] No current user - not logged in'); if (window.showToast) { window.showToast('Please log in to send GIFs'); } else { alert('Please log in to send GIFs'); } return; }
+  if (!currentStream) { console.error('[GIF] No current stream'); if (window.showToast) { window.showToast('No active stream'); } else { alert('No active stream'); } return; }
   await sendGiphyMessage(url, id);
 };
 

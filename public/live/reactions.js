@@ -313,7 +313,11 @@ function setupReactionButtons() {
         var user = auth && auth.currentUser;
 
         if (!user) {
-          alert('Please sign in to like');
+          if (window.showToast) {
+            window.showToast('Please log in to like the stream');
+          } else {
+            alert('Please log in to like the stream');
+          }
           return;
         }
 

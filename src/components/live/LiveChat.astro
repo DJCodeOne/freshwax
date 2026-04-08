@@ -174,7 +174,11 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
 
     if (!user) {
       console.error('[GIF] No current user');
-      alert('Please log in to send GIFs');
+      if (window.showToast) {
+        window.showToast('Please log in to send GIFs');
+      } else {
+        alert('Please log in to send GIFs');
+      }
       return;
     }
 
@@ -473,7 +477,11 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
       const auth = window.firebaseAuth;
       const user = auth?.currentUser;
       if (!user) {
-        alert('Please log in to send messages');
+        if (window.showToast) {
+          window.showToast('Please log in to send messages');
+        } else {
+          alert('Please log in to send messages');
+        }
         return;
       }
 
