@@ -1111,9 +1111,22 @@ Artist - Track Title
       if (likedText) likedText.style.display = 'inline';
     }
 
-    likeBtn.addEventListener('click', function() {
+    likeBtn.addEventListener('click', async function() {
       const isLiked = likeBtn.getAttribute('data-liked') === 'true';
       const likesCount = document.getElementById('likes-count');
+
+      // Both endpoints require auth — fetch the Firebase ID token first
+      const likeHeaders = { 'Content-Type': 'application/json' };
+      try {
+        const user = window.firebaseAuth?.currentUser || (window.authReady ? await window.authReady : null);
+        if (!user) {
+          if (window.showToast) window.showToast('Please log in to like mixes');
+          else alert('Please log in to like mixes');
+          return;
+        }
+        const _t = await user.getIdToken();
+        if (_t) likeHeaders['Authorization'] = 'Bearer ' + _t;
+      } catch (e) { console.error('Failed to get auth token:', e); }
 
       if (isLiked) {
         likeBtn.setAttribute('data-liked', 'false');
@@ -1129,7 +1142,7 @@ Artist - Track Title
         } catch (e) { /* Non-critical: storage may be unavailable in private browsing */ }
         fetch('/api/track-mix-unlike/', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: likeHeaders,
           body: JSON.stringify({ mixId: mixId })
         }).then(function(response) {
           if (!response.ok) { console.error('Unlike failed:', response.status); return null; }
@@ -1154,7 +1167,7 @@ Artist - Track Title
         } catch (e) { /* Non-critical: storage may be unavailable in private browsing */ }
         fetch('/api/track-mix-like/', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: likeHeaders,
           body: JSON.stringify({ mixId: mixId })
         }).then(function(response) {
           if (!response.ok) { console.error('Like failed:', response.status); return null; }
