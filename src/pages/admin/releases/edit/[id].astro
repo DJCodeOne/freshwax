@@ -3,7 +3,14 @@
 // FINAL VERSION - Exact Firebase field mapping based on actual collection data
 import { requireAdminAuth } from '@lib/admin';
 import { getDocument } from '@lib/firebase-rest';
+import { FIREBASE_API_KEY } from '@lib/constants';
 import '@styles/admin/releases/edit.css';
+
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || FIREBASE_API_KEY,
+  authDomain: 'freshwax-store.firebaseapp.com',
+  projectId: 'freshwax-store',
+};
 
 
 // Server-side admin auth check
@@ -692,6 +699,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   <div class="success-message" id="successMessage">✅ Release Updated Successfully!</div>
 
+  <!-- Firebase config for inline script auth -->
+  <script define:vars={{ firebaseConfig }} nonce={nonce}>
+    window.FIREBASE_CONFIG = firebaseConfig;
+  </script>
   <script define:vars={{ releaseId: release.id, existingSocialLinks: JSON.stringify(release.socialLinks || {}), trackCount: release.tracks?.length || 0, existingNotes: release.metadata?.notes || '', timestamps: JSON.stringify({ uploadedAt: release.uploadedAt || null, createdAt: release.createdAt || null, processedAt: release.processedAt || null, updatedAt: release.updatedAt || null }) }} nonce={nonce}>
     var currentIdToken = null;
 

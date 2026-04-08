@@ -13,7 +13,7 @@ const updateReleaseSchema = z.object({
   id: z.string().min(1),
   idToken: z.string().optional(),
   adminKey: z.string().optional(),
-}).strip();
+}).passthrough();
 
 export const prerender = false;
 
