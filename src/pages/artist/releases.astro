@@ -1876,22 +1876,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (!response.ok) throw new Error(result.error || 'Delete release failed: ' + response.status);
 
       if (result.success) {
-        // Remove the release card from the page
+        // Fade out the card, then hard reload from the server so the page
+        // reflects the true state (avoids stale rendering bugs).
         const card = document.querySelector(`.release-card[data-release-id="${deleteReleaseId}"]`);
+        deleteModal.classList.remove('active');
         if (card) {
           card.style.transition = 'opacity 0.3s, transform 0.3s';
           card.style.opacity = '0';
           card.style.transform = 'translateX(-20px)';
-          setTimeout(() => {
-            card.remove();
-            // Check if no releases left
-            const remainingCards = document.querySelectorAll('.release-card');
-            if (remainingCards.length === 0) {
-              location.reload();
-            }
-          }, 300);
         }
-        deleteModal.classList.remove('active');
+        setTimeout(() => { location.reload(); }, card ? 300 : 0);
       } else {
         alert(result.error || 'Failed to delete release');
       }

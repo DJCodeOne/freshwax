@@ -2,7 +2,7 @@
 // Deletes a release from Firebase (releases collection + master list)
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { getDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, queryCollection, verifyRequestUser, invalidateReleasesCache } from '../../lib/firebase-rest';
 import { saDeleteDocument, saUpdateDocument, getServiceAccountKey } from '../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
@@ -99,6 +99,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Delete the release document using service account auth
     await saDeleteDocument(serviceAccountKey, projectId, 'releases', releaseId);
 
+    // Delete from D1 mirror so /artist/releases stops listing it
+    const db = env?.DB;
+    if (db) {
+      try {
+        await db.prepare('DELETE FROM releases_v2 WHERE id = ?').bind(releaseId).run();
+        log.info('[delete-release] Removed from D1');
+      } catch (d1Error: unknown) {
+        log.error('[delete-release] D1 delete failed (non-critical):', d1Error);
+      }
+    }
+
     // Delete associated tracks
     try {
       const tracks = await queryCollection('tracks', {
@@ -135,7 +146,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       log.warn('[delete-release] Could not update master list:', error);
     }
 
-    // Invalidate KV cache for releases list so all edge workers serve fresh data
+    // Invalidate caches so subsequent reads return fresh data:
+    // - In-memory query cache (saDeleteDocument bypasses regular cache busting)
+    // - KV cache for the public releases list
+    invalidateReleasesCache();
     await invalidateReleasesKVCache();
 
     log.info(`[delete-release] Deleted: ${releaseData?.artistName} - ${releaseData?.releaseName}`);
