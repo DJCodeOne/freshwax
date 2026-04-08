@@ -39,6 +39,15 @@ vi.mock('../lib/d1-catalog', () => ({
   d1UpdateSlotStatus: vi.fn(),
 }));
 
+// Override checkDjEligible while preserving the rest of helpers (SLOT_DURATIONS, generateId, etc.)
+vi.mock('../lib/livestream-slots/helpers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/livestream-slots/helpers')>();
+  return {
+    ...actual,
+    checkDjEligible: vi.fn().mockResolvedValue({ eligible: true }),
+  };
+});
+
 import { handleBook, handleCancel, handleUpdateSlot } from '../lib/livestream-slots/booking';
 import { SLOT_DURATIONS } from '../lib/livestream-slots/helpers';
 
@@ -111,6 +120,21 @@ describe('handleBook — slot validation', () => {
     expect(response.status).toBe(400);
     const body = await parseResponse(response);
     expect(body.error).toContain('Missing required fields');
+  });
+
+  it('rejects when DJ is not eligible to book slots', async () => {
+    const helpers = await import('../lib/livestream-slots/helpers');
+    const checkSpy = vi.mocked(helpers.checkDjEligible);
+    checkSpy.mockResolvedValueOnce({ eligible: false, reason: 'You need to upload at least one DJ mix before you can go live' });
+
+    const response = await handleBook(
+      { djId: 'dj1', djName: 'TestDJ', startTime: futureStart, duration: 60 },
+      'dj1', null, null, now, nowISO
+    );
+
+    expect(response.status).toBe(403);
+    const body = await parseResponse(response);
+    expect(body.error).toContain('upload at least one DJ mix');
   });
 
   it('rejects when DJ ID does not match auth user', async () => {
