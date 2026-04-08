@@ -5,21 +5,18 @@ import { z } from 'zod';
 import { getDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { saDeleteDocument, saUpdateDocument, getServiceAccountKey } from '../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { requireAdminAuth, isAdmin } from '../../lib/admin';
+import { requireAdminAuth } from '../../lib/admin';
 import { invalidateReleasesKVCache } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const deleteReleaseSchema = z.object({
   releaseId: z.string().min(1),
-});
+  idToken: z.string().optional(),
+}).passthrough();
 
 const log = createLogger('delete-release');
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Admin authentication required
-  const authError = await requireAdminAuth(request, locals);
-  if (authError) return authError;
-
   // Rate limit: destructive operations - 3 per hour
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`delete-release:${clientId}`, RateLimiters.destructive);
@@ -27,21 +24,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return ApiErrors.badRequest('Invalid JSON body');
+  }
+
+  // Try admin auth first; fall back to ownership-based auth so artists can
+  // delete their own releases without being site admins.
+  const adminAuthError = await requireAdminAuth(request, locals, body);
+  const isAdminUser = !adminAuthError;
+
   try {
     // Initialize Firebase environment
     const env = locals.runtime.env || {};
-
-
-    const body = await request.json();
 
     const parsed = deleteReleaseSchema.safeParse(body);
     if (!parsed.success) {
       return ApiErrors.badRequest('Invalid request');
     }
 
-    const { releaseId } = parsed.data;
+    const { releaseId, idToken } = parsed.data;
 
-    log.info(`[delete-release] Deleting: ${releaseId}`);
+    log.info(`[delete-release] Deleting: ${releaseId}`, isAdminUser ? '(admin)' : '(ownership check)');
 
     // Get service account key for writes
     const serviceAccountKey = getServiceAccountKey(env);
@@ -61,15 +67,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const releaseData = releaseDoc;
 
-    // Verify ownership: authenticated user must own the release or be a super admin
-    const { userId: currentUserId } = await verifyRequestUser(request);
-    if (currentUserId) {
-      const isOwner = releaseData.submitterId === currentUserId || releaseData.userId === currentUserId;
-      if (!isOwner) {
-        const userIsAdmin = await isAdmin(currentUserId);
-        if (!userIsAdmin) {
-          return ApiErrors.forbidden('Not authorized to delete this release');
+    // Non-admin path: verify the request user owns this release
+    if (!isAdminUser) {
+      let currentUserId: string | null = null;
+      const verifyResult = await verifyRequestUser(request);
+      currentUserId = verifyResult.userId;
+
+      // Fallback: token sent in body instead of Authorization header
+      if (!currentUserId && typeof idToken === 'string' && idToken.length > 0) {
+        try {
+          const { verifyUserToken } = await import('../../lib/firebase-rest');
+          currentUserId = await verifyUserToken(idToken);
+        } catch (e: unknown) {
+          log.warn('[delete-release] body idToken verification failed:', e);
         }
+      }
+
+      if (!currentUserId) {
+        return adminAuthError!;
+      }
+
+      const isOwner = releaseData.submitterId === currentUserId
+        || releaseData.userId === currentUserId
+        || releaseData.uploadedBy === currentUserId
+        || releaseData.submitterEmail === verifyResult.email;
+      if (!isOwner) {
+        return ApiErrors.forbidden('Not authorized to delete this release');
       }
     }
 

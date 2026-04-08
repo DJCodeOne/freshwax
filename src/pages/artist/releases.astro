@@ -1861,17 +1861,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     confirmDeleteBtn.disabled = true;
 
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (currentIdToken) headers['Authorization'] = 'Bearer ' + currentIdToken;
       const response = await fetch('/api/delete-release/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           releaseId: deleteReleaseId,
           idToken: currentIdToken
         })
       });
 
-      if (!response.ok) throw new Error('Delete release failed: ' + response.status);
       const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Delete release failed: ' + response.status);
 
       if (result.success) {
         // Remove the release card from the page
