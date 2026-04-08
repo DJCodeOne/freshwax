@@ -384,14 +384,25 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   <div class="edit-grid">
                     <div class="edit-field">
                       <label>Genre</label>
-                      <input
-                        type="text"
-                        class="edit-input genre-input"
-                        data-release-id={release.id}
-                        value={release.genre || 'Drum and Bass'}
-                        placeholder="e.g. Drum and Bass"
-                        aria-label={`Genre for ${release.releaseName || 'release'}`}
-                      />
+                      {(() => {
+                        const knownGenres = ['Drum and Bass', 'Jungle', 'Liquid', 'Neurofunk', 'Jump-Up', 'Halftime', 'Drumfunk', 'Techstep', 'Dancefloor', 'Old Skool'];
+                        const currentGenre = (release.genre as string) || 'Drum and Bass';
+                        const hasKnown = knownGenres.includes(currentGenre);
+                        return (
+                          <select
+                            class="edit-input genre-input"
+                            data-release-id={release.id}
+                            aria-label={`Genre for ${release.releaseName || 'release'}`}
+                          >
+                            {knownGenres.map(g => (
+                              <option value={g} selected={currentGenre === g}>{g}</option>
+                            ))}
+                            {!hasKnown && currentGenre && (
+                              <option value={currentGenre} selected>{currentGenre}</option>
+                            )}
+                          </select>
+                        );
+                      })()}
                     </div>
                   </div>
 
