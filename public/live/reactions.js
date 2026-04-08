@@ -195,7 +195,11 @@ async function triggerReaction(e) {
   var user = auth && auth.currentUser;
 
   if (!user) {
-    alert('Please sign in to react');
+    if (window.showToast) {
+      window.showToast('Please log in to react to the stream');
+    } else {
+      alert('Please log in to react to the stream');
+    }
     return;
   }
 
@@ -380,6 +384,17 @@ function setupAnimationToggle() {
   var fsAnimToggleBtn = document.getElementById('fsAnimToggleBtn');
 
   function toggleEmojiAnimations() {
+    var auth = window.firebaseAuth;
+    var user = auth && auth.currentUser;
+    if (!user) {
+      if (window.showToast) {
+        window.showToast('Please log in to toggle emoji animations');
+      } else {
+        alert('Please log in to toggle emoji animations');
+      }
+      return;
+    }
+
     window.emojiAnimationsEnabled = !window.emojiAnimationsEnabled;
     var isOff = !window.emojiAnimationsEnabled;
     var title = window.emojiAnimationsEnabled ? 'Turn off emoji animations' : 'Turn on emoji animations';
