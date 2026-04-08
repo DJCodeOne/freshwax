@@ -88,6 +88,12 @@ export async function POST({ request, locals }: { request: Request; locals: App.
     // Add updatedAt timestamp
     cleanedData.updatedAt = new Date().toISOString();
 
+    // Sync catalogNumber whenever labelCode is updated — display logic prefers
+    // catalogNumber, so leaving it stale would mask the new labelCode value
+    if (cleanedData.labelCode !== undefined && cleanedData.catalogNumber === undefined) {
+      cleanedData.catalogNumber = cleanedData.labelCode;
+    }
+
     // Sync pricing object when price fields are updated
     if (cleanedData.pricePerSale !== undefined || cleanedData.trackPrice !== undefined) {
       const existingPricing = releaseDoc.pricing || {};
