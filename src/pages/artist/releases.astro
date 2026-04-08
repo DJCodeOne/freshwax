@@ -1669,14 +1669,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       btn.disabled = true;
 
       try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (currentIdToken) headers['Authorization'] = 'Bearer ' + currentIdToken;
         const response = await fetch('/api/update-release/', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(data)
         });
 
-        if (!response.ok) throw new Error('Update release failed: ' + response.status);
         const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Update release failed: ' + response.status);
 
         if (result.success) {
           // Update view values

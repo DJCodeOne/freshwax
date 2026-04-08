@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { getDocument, verifyRequestUser, invalidateReleasesCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, getServiceAccountKey } from '../../lib/firebase-service-account';
-import { requireAdminAuth, isAdmin } from '../../lib/admin';
+import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1UpsertRelease } from '../../lib/d1-catalog';
 import { invalidateReleasesKVCache } from '../../lib/kv-cache';
@@ -37,15 +37,13 @@ export async function POST({ request, locals }: { request: Request; locals: App.
     return ApiErrors.badRequest('Invalid JSON body');
   }
 
-  // Admin authentication required - pass body data for adminKey check
-  const authError = await requireAdminAuth(request, locals, updates);
-  if (authError) return authError;
+  // Try admin auth first. If that fails, fall back to ownership-based auth so
+  // artists can edit their own releases without being site admins.
+  const adminAuthError = await requireAdminAuth(request, locals, updates);
+  const isAdminUser = !adminAuthError;
 
   try {
     const env = locals?.runtime?.env || {};
-
-    // Initialize Firebase environment for reads
-
 
     const parsed = updateReleaseSchema.safeParse(updates);
     if (!parsed.success) {
@@ -55,7 +53,7 @@ export async function POST({ request, locals }: { request: Request; locals: App.
 
     const { id, idToken, adminKey, ...updateData } = parsed.data;
 
-    log.info('[update-release] Updating release:', id);
+    log.info('[update-release] Updating release:', id, isAdminUser ? '(admin)' : '(ownership check)');
 
     // Get release from Firestore
     const releaseDoc = await getDocument('releases', id);
@@ -65,15 +63,33 @@ export async function POST({ request, locals }: { request: Request; locals: App.
       return ApiErrors.notFound('Release not found');
     }
 
-    // Verify ownership: authenticated user must own the release or be a super admin
-    const { userId: currentUserId } = await verifyRequestUser(request);
-    if (currentUserId) {
-      const isOwner = releaseDoc.submitterId === currentUserId || releaseDoc.userId === currentUserId;
-      if (!isOwner) {
-        const userIsAdmin = await isAdmin(currentUserId);
-        if (!userIsAdmin) {
-          return ApiErrors.forbidden('Not authorized to edit this release');
+    // Non-admin path: verify the request user owns this release
+    if (!isAdminUser) {
+      let currentUserId: string | null = null;
+      const verifyResult = await verifyRequestUser(request);
+      currentUserId = verifyResult.userId;
+
+      // Fallback: token sent in body instead of Authorization header
+      if (!currentUserId && typeof idToken === 'string' && idToken.length > 0) {
+        try {
+          const { verifyUserToken } = await import('../../lib/firebase-rest');
+          currentUserId = await verifyUserToken(idToken);
+        } catch (e: unknown) {
+          log.warn('[update-release] body idToken verification failed:', e);
         }
+      }
+
+      if (!currentUserId) {
+        // Surface the original admin auth error so callers see a proper 401
+        return adminAuthError!;
+      }
+
+      const isOwner = releaseDoc.submitterId === currentUserId
+        || releaseDoc.userId === currentUserId
+        || releaseDoc.uploadedBy === currentUserId
+        || releaseDoc.submitterEmail === verifyResult.email;
+      if (!isOwner) {
+        return ApiErrors.forbidden('Not authorized to edit this release');
       }
     }
 
