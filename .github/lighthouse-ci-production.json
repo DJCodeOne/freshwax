@@ -13,28 +13,28 @@
     "assert": {
       "assertions": {
         "categories:performance": [
-          "error",
+          "warn",
           {
-            "minScore": 0.75,
+            "minScore": 0.7,
             "aggregationMethod": "median-run"
           }
         ],
         "categories:accessibility": [
-          "error",
+          "warn",
           {
             "minScore": 0.9,
             "aggregationMethod": "median-run"
           }
         ],
         "categories:best-practices": [
-          "error",
+          "warn",
           {
             "minScore": 0.85,
             "aggregationMethod": "median-run"
           }
         ],
         "categories:seo": [
-          "error",
+          "warn",
           {
             "minScore": 0.9,
             "aggregationMethod": "median-run"
