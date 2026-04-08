@@ -522,14 +522,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                       />
                     </div>
                     <div class="edit-field">
-                      <label>Label</label>
+                      <label>Catalogue Number</label>
                       <input
                         type="text"
-                        class="edit-input label-input"
+                        class="edit-input label-code-input"
                         data-release-id={release.id}
-                        value={release.label || release.labelCode || ''}
-                        placeholder="e.g. Fresh Wax"
-                        aria-label={`Label for ${release.releaseName || 'release'}`}
+                        value={release.labelCode || release.catalogNumber || ''}
+                        placeholder="e.g. FW001"
+                        maxlength="20"
+                        aria-label={`Catalogue number for ${release.releaseName || 'release'}`}
                       />
                     </div>
                   </div>
@@ -1666,7 +1667,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Credits
         masteredBy: getValue('.mastered-by-input') || null,
         producer: getValue('.producer-input') || null,
-        label: getValue('.label-input') || null,
+        labelCode: getValue('.label-code-input') || null,
         // Description
         releaseDescription: getValue('.description-input')?.trim() || null
       };
