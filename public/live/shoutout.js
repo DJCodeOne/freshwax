@@ -208,9 +208,8 @@ function playNextShoutout() {
       if (shoutoutQueue.length > 0) {
         playNextShoutout();
       } else {
-        // Reset to placeholder
         shoutoutTrack.classList.remove('scrolling');
-        shoutoutTrack.innerHTML = '<span class="shoutout-placeholder">\uD83C\uDF89 Send a shoutout to appear here!</span>';
+        shoutoutTrack.innerHTML = '';
       }
     }, 30000);
   }

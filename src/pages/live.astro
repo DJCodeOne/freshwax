@@ -543,9 +543,7 @@ try {
             </button>
           </div>
           <div class="shoutout-marquee">
-            <div class="shoutout-track" id="shoutoutTrack">
-              <span class="shoutout-placeholder">🎉 Send a shoutout to appear here!</span>
-            </div>
+            <div class="shoutout-track" id="shoutoutTrack"></div>
           </div>
         </div>
 
@@ -1053,7 +1051,7 @@ try {
   import { initReactions } from '/live/reactions.js';
   import { initFullscreen, stopFullscreenStats } from '/live/fullscreen.js';
   import { initShare } from '/live/share.js';
-  import { initShoutout } from '/live/shoutout.js';
+  import { initShoutout } from '/live/shoutout.js?v=20260408';
 
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
 
