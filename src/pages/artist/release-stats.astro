@@ -217,8 +217,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <div class="total-value">{totals.releases}</div>
                 <div class="total-label">Total Releases</div>
               </div>
-              <div class="total-card green">
-                <div class="total-icon">🟢</div>
+              <div class="total-card red">
+                <div class="total-icon">🔴</div>
                 <div class="total-value">{totals.liveReleases}</div>
                 <div class="total-label">Live</div>
               </div>
@@ -432,11 +432,22 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     background: #f0fdf4;
     border-color: #86efac;
   }
-  
-  .total-card.green .total-value {
+
+  .total-card.green .total-value,
+  .total-card.green .total-label {
     color: #16a34a;
   }
-  
+
+  .total-card.red {
+    background: rgba(220, 38, 38, 0.12);
+    border-color: rgba(220, 38, 38, 0.5);
+  }
+
+  .total-card.red .total-value,
+  .total-card.red .total-label {
+    color: #dc2626;
+  }
+
   .total-card.amber {
     background: rgba(251, 191, 36, 0.15);
     border-color: #fcd34d;
