@@ -23,7 +23,7 @@ import {
   initChatHandler, setChatCurrentUser, setChatCurrentStream,
   getChatChannel, getChatMessages, resetChatMessages,
   setupChat, sendGiphyMessage, setChatEnabled, setReactionButtonsEnabled
-} from '/live/chat-handler.js?v=20260328';
+} from '/live/chat-handler.js?v=20260408';
 
 import {
   initUiControls, detectMobileDevice, setupVolumeSlider,

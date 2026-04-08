@@ -205,10 +205,7 @@ function renderChatMessages(messages, isInitialLoad) {
 
   var shouldScroll = isInitialLoad || (container.scrollTop + container.clientHeight >= container.scrollHeight - 50);
 
-  var html = '<div class="chat-welcome" style="text-align: center; padding: 0.75rem; background: #1a1a2e; border-radius: 8px; margin-bottom: 0.5rem;">' +
-    '<p style="color: #a5b4fc; margin: 0; font-size: 0.8125rem;">Welcome! Type !help for commands \u{1F3B5}</p></div>';
-
-  html += sorted.map(function(msg) {
+  var html = sorted.map(function(msg) {
     var timeStr = '';
     if (msg.createdAt) {
       var d = msg.createdAt.toDate ? msg.createdAt.toDate() : new Date(msg.createdAt);
