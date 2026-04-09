@@ -15,14 +15,14 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
-    slug: 'final-polish-friday-ep-release',
-    title: 'Final Polish Before Launch — New EP Drops Friday',
-    excerpt: 'Fresh Wax is in the final stretch before full production launch. To mark the occasion, Code One and DJ Bakkus drop a brand new EP this Friday.',
+    slug: 'final-polish-jungle-disorder-ep',
+    title: 'Final Polish Before Launch — The Jungle Disorder EP Drops Friday',
+    excerpt: 'Fresh Wax is in the final stretch before full production launch. To mark the occasion, Code One and DJ Bakkus drop The Jungle Disorder EP this Friday.',
     featuredImage: 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&q=80',
     category: 'Releases',
     publishedAt: '2026-04-09',
     author: 'Fresh Wax',
-    tags: ['code one', 'dj bakkus', 'ep', 'release', 'launch', 'jungle', 'drum and bass'],
+    tags: ['code one', 'dj bakkus', 'jungle disorder', 'ep', 'release', 'launch', 'jungle', 'drum and bass'],
     content: `
       <p>We're in the home stretch. After months of building, breaking, fixing and rebuilding, <strong>Fresh Wax is about to go fully live</strong>. The last few days are all about final polish — squashing the edge-case bugs, tightening up the checkout flow, ironing out the live stream UX, and making sure everything that should work, works.</p>
 
@@ -38,9 +38,9 @@ export const blogPosts: BlogPost[] = [
       </ul>
       <p>None of this is glamorous on its own, but together it's the difference between "demo" and "shop". We're nearly there.</p>
 
-      <h2>To Mark The Moment — A New EP, This Friday</h2>
-      <p>Launches deserve a release. So this Friday, <strong>Code One and DJ Bakkus</strong> drop a brand new EP, exclusive to Fresh Wax. Two producers, two takes on the sound that built this whole project — proper jungle and drum & bass made for the dance, not the algorithm.</p>
-      <p>Expect rolling drums, deep low end, and the kind of energy that's been the foundation of every late-night session worth remembering. The EP will be available as digital download from launch, with vinyl pressing details to follow.</p>
+      <h2>To Mark The Moment — The Jungle Disorder EP, This Friday</h2>
+      <p>Launches deserve a release. So this Friday, <strong>Code One and DJ Bakkus</strong> drop <strong>The Jungle Disorder EP</strong>, exclusive to Fresh Wax. Two producers, two takes on the sound that built this whole project — proper jungle and drum & bass made for the dance, not the algorithm.</p>
+      <p>Expect rolling drums, deep low end, and the kind of energy that's been the foundation of every late-night session worth remembering. Available as digital download from launch.</p>
 
       <h2>Why It Matters</h2>
       <p>Fresh Wax was built so artists could put their music out without giving up half the value to a middleman. Every sale goes back into the scene — to the artists, to the labels, and into keeping the platform running. Friday's release isn't just a new EP, it's a statement of what Fresh Wax is here to do: get music from the people who make it straight to the people who play it.</p>
@@ -54,7 +54,7 @@ export const blogPosts: BlogPost[] = [
       </ul>
       <p>This is just the beginning. We've got a stacked roadmap of releases, label partnerships and stream takeovers lined up for the months ahead. Friday is the starting line.</p>
 
-      <p><strong>Code One x DJ Bakkus EP — out Friday on Fresh Wax. Lock it in.</strong></p>
+      <p><strong>The Jungle Disorder EP — Code One x DJ Bakkus, out Friday on Fresh Wax. Lock it in.</strong></p>
     `
   },
   {
