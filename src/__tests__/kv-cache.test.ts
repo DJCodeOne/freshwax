@@ -303,13 +303,14 @@ describe('CACHE_CONFIG', () => {
 // invalidateReleasesKVCache / invalidateMixesKVCache
 // =============================================
 describe('invalidateReleasesKVCache', () => {
-  it('deletes both release cache keys', async () => {
+  it('deletes all release cache key variants', async () => {
     const { initKVCache, invalidateReleasesKVCache } = await freshModule();
     const mockKV = createMockKV();
     initKVCache({ CACHE: mockKV as never });
 
     await invalidateReleasesKVCache();
-    expect(mockKV.delete).toHaveBeenCalledTimes(2);
+    expect(mockKV.delete).toHaveBeenCalledTimes(3);
+    expect(mockKV.delete).toHaveBeenCalledWith('releases:live-releases-v6:10');
     expect(mockKV.delete).toHaveBeenCalledWith('releases:live-releases-v6:20');
     expect(mockKV.delete).toHaveBeenCalledWith('releases:live-releases-v6:all');
   });
