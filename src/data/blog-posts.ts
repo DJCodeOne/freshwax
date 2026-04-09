@@ -29,12 +29,12 @@ export const blogPosts: BlogPost[] = [
       <h2>What's Been Happening</h2>
       <p>If you've been around the site recently, you'll have seen things shifting daily. Some of the bigger changes landing this week:</p>
       <ul>
-        <li><strong>Plus Membership through the cart</strong> — going Plus is now part of the same checkout flow as everything else. One basket, one payment, one less thing to think about.</li>
+        <li><strong>Plus Membership through the bag</strong> — going Plus is now part of the same checkout flow as everything else. One bag, one payment, one less thing to think about.</li>
         <li><strong>Smarter checkout</strong> — your details now save automatically after your first order, so future purchases pre-fill instantly.</li>
-        <li><strong>Artist editing improvements</strong> — release pages now save catalog numbers, genres, prices, and tracklists reliably from the artist dashboard.</li>
-        <li><strong>Live page polish</strong> — login prompts now use clean toast notifications instead of native browser alerts. The chat, shoutouts and reactions all behave properly when logged out.</li>
-        <li><strong>New page backgrounds</strong> — the index, releases and crates pages now sit on top of blurred Fresh Wax graffiti artwork. Same vibe, more presence.</li>
-        <li><strong>Cache and data fixes</strong> — release edits now propagate everywhere immediately, deletions actually delete, and the homepage stops serving stale data.</li>
+        <li><strong>Artist editing improvements</strong> — release pages now save catalogue numbers, genres, prices and tracklists reliably from the artist dashboard.</li>
+        <li><strong>Live page polish</strong> — log-in prompts now use clean toast notifications instead of native browser alerts. The chat, shout-outs and reactions all behave properly when logged out.</li>
+        <li><strong>New page backgrounds</strong> — the home, releases and crates pages now sit on top of blurred Fresh Wax graffiti artwork. Same vibe, more presence.</li>
+        <li><strong>Cache and data fixes</strong> — release edits now propagate everywhere immediately, deletions actually delete, and the home page stops serving stale data.</li>
       </ul>
       <p>None of this is glamorous on its own, but together it's the difference between "demo" and "shop". We're nearly there.</p>
 
