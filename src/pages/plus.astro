@@ -1,0 +1,406 @@
+---
+// src/pages/plus.astro
+// Public Plus membership info / pricing page (no login required)
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout
+  title="Fresh Wax Plus — Membership & Pricing"
+  description="Unlock the full Fresh Wax experience with Plus. £10 a year for unlimited mix uploads, longer streams, cloud playlists, exclusive avatars and more."
+>
+  <Header />
+
+  <main class="plus-page">
+    <section class="plus-hero">
+      <div class="plus-hero-inner">
+        <svg class="plus-crown" viewBox="0 0 24 24" fill="currentColor" width="64" height="64" aria-hidden="true">
+          <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
+        </svg>
+        <h1>Fresh Wax <span class="gold">Plus</span></h1>
+        <p class="plus-tagline">Unlock the full Fresh Wax experience.</p>
+
+        <div class="plus-price-box">
+          <div class="plus-price">
+            <span class="currency">£</span><span class="amount">10</span><span class="period">/year</span>
+          </div>
+          <p class="plus-price-note">One payment. No subscription auto-renewal. Cancel anytime.</p>
+        </div>
+
+        <div class="plus-cta-row">
+          <a href="/account/dashboard/" class="plus-cta primary">Go Plus</a>
+          <a href="/register/" class="plus-cta secondary">Create an Account First</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="plus-benefits-section">
+      <h2 class="plus-benefits-title">What You Get</h2>
+      <div class="plus-benefits-grid">
+        <div class="plus-benefit-card">
+          <div class="benefit-icon-wrap">🎧</div>
+          <h3>5 Mix Uploads / Week</h3>
+          <p>Up from 2 on the standard tier. Drop your sets without holding back.</p>
+        </div>
+
+        <div class="plus-benefit-card">
+          <div class="benefit-icon-wrap">📡</div>
+          <h3>Long Live Sessions</h3>
+          <p>Stream for up to 24 hours. Perfect for marathon sets and label takeovers.</p>
+        </div>
+
+        <div class="plus-benefit-card">
+          <div class="benefit-icon-wrap">📅</div>
+          <h3>Multi-Slot Bookings</h3>
+          <p>Book multiple slots for day-long events. Lock in slots up to a month in advance.</p>
+        </div>
+
+        <div class="plus-benefit-card">
+          <div class="benefit-icon-wrap">☁️</div>
+          <h3>Cloud Playlist (1,000 tracks)</h3>
+          <p>Save up to 1,000 tracks to a personal cloud playlist that syncs across all your devices.</p>
+        </div>
+
+        <div class="plus-benefit-card">
+          <div class="benefit-icon-wrap">⏭️</div>
+          <h3>!skip Command</h3>
+          <p>Skip tracks during the global playlist with the !skip chat command — three skips a day.</p>
+        </div>
+
+        <div class="plus-benefit-card">
+          <div class="benefit-icon-wrap">⏺️</div>
+          <h3>Stream Recording</h3>
+          <p>Record your own live streams with one click. Save them, edit them, share them.</p>
+        </div>
+
+        <div class="plus-benefit-card">
+          <div class="benefit-icon-wrap">👑</div>
+          <h3>20 Exclusive Avatars</h3>
+          <p>Stand out in chat with member-only avatar badges only Plus members can use.</p>
+        </div>
+
+        <div class="plus-benefit-card">
+          <div class="benefit-icon-wrap">💸</div>
+          <h3>Refer & Save</h3>
+          <p>Share your referral code with a friend and they get 50% off Plus — just £5 instead of £10.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="plus-faq-section">
+      <h2>Common Questions</h2>
+
+      <div class="plus-faq">
+        <h3>Is Plus a subscription?</h3>
+        <p>No. £10 covers one full year. Nothing renews automatically. When the year is up, you can choose to renew — or not.</p>
+      </div>
+
+      <div class="plus-faq">
+        <h3>How do I pay?</h3>
+        <p>Card or PayPal, both handled through our standard checkout. Plus is added to your bag like any other product.</p>
+      </div>
+
+      <div class="plus-faq">
+        <h3>Do I need an account?</h3>
+        <p>Yes — Plus is linked to your Fresh Wax account. <a href="/register/">Create one for free</a> and you can upgrade to Plus from your dashboard at any time.</p>
+      </div>
+
+      <div class="plus-faq">
+        <h3>Can I get a discount?</h3>
+        <p>Yes. Existing Plus members can share a referral code that gives a friend 50% off — £5 instead of £10. If someone has shared a code with you, enter it at checkout.</p>
+      </div>
+
+      <div class="plus-faq">
+        <h3>What happens to my mixes if I don't renew?</h3>
+        <p>Your existing mixes and uploads stay safe. You'll just drop back to the standard limits for new uploads, streams and playlists when your year ends.</p>
+      </div>
+    </section>
+
+    <section class="plus-bottom-cta">
+      <h2>Ready to go Plus?</h2>
+      <p>Start uploading more, streaming longer and unlocking the full experience.</p>
+      <a href="/account/dashboard/" class="plus-cta primary large">Go Plus — £10/year</a>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .plus-page {
+    min-height: 100vh;
+    background: #000;
+    color: #fff;
+    padding-bottom: 4rem;
+  }
+
+  /* Hero */
+  .plus-hero {
+    padding: 4rem 1.5rem 3rem;
+    text-align: center;
+    background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.12) 0%, rgba(0, 0, 0, 0.6) 60%, transparent 100%);
+  }
+
+  .plus-hero-inner {
+    max-width: 48rem;
+    margin: 0 auto;
+  }
+
+  .plus-crown {
+    color: #f59e0b;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 0 24px rgba(245, 158, 11, 0.5));
+  }
+
+  .plus-page h1 {
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
+    font-size: clamp(3rem, 8vw, 5.5rem);
+    letter-spacing: 0.04em;
+    margin: 0 0 0.5rem;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  .gold {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .plus-tagline {
+    font-size: 1.125rem;
+    color: #d1d5db;
+    margin: 0 0 2rem;
+  }
+
+  /* Price Box */
+  .plus-price-box {
+    display: inline-block;
+    padding: 2rem 3rem;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.06));
+    border: 2px solid rgba(245, 158, 11, 0.4);
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 0 40px rgba(245, 158, 11, 0.15);
+  }
+
+  .plus-price {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25rem;
+    color: #fbbf24;
+  }
+
+  .plus-price .currency {
+    font-size: 2rem;
+    font-weight: 600;
+  }
+
+  .plus-price .amount {
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
+    font-size: 5rem;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .plus-price .period {
+    font-size: 1.25rem;
+    color: #d1d5db;
+    margin-left: 0.25rem;
+  }
+
+  .plus-price-note {
+    margin: 0.75rem 0 0;
+    font-size: 0.875rem;
+    color: #9ca3af;
+  }
+
+  /* CTA Row */
+  .plus-cta-row {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .plus-cta {
+    display: inline-block;
+    padding: 1rem 2rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .plus-cta.primary {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #000;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 24px rgba(245, 158, 11, 0.4);
+  }
+
+  .plus-cta.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 32px rgba(245, 158, 11, 0.6);
+  }
+
+  .plus-cta.secondary {
+    background: transparent;
+    color: #fff;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .plus-cta.secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.6);
+  }
+
+  .plus-cta.large {
+    padding: 1.25rem 2.5rem;
+    font-size: 1.125rem;
+  }
+
+  /* Benefits */
+  .plus-benefits-section {
+    max-width: 72rem;
+    margin: 4rem auto 0;
+    padding: 0 1.5rem;
+  }
+
+  .plus-benefits-title {
+    text-align: center;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
+    font-size: 2.5rem;
+    letter-spacing: 0.04em;
+    margin: 0 0 2rem;
+    text-transform: uppercase;
+  }
+
+  .plus-benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .plus-benefit-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .plus-benefit-card:hover {
+    border-color: rgba(245, 158, 11, 0.4);
+    background: rgba(245, 158, 11, 0.04);
+  }
+
+  .benefit-icon-wrap {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .plus-benefit-card h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    color: #fff;
+  }
+
+  .plus-benefit-card p {
+    font-size: 0.9375rem;
+    color: #9ca3af;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* FAQ */
+  .plus-faq-section {
+    max-width: 48rem;
+    margin: 4rem auto 0;
+    padding: 0 1.5rem;
+  }
+
+  .plus-faq-section h2 {
+    text-align: center;
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
+    font-size: 2.5rem;
+    letter-spacing: 0.04em;
+    margin: 0 0 2rem;
+    text-transform: uppercase;
+  }
+
+  .plus-faq {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid #f59e0b;
+    border-radius: 0.5rem;
+  }
+
+  .plus-faq h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    color: #fbbf24;
+  }
+
+  .plus-faq p {
+    margin: 0;
+    color: #d1d5db;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+  }
+
+  .plus-faq a {
+    color: #fbbf24;
+    text-decoration: underline;
+  }
+
+  /* Bottom CTA */
+  .plus-bottom-cta {
+    max-width: 48rem;
+    margin: 4rem auto 0;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.12) 0%, transparent 70%);
+  }
+
+  .plus-bottom-cta h2 {
+    font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
+    font-size: 2.5rem;
+    letter-spacing: 0.04em;
+    margin: 0 0 0.5rem;
+    text-transform: uppercase;
+  }
+
+  .plus-bottom-cta p {
+    color: #d1d5db;
+    margin: 0 0 1.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .plus-hero {
+      padding: 2.5rem 1rem 2rem;
+    }
+    .plus-price-box {
+      padding: 1.5rem 2rem;
+    }
+    .plus-price .amount {
+      font-size: 4rem;
+    }
+    .plus-cta-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .plus-cta {
+      width: 100%;
+    }
+  }
+</style>
