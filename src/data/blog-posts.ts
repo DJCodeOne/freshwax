@@ -32,6 +32,7 @@ export const blogPosts: BlogPost[] = [
         <li><strong>Plus Membership through the bag</strong> — going Plus is now part of the same checkout flow as everything else. One bag, one payment, one less thing to think about.</li>
         <li><strong>Smarter checkout</strong> — your details now save automatically after your first order, so future purchases pre-fill instantly.</li>
         <li><strong>Artist editing improvements</strong> — release pages now save catalogue numbers, genres, prices and tracklists reliably from the artist dashboard.</li>
+        <li><strong>Go Live straight from your phone</strong> — the Live page now supports broadcasting directly from a mobile phone or tablet. No OBS, no BUTT, no laptop. Open the page, hit Go Live and you're streaming.</li>
         <li><strong>Live page polish</strong> — log-in prompts now use clean toast notifications instead of native browser alerts. The chat, shout-outs and reactions all behave properly when logged out.</li>
         <li><strong>New page backgrounds</strong> — the home, releases and crates pages now sit on top of blurred Fresh Wax graffiti artwork. Same vibe, more presence.</li>
         <li><strong>Cache and data fixes</strong> — release edits now propagate everywhere immediately, deletions actually delete, and the home page stops serving stale data.</li>
@@ -50,7 +51,7 @@ export const blogPosts: BlogPost[] = [
       <ul>
         <li><a href="/register/">Create an account</a> so you're ready to grab the EP the moment it drops</li>
         <li><a href="/account/dashboard/">Go Plus</a> for unlimited mix uploads, longer streaming hours and member-only features</li>
-        <li><a href="/live/">Check out the live stream</a> — there'll be a launch session running across release weekend</li>
+        <li><a href="/live/">Have a look at the Live page</a> — and try the new mobile Go Live if you're a DJ</li>
       </ul>
       <p>This is just the beginning. We've got a stacked roadmap of releases, label partnerships and stream takeovers lined up for the months ahead. Friday is the starting line.</p>
 
