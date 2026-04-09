@@ -93,6 +93,16 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <div class="crates-divider"></div>
         </div>
 
+        <!-- Demo content notice -->
+        <div class="demo-notice" role="note" aria-label="Demo content notice">
+          <span class="demo-notice-icon" aria-hidden="true">ℹ️</span>
+          <p>
+            <strong>Heads up:</strong> the records currently listed here are placeholders for demonstration only.
+            They'll be removed as soon as the first real seller uploads vinyl to the marketplace.
+            Want to be the first? <a href="/artist/vinyl/">List your records</a>.
+          </p>
+        </div>
+
         <!-- Action Buttons -->
         <div class="action-buttons">
           <button class="condition-guide-btn" id="conditionKeyToggle">
@@ -358,6 +368,46 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     .crates-title {
       font-size: 6rem;
     }
+  }
+
+  /* Demo content notice */
+  .demo-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    max-width: 56rem;
+    margin: 0 auto 1.5rem;
+    padding: 0.875rem 1.25rem;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 0.5rem;
+    color: #fde68a;
+  }
+
+  .demo-notice-icon {
+    font-size: 1.125rem;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+
+  .demo-notice p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .demo-notice strong {
+    color: #fbbf24;
+  }
+
+  .demo-notice a {
+    color: #fbbf24;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+
+  .demo-notice a:hover {
+    color: #fde68a;
   }
 
   /* Action Buttons — centered below header */
