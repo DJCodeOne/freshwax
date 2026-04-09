@@ -15,6 +15,49 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'final-polish-friday-ep-release',
+    title: 'Final Polish Before Launch — New EP Drops Friday',
+    excerpt: 'Fresh Wax is in the final stretch before full production launch. To mark the occasion, Code One and DJ Bakkus drop a brand new EP this Friday.',
+    featuredImage: 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&q=80',
+    category: 'Releases',
+    publishedAt: '2026-04-09',
+    author: 'Fresh Wax',
+    tags: ['code one', 'dj bakkus', 'ep', 'release', 'launch', 'jungle', 'drum and bass'],
+    content: `
+      <p>We're in the home stretch. After months of building, breaking, fixing and rebuilding, <strong>Fresh Wax is about to go fully live</strong>. The last few days are all about final polish — squashing the edge-case bugs, tightening up the checkout flow, ironing out the live stream UX, and making sure everything that should work, works.</p>
+
+      <h2>What's Been Happening</h2>
+      <p>If you've been around the site recently, you'll have seen things shifting daily. Some of the bigger changes landing this week:</p>
+      <ul>
+        <li><strong>Plus Membership through the cart</strong> — going Plus is now part of the same checkout flow as everything else. One basket, one payment, one less thing to think about.</li>
+        <li><strong>Smarter checkout</strong> — your details now save automatically after your first order, so future purchases pre-fill instantly.</li>
+        <li><strong>Artist editing improvements</strong> — release pages now save catalog numbers, genres, prices, and tracklists reliably from the artist dashboard.</li>
+        <li><strong>Live page polish</strong> — login prompts now use clean toast notifications instead of native browser alerts. The chat, shoutouts and reactions all behave properly when logged out.</li>
+        <li><strong>New page backgrounds</strong> — the index, releases and crates pages now sit on top of blurred Fresh Wax graffiti artwork. Same vibe, more presence.</li>
+        <li><strong>Cache and data fixes</strong> — release edits now propagate everywhere immediately, deletions actually delete, and the homepage stops serving stale data.</li>
+      </ul>
+      <p>None of this is glamorous on its own, but together it's the difference between "demo" and "shop". We're nearly there.</p>
+
+      <h2>To Mark The Moment — A New EP, This Friday</h2>
+      <p>Launches deserve a release. So this Friday, <strong>Code One and DJ Bakkus</strong> drop a brand new EP, exclusive to Fresh Wax. Two producers, two takes on the sound that built this whole project — proper jungle and drum & bass made for the dance, not the algorithm.</p>
+      <p>Expect rolling drums, deep low end, and the kind of energy that's been the foundation of every late-night session worth remembering. The EP will be available as digital download from launch, with vinyl pressing details to follow.</p>
+
+      <h2>Why It Matters</h2>
+      <p>Fresh Wax was built so artists could put their music out without giving up half the value to a middleman. Every sale goes back into the scene — to the artists, to the labels, and into keeping the platform running. Friday's release isn't just a new EP, it's a statement of what Fresh Wax is here to do: get music from the people who make it straight to the people who play it.</p>
+
+      <h2>Be Ready</h2>
+      <p>If you haven't already, now's a good time to:</p>
+      <ul>
+        <li><a href="/register/">Create an account</a> so you're ready to grab the EP the moment it drops</li>
+        <li><a href="/account/dashboard/">Go Plus</a> for unlimited mix uploads, longer streaming hours and member-only features</li>
+        <li><a href="/live/">Check out the live stream</a> — there'll be a launch session running across release weekend</li>
+      </ul>
+      <p>This is just the beginning. We've got a stacked roadmap of releases, label partnerships and stream takeovers lined up for the months ahead. Friday is the starting line.</p>
+
+      <p><strong>Code One x DJ Bakkus EP — out Friday on Fresh Wax. Lock it in.</strong></p>
+    `
+  },
+  {
     slug: 'underground-lair-recordings-merch',
     title: 'New Merch Drop: Underground Lair Recordings',
     excerpt: 'Underground Lair Recordings has landed on Fresh Wax Merch with hoodies and t-shirts in a range of colours. Rep the label.',
