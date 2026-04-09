@@ -250,7 +250,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             mixesContainer.innerHTML = `<div class="mixes-grid">
               ${data.mixes.map(mix => {
                 const rawArtworkUrl = mix.thumbUrl || mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
-                const artworkUrl = rawArtworkUrl && !rawArtworkUrl.includes('place-holder') ? rawArtworkUrl : '';
+                let artworkUrl = rawArtworkUrl && !rawArtworkUrl.includes('place-holder') ? rawArtworkUrl : '';
+                // Bust browser/edge cache when the underlying file is overwritten in-place
+                // by appending the mix updatedAt timestamp as a version query string.
+                if (artworkUrl && mix.updatedAt && !artworkUrl.includes('?v=')) {
+                  const v = encodeURIComponent(mix.updatedAt);
+                  artworkUrl += (artworkUrl.includes('?') ? '&' : '?') + 'v=' + v;
+                }
                 const title = escapeHtml(mix.title || 'Untitled Mix');
                 const description = escapeHtml(mix.description || '');
                 return `
