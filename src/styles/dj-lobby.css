@@ -412,7 +412,14 @@ html, body{ height:100%; overflow:hidden; margin:0; max-width:100vw }
 .relay-station-badge.live{ background:rgba(34,197,94,.2); color:#22c55e }
 .relay-station-badge.offline,
 .relay-hint-text{ font-size:.75rem; color:#aaa; margin-top:.75rem; text-align:center; font-style:italic }
-.butt-settings{ grid-template-columns:1.5fr .7fr 1.2fr .8fr }
+.butt-settings{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:.75rem }
+.butt-settings .butt-instructions,
+.butt-settings .butt-tip{ grid-column:1/-1; margin:0; padding:.75rem 1rem; font-size:.85rem; line-height:1.5; border-radius:8px }
+.butt-settings .butt-instructions{ background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.3); color:#fde68a }
+.butt-settings .butt-instructions strong{ color:#fbbf24 }
+.butt-settings .butt-tip{ background:rgba(220,38,38,.1); border:1px solid rgba(220,38,38,.3); color:#fecaca }
+.butt-settings .butt-tip strong{ color:#fca5a5 }
+.butt-settings .butt-tip code{ background:#0d0d0d; padding:.1rem .35rem; border-radius:4px; color:#fbbf24; font-family:var(--fm); font-size:.85em }
 .key-available{ flex:1; display:flex; flex-direction:column }
 .setup-row{ display:grid; grid-template-columns:1fr 1fr; gap:.75rem }
 .setup-field,

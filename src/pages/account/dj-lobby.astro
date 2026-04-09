@@ -976,8 +976,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
               <!-- BUTT Settings (hidden by default) -->
               <div class="setup-row butt-settings hidden" id="buttSettings">
+                <p class="butt-instructions">
+                  In BUTT click <strong>Settings → Main → Add</strong> and copy the values
+                  below into each field <em>exactly</em>. Then click <strong>Save</strong>
+                  and <strong>Connect</strong>.
+                </p>
                 <div class="cred-box-compact">
-                  <label>Server</label>
+                  <label>Type</label>
+                  <div class="cred-value-compact">
+                    <code id="icecastType">Icecast</code>
+                  </div>
+                </div>
+                <div class="cred-box-compact">
+                  <label>Address (Server)</label>
                   <div class="cred-value-compact">
                     <code id="icecastServer" class="url-scrolling"><span class="url-text">icecast.freshwax.co.uk</span></code>
                     <button class="copy-btn-sm" data-copy="icecastServer">Copy</button>
@@ -991,19 +1002,32 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   </div>
                 </div>
                 <div class="cred-box-compact">
-                  <label>Password <span style="font-size: 0.7em; opacity: 0.7;">(your stream key)</span></label>
+                  <label>User</label>
+                  <div class="cred-value-compact">
+                    <code id="icecastUser">source</code>
+                    <button class="copy-btn-sm" data-copy="icecastUser">Copy</button>
+                  </div>
+                </div>
+                <div class="cred-box-compact">
+                  <label>Password <span style="font-size: 0.7em; opacity: 0.7;">(your stream key — book a slot to get yours)</span></label>
                   <div class="cred-value-compact">
                     <code id="icecastPassword" class="stream-key-placeholder">Book a slot first</code>
                     <button class="copy-btn-sm" data-copy="icecastPassword">Copy</button>
                   </div>
                 </div>
                 <div class="cred-box-compact">
-                  <label>Mount</label>
+                  <label>Mountpoint</label>
                   <div class="cred-value-compact">
                     <code id="icecastMount">/live</code>
                     <button class="copy-btn-sm" data-copy="icecastMount">Copy</button>
                   </div>
                 </div>
+                <p class="butt-tip">
+                  <strong>⚠️ Common gotcha:</strong> the <em>Address</em> field must be
+                  exactly <code>icecast.freshwax.co.uk</code> — not an IP address.
+                  If BUTT shows "Connected" but the lobby has no audio, you've almost
+                  certainly entered the wrong server address.
+                </p>
               </div>
               </div><!-- End Direct Stream Section -->
 
