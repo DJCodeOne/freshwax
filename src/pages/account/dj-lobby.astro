@@ -2706,14 +2706,60 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           const audioUrl = currentStream.audioStreamUrl || currentStream.streamUrl;
           if (audioEl && audioUrl) {
             log('[Audio] Setting up audio stream:', audioUrl);
-            audioEl.src = audioUrl;
-            audioEl.muted = false; // Ensure not muted
-            audioEl.volume = 1;    // Ensure full volume
-            audioEl.play().then(() => {
-              /* audio playing */
-            }).catch(e => {
-              log('[Audio] Auto-play blocked, user interaction required:', e.message);
-            });
+            (async () => {
+              // Clean up any previous Hls.js instance attached to this element
+              if (audioEl._hlsInstance) {
+                try { audioEl._hlsInstance.destroy(); } catch(_e) { /* noop */ }
+                audioEl._hlsInstance = null;
+              }
+
+              const isHls = audioUrl.includes('.m3u8');
+
+              // Lazy-load Hls.js for HLS streams in non-Safari browsers
+              if (isHls && typeof Hls === 'undefined') {
+                try {
+                  await new Promise((resolve, reject) => {
+                    const s = document.createElement('script');
+                    s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js';
+                    s.crossOrigin = 'anonymous';
+                    s.onload = resolve;
+                    s.onerror = () => reject(new Error('Failed to load HLS.js'));
+                    document.head.appendChild(s);
+                  });
+                } catch (err) {
+                  log('[Audio] HLS.js load failed, falling back to native:', err.message);
+                }
+              }
+
+              if (isHls && typeof Hls !== 'undefined' && Hls.isSupported()) {
+                // HLS via Hls.js (Chrome, Firefox, Edge)
+                const hls = new Hls({ lowLatencyMode: true, backBufferLength: 30 });
+                hls.loadSource(audioUrl);
+                hls.attachMedia(audioEl);
+                audioEl._hlsInstance = hls;
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                  audioEl.muted = false;
+                  audioEl.volume = 1;
+                  audioEl.play().catch(e => log('[Audio] Auto-play blocked:', e.message));
+                });
+                hls.on(Hls.Events.ERROR, (_e, data) => {
+                  log('[Audio] HLS error:', data.type, data.details);
+                  if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                    hls.startLoad();
+                  }
+                });
+              } else {
+                // Direct src for native HLS (Safari) or non-HLS audio (icecast/MP3)
+                audioEl.src = audioUrl;
+                audioEl.muted = false;
+                audioEl.volume = 1;
+                audioEl.play().then(() => {
+                  /* audio playing */
+                }).catch(e => {
+                  log('[Audio] Auto-play blocked, user interaction required:', e.message);
+                });
+              }
+            })();
           }
         }
 
