@@ -200,7 +200,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       streamSource: slot.isRelay ? 'relay' : 'red5',
       isRelay: slot.isRelay || false,
       relaySource: slot.relaySource || null,
-      audioStreamUrl: slot.audioStreamUrl || (slot.isRelay && slot.relaySource?.url) || null,
+      // For BUTT/Icecast streamers, fall back to the public icecast mount.
+      // Same URL serves both BUTT (PUT source) and browsers (GET listener).
+      audioStreamUrl: slot.audioStreamUrl
+        || (slot.isRelay && slot.relaySource?.url)
+        || 'https://icecast.freshwax.co.uk/live',
       youtubeLiveId: slot.youtubeLiveId || null,
       twitchChannel: slot.twitchChannel || slot.twitchUsername || null,
       currentViewers: slot.currentViewers || 0,
