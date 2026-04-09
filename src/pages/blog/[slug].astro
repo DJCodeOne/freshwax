@@ -191,21 +191,59 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
 </Layout>
 
 <script is:inline nonce={nonce}>
-  function copyLink() {
-    navigator.clipboard.writeText(window.location.href).then(function() {
-      var btn = document.querySelector('.share-btn.copy');
-      if (btn) {
-        btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
-        setTimeout(function() {
-          btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>';
-        }, 2000);
+  (function() {
+    var COPY_ICON = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>';
+    var TICK_ICON = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+
+    function showCopied(btn) {
+      btn.innerHTML = TICK_ICON;
+      setTimeout(function() { btn.innerHTML = COPY_ICON; }, 2000);
+    }
+
+    function fallbackCopy(text, btn) {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) showCopied(btn);
+        else if (window.showToast) window.showToast('Link: ' + text);
+      } catch (e) {
+        if (window.showToast) window.showToast('Link: ' + text);
+        else console.error('Clipboard fallback failed:', e);
       }
-    });
-  }
-  var copyLinkBtn = document.getElementById('copyLinkBtn');
-  if (copyLinkBtn) {
-    copyLinkBtn.addEventListener('click', copyLink);
-  }
+    }
+
+    function copyLink(e) {
+      var btn = e.currentTarget;
+      var url = window.location.href;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function() {
+          showCopied(btn);
+        }).catch(function() {
+          fallbackCopy(url, btn);
+        });
+      } else {
+        fallbackCopy(url, btn);
+      }
+    }
+
+    function attach() {
+      var btn = document.getElementById('copyLinkBtn');
+      if (btn && !btn.dataset.copyAttached) {
+        btn.dataset.copyAttached = 'true';
+        btn.addEventListener('click', copyLink);
+      }
+    }
+
+    attach();
+    document.addEventListener('astro:page-load', attach);
+  })();
 </script>
 
 <style>
