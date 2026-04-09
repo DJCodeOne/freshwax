@@ -108,6 +108,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
 
     // Generate 400x400 thumbnail for listing pages
+    // Note: thumb key has no timestamp (overwrites in place), so we append a
+    // ?v= query string to the URL to bust the 1-year browser/edge cache.
     let thumbUrl: string | undefined;
     try {
       const thumb = await processImageToSquareWebP(rawBuffer, 400, 75);
@@ -119,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ContentType: imageContentType(thumb.format),
         CacheControl: 'public, max-age=31536000',
       }));
-      thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
+      thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}?v=${timestamp}`;
     } catch (thumbErr: unknown) {
       log.error('[update-mix-artwork] Thumbnail generation failed (non-critical):', thumbErr);
     }
