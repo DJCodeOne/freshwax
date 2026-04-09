@@ -35,21 +35,27 @@ const nonce = Astro.locals.nonce || '';
         </div>
       </div>
 
-      <!-- Quick Links + Info Links - side by side on mobile -->
+      <!-- Quick Links - balanced columns -->
       <div class="footer-links">
         <div>
           <h3 class="text-white font-bold text-base mb-3">Shop</h3>
           <ul class="space-y-1.5 text-sm">
             <li><a href="/releases/" class="hover:text-white transition-colors">All Releases</a></li>
-            <li><a href="/weekly-chart/" class="hover:text-white transition-colors">Weekly Chart</a></li>
             <li><a href="/pre-orders/" class="hover:text-white transition-colors">Pre-Orders</a></li>
             <li><a href="/dj-mixes/" class="hover:text-white transition-colors">DJ Mixes</a></li>
-            <li><a href="/dj-mix-chart/" class="hover:text-white transition-colors">Mix Chart</a></li>
             <li><a href="/merch/" class="hover:text-white transition-colors">Merchandise</a></li>
             <li><a href="/giftcards/" class="hover:text-white transition-colors">Gift Cards</a></li>
             <li><a href="/samples/" class="hover:text-white transition-colors">Sample Packs</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 class="text-white font-bold text-base mb-3">Live &amp; Charts</h3>
+          <ul class="space-y-1.5 text-sm">
             <li><a href="/live/" class="hover:text-white transition-colors">Live Stream</a></li>
             <li><a href="/schedule/" class="hover:text-white transition-colors">Stream Schedule</a></li>
+            <li><a href="/weekly-chart/" class="hover:text-white transition-colors">Weekly Chart</a></li>
+            <li><a href="/dj-mix-chart/" class="hover:text-white transition-colors">Mix Chart</a></li>
             <li><a href="/plus/" class="hover:text-white transition-colors">Fresh Wax Plus</a></li>
           </ul>
         </div>
@@ -124,7 +130,7 @@ const nonce = Astro.locals.nonce || '';
 <style>
   .footer-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-columns: 1.6fr 1fr 1fr 1fr;
     gap: 1.5rem;
   }
 
@@ -153,7 +159,7 @@ const nonce = Astro.locals.nonce || '';
 
   @media (min-width: 768px) and (max-width: 1023px) {
     .footer-grid {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 1.5rem;
     }
 
