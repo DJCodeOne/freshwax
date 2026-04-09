@@ -18,7 +18,7 @@ import Footer from '../components/Footer.astro';
         <svg class="plus-crown" viewBox="0 0 24 24" fill="currentColor" width="64" height="64" aria-hidden="true">
           <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
         </svg>
-        <h1>Fresh Wax <span class="gold">Plus</span></h1>
+        <h1>Fresh <span class="red">Wax</span> <span class="gold">Plus</span></h1>
         <p class="plus-tagline">Unlock the full Fresh Wax experience.</p>
 
         <div class="plus-price-box">
@@ -148,8 +148,9 @@ import Footer from '../components/Footer.astro';
   }
 
   .plus-crown {
+    display: block;
+    margin: 0 auto 1rem;
     color: #f59e0b;
-    margin-bottom: 1rem;
     filter: drop-shadow(0 0 24px rgba(245, 158, 11, 0.5));
   }
 
@@ -167,6 +168,10 @@ import Footer from '../components/Footer.astro';
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  }
+
+  .red {
+    color: #dc2626;
   }
 
   .plus-tagline {
