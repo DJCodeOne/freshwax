@@ -997,8 +997,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <div class="cred-box-compact">
                   <label>Port</label>
                   <div class="cred-value-compact">
-                    <code id="icecastPort">8000</code>
+                    <code id="icecastPort">443</code>
                     <button class="copy-btn-sm" data-copy="icecastPort">Copy</button>
+                  </div>
+                </div>
+                <div class="cred-box-compact">
+                  <label>TLS / SSL</label>
+                  <div class="cred-value-compact">
+                    <code id="icecastTls">Enabled</code>
                   </div>
                 </div>
                 <div class="cred-box-compact">
@@ -1023,10 +1029,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   </div>
                 </div>
                 <p class="butt-tip">
-                  <strong>⚠️ Common gotcha:</strong> the <em>Address</em> field must be
-                  exactly <code>icecast.freshwax.co.uk</code> — not an IP address.
-                  If BUTT shows "Connected" but the lobby has no audio, you've almost
-                  certainly entered the wrong server address.
+                  <strong>⚠️ Important:</strong> in BUTT click <strong>Settings → Audio</strong>
+                  and tick <strong>"Use SSL/TLS"</strong> for the server. The address must be
+                  exactly <code>icecast.freshwax.co.uk</code> — not an IP address — and the
+                  port must be <code>443</code>, not 8000. Port 8000 is closed to the public.
                 </p>
               </div>
               </div><!-- End Direct Stream Section -->
