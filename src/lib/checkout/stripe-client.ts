@@ -45,10 +45,8 @@ export async function handleSubmit(
 
   const form = e.target as HTMLFormElement;
 
-  // Save details to customer account if checkbox is checked
-  const saveDetailsEl = form.elements.namedItem('saveDetails') as HTMLInputElement | null;
-  const saveDetails = saveDetailsEl?.checked;
-  if (saveDetails && state.currentUser) {
+  // Always save details to user's account so future checkouts pre-fill
+  if (state.currentUser) {
     try {
       const saveToken = await state.currentUser.getIdToken();
       const saveController = new AbortController();

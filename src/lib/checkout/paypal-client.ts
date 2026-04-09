@@ -103,6 +103,34 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
     const originalText = 'PAY WITH PAYPAL';
     customBtn.innerHTML = '<span>Processing...</span>';
 
+    // Save customer details for faster future checkout (fire-and-forget)
+    if (state.currentUser) {
+      try {
+        const saveToken = await state.currentUser.getIdToken();
+        fetch('/api/checkout-data/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${saveToken}`
+          },
+          body: JSON.stringify({
+            firstName: getFormField(form, 'firstName'),
+            lastName: getFormField(form, 'lastName'),
+            email: getFormField(form, 'email'),
+            phone: getFormField(form, 'phone') || '',
+            address1: getFormField(form, 'address1') || '',
+            address2: getFormField(form, 'address2') || '',
+            city: getFormField(form, 'city') || '',
+            county: getFormField(form, 'county') || '',
+            postcode: getFormField(form, 'postcode') || '',
+            country: getFormField(form, 'country') || 'United Kingdom'
+          })
+        }).catch((e: unknown) => state.logger.error('Error saving customer details:', e));
+      } catch (e: unknown) {
+        state.logger.error('Error fetching token for save:', e);
+      }
+    }
+
     const orderData = {
       customer: {
         email: getFormField(form, 'email'),

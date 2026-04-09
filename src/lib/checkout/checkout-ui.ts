@@ -471,10 +471,9 @@ export function renderCheckout(
           </div>
 
           ${currentUser ? `
-          <label for="saveDetails" style="display: flex; align-items: center; gap: 0.75rem; margin-top: 1.25rem; padding: 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; cursor: pointer;">
-            <input type="checkbox" id="saveDetails" name="saveDetails" style="width: 20px; height: 20px; accent-color: #dc2626; cursor: pointer;">
-            <span style="font-size: 0.875rem; color: #1e40af; font-weight: 500;">Save these details for faster checkout</span>
-          </label>
+          <p style="margin-top: 1.25rem; padding: 0.75rem 1rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 0.8125rem; color: #1e40af;">
+            ✓ Your details will be saved for faster checkout next time.
+          </p>
           ` : ''}
         </div>
       </div>
