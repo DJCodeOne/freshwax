@@ -977,9 +977,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <!-- BUTT Settings (hidden by default) -->
               <div class="setup-row butt-settings hidden" id="buttSettings">
                 <p class="butt-instructions">
-                  In BUTT click <strong>Settings → Main → Add</strong> and copy the values
-                  below into each field <em>exactly</em>. Then click <strong>Save</strong>
-                  and <strong>Connect</strong>.
+                  In BUTT click <strong>Settings → Main → Add</strong> and enter the values
+                  below. Hit <strong>Spawn</strong> to generate your password, then
+                  <strong>Save</strong> and <strong>Connect</strong>.
                 </p>
                 <div class="cred-box-compact">
                   <label>Type</label>
@@ -997,14 +997,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <div class="cred-box-compact">
                   <label>Port</label>
                   <div class="cred-value-compact">
-                    <code id="icecastPort">443</code>
+                    <code id="icecastPort">8000</code>
                     <button class="copy-btn-sm" data-copy="icecastPort">Copy</button>
-                  </div>
-                </div>
-                <div class="cred-box-compact">
-                  <label>TLS / SSL</label>
-                  <div class="cred-value-compact">
-                    <code id="icecastTls">Enabled</code>
                   </div>
                 </div>
                 <div class="cred-box-compact">
@@ -1015,9 +1009,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   </div>
                 </div>
                 <div class="cred-box-compact">
-                  <label>Password <span style="font-size: 0.7em; opacity: 0.7;">(your stream key — book a slot to get yours)</span></label>
+                  <label>Password <span style="font-size: 0.7em; opacity: 0.7;">(your stream key)</span></label>
                   <div class="cred-value-compact">
-                    <code id="icecastPassword" class="stream-key-placeholder">Book a slot first</code>
+                    <code id="icecastPassword" class="stream-key-placeholder">Click Spawn</code>
+                    <button class="spawn-key-btn" id="spawnKeyBtnButt" title="Generate stream key">Spawn</button>
                     <button class="copy-btn-sm" data-copy="icecastPassword">Copy</button>
                   </div>
                 </div>
@@ -1029,10 +1024,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   </div>
                 </div>
                 <p class="butt-tip">
-                  <strong>⚠️ Important:</strong> in BUTT click <strong>Settings → Audio</strong>
-                  and tick <strong>"Use SSL/TLS"</strong> for the server. The address must be
-                  exactly <code>icecast.freshwax.co.uk</code> — not an IP address — and the
-                  port must be <code>443</code>, not 8000. Port 8000 is closed to the public.
+                  <strong>💡 Tip:</strong> Click <strong>Spawn</strong> to generate your
+                  password — no need to book a slot first. The address must be exactly
+                  <code>icecast.freshwax.co.uk</code> — not an IP address. Make sure
+                  TLS/SSL is <strong>off</strong> in BUTT's audio settings.
                 </p>
               </div>
               </div><!-- End Direct Stream Section -->
@@ -3802,7 +3797,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     stereoMetersModule.setupStereoMeters();
 
     // Spawn Key button - Generate stream key without going live
-    document.getElementById('spawnKeyBtn')?.addEventListener('click', async () => {
+    // Shared handler for both OBS and BUTT spawn buttons
+    async function handleSpawnKey() {
       if (!currentUser) return;
 
       const btn = document.getElementById('spawnKeyBtn');
@@ -3945,7 +3941,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         btn.textContent = 'Spawn';
         btn.disabled = false;
       }
-    });
+    }
+    document.getElementById('spawnKeyBtn')?.addEventListener('click', handleSpawnKey);
+    document.getElementById('spawnKeyBtnButt')?.addEventListener('click', handleSpawnKey);
 
     // Ready button - Indicates DJ is ready and shows preview (does NOT go live yet)
     document.getElementById('setReadyBtn')?.addEventListener('click', async () => {
