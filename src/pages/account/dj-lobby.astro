@@ -981,32 +981,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   below. Hit <strong>Spawn</strong> to generate your password, then
                   <strong>Save</strong> and <strong>Connect</strong>.
                 </p>
-                <div class="cred-box-compact">
-                  <label>Type</label>
-                  <div class="cred-value-compact">
-                    <code id="icecastType">Icecast</code>
-                  </div>
-                </div>
-                <div class="cred-box-compact">
-                  <label>Address (Server)</label>
-                  <div class="cred-value-compact">
-                    <code id="icecastServer" class="url-scrolling"><span class="url-text">90.207.8.79</span></code>
-                    <button class="copy-btn-sm" data-copy="icecastServer">Copy</button>
-                  </div>
-                </div>
-                <div class="cred-box-compact">
-                  <label>Port</label>
-                  <div class="cred-value-compact">
-                    <code id="icecastPort">8000</code>
-                    <button class="copy-btn-sm" data-copy="icecastPort">Copy</button>
-                  </div>
-                </div>
-                <div class="cred-box-compact">
-                  <label>User</label>
-                  <div class="cred-value-compact">
-                    <code id="icecastUser">source</code>
-                    <button class="copy-btn-sm" data-copy="icecastUser">Copy</button>
-                  </div>
+                <div class="butt-static-row">
+                  <div class="cred-box-mini"><label>Type</label><code>Icecast</code></div>
+                  <div class="cred-box-mini"><label>Address</label><code id="icecastServer">90.207.8.79</code></div>
+                  <div class="cred-box-mini"><label>Port</label><code id="icecastPort">8000</code></div>
+                  <div class="cred-box-mini"><label>User</label><code id="icecastUser">source</code></div>
                 </div>
                 <div class="cred-box-compact cred-box-highlight">
                   <label>Password <span style="font-size: 0.7em; opacity: 0.7;">(your stream key)</span></label>

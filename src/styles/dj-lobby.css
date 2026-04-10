@@ -440,6 +440,10 @@ html, body{ height:100%; overflow:hidden; margin:0; max-width:100vw }
 to{ opacity:1; transform:translateY(0) } }
 .cred-box-compact{ background:#1a1a1a; border:var(--b1); border-radius:8px; padding:.75rem 1rem }
 .cred-box-highlight{ background:rgba(220,38,38,.08); border:2px solid rgba(220,38,38,.4); box-shadow:0 0 12px rgba(220,38,38,.15) }
+.butt-static-row{ display:flex; gap:.5rem; grid-column:1/-1 }
+.butt-static-row .cred-box-mini{ flex:1; background:#1a1a1a; border:var(--b1); border-radius:8px; padding:.5rem .75rem; text-align:center }
+.butt-static-row .cred-box-mini label{ display:block; font-size:.6rem; font-weight:600; color:#777; text-transform:uppercase; letter-spacing:.5px; margin-bottom:.25rem; font-family:var(--fi) }
+.butt-static-row .cred-box-mini code{ display:block; font-size:.85rem; color:#f59e0b; font-family:var(--fm); white-space:nowrap }
 .cred-box-compact label{font-family:var(--fi) }
 .cred-value-compact code{ flex:1; font-size:.9rem; color:#f59e0b; font-family:var(--fm); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:.6rem .75rem; background:#0d0d0d; border:var(--b1) }
 .cred-value-compact code.key-reveal{ color:#f59e0b; position:relative }
