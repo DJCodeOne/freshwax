@@ -925,12 +925,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         </div>
 
-        <!-- Go Live Setup Section -->
-        <div class="stream-key-section" id="streamKeySection">
-          <div id="keyAvailable" class="key-available">
-            <div class="go-live-grid-compact">
-              <!-- Stream Mode Toggle + Share: Direct / Relay / Share -->
-              <div class="stream-mode-toggle" id="streamModeToggle">
+        <!-- Stream Mode Toggle + Share: Direct / Relay / Share (always visible) -->
+        <div class="stream-mode-toggle" id="streamModeToggle">
                 <button type="button" class="mode-btn active" id="directModeBtn" title="Stream directly from your software">
                   <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9 8h2v8H9zm4 2h2v6h-2z"/></svg>
                   Direct
@@ -943,8 +939,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
                   Share
                 </button>
-              </div>
+        </div>
 
+        <!-- Go Live Setup Section -->
+        <div class="stream-key-section" id="streamKeySection">
+          <div id="keyAvailable" class="key-available">
+            <div class="go-live-grid-compact">
               <!-- Direct Streaming Section -->
               <div id="directStreamSection">
               <!-- Software Toggle: OBS vs BUTT -->
@@ -980,11 +980,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
               <!-- BUTT Settings (hidden by default) -->
               <div class="setup-row butt-settings hidden" id="buttSettings">
-                <p class="butt-instructions">
-                  In BUTT click <strong>Settings → Main → Add</strong> and enter the values
-                  below. Hit <strong>Spawn</strong> to generate your password, then
-                  <strong>Save</strong> and <strong>Connect</strong>.
-                </p>
                 <div class="butt-static-row">
                   <div class="cred-box-mini"><label>Type</label><code>Icecast</code></div>
                   <div class="cred-box-mini"><label>Port</label><code id="icecastPort">8000</code></div>
