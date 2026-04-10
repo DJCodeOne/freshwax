@@ -216,7 +216,7 @@ html, body{ overflow:auto; }
 .schedule-item.live{ border-color:#10b981; background:rgba(16,185,129,.15); }
 .schedule-item.relay h4{ color:#dc2626; }
 .schedule-item.relay .schedule-time-range{ font-size:.5rem; color:#fff; }
-.live-headphone-icon{ font-size:1.25rem; flex-shrink:0; animation:headphonePulse 2s ease-in-out infinite; }
+.live-headphone-icon{ font-size:1.25rem; flex-shrink:0; display:block; text-align:center; animation:headphonePulse 2s ease-in-out infinite; }
 @keyframes headphonePulse{0%, 100% { opacity:1; transform:scale(1); }
 50% { opacity:.7; transform:scale(1.1); } }
 .schedule-item.cancelled{ opacity:.5; }
