@@ -221,8 +221,9 @@ html, body{ overflow:auto; }
 50% { opacity:.7; transform:scale(1.1); } }
 .schedule-item.cancelled{ opacity:.5; }
 .schedule-item.cancelled .schedule-time-range,
-.schedule-dj-info{ flex:1; min-width:0; text-align:left; }
-.schedule-dj-header{ display:flex; align-items:center; gap:.5rem; }
+.schedule-dj-info{ flex:1; min-width:0; text-align:center; }
+.schedule-dj-header{ display:flex; align-items:center; justify-content:center; gap:.5rem; }
+.schedule-times{ justify-content:center; }
 .schedule-dj-info h4{ -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .schedule-title{ display:block; font-size:.8rem; color:#dc2626; font-weight:600; margin-top:.25rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .schedule-times{ display:flex; align-items:center; gap:.5rem; margin-top:.375rem; }
