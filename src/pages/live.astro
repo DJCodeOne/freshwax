@@ -1044,7 +1044,8 @@ try {
   <PlaylistModal />
 </Layout>
 
-<!-- HLS.js loaded dynamically by live-stream.js when stream playback starts -->
+<!-- HLS.js for stream playback -->
+<script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" crossorigin="anonymous"></script>
 
 <script is:inline type="module">
   import { initSpeedTest } from '/live/speed-test.js';
