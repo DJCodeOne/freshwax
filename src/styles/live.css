@@ -10,6 +10,8 @@ body.header-hidden main,
 body.header-hidden .live-main{ height:100vh !important; height:100dvh !important; max-height:100vh !important; max-height:100dvh !important; overflow:hidden !important; margin:0 !important; }
 body.header-hidden .live-layout{ height:100vh !important; height:100dvh !important; max-height:100vh !important; max-height:100dvh !important; overflow:hidden !important; }
 body.header-hidden #mini-player-spacer{ display:none !important; }
+#mini-player{ display:none !important; }
+#mini-player-spacer{ display:none !important; }
 .hidden{ display:none !important; }
 .player-container{ flex:1; min-height:0; position:relative; overflow:hidden; }
 .relay-attribution{ position:absolute; bottom:1rem; left:1rem; color:#fff; font-size:.85rem; font-weight:500; z-index:50; opacity:.4; text-shadow:0 1px 3px rgba(0,0,0,.8); pointer-events:none; }
