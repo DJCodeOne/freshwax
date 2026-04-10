@@ -3302,6 +3302,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       document.getElementById('obsSettings')?.classList.add('hidden');
     });
 
+    // Direct/Relay mode toggle (backup handler — relay.js also attaches but may miss if timing is off)
+    document.getElementById('directModeBtn')?.addEventListener('click', () => {
+      relayModule.setStreamMode('direct');
+    });
+    document.getElementById('relayModeBtn')?.addEventListener('click', () => {
+      relayModule.setStreamMode('relay');
+    });
+
     // Share Stream Modal
     document.getElementById('openShareModal')?.addEventListener('click', openShareModal);
     document.getElementById('closeShareModal')?.addEventListener('click', closeShareModal);
