@@ -466,8 +466,10 @@ code.url-scrolling .url-text{ display:inline-block; animation:scrollUrlIn 1.2s e
 .spawn-key-btn:hover{ background:linear-gradient(135deg,#b91c1c,#991b1b); transform:translateY(-1px) }
 .spawn-key-btn:disabled,
 .multi-stream-section{ background:var(--g3); border:1px solid #2a2a2a; border-radius:10px; padding:.75rem 1rem; margin-top:.75rem }
-.multi-stream-header{ display:flex; align-items:center; gap:.75rem; width:100%; padding:0; background:transparent; border:0; cursor:pointer; text-align:left; transition:opacity .2s }
-.multi-stream-header:hover{ opacity:.85 }
+.multi-stream-header-label{ display:flex; align-items:center; gap:.75rem; margin-bottom:.75rem; color:#bbb }
+.multi-stream-header-label svg{ flex-shrink:0; color:#dc2626 }
+.multi-stream-header-label h3{ font-size:.95rem; font-weight:600; color:#fff; margin:0; font-family:var(--fi) }
+.multi-stream-header-label p{ font-size:.75rem; color:#888; margin:.125rem 0 0 }
 .multi-stream-toggle{ margin-left:auto; color:#aaa; transition:transform .3s }
 .multi-stream-section.expanded .multi-stream-toggle{ transform:rotate(180deg) }
 .toggle-chevron{ display:block }
@@ -750,7 +752,7 @@ button{ -webkit-user-select:none; user-select:none } }
 .output-url-row code{ flex:1; font-size:.7rem; color:#fb923c; font-family:Consolas,'Monaco',monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .pro-copy-btn{ padding:.35rem .6rem; border-radius:4px; font-size:.7rem; transition:background .2s }
 .pro-copy-btn:hover{ background:linear-gradient(135deg,#f97316,#ea580c) }
-.share-btn-row{ padding-top:.75rem; border-top:1px solid #252525 }
+.share-btn-row{ margin-top:.75rem }
 .share-btn-main{padding:.65rem 1rem; background:linear-gradient(135deg,#1a1a1a,#0d0d0d); border:var(--b1); border-radius:6px; font-size:.85rem; font-family:var(--fi); cursor:pointer }
 .share-btn-main:hover{ background:linear-gradient(135deg,#252525,#1a1a1a); border-color:#f59e0b; color:#f59e0b }
 .share-btn-main svg{ opacity:.8 }
