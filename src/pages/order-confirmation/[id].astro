@@ -1433,15 +1433,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 </style>
 
 <script>
-  // Clear cart after successful order
+  // Clear cart after successful order (localStorage + KV + badge)
   (function clearCartAfterPurchase() {
     try {
-      const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
-      if (customerId) {
-        localStorage.removeItem('freshwax_cart_' + customerId);
+      if (window.FreshWaxCart && window.FreshWaxCart.clear) {
+        window.FreshWaxCart.clear();
+      } else {
+        // Fallback if FreshWaxCart not ready yet
+        const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
+        if (customerId) localStorage.removeItem('freshwax_cart_' + customerId);
+        localStorage.removeItem('cart');
+        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
       }
-      localStorage.removeItem('cart');
-      window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
     } catch (e) {
       console.error('[order-confirmation] Error clearing cart:', e);
     }

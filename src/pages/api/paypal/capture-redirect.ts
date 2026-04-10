@@ -123,6 +123,17 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
 
     // Payment captured successfully
 
+    // Backfill customer.userId if missing (PayPal redirect loses the auth context)
+    if (!pendingOrder.customer?.userId) {
+      try {
+        const { verifyRequestUser } = await import('../../../lib/firebase-rest');
+        const { userId } = await verifyRequestUser(request);
+        if (userId && pendingOrder.customer) {
+          pendingOrder.customer.userId = userId;
+        }
+      } catch (_e: unknown) { /* auth verification failed — continue without userId */ }
+    }
+
     // Create order in Firebase
     const orderData = {
       customer: pendingOrder.customer,
