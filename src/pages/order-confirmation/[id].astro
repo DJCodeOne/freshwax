@@ -1455,12 +1455,22 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const originalText = button.innerHTML;
     button.classList.add('downloading');
     button.innerHTML = `<svg class="animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" stroke-width="2" opacity="0.25"/><path d="M4 12a8 8 0 018-8" stroke-width="2"/></svg> Downloading...`;
-    
+
     try {
+      // Get auth token for download proxy
+      const headers: Record<string, string> = {};
+      try {
+        const user = window.firebaseAuth?.currentUser || (window.authReady ? await window.authReady : null);
+        if (user) {
+          const token = await user.getIdToken();
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+        }
+      } catch (_e) { /* auth token fetch failed — proceed without */ }
+
       // Use server-side proxy to fetch the file
       const proxyUrl = `/api/download/?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
-      
-      const response = await fetch(proxyUrl);
+
+      const response = await fetch(proxyUrl, { headers });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `Download failed: ${response.status}`);
@@ -1521,6 +1531,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     } catch (e) {
       console.error('Failed to parse tracks:', e);
     }
+
+    // Get auth token for download proxy
+    const headers: Record<string, string> = {};
+    try {
+      const user = window.firebaseAuth?.currentUser || (window.authReady ? await window.authReady : null);
+      if (user) {
+        const token = await user.getIdToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (_e) { /* proceed without auth */ }
 
     // Get modal elements
     const modal = document.getElementById('zipProgressModal');
@@ -1634,7 +1654,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // Use server-side proxy to fetch the file
           const proxyUrl = `/api/download/?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.filename)}`;
 
-          const response = await fetch(proxyUrl, { signal: abortController.signal });
+          const response = await fetch(proxyUrl, { headers, signal: abortController.signal });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
           const blob = await response.blob();
