@@ -391,7 +391,7 @@ html, body{ height:100%; overflow:hidden; margin:0; max-width:100vw }
 .software-btn.active svg{ color:#fff }
 .software-btn svg{ width:16px; height:16px; flex-shrink:0 }
 .stream-mode-toggle{ display:flex; gap:.5rem; margin-bottom:.75rem; padding-bottom:.75rem; border-bottom:var(--b1) }
-.mode-btn{gap:.4rem; padding:.6rem 1.2rem; border-radius:8px; font-size:.85rem; font-weight:600; transition:background .2s,border-color .2s,color .2s; flex:1 }
+.mode-btn{gap:.4rem; padding:.6rem 1.2rem; border-radius:8px; font-size:.85rem; font-weight:600; transition:background .2s,border-color .2s,color .2s; flex:1; justify-content:center; text-align:center }
 .mode-btn:hover{ background:#252525; border-color:#444; color:#ccc }
 .mode-btn.active{ background:linear-gradient(135deg,#1a1a1a,#222); border-color:#dc2626; color:#fff }
 .mode-btn.active svg{ color:#dc2626 }
