@@ -3,7 +3,7 @@
 // SECURITY: Verifies user owns the order before streaming
 
 import type { APIRoute } from 'astro';
-import { verifyRequestUser, getDocument } from '../../lib/firebase-rest';
+import { verifyRequestUser, getDocument, invalidateReleasesCache } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger } from '../../lib/api-utils';
 
@@ -156,6 +156,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Fallback to release data
     if (!fileUrl) {
+      // Force-clear any cached release data to ensure we get fresh URLs
+      invalidateReleasesCache();
       const releaseData = await getDocument('releases', releaseId);
       if (!releaseData) {
         return ApiErrors.notFound('Release not found');
@@ -192,6 +194,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     log.info('[download-file] RESOLVED:', { urlSource, fileType, fileUrl: fileUrl.split('/').pop(), trackIndex });
+
+    // Debug mode — return resolved URL info without streaming the file
+    if (url.searchParams.get('debug') === '1') {
+      return new Response(JSON.stringify({ urlSource, fileType, fileUrl, trackIndex, filename }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     // Extract R2 key
     const objectKey = extractKeyFromUrl(fileUrl);
