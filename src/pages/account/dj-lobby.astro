@@ -2817,8 +2817,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         // Hide Go Live setup section when someone is streaming (gives more space to video)
         document.getElementById('streamKeySection')?.classList.add('hidden');
-        // Hide Multi Streaming section when live
-        document.getElementById('multiStreamSection')?.classList.add('hidden');
         // Show Broadcast Audio Panel when live
         document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
         initBroadcastMeters();
