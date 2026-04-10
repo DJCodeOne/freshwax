@@ -395,6 +395,9 @@ html, body{ height:100%; overflow:hidden; margin:0; max-width:100vw }
 .mode-btn:hover{ background:#252525; border-color:#444; color:#ccc }
 .mode-btn.active{ background:linear-gradient(135deg,#1a1a1a,#222); border-color:#dc2626; color:#fff }
 .mode-btn.active svg{ color:#dc2626 }
+.mode-btn.share-mode-btn{ flex:none; border-color:#f59e0b; color:#f59e0b }
+.mode-btn.share-mode-btn:hover{ background:#f59e0b; color:#000; border-color:#f59e0b }
+.mode-btn.share-mode-btn svg{ color:inherit }
 .mode-btn svg{ width:16px; height:16px; flex-shrink:0 }
 .relay-source-selector{ padding:.75rem; background:#1a1a1a; border:var(--b1); border-radius:8px; margin-bottom:.5rem }
 .relay-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:.75rem }
