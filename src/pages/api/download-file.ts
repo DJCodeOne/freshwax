@@ -124,11 +124,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Resolve file URL
     let fileUrl: string | null = null;
+    let urlSource = 'none';
 
     if (fileType === 'artwork') {
       fileUrl = item.downloads?.artworkUrl || null;
+      urlSource = 'order-artwork';
     } else {
       const orderTracks = item.downloads?.tracks || [];
+      log.info('[download-file] Order tracks count:', orderTracks.length, 'fileType:', fileType, 'trackIndex:', trackIndex);
       if (orderTracks.length > 0) {
         if (item.type === 'track' && item.trackId) {
           const orderTrack = orderTracks.find((t: Record<string, unknown>) =>
@@ -148,6 +151,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         }
       }
     }
+
+    if (fileUrl) urlSource = 'order-tracks';
 
     // Fallback to release data
     if (!fileUrl) {
@@ -180,9 +185,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    if (fileUrl && urlSource === 'none') urlSource = 'release-fallback';
+
     if (!fileUrl) {
       return ApiErrors.notFound('File not available');
     }
+
+    log.info('[download-file] RESOLVED:', { urlSource, fileType, fileUrl: fileUrl.split('/').pop(), trackIndex });
 
     // Extract R2 key
     const objectKey = extractKeyFromUrl(fileUrl);
