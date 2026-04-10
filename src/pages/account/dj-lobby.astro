@@ -983,9 +983,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 </p>
                 <div class="butt-static-row">
                   <div class="cred-box-mini"><label>Type</label><code>Icecast</code></div>
-                  <div class="cred-box-mini"><label>Address</label><code id="icecastServer">90.207.8.79</code></div>
                   <div class="cred-box-mini"><label>Port</label><code id="icecastPort">8000</code></div>
+                  <div class="cred-box-mini"><label>Mountpoint</label><code id="icecastMount">/live</code></div>
                   <div class="cred-box-mini"><label>User</label><code id="icecastUser">source</code></div>
+                </div>
+                <div class="cred-box-compact">
+                  <label>Address (Server)</label>
+                  <div class="cred-value-compact">
+                    <code id="icecastServer">90.207.8.79</code>
+                    <button class="copy-btn-sm" data-copy="icecastServer">Copy</button>
+                  </div>
                 </div>
                 <div class="cred-box-compact cred-box-highlight">
                   <label>Password <span style="font-size: 0.7em; opacity: 0.7;">(your stream key)</span></label>
@@ -993,13 +1000,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                     <code id="icecastPassword" class="stream-key-placeholder">Click Spawn</code>
                     <button class="spawn-key-btn" id="spawnKeyBtnButt" title="Generate stream key">Spawn</button>
                     <button class="copy-btn-sm" data-copy="icecastPassword">Copy</button>
-                  </div>
-                </div>
-                <div class="cred-box-compact">
-                  <label>Mountpoint</label>
-                  <div class="cred-value-compact">
-                    <code id="icecastMount">/live</code>
-                    <button class="copy-btn-sm" data-copy="icecastMount">Copy</button>
                   </div>
                 </div>
                 <p class="butt-tip">
