@@ -193,10 +193,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       endTime: slot.endTime,
       duration: slot.duration,
       // Always use stored hlsUrl if available (updated by DJ lobby on mode change).
-      // For placeholder/BUTT mode, fall back to the icecast→HLS bridge so
-      // the player has something to load (audio-only HLS works in video elements).
-      hlsUrl: slot.hlsUrl || (!slot.isRelay && slot.streamKey ? buildHlsUrl(slot.streamKey) : null)
-        || (slot.broadcastMode === 'placeholder' ? 'https://stream.freshwax.co.uk/icecast-live/index.m3u8' : null),
+      // For placeholder/BUTT mode, hlsUrl is intentionally null so the lobby
+      // shows the audio-only placeholder (background video + turntable visual)
+      // instead of trying to load an HLS video player.
+      hlsUrl: slot.broadcastMode === 'placeholder' ? null
+        : (slot.hlsUrl || (!slot.isRelay && slot.streamKey ? buildHlsUrl(slot.streamKey) : null)),
       broadcastMode: slot.broadcastMode || 'video',
       // streamKey intentionally omitted - security risk
       streamSource: slot.isRelay ? 'relay' : 'red5',
