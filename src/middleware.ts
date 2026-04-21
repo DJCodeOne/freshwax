@@ -321,10 +321,9 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     }
 
     if (!validateCsrfToken(existingCsrfToken, submittedToken)) {
-      console.log('[CSRF-DEBUG] BLOCKED:', pathname, 'method:', request.method, 'skip:', shouldSkipCsrf(pathname), 'cookie:', existingCsrfToken?.substring(0, 8), 'header:', submittedToken?.substring(0, 8));
       if (isApiRoute) {
         return new Response(
-          JSON.stringify({ success: false, error: 'CSRF token mismatch', debug: { path: pathname, skipped: shouldSkipCsrf(pathname) } }),
+          JSON.stringify({ success: false, error: 'CSRF token mismatch' }),
           { status: 403, headers: { 'Content-Type': 'application/json' } }
         );
       }

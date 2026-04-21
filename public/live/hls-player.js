@@ -301,8 +301,6 @@ export async function setupHlsPlayer(streamData, deps) {
   var branding = document.getElementById('videoPlayerBranding');
   if (branding) branding.classList.remove('hidden');
 
-  console.log('[setupHlsPlayer] Elements: videoPlayer=', !!videoPlayer, 'video=', !!video, 'videoPlayer.hidden=', videoPlayer?.classList.contains('hidden'), 'video.hidden=', video?.classList.contains('hidden'));
-
   var hlsUrl = normalizeHlsUrl(
     streamData.hlsUrl || streamData.videoStreamUrl || streamData.audioStreamUrl || (streamData.relaySource && streamData.relaySource.url)
   );
@@ -407,13 +405,10 @@ export async function setupHlsPlayer(streamData, deps) {
         levelLoadingRetryDelay: 200,
         levelLoadingMaxRetryTimeout: 15000
       });
-      console.log('[HLS] Loading source:', hlsUrl);
       hlsPlayer.loadSource(hlsUrl);
       hlsPlayer.attachMedia(video);
-      console.log('[HLS] Attached to video element, waiting for manifest...');
 
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
-        console.log('[HLS] Manifest parsed, levels:', data.levels ? data.levels.length : 0, 'audio:', data.audioTracks ? data.audioTracks.length : 0);
         (async function() {
           var wasPlaying = wasLiveStreamPlaying();
           try {
@@ -437,7 +432,6 @@ export async function setupHlsPlayer(streamData, deps) {
             if (pi) pi.classList.add('hidden');
             if (pa) pa.classList.remove('hidden');
             if (pb) pb.classList.add('playing');
-            console.log('[HLS] Video playing! muted:', video.muted, 'readyState:', video.readyState, 'videoWidth:', video.videoWidth, 'videoHeight:', video.videoHeight);
             rememberAutoplay();
             initGlobalAudioAnalyzer(video);
             startGlobalMeters();

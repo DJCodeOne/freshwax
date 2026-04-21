@@ -465,7 +465,6 @@ function showLiveStream(streamData) {
     var fsDjAvatar = document.getElementById('fsDjAvatar'); var fsVinyl1 = document.getElementById('fsVinylDjAvatar'); var fsVinyl2 = document.getElementById('fsVinylDjAvatar2');
     var fsAvatar = streamData.isRelay ? '/place-holder.webp' : (streamData.djAvatar || '/place-holder.webp'); if (fsDjAvatar) fsDjAvatar.src = fsAvatar; if (fsVinyl1) fsVinyl1.src = fsAvatar; if (fsVinyl2) fsVinyl2.src = fsAvatar;
     var isPlaceholderOrAudio = streamData.broadcastMode === 'placeholder' || streamData.broadcastMode === 'audio';
-    console.log('[showLiveStream] Player decision:', { broadcastMode: streamData.broadcastMode, isPlaceholderOrAudio: isPlaceholderOrAudio, streamSource: streamData.streamSource, hlsUrl: streamData.hlsUrl ? streamData.hlsUrl.substring(0, 60) : null, isRelay: streamData.isRelay });
     var hlsDeps = { shouldAutoplay: shouldAutoplay, wasLiveStreamPlaying: wasLiveStreamPlaying, rememberAutoplay: rememberAutoplay, setLiveStreamPlaying: setLiveStreamPlaying };
     if (streamData.streamSource === 'twitch' && streamData.twitchChannel) setupTwitchPlayer(streamData);
     else if (isPlaceholderOrAudio || streamData.isRelay || (streamData.streamSource !== 'red5' && !streamData.hlsUrl)) {
