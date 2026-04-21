@@ -324,7 +324,7 @@ try {
             <span class="np-duration" id="bottomDuration">--:--</span>
           </div>
           <!-- Relay Source Attribution -->
-          <div class="relay-attribution" id="relayAttribution">Relayed From The Underground Lair</div>
+          <div class="relay-attribution" id="relayAttribution" style="display:none;"></div>
 
           <!-- Offline Overlay - shown by default, hidden when stream is active -->
           <div id="offlineOverlay" class="offline-overlay is-loading">
@@ -427,8 +427,11 @@ try {
           </div>
 
           <!-- Video Player (for both live stream and playlist) -->
-          <div id="videoPlayer" class="video-player hidden" transition:persist="live-video-player">
-            <video id="hlsVideoElement" class="hls-video" playsinline preload="auto" autoplay muted aria-label="Live stream player">
+          <div id="videoPlayer" class="video-player hidden" style="background:#000;z-index:2;" transition:persist="live-video-player">
+            <div class="video-player-branding hidden" id="videoPlayerBranding">
+              <span class="brand-fresh">FRESH</span><span class="brand-wax">WAX</span>
+            </div>
+            <video id="hlsVideoElement" class="hls-video" playsinline preload="auto" autoplay muted aria-label="Live stream player" style="background:#000;">
               <track kind="captions" label="Captions unavailable for live content" default />
             </video>
             <!-- Playlist embeds will be injected here when active -->
@@ -1673,7 +1676,9 @@ try {
           name: displayName,
           displayName: displayName,
           id: userId,
-          avatar: result.avatarUrl || currentUser?.photoURL || null
+          avatar: result.avatarUrl || currentUser?.photoURL || null,
+          isPro: userInfo.isPro === true,
+          badge: window.userBadge || 'crown'
         };
 
         // Cache auth state to localStorage for instant restore on page reload
@@ -2709,7 +2714,7 @@ try {
           </div>
           ${showTitle ? `<span class="schedule-title">${escapeHtml(slot.title)}</span>` : ''}
           <div class="schedule-times">
-            <span class="schedule-time-range">${isRelay ? 'Relayed from The Underground Lair' : `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`}</span>
+            <span class="schedule-time-range">${isRelay ? `Relayed from ${escapeHtml(slot.relaySource?.stationName || 'External Station')}` : `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`}</span>
           </div>
         </div>
         ${isMySlot && (slot.status === 'scheduled' || slot.status === 'queued') ? `<button class="cancel-slot-btn" data-cancel-slot="${slot.id}" aria-label="Cancel slot">×</button>` : ''}
@@ -3610,7 +3615,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260408b"></script>
+<script type="module" src="/live-stream.js?v=20260421b"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page
