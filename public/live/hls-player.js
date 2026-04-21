@@ -282,18 +282,26 @@ export async function setupHlsPlayer(streamData, deps) {
 
   var audioPlayer = document.getElementById('audioPlayer');
   var videoPlayer = document.getElementById('videoPlayer');
-  if (audioPlayer) audioPlayer.classList.add('hidden');
-  if (videoPlayer) videoPlayer.classList.remove('hidden');
+  if (audioPlayer) { audioPlayer.classList.add('hidden'); audioPlayer.style.display = 'none'; }
+  if (videoPlayer) { videoPlayer.classList.remove('hidden'); videoPlayer.style.display = ''; videoPlayer.style.background = '#000'; videoPlayer.style.zIndex = '2'; }
 
   var video = document.getElementById('hlsVideoElement');
   var twitchEmbed = document.getElementById('twitchEmbed');
   var playlistPlayer = document.getElementById('playlistPlayer');
   var playlistOverlay = document.getElementById('playlistLoadingOverlay');
 
-  if (video) video.classList.remove('hidden');
+  if (video) { video.classList.remove('hidden'); video.style.display = ''; video.style.background = '#000'; }
   if (twitchEmbed) twitchEmbed.classList.add('hidden');
   if (playlistPlayer) { playlistPlayer.classList.add('hidden'); playlistPlayer.style.display = 'none'; }
   if (playlistOverlay) playlistOverlay.classList.add('hidden');
+
+  // Hide playlist timer and show branding for live streams
+  var durationBox = document.getElementById('bottomDurationBox');
+  if (durationBox) durationBox.style.display = 'none';
+  var branding = document.getElementById('videoPlayerBranding');
+  if (branding) branding.classList.remove('hidden');
+
+  console.log('[setupHlsPlayer] Elements: videoPlayer=', !!videoPlayer, 'video=', !!video, 'videoPlayer.hidden=', videoPlayer?.classList.contains('hidden'), 'video.hidden=', video?.classList.contains('hidden'));
 
   var hlsUrl = normalizeHlsUrl(
     streamData.hlsUrl || streamData.videoStreamUrl || streamData.audioStreamUrl || (streamData.relaySource && streamData.relaySource.url)
@@ -373,13 +381,13 @@ export async function setupHlsPlayer(streamData, deps) {
       if (hlsPlayer) hlsPlayer.destroy();
       hlsPlayer = new Hls({
         enableWorker: true,
-        lowLatencyMode: true,
+        lowLatencyMode: false,
         maxBufferLength: window.isMobileDevice ? 20 : 30,
         maxMaxBufferLength: window.isMobileDevice ? 45 : 90,
         maxBufferSize: 30000000,
         maxBufferHole: 0.5,
-        liveSyncDurationCount: 5,
-        liveMaxLatencyDurationCount: 10,
+        liveSyncDurationCount: 2,
+        liveMaxLatencyDurationCount: 5,
         liveDurationInfinity: true,
         liveBackBufferLength: 30,
         initialLiveManifestSize: 1,
@@ -399,10 +407,13 @@ export async function setupHlsPlayer(streamData, deps) {
         levelLoadingRetryDelay: 200,
         levelLoadingMaxRetryTimeout: 15000
       });
+      console.log('[HLS] Loading source:', hlsUrl);
       hlsPlayer.loadSource(hlsUrl);
       hlsPlayer.attachMedia(video);
+      console.log('[HLS] Attached to video element, waiting for manifest...');
 
-      hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
+      hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+        console.log('[HLS] Manifest parsed, levels:', data.levels ? data.levels.length : 0, 'audio:', data.audioTracks ? data.audioTracks.length : 0);
         (async function() {
           var wasPlaying = wasLiveStreamPlaying();
           try {
@@ -426,6 +437,7 @@ export async function setupHlsPlayer(streamData, deps) {
             if (pi) pi.classList.add('hidden');
             if (pa) pa.classList.remove('hidden');
             if (pb) pb.classList.add('playing');
+            console.log('[HLS] Video playing! muted:', video.muted, 'readyState:', video.readyState, 'videoWidth:', video.videoWidth, 'videoHeight:', video.videoHeight);
             rememberAutoplay();
             initGlobalAudioAnalyzer(video);
             startGlobalMeters();
@@ -441,7 +453,7 @@ export async function setupHlsPlayer(streamData, deps) {
       });
 
       var retryCount = 0;
-      var maxRetries = 5;
+      var maxRetries = 8;
       hlsPlayer.on(Hls.Events.ERROR, function(event, data) {
         if (data.fatal) {
           console.error('[HLS] Fatal error:', data.type, data.details);
@@ -449,12 +461,12 @@ export async function setupHlsPlayer(streamData, deps) {
             case Hls.ErrorTypes.NETWORK_ERROR:
               retryCount++;
               if (retryCount <= maxRetries) {
-                hlsPlayer.startLoad();
-                var delay = Math.min(1000 * Math.pow(2, retryCount - 1), 16000);
+                showReconnecting();
+                var delay = Math.min(500 * retryCount, 3000);
                 setTimeout(function() {
-                  if (!isPlaying) {
-                    showReconnecting();
+                  if (hlsPlayer) {
                     hlsPlayer.loadSource(hlsUrl);
+                    hlsPlayer.startLoad();
                   }
                 }, delay);
               } else {
@@ -614,8 +626,8 @@ export async function setupAudioPlayer(streamData, deps) {
         lowLatencyMode: true,
         maxBufferLength: 20,
         maxMaxBufferLength: 45,
-        liveSyncDurationCount: 5,
-        liveMaxLatencyDurationCount: 10,
+        liveSyncDurationCount: 2,
+        liveMaxLatencyDurationCount: 5,
         liveBackBufferLength: 30,
         liveDurationInfinity: true,
         startPosition: -1,

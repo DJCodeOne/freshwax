@@ -4,6 +4,7 @@
 var ctx = null;
 
 // Module-local state
+var lobbyMuted = false;
 var broadcastMeterAnimationId = null;
 var broadcastAudioSource = 'preview';
 var lufsHistory = [];
@@ -38,6 +39,10 @@ try {
 
 export function init(context) {
   ctx = context;
+}
+
+export function isLobbyMuted() {
+  return lobbyMuted;
 }
 
 export function getBroadcastAudioSource() {
@@ -92,6 +97,19 @@ export function initBroadcastMeters() {
         }
       }
     }
+
+    // When switching to live in OBS mode, ensure live analysers exist
+    if (currentPreviewSource === 'obs' && broadcastAudioSource === 'preview') {
+      if (!state.liveAnalyserL || !state.liveAnalyserR) {
+        var liveVid = document.getElementById('hlsVideo');
+        var audioEl = document.getElementById('audioElement');
+        var sourceEl = (liveVid && !liveVid.paused) ? liveVid : ((audioEl && !audioEl.paused) ? audioEl : liveVid);
+        if (sourceEl && ctx && ctx.setupLiveAudioMeter) {
+          ctx.setupLiveAudioMeter(sourceEl);
+        }
+      }
+    }
+
     broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
     var label = document.querySelector('#audioSourceToggle .source-label');
     if (label) label.textContent = broadcastAudioSource.toUpperCase();
@@ -107,7 +125,78 @@ export function initBroadcastMeters() {
     } else {
       if (ctx && ctx.updateAudioSourceIndicator) ctx.updateAudioSourceIndicator('obs', broadcastAudioSource);
     }
+
+    // Swap audio: only one source audible at a time
+    var previewEls = [document.getElementById('obsVideo'), document.getElementById('icecastAudio')];
+    var outputEls = [document.getElementById('hlsVideo'), document.getElementById('audioElement')];
+    var isLobbyMuted2 = lobbyMuted;
+    if (broadcastAudioSource === 'live') {
+      previewEls.forEach(function(el) { if (el) el.volume = 0; });
+      outputEls.forEach(function(el) { if (el) el.volume = isLobbyMuted2 ? 0 : 1; });
+    } else {
+      previewEls.forEach(function(el) { if (el) el.volume = isLobbyMuted2 ? 0 : 1; });
+      outputEls.forEach(function(el) { if (el) el.volume = 0; });
+    }
+
+    // Force restart broadcast meter animation on source switch
+    if (broadcastMeterAnimationId) {
+      cancelAnimationFrame(broadcastMeterAnimationId);
+      broadcastMeterAnimationId = null;
+    }
+    // Reset LUFS history so it recalculates from new source
+    lufsHistory = [];
+    lufsBlockHistory = [];
+    lastLufsBlockTime = 0;
+    peakHoldL = -Infinity;
+    peakHoldR = -Infinity;
+    animateBroadcastMeters();
   });
+
+  // Lobby mute — uses document delegation so it works regardless of DOM timing
+  if (!window._lobbyMuteInit) {
+    window._lobbyMuteInit = true;
+    var muteEnforcerInterval = null;
+
+    function applyMuteState() {
+      // Use volume instead of .muted so the AudioContext analysers keep receiving data
+      var previewIds = ['obsVideo', 'icecastAudio'];
+      var outputIds = ['hlsVideo', 'audioElement'];
+      var src = broadcastAudioSource;
+      for (var i = 0; i < previewIds.length; i++) {
+        var el = document.getElementById(previewIds[i]);
+        if (el) el.volume = (lobbyMuted || src === 'live') ? 0 : 1;
+      }
+      for (var j = 0; j < outputIds.length; j++) {
+        var el2 = document.getElementById(outputIds[j]);
+        if (el2) el2.volume = (lobbyMuted || src === 'preview') ? 0 : 1;
+      }
+    }
+
+    function updateMuteButton() {
+      var btn = document.getElementById('lobbyMuteBtn');
+      if (!btn) return;
+      var mi = btn.querySelector('.muted-icon');
+      var ui = btn.querySelector('.unmuted-icon');
+      if (mi) mi.classList.toggle('hidden', !lobbyMuted);
+      if (ui) ui.classList.toggle('hidden', lobbyMuted);
+      btn.classList.toggle('lobby-mute-active', !lobbyMuted);
+      btn.classList.toggle('lobby-mute-muted', lobbyMuted);
+    }
+
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('#lobbyMuteBtn');
+      if (!btn) return;
+      lobbyMuted = !lobbyMuted;
+      applyMuteState();
+      updateMuteButton();
+      if (lobbyMuted && !muteEnforcerInterval) {
+        muteEnforcerInterval = setInterval(applyMuteState, 300);
+      } else if (!lobbyMuted && muteEnforcerInterval) {
+        clearInterval(muteEnforcerInterval);
+        muteEnforcerInterval = null;
+      }
+    });
+  }
 
   document.getElementById('calibrateBtn')?.addEventListener('click', function() {
     var calPanel = document.getElementById('calibrationPanel');
@@ -228,10 +317,10 @@ export function animateBroadcastMeters() {
       kWeightedL = state.liveKWeightedAnalyserL;
       kWeightedR = state.liveKWeightedAnalyserR;
     } else if (currentPreviewSource === 'obs') {
-      analyserL = broadcastAudioSource === 'preview' ? state.obsAnalyserL : state.liveAnalyserL;
-      analyserR = broadcastAudioSource === 'preview' ? state.obsAnalyserR : state.liveAnalyserR;
-      kWeightedL = broadcastAudioSource === 'preview' ? state.obsKWeightedAnalyserL : state.liveKWeightedAnalyserL;
-      kWeightedR = broadcastAudioSource === 'preview' ? state.obsKWeightedAnalyserR : state.liveKWeightedAnalyserR;
+      analyserL = broadcastAudioSource === 'preview' ? state.obsAnalyserL : (state.liveAnalyserL || state.obsAnalyserL);
+      analyserR = broadcastAudioSource === 'preview' ? state.obsAnalyserR : (state.liveAnalyserR || state.obsAnalyserR);
+      kWeightedL = broadcastAudioSource === 'preview' ? state.obsKWeightedAnalyserL : (state.liveKWeightedAnalyserL || state.obsKWeightedAnalyserL);
+      kWeightedR = broadcastAudioSource === 'preview' ? state.obsKWeightedAnalyserR : (state.liveKWeightedAnalyserR || state.obsKWeightedAnalyserR);
     } else {
       analyserL = state.icecastAnalyserL;
       analyserR = state.icecastAnalyserR;

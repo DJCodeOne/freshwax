@@ -12,9 +12,11 @@ export default defineConfig({
   // For hybrid behavior, use 'server' + prerender on individual pages
   output: 'server',
 
-  // Enable CSRF protection (validates request origin)
+  // CSRF protection handled by custom middleware (double-submit cookie pattern)
+  // Astro's checkOrigin disabled — it blocks legitimate same-origin requests
+  // when Origin header is missing or mismatched (common with fetch + redirects)
   security: {
-    checkOrigin: true
+    checkOrigin: false
   },
 
   build: {

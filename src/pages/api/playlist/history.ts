@@ -33,7 +33,9 @@ const deleteSchema = z.object({
 const log = createLogger('[playlist-history]');
 
 const KV_HISTORY_KEY = 'playlist-history';
+const KV_COOLDOWN_KEY = 'playlist-cooldown-7d';
 const MAX_HISTORY_SIZE = 500;
+const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function getKV(locals: App.Locals): KVNamespace | undefined {
   return locals.runtime.env?.CACHE;
@@ -68,11 +70,21 @@ export async function GET({ request, locals }: APIContext) {
 
     // Read from KV - single key, no chunks needed
     const data = await kv.get(KV_HISTORY_KEY, 'json');
-
     const items = data?.items || [];
 
-    // History doesn't change often
-    return successResponse({ items, count: items.length }, 200, {
+    // Read 7-day cooldown list
+    let cooldownUrls: string[] = [];
+    try {
+      const cooldownData = await kv.get(KV_COOLDOWN_KEY, 'json') as Record<string, number> | null;
+      if (cooldownData) {
+        const now = Date.now();
+        cooldownUrls = Object.entries(cooldownData)
+          .filter(([, ts]) => now - ts < COOLDOWN_MS)
+          .map(([url]) => url);
+      }
+    } catch (cdErr: unknown) { /* non-critical */ }
+
+    return successResponse({ items, count: items.length, cooldownUrls }, 200, {
       headers: { 'Cache-Control': 'public, max-age=30, s-maxage=60' }
     });
   } catch (error: unknown) {
@@ -149,6 +161,22 @@ export async function POST({ request, locals }: APIContext) {
       items: history,
       lastUpdated: new Date().toISOString()
     }), { expirationTtl: KV_TTL.ONE_WEEK });
+
+    // Update 7-day cooldown list
+    try {
+      const cooldownData = await kv.get(KV_COOLDOWN_KEY, 'json') as Record<string, number> | null;
+      const cooldown: Record<string, number> = cooldownData || {};
+      const now = Date.now();
+      // Add/update this track
+      cooldown[item.url] = now;
+      // Prune expired entries
+      for (const url of Object.keys(cooldown)) {
+        if (now - cooldown[url] > COOLDOWN_MS) delete cooldown[url];
+      }
+      await kv.put(KV_COOLDOWN_KEY, JSON.stringify(cooldown), { expirationTtl: KV_TTL.ONE_WEEK });
+    } catch (cdErr: unknown) {
+      log.warn('Cooldown update failed:', cdErr instanceof Error ? cdErr.message : String(cdErr));
+    }
 
     return successResponse({ count: history.length });
   } catch (error: unknown) {

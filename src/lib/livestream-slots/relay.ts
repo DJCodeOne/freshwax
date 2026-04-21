@@ -105,7 +105,8 @@ export async function handleStartRelay(
     isRelay: true,
     relaySource: {
       url: relayUrl,
-      stationName: stationName || 'External Station'
+      stationName: stationName || 'External Station',
+      websiteUrl: approvedStation?.websiteUrl || null
     },
     viewerPeak: 0,
     totalViews: 0,

@@ -205,7 +205,8 @@ function generateId(): string {
  */
 export async function pickRandomFromLocalServer(
   lastPlayedUrl: string | null,
-  recentlyPlayed: Map<string, number>
+  recentlyPlayed: Map<string, number>,
+  serverCooldownUrls?: string[]
 ): Promise<GlobalPlaylistItem | null> {
   try {
     // Use authenticated proxy to prevent unauthenticated inventory disclosure
@@ -233,11 +234,17 @@ export async function pickRandomFromLocalServer(
       return null;
     }
 
-    // Filter out recently played tracks
+    // Build server cooldown set for fast lookup
+    const cooldownSet = new Set(serverCooldownUrls || []);
+
+    // Filter out recently played tracks (server-side 7-day cooldown + local cooldown)
     const now = Date.now();
     const availableTracks = (data.files as ServerFileItem[]).filter((file) => {
       const url = `${LOCAL_PLAYLIST_SERVER}${file.url}`;
       if (url === lastPlayedUrl) return false;
+      // Server-side 7-day cooldown
+      if (cooldownSet.has(url)) return false;
+      // Local cooldown (fallback)
       const timestamp = recentlyPlayed.get(url);
       if (!timestamp) return true;
       return (now - timestamp) >= TRACK_COOLDOWN_MS;
@@ -294,8 +301,19 @@ export async function pickRandomFromHistory(
   recentlyPlayed: Map<string, number>,
   localPlayHistory: PlaylistHistoryEntry[]
 ): Promise<GlobalPlaylistItem | null> {
+  // Fetch server-side 7-day cooldown list
+  let serverCooldownUrls: string[] = [];
+  try {
+    const cdResponse = await fetch('/api/playlist/history/');
+    if (cdResponse.ok) {
+      const cdResult = await cdResponse.json();
+      serverCooldownUrls = cdResult.cooldownUrls || [];
+    }
+  } catch (e: unknown) { /* non-critical */ }
+  const cooldownSet = new Set(serverCooldownUrls);
+
   // First, try the local playlist server (H: drive MP3s) - more reliable, no bot issues
-  const localTrack = await pickRandomFromLocalServer(lastPlayedUrl, recentlyPlayed);
+  const localTrack = await pickRandomFromLocalServer(lastPlayedUrl, recentlyPlayed, serverCooldownUrls);
   if (localTrack) {
     return localTrack;
   }
@@ -310,18 +328,17 @@ export async function pickRandomFromHistory(
     if (result.success && result.items && result.items.length > 0) {
       const serverHistory = result.items as ServerHistoryItem[];
 
-      // Filter out recently played tracks and the last played track
-      const AUTO_PLAY_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
+      // Filter out tracks on 7-day server cooldown + local cooldown
       const now = Date.now();
 
       const availableTracks = serverHistory.filter((entry) => {
-        // Never pick the track that just finished playing
         if (entry.url === lastPlayedUrl) return false;
-
+        // Server-side 7-day cooldown
+        if (cooldownSet.has(entry.url)) return false;
+        // Local cooldown fallback
         const timestamp = recentlyPlayed.get(entry.url);
-        if (!timestamp) return true; // Never played recently, available
-        const elapsed = now - timestamp;
-        return elapsed >= AUTO_PLAY_COOLDOWN_MS; // Available if 60+ minutes since last play
+        if (!timestamp) return true;
+        return (now - timestamp) >= TRACK_COOLDOWN_MS;
       });
 
       if (availableTracks.length === 0) {

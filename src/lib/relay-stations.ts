@@ -28,7 +28,6 @@ export const APPROVED_RELAY_STATIONS: RelayStation[] = [
     description: 'Underground Music Webradio - Jungle, DnB, Breakcore, Hip-Hop, Dub',
     checkUrl: 'https://cressida.shoutca.st:2199/rpc/theundergroundlair/streaminfo.get'
   },
-  // Add more stations here as needed
 ];
 
 // Check if a station is currently live

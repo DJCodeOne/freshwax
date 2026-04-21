@@ -442,7 +442,8 @@ const nonce = Astro.locals.nonce || '';
 
         tbody.innerHTML = filtered.map(u => {
           const roles = [];
-          if (u.roles.customer) roles.push('<span class="badge badge-secondary">Customer</span>');
+          if (u.isArtist || u.roles.artist) roles.push('<span class="badge badge-success">Artist</span>');
+          else if (u.roles.customer) roles.push('<span class="badge badge-secondary">Customer</span>');
           if (u.roles.dj) roles.push('<span class="badge badge-info">🎧 DJ</span>');
 
           let statusBadge = '<span class="badge badge-secondary">Basic</span>';

@@ -45,9 +45,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (user.deleted === true) continue;
 
       const roles = user.roles || {};
-      const isArtist = roles.artist === true;
-      const isMerchSupplier = roles.merchSupplier === true || roles.merchSeller === true;
-      const isVinylSeller = roles.vinylSeller === true;
+      const isArtist = roles.artist === true || user.isArtist === true;
+      const isMerchSupplier = roles.merchSupplier === true || roles.merchSeller === true || user.isMerchSupplier === true;
+      const isVinylSeller = roles.vinylSeller === true || user.isVinylSeller === true;
 
       // Only include if they have artist, merch, or vinyl seller role
       if (!isArtist && !isMerchSupplier && !isVinylSeller) continue;

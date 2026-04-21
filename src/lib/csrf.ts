@@ -46,6 +46,10 @@ const CSRF_SKIP = new Set([
   '/api/dj-lobby/presence/',
   '/api/dj-lobby/takeover/',
   '/api/dj-lobby/broadcast-mode/',
+  // Livestream slots — authenticated via Bearer token (Firebase ID token)
+  '/api/livestream/slots/',
+  '/api/livestream/status/',
+  '/api/livestream/manage/',
   '/api/pusher/auth/',
   // Error logging & consent logging are fire-and-forget from inline scripts
   // that run before the meta tag is available (e.g. Layout.astro error handler).

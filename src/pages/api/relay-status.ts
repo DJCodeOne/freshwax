@@ -8,7 +8,6 @@ import { TIMEOUTS } from '../../lib/timeouts';
 
 const STATION_CHECK_URLS: Record<string, string | null> = {
   'underground-lair': 'https://cressida.shoutca.st:2199/rpc/theundergroundlair/streaminfo.get',
-  'somafm-groovesalad': null // SomaFM is always live, no check needed
 };
 
 export const GET: APIRoute = async ({ request, url }) => {

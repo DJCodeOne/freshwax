@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { updateDocument, getDocument } from '../../../lib/firebase-rest';
+import { updateDocument, getDocument, setDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
@@ -56,6 +56,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (userDoc) {
       const existingRoles = userDoc.roles || {};
       await updateDocument('users', partnerId, {
+        approved: true,
         roles: {
           ...existingRoles,
           artist: existingRoles.artist || artistDoc?.isArtist || true,
@@ -67,6 +68,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
           approvedAt: now
         }
       });
+    }
+
+    // Create partners document — any approved role (artist, label, merch, vinyl) becomes a partner
+    const existingPartner = await getDocument('partners', partnerId);
+    if (!existingPartner) {
+      const partnerData: Record<string, unknown> = {
+        partnerId,
+        artistName: artistDoc?.artistName || artistDoc?.name || userDoc?.displayName || '',
+        name: artistDoc?.name || artistDoc?.artistName || userDoc?.displayName || '',
+        email: artistDoc?.email || userDoc?.email || '',
+        bio: artistDoc?.bio || '',
+        links: artistDoc?.links || '',
+        isArtist: artistDoc?.isArtist || false,
+        isLabel: artistDoc?.isLabel || false,
+        isMerchSupplier: artistDoc?.isMerchSupplier || false,
+        isVinylSeller: artistDoc?.isVinylSeller || false,
+        isDJ: artistDoc?.isDJ || false,
+        approved: true,
+        approvedAt: now,
+        approvedBy: 'admin',
+        createdAt: artistDoc?.createdAt || now,
+        promotedAt: now,
+        suspended: false,
+        userId: partnerId,
+      };
+      await setDocument('partners', partnerId, partnerData);
+      log.info('Created partners document for', partnerId);
     }
 
     return successResponse({});

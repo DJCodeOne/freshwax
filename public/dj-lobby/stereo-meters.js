@@ -17,6 +17,8 @@ var meterLevels = new Map();
 var activeAudioSource = 'preview'; // 'preview' or 'live'
 
 export function getObsAudioContext() { return obsAudioContext; }
+export function resetObsAudioContext() { if (obsAudioContext) { try { obsAudioContext.close(); } catch(e) {} obsAudioContext = null; } }
+export function resumeObsAudioContext() { if (obsAudioContext && obsAudioContext.state === 'suspended') { obsAudioContext.resume(); } }
 export function getLiveAudioContext() { return liveAudioContext; }
 export function getObsMeterAnimationId() { return obsMeterAnimationId; }
 export function setObsMeterAnimationId(v) { obsMeterAnimationId = v; }

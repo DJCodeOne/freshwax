@@ -13,7 +13,7 @@ import {
   setupHlsPlayer, setupTwitchPlayer, setupAudioPlayer, setupRecording,
   destroyHlsPlayer, cleanupHlsAbort, getGlobalAudioContext,
   getIsRecording, stopRecording
-} from '/live/hls-player.js';
+} from '/live/hls-player.js?v=20260410b';
 
 import {
   getPusherConfig, loadPusherScript, setupLiveStatusPusher
@@ -322,12 +322,12 @@ function syncPlayButtonWithPlaylist(retries) {
 // --- Stream view registration ---
 async function registerStreamView(streamId) {
   if (!streamId) return;
-  var user = auth && auth.currentUser; var userId = (user && user.uid) || ('anon-' + Math.random().toString(36).substr(2, 9));
+  var user = auth && auth.currentUser; var userId = (user && user.uid) || viewerSessionId || ('anon-' + Math.random().toString(36).substr(2, 9));
   var userName = (window.currentUserInfo && window.currentUserInfo.name) || (user && user.displayName) || 'Viewer';
   try { var ctrl = new AbortController(); var timer = setTimeout(function() { ctrl.abort(); }, 15000);
     var resp = await fetch('/api/livestream/listeners/', { signal: ctrl.signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'join', streamId: streamId, userId: userId, userName: userName, avatarUrl: (user && user.photoURL) || null }) });
     clearTimeout(timer); if (!resp.ok) return; var data = await resp.json(); var viewerEl = document.getElementById('viewerCount');
-    if (viewerEl && data.success && data.totalViews) viewerEl.textContent = data.totalViews;
+    if (viewerEl && data.success && data.activeViewers) viewerEl.textContent = data.activeViewers;
   } catch (e) {}
 }
 
@@ -349,6 +349,7 @@ async function sendHeartbeat(streamId) {
     var resp = await fetch('/api/livestream/listeners/', { signal: ctrl.signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     clearTimeout(timer); if (!resp.ok) { return; } var data = await resp.json(); var count = data.activeViewers || 0; var chatViewers = document.getElementById('chatViewers');
     if (chatViewers) { var label = currentStream ? 'watching' : 'listening'; chatViewers.textContent = count + ' ' + label; }
+    var viewerEl = document.getElementById('viewerCount'); if (viewerEl) viewerEl.textContent = count;
   } catch (e) { /* heartbeat failed */ }
 }
 
@@ -376,7 +377,7 @@ function setupAuthListener() {
 // --- Reactions ---
 function setupReactions(streamId) {
   var shareBtn = document.getElementById('shareBtn');
-  if (shareBtn) { shareBtn.onclick = function() { var url = window.location.href; if (navigator.share) { navigator.share({ title: (currentStream && currentStream.title) || 'Live Stream', text: 'Check out this live stream on Fresh Wax!', url: url }); } else { navigator.clipboard.writeText(url); alert('Link copied!'); } }; }
+  // Share handled by share.js module (custom modal with social buttons)
   if (currentUser) loadUserReactions(streamId);
 }
 
@@ -397,6 +398,7 @@ function stopLiveStream() {
   var audioEl = document.getElementById('audioElement'); if (audioEl) { try { audioEl.pause(); audioEl.removeAttribute('src'); audioEl.load(); } catch (e) {} }
   stopGlobalMeters(); currentStream = null; window.currentStreamData = null; window.isLiveStreamActive = false; window.streamDetectedThisSession = false; setLiveStreamPlaying(false); setChatCurrentStream(null);
   var relayAttr = document.getElementById('relayAttribution'); if (relayAttr) relayAttr.style.display = 'none';
+  var branding = document.getElementById('videoPlayerBranding'); if (branding) branding.classList.add('hidden');
 }
 
 // --- Offline state ---
@@ -429,7 +431,15 @@ function showLiveStream(streamData) {
   try {
     window.currentStreamId = streamData.id; window.currentStreamData = streamData; window.firebaseAuth = auth;
     if (streamData.isRelay) { if (typeof window.renderTodaySchedule === 'function') window.renderTodaySchedule(); var djNameCard = document.getElementById('liveDjNameCard'); if (djNameCard) djNameCard.textContent = streamData.title || 'Relay Stream'; }
-    var relayAttr = document.getElementById('relayAttribution'); if (relayAttr) relayAttr.style.display = streamData.isRelay ? 'block' : 'none';
+    var relayAttr = document.getElementById('relayAttribution');
+    if (relayAttr) {
+      relayAttr.style.display = streamData.isRelay ? 'block' : 'none';
+      if (streamData.isRelay && streamData.relaySource) {
+        var siteUrl = streamData.relaySource.websiteUrl || '';
+        var domain = siteUrl ? siteUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') : (streamData.relaySource.stationName || 'External Station');
+        relayAttr.textContent = 'Relayed from ' + domain;
+      }
+    }
     registerStreamView(streamData.id);
     var offState = document.getElementById('offlineState'); if (offState) offState.classList.add('hidden');
     var offOverlay = document.getElementById('offlineOverlay'); if (offOverlay) offOverlay.remove();
@@ -446,7 +456,7 @@ function showLiveStream(streamData) {
     var uiFields = { djName: displayName, controlsDjName: displayName || 'DJ', streamGenre: streamData.genre || 'Jungle / D&B', viewerCount: streamData.totalViews || streamData.currentViewers || 0, likeCount: streamData.totalLikes || 0, avgRating: (streamData.averageRating || 0).toFixed(1), streamDescription: streamData.description || 'No description', audioDjName: displayName || 'DJ', audioShowTitle: streamData.isRelay ? (streamData.relayNowPlaying ? 'Now Playing: ' + streamData.relayNowPlaying : 'Relayed from ' + ((streamData.relaySource && streamData.relaySource.stationName) || 'External Station')) : (streamData.title || 'Live on Fresh Wax'), fsStreamTitle: streamData.title || 'Live Stream', fsDjName: displayName || 'DJ', fsAudioDjName: displayName || 'DJ' };
     Object.keys(uiFields).forEach(function(key) { var el = document.getElementById(key); if (!el) return; var isNameField = (key === 'controlsDjName' || key === 'djName' || key === 'audioDjName' || key === 'fsDjName' || key === 'fsAudioDjName'); if (streamData.isRelay && isNameField) el.innerHTML = '<span style="color: #ef4444;">' + escapeHtml(uiFields[key]) + '</span>'; else el.textContent = uiFields[key]; });
     var streamTitle = document.getElementById('streamTitle');
-    if (streamTitle) { if (streamData.isRelay && streamData.relaySource && streamData.relaySource.stationName) streamTitle.innerHTML = '<span class="title-live">RELAY</span> <span class="title-relay-from">from ' + escapeHtml(streamData.relaySource.stationName) + '</span>'; else streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>'; }
+    if (streamTitle) { if (streamData.isRelay && streamData.relaySource && streamData.relaySource.stationName) streamTitle.innerHTML = '<span class="title-live">RELAYED FROM</span> <span class="title-relay-from">' + escapeHtml(streamData.relaySource.stationName).toUpperCase() + '</span>'; else streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>'; }
     var audioBadge = document.getElementById('audioBadgeText'); var fsAudioBadge = document.getElementById('fsAudioBadgeText');
     if (streamData.isRelay) { if (audioBadge) audioBadge.textContent = 'RELAY'; if (fsAudioBadge) fsAudioBadge.textContent = 'RELAY'; } else { if (audioBadge) audioBadge.textContent = 'AUDIO ONLY'; if (fsAudioBadge) fsAudioBadge.textContent = 'AUDIO ONLY'; }
     var avatarSrc = streamData.isRelay ? '/place-holder.webp' : streamData.djAvatar; var djAvatar = document.getElementById('djAvatar'); var streamCover = document.getElementById('streamCover'); var vinyl1 = document.getElementById('vinylDjAvatar'); var vinyl2 = document.getElementById('vinylDjAvatar2');
@@ -455,6 +465,7 @@ function showLiveStream(streamData) {
     var fsDjAvatar = document.getElementById('fsDjAvatar'); var fsVinyl1 = document.getElementById('fsVinylDjAvatar'); var fsVinyl2 = document.getElementById('fsVinylDjAvatar2');
     var fsAvatar = streamData.isRelay ? '/place-holder.webp' : (streamData.djAvatar || '/place-holder.webp'); if (fsDjAvatar) fsDjAvatar.src = fsAvatar; if (fsVinyl1) fsVinyl1.src = fsAvatar; if (fsVinyl2) fsVinyl2.src = fsAvatar;
     var isPlaceholderOrAudio = streamData.broadcastMode === 'placeholder' || streamData.broadcastMode === 'audio';
+    console.log('[showLiveStream] Player decision:', { broadcastMode: streamData.broadcastMode, isPlaceholderOrAudio: isPlaceholderOrAudio, streamSource: streamData.streamSource, hlsUrl: streamData.hlsUrl ? streamData.hlsUrl.substring(0, 60) : null, isRelay: streamData.isRelay });
     var hlsDeps = { shouldAutoplay: shouldAutoplay, wasLiveStreamPlaying: wasLiveStreamPlaying, rememberAutoplay: rememberAutoplay, setLiveStreamPlaying: setLiveStreamPlaying };
     if (streamData.streamSource === 'twitch' && streamData.twitchChannel) setupTwitchPlayer(streamData);
     else if (isPlaceholderOrAudio || streamData.isRelay || (streamData.streamSource !== 'red5' && !streamData.hlsUrl)) {
@@ -474,6 +485,13 @@ async function checkLiveStatus(forceRefresh) {
     var ctrl = new AbortController(); var timer = setTimeout(function() { ctrl.abort(); }, 15000);
     var resp = await fetch('/api/livestream/status/?_t=' + ts + freshParam, { signal: ctrl.signal }); clearTimeout(timer); if (!resp.ok) return; var data = await resp.json();
     if (data.success && data.isLive && data.primaryStream) {
+      // Always re-fetch with fresh=1 if stream appears to be audio-only but has a stream key
+      // This catches stale cached broadcastMode:'placeholder' when DJ is actually streaming video
+      var ps = data.primaryStream;
+      if (!forceRefresh && ps.broadcastMode !== 'video' && ps.streamSource !== 'twitch' && !ps.isRelay) {
+        checkLiveStatus(true);
+        return;
+      }
       wasLiveStreamActive = true; streamEndedAt = null;
       if (playlistManager && playlistManager.isPlaying) { await playlistManager.pause(); playlistManager.wasPausedForStream = true; }
       var ppEl = document.getElementById('playlistPlayer'); if (ppEl) ppEl.classList.add('hidden');

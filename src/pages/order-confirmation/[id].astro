@@ -458,6 +458,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <div id="zipProgressFill" class="zip-progress-fill"></div>
         </div>
         <p id="zipProgressText" class="zip-progress-text">Preparing download...</p>
+        <p id="zipProgressNote" class="zip-progress-note hidden">WAV files are large — this may take a minute or two</p>
         <div id="zipFileList" class="zip-file-list"></div>
         <button type="button" id="zipModalClose" class="zip-modal-close">Cancel</button>
       </div>
@@ -794,10 +795,41 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     border-radius: 4px;
     transition: width 0.3s ease;
     width: 0%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .zip-progress-fill.active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 6px,
+      rgba(255,255,255,0.15) 6px,
+      rgba(255,255,255,0.15) 12px
+    );
+    animation: zip-stripe-move 0.6s linear infinite;
+  }
+
+  @keyframes zip-stripe-move {
+    0% { background-position: 0 0; }
+    100% { background-position: 17px 0; }
   }
 
   .zip-progress-fill.creating {
     animation: pulse-opacity-60 1.5s ease-in-out infinite;
+  }
+
+  .zip-progress-note {
+    font-size: 0.75rem;
+    color: #999;
+    margin-bottom: 0.75rem;
+    font-style: italic;
   }
 
   .zip-progress-text {
@@ -1595,7 +1627,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       // Add all tracks (MP3 and WAV)
       tracks.forEach((track) => {
-        const trackName = artistName ? `${artistName} - ${track.name}` : track.name;
+        const trackName = track.name;
         if (track.mp3Url) {
           filesToDownload.push({
             url: track.mp3Url,
@@ -1631,10 +1663,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const zip = new window.JSZip();
       const folder = zip.folder(releaseName);
 
+      // Show note if WAVs are included
+      const progressNote = document.getElementById('zipProgressNote');
+      const hasWavs = filesToDownload.some(f => f.filename.endsWith('.wav'));
+      if (hasWavs && progressNote) progressNote.classList.remove('hidden');
+
       // Download each file and add to ZIP
       let completed = 0;
       let successCount = 0;
       const downloadProgressWeight = 80;
+      progressFill.classList.add('active');
 
       for (const file of filesToDownload) {
         if (isCancelled) {
@@ -1643,7 +1681,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         const basePercent = Math.round((completed / filesToDownload.length) * downloadProgressWeight);
         progressFill.style.width = `${basePercent}%`;
-        progressText.textContent = `Downloading ${file.label}... ${basePercent}%`;
+        progressText.textContent = `${file.label}...`;
 
         const listItem = document.createElement('div');
         listItem.className = 'zip-file-item';
@@ -1657,7 +1695,37 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           const response = await fetch(proxyUrl, { headers, signal: abortController.signal });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-          const blob = await response.blob();
+          // Stream with progress tracking
+          const contentLength = response.headers.get('Content-Length');
+          const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+          let blob;
+
+          if (totalBytes > 0 && response.body) {
+            const reader = response.body.getReader();
+            const chunks = [];
+            let received = 0;
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              received += value.length;
+
+              const fileFraction = received / totalBytes;
+              const filePercent = basePercent + Math.round(fileFraction * (downloadProgressWeight / filesToDownload.length));
+              progressFill.style.width = `${filePercent}%`;
+
+              const sizeMB = (received / 1024 / 1024).toFixed(1);
+              const totalMB = (totalBytes / 1024 / 1024).toFixed(1);
+              listItem.textContent = `⏳ ${file.label}`;
+              progressText.textContent = `${file.label}... ${sizeMB} / ${totalMB} MB`;
+            }
+
+            blob = new Blob(chunks);
+          } else {
+            blob = await response.blob();
+          }
+
           folder.file(file.filename, blob);
 
           listItem.textContent = `✓ ${file.label}`;
@@ -1675,6 +1743,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         progressFill.style.width = `${overallPercent}%`;
       }
 
+      progressFill.classList.remove('active');
+
       if (successCount === 0) {
         throw new Error('No files could be downloaded');
       }
@@ -1683,6 +1753,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       progressText.textContent = 'Creating ZIP file...';
       progressFill.style.width = '85%';
       progressFill.classList.add('creating');
+      progressFill.classList.add('active');
 
       const zipBlob = await zip.generateAsync({
         type: 'blob',
@@ -1694,6 +1765,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       });
 
       progressFill.classList.remove('creating');
+      progressFill.classList.remove('active');
       progressFill.style.width = '100%';
       progressText.textContent = 'Download ready!';
 
@@ -1712,6 +1784,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         modal.classList.add('hidden');
         document.body.style.overflow = '';
         progressFill.style.width = '0%';
+        progressFill.classList.remove('active');
+        if (progressNote) progressNote.classList.add('hidden');
       }, 1500);
 
       button.innerHTML = '✓ Done!';
@@ -1733,6 +1807,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           document.body.style.overflow = '';
           progressFill.style.width = '0%';
           progressFill.style.background = '';
+          progressFill.classList.remove('active');
+          if (progressNote) progressNote.classList.add('hidden');
         }, 3000);
       }
 

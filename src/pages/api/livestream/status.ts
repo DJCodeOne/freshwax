@@ -197,7 +197,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // shows the audio-only placeholder (background video + turntable visual)
       // instead of trying to load an HLS video player.
       hlsUrl: slot.broadcastMode === 'placeholder' ? null
-        : (slot.hlsUrl || (!slot.isRelay && slot.streamKey ? buildHlsUrl(slot.streamKey) : null)),
+        : (!slot.isRelay && slot.streamKey ? buildHlsUrl(slot.streamKey) : (slot.hlsUrl || null)),
       broadcastMode: slot.broadcastMode || 'video',
       // streamKey intentionally omitted - security risk
       streamSource: slot.isRelay ? 'relay' : 'red5',

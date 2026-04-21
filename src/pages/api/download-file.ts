@@ -3,7 +3,7 @@
 // SECURITY: Verifies user owns the order before streaming
 
 import type { APIRoute } from 'astro';
-import { verifyRequestUser, getDocument, invalidateReleasesCache } from '../../lib/firebase-rest';
+import { verifyRequestUser, getDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger } from '../../lib/api-utils';
 
@@ -124,14 +124,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Resolve file URL
     let fileUrl: string | null = null;
-    let urlSource = 'none';
 
     if (fileType === 'artwork') {
       fileUrl = item.downloads?.artworkUrl || null;
-      urlSource = 'order-artwork';
     } else {
       const orderTracks = item.downloads?.tracks || [];
-      log.info('[download-file] Order tracks count:', orderTracks.length, 'fileType:', fileType, 'trackIndex:', trackIndex);
       if (orderTracks.length > 0) {
         if (item.type === 'track' && item.trackId) {
           const orderTrack = orderTracks.find((t: Record<string, unknown>) =>
@@ -152,12 +149,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    if (fileUrl) urlSource = 'order-tracks';
-
     // Fallback to release data
     if (!fileUrl) {
-      // Force-clear any cached release data to ensure we get fresh URLs
-      invalidateReleasesCache();
       const releaseData = await getDocument('releases', releaseId);
       if (!releaseData) {
         return ApiErrors.notFound('Release not found');
@@ -187,19 +180,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    if (fileUrl && urlSource === 'none') urlSource = 'release-fallback';
-
     if (!fileUrl) {
       return ApiErrors.notFound('File not available');
-    }
-
-    log.info('[download-file] RESOLVED:', { urlSource, fileType, fileUrl: fileUrl.split('/').pop(), trackIndex });
-
-    // Debug mode — return resolved URL info without streaming the file
-    if (url.searchParams.get('debug') === '1') {
-      return new Response(JSON.stringify({ urlSource, fileType, fileUrl, trackIndex, filename }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
     }
 
     // Extract R2 key

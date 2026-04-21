@@ -698,6 +698,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <button type="button" class="panel-btn" id="audioSourceToggle" title="Toggle Source" aria-label="Toggle audio source">
                   <span class="source-label">PREVIEW</span>
                 </button>
+                <button type="button" class="panel-btn lobby-mute-active" id="lobbyMuteBtn" title="Mute lobby audio (does not affect live output)" aria-label="Mute lobby audio">
+                  <svg class="unmuted-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg>
+                  <svg class="muted-icon hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                </button>
                 <button type="button" class="panel-btn" id="calibrateBtn" title="Calibrate Meters" aria-label="Calibrate meters">CAL</button>
                 <button type="button" class="panel-btn" id="panelMinimize" title="Minimize" aria-label="Minimize panel">−</button>
               </div>
@@ -982,9 +986,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="setup-row butt-settings hidden" id="buttSettings">
                 <div class="butt-static-row">
                   <div class="cred-box-mini"><label>Type</label><code>Icecast</code></div>
-                  <div class="cred-box-mini"><label>Port</label><code id="icecastPort">8000</code></div>
+                  <div class="cred-box-mini"><label>Port</label><code>8000</code></div>
                   <div class="cred-box-mini"><label>Mountpoint</label><code id="icecastMount">/live</code></div>
                   <div class="cred-box-mini"><label>User</label><code id="icecastUser">source</code></div>
+                  <div class="cred-box-mini"><label>SSL/TLS</label><code>Unticked</code></div>
                 </div>
                 <div class="cred-box-compact">
                   <label>Address (Server)</label>
@@ -994,10 +999,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   </div>
                 </div>
                 <div class="cred-box-compact cred-box-highlight">
-                  <label>Password <span style="font-size: 0.7em; opacity: 0.7;">(your stream key)</span></label>
+                  <label>Password</label>
                   <div class="cred-value-compact">
-                    <code id="icecastPassword" class="stream-key-placeholder">Click Spawn</code>
-                    <button class="spawn-key-btn" id="spawnKeyBtnButt" title="Generate stream key">Spawn</button>
+                    <code id="icecastPassword">freshwax-source-2024</code>
                     <button class="copy-btn-sm" data-copy="icecastPassword">Copy</button>
                   </div>
                 </div>
@@ -1390,6 +1394,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     </div>
   </div>
 
+<script is:inline nonce={nonce}>
+  window.addEventListener('error', function(e) { console.error('[DJ-Lobby] Uncaught error:', e.message, e.filename, e.lineno); });
+  window.addEventListener('unhandledrejection', function(e) { console.error('[DJ-Lobby] Unhandled rejection:', e.reason); });
+</script>
 <script is:inline type="module" nonce={nonce}>
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
@@ -1408,17 +1416,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   } from '/dj-lobby-pusher.js?v=3.5';
 
   // Extracted modules (DJ lobby code split)
-  import * as audioMeters from '/dj-lobby/audio-meters.js';
-  import * as lobbyChat from '/dj-lobby/chat.js';
-  import * as lobbyDm from '/dj-lobby/dm.js';
-  import * as scheduling from '/dj-lobby/scheduling.js';
-  import * as shareModule from '/dj-lobby/share.js';
-  import * as videoPlayer from '/dj-lobby/video-player.js?v=20260410';
-  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=3';
-  import * as relayModule from '/dj-lobby/relay.js';
-  import * as initModalModule from '/dj-lobby/init-modal.js';
-  import * as eligibilityModule from '/dj-lobby/eligibility.js';
-  import * as stereoMetersModule from '/dj-lobby/stereo-meters.js';
+  import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260417';
+  import * as lobbyChat from '/dj-lobby/chat.js?v=20260410';
+  import * as lobbyDm from '/dj-lobby/dm.js?v=20260410';
+  import * as scheduling from '/dj-lobby/scheduling.js?v=20260410b';
+  import * as shareModule from '/dj-lobby/share.js?v=20260410';
+  import * as videoPlayer from '/dj-lobby/video-player.js?v=20260410j';
+  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260410';
+  import * as relayModule from '/dj-lobby/relay.js?v=20260410';
+  import * as initModalModule from '/dj-lobby/init-modal.js?v=20260410';
+  import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260410';
+  import * as stereoMetersModule from '/dj-lobby/stereo-meters.js?v=20260410';
 
   // ============================================
   // MODULE FUNCTION ALIASES
@@ -1465,10 +1473,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   var initObsPreviewPlayer = videoPlayer.initObsPreviewPlayer;
   var destroyObsPreviewPlayer = videoPlayer.destroyObsPreviewPlayer;
   var startObsPreviewCheck = function() {
-    var lc = document.getElementById('mainLobby');
-    if (lc && lc.classList.contains('obs-mode')) {
-      videoPlayer.startObsPreviewCheck();
-    }
+    videoPlayer.startObsPreviewCheck();
   };
   var stopObsPreviewCheck = videoPlayer.stopObsPreviewCheck;
   var updateMuteButtonState = videoPlayer.updateMuteButtonState;
@@ -1686,18 +1691,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   const urlParams = new URLSearchParams(window.location.search);
   let currentStreamKey = urlParams.get('testPreview') || null;
 
-  // Helper function to update BUTT password when stream key changes
+  // BUTT password is now fixed (icecast source password), no longer tied to stream key
   function updateButtPassword(streamKey) {
-    const icecastPasswordEl = document.getElementById('icecastPassword');
-    if (icecastPasswordEl) {
-      if (streamKey) {
-        icecastPasswordEl.textContent = streamKey;
-        icecastPasswordEl.classList.remove('stream-key-placeholder');
-      } else {
-        icecastPasswordEl.textContent = 'Book a slot first';
-        icecastPasswordEl.classList.add('stream-key-placeholder');
-      }
-    }
+    // No-op — icecast password is hardcoded in the HTML
   }
   const forcePreview = urlParams.has('forcePreview');
   // Allow overriding HLS base URL for testing (e.g., ?hlsBase=https://tunnel.trycloudflare.com)
@@ -1774,14 +1770,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     setTimeout(loadTestPreview, 1000);
   }
 
-  if (currentStreamKey) {
-    if (forcePreview) {
-      // Force start preview check immediately after page loads
-      setTimeout(() => {
-        startObsPreviewCheck();
-      }, 2000);
-    }
-  }
+  // Always start OBS preview check so DJs can see their feed before going live
+  setTimeout(() => {
+    console.log('[DJ-Lobby] Starting OBS preview check...');
+    startObsPreviewCheck();
+    console.log('[DJ-Lobby] OBS preview check started');
+  }, 2000);
 
   // Takeover limiting - max 3 attempts per session
   let takeoverAttempts = 0;
@@ -2097,11 +2091,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       log: log,
       updateButtPassword: updateButtPassword,
       startObsPreviewCheck: function() {
-        // Only poll OBS HLS preview when in OBS/Advanced mode
-        var lc = document.getElementById('mainLobby');
-        if (lc && lc.classList.contains('obs-mode')) {
-          return videoPlayer.startObsPreviewCheck();
-        }
+        return videoPlayer.startObsPreviewCheck();
       },
       loadStreamStatus: loadStreamStatus,
       updateEndStreamButton: updateEndStreamButton,
@@ -2112,12 +2102,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       getCurrentStreamMode: function() { return relayModule.getCurrentStreamMode ? relayModule.getCurrentStreamMode() : currentStreamMode; },
       getSelectedRelaySource: function() { return relayModule.getSelectedRelaySource ? relayModule.getSelectedRelaySource() : selectedRelaySource; },
       getBroadcastMode: function() { return videoPlayer.getBroadcastMode(); },
+      setBroadcastModeDirect: function(m) { return videoPlayer.setBroadcastModeDirect(m); },
+      getObsConnected: function() { return videoPlayer.getObsConnected(); },
       getCurrentPreviewSource: function() { return videoPlayer.getCurrentPreviewSource(); },
       getIcecastAudioContext: function() { return videoPlayer.getIcecastAudioContext(); },
       getIcecastAnalyserL: function() { return videoPlayer.getIcecastAnalyserL(); },
       getIcecastAnalyserR: function() { return videoPlayer.getIcecastAnalyserR(); },
       getIcecastGainNode: function() { return videoPlayer.getIcecastGainNode(); },
       getCurrentStreamKey: function() { return scheduling.getCurrentStreamKey(); },
+      setCurrentStreamKey: function(k) { return scheduling.setCurrentStreamKey(k); },
       getAnalyserState: function() {
         return {
           obsAnalyserL: obsAnalyserL,
@@ -2139,6 +2132,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       },
       updateAudioSourceIndicator: function(s, m) { return videoPlayer.updateAudioSourceIndicator(s, m); },
       setupAudioMeter: function(el, label) { if (_setupAudioMeterRef) _setupAudioMeterRef(el, label); },
+      setupLiveAudioMeter: function(el) {
+        if (_setupAudioMeterRef) {
+          var result = _setupAudioMeterRef(el, 'Live');
+          if (result) {
+            liveAnalyserL = result.analyserL;
+            liveAnalyserR = result.analyserR;
+            liveKWeightedAnalyserL = result.kWeightedAnalyserL;
+            liveKWeightedAnalyserR = result.kWeightedAnalyserR;
+          }
+        }
+      },
       openDmConversation: openDmConversation,
       sendDm: sendDm,
       updateCenterStats: function(stats) { return videoPlayer.updateCenterStats(stats); },
@@ -2154,6 +2158,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       getObsAnalyserR: function() { return obsAnalyserR; },
       setLiveMeterAnimationId: function(id) { liveMeterAnimationId = id; },
       setObsAnalysers: function(l, r) { obsAnalyserL = l; obsAnalyserR = r; },
+      resetObsAudioContext: function() { stereoMetersModule.resetObsAudioContext(); obsAnalyserL = null; obsAnalyserR = null; },
+      resumeObsAudioContext: function() { stereoMetersModule.resumeObsAudioContext(); },
+      getObsAudioContext: function() { return stereoMetersModule.getObsAudioContext(); },
+      isLobbyMuted: function() { return audioMeters.isLobbyMuted(); },
       setLiveAnalysers: function(l, r) { liveAnalyserL = l; liveAnalyserR = r; },
       setObsKWeightedAnalysers: function(l, r) { obsKWeightedAnalyserL = l; obsKWeightedAnalyserR = r; },
       setLiveKWeightedAnalysers: function(l, r) { liveKWeightedAnalyserL = l; liveKWeightedAnalyserR = r; },
@@ -2210,10 +2218,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       document.getElementById('chatForm')?.classList.remove('hidden');
     }
 
-    // Load initial data from API — skip if page loaded in a background tab
+    // Load initial data from API
+    await loadAllSlots(); // Load all slots for consecutive slot detection
+    await loadStreamStatus();
+
+    // Poll stream status as fallback (Pusher may fail to connect)
+    setInterval(function() { loadStreamStatus(); }, 15000);
+
     if (!document.hidden) {
-      await loadAllSlots(); // Load all slots for consecutive slot detection
-      await loadStreamStatus();
 
       // Detect orphaned live stream (DJ navigated away while live, stream still marked live in Firestore)
       if (currentStream && currentUser && currentStream.djId === currentUser.uid) {
@@ -2468,8 +2480,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       // Add cache buster to prevent stale cached responses
       // Use fresh=1 to bypass server-side cache when called from Pusher events
       const cacheBuster = Date.now();
-      const freshParam = skipCache ? '&fresh=1' : '';
-      const response = await fetch(`/api/livestream/status/?_t=${cacheBuster}${freshParam}`);
+      const response = await fetch(`/api/livestream/status/?_t=${cacheBuster}&fresh=1`);
       if (!response.ok) throw new Error('Stream status fetch failed: ' + response.status);
       const result = await response.json();
       
@@ -2607,8 +2618,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // Video stream (HLS/Red5)
           videoPreview?.classList.remove('hidden');
           audioPreview?.classList.add('hidden');
-          // Setup HLS video player (includes auto-play)
+          // Setup HLS video player — muted in DJ lobby so it doesn't overlap preview audio
           setupHlsPlayer(currentStream);
+          const hlsVid = document.getElementById('hlsVideo');
+          if (hlsVid) hlsVid.volume = 0;
         } else {
           // Audio-only stream (BUTT/Icecast/Relay)
           log('[Stream] Showing audio placeholder for audio-only stream');
@@ -2690,7 +2703,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 audioEl._hlsInstance = hls;
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                   audioEl.muted = false;
-                  audioEl.volume = 1;
+                  audioEl.volume = 0; // Muted in DJ lobby — preview audio takes priority
                   audioEl.play().catch(e => log('[Audio] Auto-play blocked:', e.message));
                 });
                 hls.on(Hls.Events.ERROR, (_e, data) => {
@@ -2703,7 +2716,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 // Direct src for native HLS (Safari) or non-HLS audio (icecast/MP3)
                 audioEl.src = audioUrl;
                 audioEl.muted = false;
-                audioEl.volume = 1;
+                audioEl.volume = 0; // Muted in DJ lobby — preview audio takes priority
                 audioEl.play().then(() => {
                   /* audio playing */
                 }).catch(e => {

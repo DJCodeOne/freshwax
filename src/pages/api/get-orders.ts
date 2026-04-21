@@ -54,10 +54,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }
     }
 
-    // Force-clear release cache to ensure fresh download URLs
-    const { invalidateReleasesCache } = await import('../../lib/firebase-rest');
-    invalidateReleasesCache();
-
     // Batch fetch all releases at once (avoids N+1 queries)
     const releaseCache = releaseIds.size > 0
       ? await getDocumentsBatch('releases', Array.from(releaseIds))

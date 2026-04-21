@@ -697,6 +697,29 @@ export async function handleGoLiveReady() {
   var genreEl = document.getElementById('inlineStreamGenre');
   genre = genreEl ? (genreEl.value || 'Jungle / D&B') : 'Jungle / D&B';
 
+  // Before going live, check if OBS is already streaming to MediaMTX with a different key
+  if (!isRelayMode) {
+    try {
+      var base = window.HLS_BASE_URL || 'https://stream.freshwax.co.uk';
+      var pathsRes = await fetch(base + '/v3/paths/list', { signal: AbortSignal.timeout(5000) });
+      if (pathsRes.ok) {
+        var paths = await pathsRes.json();
+        var uid = currentUser.uid;
+        var userPrefix = 'fwx_' + uid.substring(0, 8);
+        var match = (paths.items || []).find(function(p) {
+          return p.ready && p.name && p.name.indexOf('live/') === 0 && p.name.indexOf(userPrefix) !== -1;
+        });
+        if (match) {
+          var detectedKey = match.name.replace('live/', '');
+          if (detectedKey !== currentStreamKey) {
+            log('[GoLive] OBS is streaming to ' + detectedKey + ', using that instead of ' + (currentStreamKey || 'none'));
+            currentStreamKey = detectedKey;
+          }
+        }
+      }
+    } catch (ex) { /* MediaMTX check failed, continue with existing key */ }
+  }
+
   if (!isRelayMode && !currentStreamKey) {
     throw new Error('No stream key available. Please refresh and try again.');
   }
@@ -715,6 +738,13 @@ export async function handleGoLiveReady() {
   var twitchStreamKeyVal = twitchStreamKeyEl ? (twitchStreamKeyEl.value ? twitchStreamKeyEl.value.trim() : null) : null;
 
   var avatarUrl = (userInfo ? userInfo.avatar : null) || (currentUser ? currentUser.photoURL : null) || '/place-holder.webp';
+
+  // If streaming via OBS (not BUTT/relay), force video mode so viewers see the stream
+  var obsConnected = ctx ? ctx.getObsConnected() : false;
+  if (!isRelayMode && currentPreviewSource === 'obs' && obsConnected && broadcastMode === 'placeholder') {
+    broadcastMode = 'video';
+    if (ctx && ctx.setBroadcastModeDirect) ctx.setBroadcastModeDirect('video');
+  }
 
   var requestBody = {
     action: isRelayMode ? 'start_relay' : 'go_live',

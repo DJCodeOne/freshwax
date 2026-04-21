@@ -77,8 +77,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Skip ghost/empty user documents with no email and no name
       if (!doc.email && !doc.displayName && !doc.name && !doc.fullName) continue;
 
-      // Get roles from the roles object (primary) or legacy fields
+      // Skip approved artists/labels/merch — they belong in Partner Management
       const roles = doc.roles || {};
+      const isPartnerRole = doc.isArtist === true || roles.artist === true || doc.isMerchSupplier === true || roles.merchSupplier === true || doc.isVinylSeller === true || roles.vinylSeller === true;
+      if (isPartnerRole && doc.approved === true) continue;
 
       usersMap.set(doc.id, {
         id: doc.id,
@@ -98,6 +100,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         },
         isAdmin: doc.isAdmin === true || roles.admin === true,
         permissions: doc.permissions || { canBuy: true, canComment: true, canRate: true },
+        isArtist: doc.isArtist === true,
         approved: doc.approved === true || (doc.partnerInfo?.approved === true),
         suspended: doc.suspended === true || doc.disabled === true,
         notes: doc.adminNotes || '',
