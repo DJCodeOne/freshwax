@@ -19,7 +19,7 @@ import { queryCollection } from './queries';
 // Now supports D1 as primary source with Firebase fallback
 // Cache tiers: 1) in-memory (~0ms) -> 2) KV (~30ms) -> 3) D1/Firebase (~300-900ms)
 export async function getLiveReleases(limit?: number, db?: D1Database): Promise<Record<string, unknown>[]> {
-  const cacheKey = `live-releases-v7:${limit || 'all'}`;
+  const cacheKey = `live-releases-v8:${limit || 'all'}`;
 
   // Tier 1: in-memory cache (same worker process, ~0ms)
   const cached = getCached(cacheKey);
@@ -51,10 +51,11 @@ export async function getLiveReleases(limit?: number, db?: D1Database): Promise<
               }
             }).filter(Boolean) as Record<string, unknown>[];
 
-            // Sort by upload date (newest first)
+            // Sort by approval date (newest first), falling back to upload/created
+            // — newly approved releases jump to top of "Latest Releases" even if uploaded earlier.
             releases.sort((a, b) => {
-              const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
-              const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
+              const dateA = new Date(a.approvedAt || a.uploadedAt || a.createdAt || 0).getTime();
+              const dateB = new Date(b.approvedAt || b.uploadedAt || b.createdAt || 0).getTime();
               return dateB - dateA;
             });
 
@@ -90,10 +91,10 @@ export async function getLiveReleases(limit?: number, db?: D1Database): Promise<
         });
       }
 
-      // Sort by upload date (newest first)
+      // Sort by approval date (newest first), falling back to upload/created
       releases.sort((a, b) => {
-        const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
-        const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
+        const dateA = new Date(a.approvedAt || a.uploadedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.approvedAt || b.uploadedAt || b.createdAt || 0).getTime();
         return dateB - dateA;
       });
 
