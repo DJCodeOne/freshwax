@@ -8,7 +8,7 @@ import { createS3Client } from '../../lib/s3-client';
 import { getDocument, deleteDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1DeleteMix } from '../../lib/d1-catalog';
-import { invalidateMixesKVCache } from '../../lib/kv-cache';
+import { initKVCache, invalidateMixesKVCache } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 import { z } from 'zod';
 
@@ -35,6 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // Initialize Firebase for Cloudflare runtime
   const env = locals.runtime.env;
+  initKVCache(env as { CACHE?: KVNamespace } | undefined);
 
 
   // Initialize R2/S3 client for Cloudflare runtime

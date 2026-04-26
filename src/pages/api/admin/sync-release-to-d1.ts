@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, invalidateReleasesCache } from '../../../lib/firebase-rest';
-import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
+import { initKVCache, invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
@@ -17,6 +17,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  initKVCache(env as { CACHE?: KVNamespace } | undefined);
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 

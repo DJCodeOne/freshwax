@@ -6,7 +6,7 @@ import { getDocument, queryCollection, verifyRequestUser, invalidateReleasesCach
 import { saDeleteDocument, saUpdateDocument, getServiceAccountKey } from '../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
-import { invalidateReleasesKVCache } from '../../lib/kv-cache';
+import { initKVCache, invalidateReleasesKVCache } from '../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const deleteReleaseSchema = z.object({
@@ -39,6 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Initialize Firebase environment
     const env = locals.runtime.env || {};
+    initKVCache(env as { CACHE?: KVNamespace } | undefined);
 
     const parsed = deleteReleaseSchema.safeParse(body);
     if (!parsed.success) {

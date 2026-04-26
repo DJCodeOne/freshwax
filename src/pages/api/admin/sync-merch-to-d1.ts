@@ -7,7 +7,7 @@ import { d1UpsertMerch, d1DeleteMerch } from '../../../lib/d1-catalog';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
-import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
+import { initKVCache, kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 
 const log = createLogger('[sync-merch-to-d1]');
 
@@ -23,6 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   const env = locals.runtime.env;
+  initKVCache(env as { CACHE?: KVNamespace } | undefined);
   const db = env?.DB;
 
   if (!db) {

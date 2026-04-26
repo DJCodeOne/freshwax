@@ -7,7 +7,7 @@ import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
-import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
+import { initKVCache, kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 
 const log = createLogger('admin/update-mix');
 
@@ -34,6 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
   const env = locals.runtime.env;
+  initKVCache(env as { CACHE?: KVNamespace } | undefined);
 
   try {
     const body = await request.json();

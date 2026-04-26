@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, invalidateReleasesCache } from '../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../lib/d1-catalog';
 import { requireAdminAuth } from '../../lib/admin';
-import { invalidateReleasesKVCache } from '../../lib/kv-cache';
+import { initKVCache, invalidateReleasesKVCache } from '../../lib/kv-cache';
 import { createLogger, successResponse, ApiErrors } from '../../lib/api-utils';
 import { logActivity } from '../../lib/activity-feed';
 import { broadcastActivity } from '../../lib/pusher';
@@ -27,6 +27,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // Initialize Firebase env for write operations (Cloudflare runtime)
   const env = (locals as App.Locals).runtime?.env;
+  initKVCache(env as { CACHE?: KVNamespace } | undefined);
 
   try {
     let body;

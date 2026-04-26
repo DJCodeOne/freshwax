@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { updateDocument, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
-import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
+import { initKVCache, kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 
 const log = createLogger('admin/toggle-mix-publish');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -29,6 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   const env = locals.runtime.env;
+  initKVCache(env as { CACHE?: KVNamespace } | undefined);
 
   try {
     const parsed = toggleMixPublishSchema.safeParse(body);

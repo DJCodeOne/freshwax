@@ -9,7 +9,7 @@ import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
 import { checkRateLimit, delay, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { TIMEOUTS } from '../../../lib/timeouts';
 import { requireAdminAuth } from '../../../lib/admin';
-import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
+import { initKVCache, invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('cleanup-duplicates');
@@ -34,6 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const env = locals.runtime.env;
+    initKVCache(env as { CACHE?: KVNamespace } | undefined);
 
     let rawBody: unknown;
     try {
