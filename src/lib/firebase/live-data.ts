@@ -19,7 +19,7 @@ import { queryCollection } from './queries';
 // Now supports D1 as primary source with Firebase fallback
 // Cache tiers: 1) in-memory (~0ms) -> 2) KV (~30ms) -> 3) D1/Firebase (~300-900ms)
 export async function getLiveReleases(limit?: number, db?: D1Database): Promise<Record<string, unknown>[]> {
-  const cacheKey = `live-releases-v8:${limit || 'all'}`;
+  const cacheKey = `live-releases-v9:${limit || 'all'}`;
 
   // Tier 1: in-memory cache (same worker process, ~0ms)
   const cached = getCached(cacheKey);
@@ -32,9 +32,20 @@ export async function getLiveReleases(limit?: number, db?: D1Database): Promise<
       // Try D1 first if database is provided
       if (db) {
         try {
-          // Fetch more than needed to allow for JS sorting by upload date
-          const fetchLimit = limit ? limit * 2 : 100;
-          const query = `SELECT data FROM releases_v2 WHERE published = 1 OR status = 'live' LIMIT ?`;
+          // Order by latest activity (approvedAt → uploadedAt → createdAt) at the SQL layer
+          // so the LIMIT slices the actual newest rows rather than 20 arbitrary ones.
+          const fetchLimit = limit ? Math.max(limit * 2, 30) : 500;
+          const query = `
+            SELECT data FROM releases_v2
+            WHERE published = 1 OR status = 'live'
+            ORDER BY COALESCE(
+              json_extract(data, '$.approvedAt'),
+              json_extract(data, '$.uploadedAt'),
+              json_extract(data, '$.createdAt'),
+              ''
+            ) DESC
+            LIMIT ?
+          `;
 
           const stmt = db.prepare(query).bind(fetchLimit);
           const { results } = await stmt.all();
