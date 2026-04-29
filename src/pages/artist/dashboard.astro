@@ -1446,6 +1446,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (!hasPartnerCookie) {
       // If server already rendered the dashboard, set the cookie silently via API
       if (serverRenderedDashboard) {
+        try { sessionStorage.removeItem('fwx-partner-reload-attempts'); } catch (_e) {}
         var _tok = await user.getIdToken();
         if (window.__setAuthCookies) window.__setAuthCookies({ token: _tok, action: 'set-partner' });
         hideAll();
@@ -1453,6 +1454,31 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
 
       showLoading();
+
+      // Loop guard: count reload attempts. On mobile Safari + in-app browsers,
+      // the partnerId cookie sometimes fails to commit between API response and
+      // location.reload(), causing an infinite loop. Cap retries at 2.
+      const RELOAD_KEY = 'fwx-partner-reload-attempts';
+      let attempts = 0;
+      try { attempts = parseInt(sessionStorage.getItem(RELOAD_KEY) || '0', 10) || 0; } catch (_e) { /* sessionStorage unavailable */ }
+
+      if (attempts >= 2) {
+        // Cookie isn't sticking after 2 tries - show explicit error instead of looping
+        try { sessionStorage.removeItem(RELOAD_KEY); } catch (_e) {}
+        console.error('[Partner Dashboard] partnerId cookie failed to commit after retries');
+        if (loadingState) {
+          loadingState.innerHTML =
+            '<div class="login-card">' +
+              '<img src="/logo.webp" alt="Fresh Wax" class="login-logo" width="200" height="158" />' +
+              '<h2>Sign-In Issue</h2>' +
+              '<p>Your browser is blocking our session cookie. This usually happens in private/incognito mode or older mobile browsers.</p>' +
+              '<p style="margin-top:1rem;font-size:.9rem;opacity:.8;">Try: log out and back in, switch browsers (Chrome → Safari or vice versa), or open the page outside any in-app browser.</p>' +
+              '<a href="/logout/" class="btn-primary">Log out and try again</a>' +
+              '<a href="/" class="btn-secondary">Back to home</a>' +
+            '</div>';
+        }
+        return;
+      }
 
       try {
         // Fetch user profile to check if they're a partner
@@ -1466,7 +1492,31 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // If they have any partner role, set the cookie via API and reload
         if (profile.success && (profile.isPro || profile.roles?.artist || profile.roles?.dj || profile.roles?.merchSupplier || profile.roles?.vinylSeller)) {
           if (window.__setAuthCookies) await window.__setAuthCookies({ token: _idToken, action: 'set-partner' });
-          window.location.reload();
+
+          // Verify cookie actually committed before reloading (mobile timing fix)
+          let cookieSet = false;
+          for (let i = 0; i < 10; i++) {
+            if (hasCookie('partnerId')) { cookieSet = true; break; }
+            await new Promise(function (r) { setTimeout(r, 50); });
+          }
+
+          if (cookieSet) {
+            try { sessionStorage.setItem(RELOAD_KEY, String(attempts + 1)); } catch (_e) {}
+            window.location.reload();
+          } else {
+            // API set the cookie server-side but browser didn't accept it (Safari ITP, in-app browser, etc)
+            console.error('[Partner Dashboard] Cookie was not committed by browser');
+            if (loadingState) {
+              loadingState.innerHTML =
+                '<div class="login-card">' +
+                  '<img src="/logo.webp" alt="Fresh Wax" class="login-logo" width="200" height="158" />' +
+                  '<h2>Browser Blocked Our Cookie</h2>' +
+                  '<p>It looks like your browser is blocking our session cookie — common in private windows or in-app browsers (Facebook/Instagram).</p>' +
+                  '<p style="margin-top:1rem;font-size:.9rem;opacity:.8;">Open this page directly in Safari or Chrome (not via a Facebook/Instagram link).</p>' +
+                  '<a href="/logout/" class="btn-primary">Log out and try again</a>' +
+                '</div>';
+            }
+          }
         } else {
           // They're logged in but not a partner - show login prompt with message
           showLogin();
@@ -1476,8 +1526,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         showLogin();
       }
     } else {
-      // partnerId cookie exists - if we're seeing this, the server should have rendered the dashboard
-      // Hide loading state just in case
+      // partnerId cookie exists - server should have rendered the dashboard
+      // Clear the reload counter (we successfully recovered)
+      try { sessionStorage.removeItem('fwx-partner-reload-attempts'); } catch (_e) {}
       hideAll();
     }
   });
