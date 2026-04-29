@@ -250,7 +250,7 @@ export function setupLivestreamChatSend(streamId) {
 
     try {
       var token = await currentUser.getIdToken();
-      var activeStreamId = window.currentStreamId || streamId;
+      var activeStreamId = 'playlist-global';
       var chatSendController = new AbortController();
       var chatSendTimeout = setTimeout(function() { chatSendController.abort(); }, 15000);
       var response = await fetch('/api/livestream/chat/', {

@@ -337,8 +337,8 @@ async function joinStream(streamId) {
   viewerSessionId = sessionStorage.getItem('viewerSessionId');
   sendHeartbeat(streamId);
   if (heartbeatInterval) clearInterval(heartbeatInterval);
-  heartbeatInterval = setInterval(function() { sendHeartbeat(currentStream ? currentStream.id : 'playlist-global'); }, 60000);
-  window.addEventListener('beforeunload', function() { if (viewerSessionId) { var sid = currentStream ? currentStream.id : 'playlist-global'; navigator.sendBeacon('/api/livestream/heartbeat/', JSON.stringify({ action: 'leave', streamId: sid, sessionId: viewerSessionId })); } });
+  heartbeatInterval = setInterval(function() { sendHeartbeat('playlist-global'); }, 60000);
+  window.addEventListener('beforeunload', function() { if (viewerSessionId) { navigator.sendBeacon('/api/livestream/heartbeat/', JSON.stringify({ action: 'leave', streamId: 'playlist-global', sessionId: viewerSessionId })); } });
 }
 
 async function sendHeartbeat(streamId) {
@@ -440,7 +440,7 @@ function showLiveStream(streamData) {
         relayAttr.textContent = 'Relayed from ' + domain;
       }
     }
-    registerStreamView(streamData.id);
+    registerStreamView('playlist-global');
     var offState = document.getElementById('offlineState'); if (offState) offState.classList.add('hidden');
     var offOverlay = document.getElementById('offlineOverlay'); if (offOverlay) offOverlay.remove();
     var fsOffOverlay = document.getElementById('fsOfflineOverlay'); if (fsOffOverlay) fsOffOverlay.classList.add('hidden');
@@ -473,7 +473,7 @@ function showLiveStream(streamData) {
       setupAudioPlayer(streamData, hlsDeps);
     } else setupHlsPlayer(streamData, hlsDeps);
     var twitchUser = streamData.twitchChannel || streamData.twitchUsername; if (window.setupFsTwitchChat) window.setupFsTwitchChat(twitchUser);
-    joinStream(streamData.id); setupChat(streamData.id); startDurationTimer(streamData.startedAt); setupReactions(streamData.id);
+    joinStream('playlist-global'); setupChat('playlist-global'); startDurationTimer(streamData.startedAt); setupReactions(streamData.id);
   } catch (e) { console.error('[showLiveStream] Error in UI setup:', e); }
 }
 

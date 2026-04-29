@@ -168,7 +168,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
 
   // Send GIF using existing globals from live-stream.js or dj-lobby
   async function sendGifToChat(giphyUrl, giphyId) {
-    const streamId = window.currentStreamId;
+    const streamId = 'playlist-global';
     const auth = window.firebaseAuth;
     const user = auth?.currentUser;
 
@@ -492,7 +492,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
           method: 'POST',
           headers: dmHeaders,
           body: JSON.stringify({
-            streamId: window.currentStreamId,
+            streamId: 'playlist-global',
             userId: user.uid,
             userName: window.currentUserInfo?.name || user.displayName || user.email?.split('@')[0] || 'User',
             message: `@${currentDmRecipient.name}: ${message}`,

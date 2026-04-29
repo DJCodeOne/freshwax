@@ -17,7 +17,7 @@ body.dj-lobby-page{ --g1:linear-gradient(#222,#1a1a1a);--g2:linear-gradient(135d
 .pro-save-btn,.pro-copy-btn{background:var(--g9);border:0;color:#fff;font-weight:600;font-family:var(--fi);cursor:pointer;border-radius:6px}
 .mute-section,.ppm-section{flex-direction:column;align-items:center}
 #dmSendBtn,#sendBtn{display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;color:#fff;cursor:pointer}
-.copy-btn-sm,.spawn-key-btn{padding:.4rem .65rem;font-size:.8rem;border:0;border-radius:6px;color:#fff;cursor:pointer;flex-shrink:0;font-weight:600}
+.copy-btn-sm,.spawn-key-btn{padding:.6rem .9rem;font-size:.8rem;border:0;border-radius:6px;color:#fff;cursor:pointer;flex-shrink:0;font-weight:600;line-height:1.2}
 .setup-field label,.cred-box-compact label{display:block;font-size:.75rem;margin-bottom:.4rem;font-family:var(--fi)}
 .stream-control-card,.setup-link-section{background:var(--g1);border-radius:12px;border:var(--b3);padding:.75rem}
 .preview-player.fading-out::after,.preview-player.faded-out::after,.preview-player.fading-in::after{content:'';position:absolute;inset:0;background:#000;pointer-events:none;z-index:5}

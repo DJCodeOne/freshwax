@@ -944,14 +944,38 @@ const firebaseConfig = {
         updateSelection();
       });
 
-      // Copy stream key
-      document.getElementById('copyKeyBtn').addEventListener('click', () => {
-        const key = document.getElementById('streamKeyValue').textContent;
-        navigator.clipboard.writeText(key);
-        document.getElementById('copyKeyBtn').textContent = 'Copied!';
-        setTimeout(() => {
-          document.getElementById('copyKeyBtn').textContent = 'Copy';
-        }, 2000);
+      // Copy stream key — async with fallback so users get accurate feedback
+      // (silent navigator.clipboard rejections on focus loss were showing "Copied!" with nothing on the clipboard)
+      document.getElementById('copyKeyBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('copyKeyBtn');
+        const key = document.getElementById('streamKeyValue').textContent.trim();
+        if (!key || key === '-') {
+          btn.textContent = 'No key';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+          return;
+        }
+        let ok = false;
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(key);
+            ok = true;
+          }
+        } catch { /* fall through to execCommand */ }
+        if (!ok) {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = key;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+          } catch { ok = false; }
+        }
+        btn.textContent = ok ? 'Copied!' : 'Copy failed';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
       });
 
       // Form submit

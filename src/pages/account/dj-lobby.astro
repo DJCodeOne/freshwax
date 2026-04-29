@@ -2496,26 +2496,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.success && result.isLive && result.primaryStream) {
         currentStream = result.primaryStream;
 
-        // Set global stream ID for LiveChat component
-        const streamId = currentStream.slotId || currentStream.id || currentStream.streamId;
-        const previousStreamId = window.currentStreamId;
-        window.currentStreamId = streamId;
-
-        // Initialize livestream chat if not done, or switch from playlist-global to actual stream
-        // Skip stream IDs that were previously rejected as not-live (stale D1/cache data)
-        if (streamId && !staleStreamIds.has(streamId) && (!window.livestreamChatInitialized || previousStreamId !== streamId)) {
-          // Cleanup previous channel first (e.g., playlist-global)
-          if (livestreamChatChannel) {
-            livestreamChatChannel.unbind_all();
-            window.livestreamPusher?.unsubscribe(livestreamChatChannel.name);
-            livestreamChatChannel = null;
-          }
-          window.livestreamChatInitialized = false;
-          initLivestreamChat(streamId);
-        } else if (staleStreamIds.has(streamId)) {
-          // Keep using current channel (playlist-global)
-          window.currentStreamId = previousStreamId;
-        }
+        // Track the actual stream ID for stream-specific features (reactions, video URL, etc.)
+        // Chat and viewer count stay on the global 'playlist-global' channel — see chat.js init.
+        window.currentStreamId = currentStream.slotId || currentStream.id || currentStream.streamId;
 
         statusDot?.classList.remove('offline');
         statusDot?.classList.add('live');
@@ -2743,6 +2726,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           const liveAudioEl = document.getElementById('audioElement');
           if (liveAudioEl) {
             liveAudioEl.muted = false;
+            liveAudioEl.volume = 1;
           }
           // Also try to update the toggle UI when it's ready
           setTimeout(() => {
@@ -3670,6 +3654,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else if (activePlayer === 'live') {
         // Mute OBS preview
         if (obsVideo) obsVideo.muted = true;
+        // Restore live audio volume — setup forces it to 0 so preview takes priority
+        if (liveVideo && liveVideo.volume === 0) liveVideo.volume = 1;
+        if (liveAudio && liveAudio.volume === 0) liveAudio.volume = 1;
         updatePlayerControlIcons('obs', !obsVideo?.paused, true);
         activeAudioPlayer = 'live';
       }
@@ -3739,8 +3726,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const newMutedState = !media.muted;
       media.muted = newMutedState;
 
-      // If unmuting, enforce mutual exclusion
+      // If unmuting, enforce mutual exclusion and restore volume
+      // (setup forces volume to 0 so preview takes priority by default)
       if (!newMutedState) {
+        if (media.volume === 0) media.volume = 1;
         enforceAudioMutualExclusion('live');
       }
 
@@ -4281,17 +4270,40 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
     });
     
-    // Copy buttons (both .copy-btn and .copy-btn-sm)
+    // Copy buttons — async with execCommand fallback so users get accurate feedback
+    // (silent navigator.clipboard rejections were showing "Copied!" with nothing on the clipboard)
     document.querySelectorAll('.copy-btn, .copy-btn-sm').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const code = document.getElementById(btn.dataset.copy);
-        if (code) {
-          // Get just the text content, strip any extra whitespace
-          const textToCopy = code.textContent.trim();
-          navigator.clipboard.writeText(textToCopy);
-          btn.textContent = 'Copied!';
+        if (!code) return;
+        const textToCopy = code.textContent.trim();
+        if (!textToCopy || textToCopy === '-') {
+          btn.textContent = 'No value';
           setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+          return;
         }
+        let ok = false;
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(textToCopy);
+            ok = true;
+          }
+        } catch { /* fall through to execCommand */ }
+        if (!ok) {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = textToCopy;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+          } catch { ok = false; }
+        }
+        btn.textContent = ok ? 'Copied!' : 'Copy failed';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
       });
     });
   }
