@@ -2,10 +2,12 @@
 // Send all order-related emails (confirmation, stockist, digital artist, merch seller)
 // Extracted from create-order.ts (pure extraction, zero behavior changes)
 
-import { updateDocument } from '../firebase-rest';
+import { updateDocument, getDocument } from '../firebase-rest';
 import { fetchWithTimeout, createLogger, maskEmail } from '../api-utils';
 import { buildOrderConfirmationEmail, buildStockistFulfillmentEmail, buildDigitalSaleEmail, buildMerchSaleEmail } from './create-order-emails';
 import type { OrderItem } from './create-order-emails';
+import { emailWrapper, ctaButton, esc } from '../email-wrapper';
+import { SITE_URL } from '../constants';
 
 const log = createLogger('create-order');
 
@@ -129,56 +131,112 @@ export async function sendOrderEmails({ order, orderRefId, orderNumber, env }: S
     }
   }
 
-  // Send notification emails to artists for digital sales (tracks/releases)
+  // Send notification emails to digital payees (artists / labels).
+  // Resolved using the same logic as processArtistPayments so we always
+  // notify everyone who'll get money from the order:
+  //   - For releases with a `payoutSplits` array, every recipient.
+  //   - Otherwise, the release.artistId account.
+  // The buyer's items are not enumerated in the email — payees check their
+  // dashboard for the breakdown. Keeps emails simple + privacy-safe.
   const digitalItems = order.items.filter((item: OrderItem) => item.type === 'track' || item.type === 'digital' || item.type === 'release');
   if (digitalItems.length > 0) {
-    try {
-      const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
-
-      // Group items by artist email
-      const itemsByArtist: { [email: string]: OrderItem[] } = {};
-      for (const item of digitalItems) {
-        const artistEmail = item.artistEmail;
-        if (artistEmail) {
-          if (!itemsByArtist[artistEmail]) {
-            itemsByArtist[artistEmail] = [];
-          }
-          itemsByArtist[artistEmail].push(item);
+    const RESEND_API_KEY = (env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY) as string | undefined;
+    if (RESEND_API_KEY) {
+      try {
+        // Resolve unique payee artistIds, batching release fetches.
+        const releaseIds = new Set<string>();
+        for (const item of digitalItems) {
+          const releaseId = (item.releaseId || item.productId || item.id) as string | undefined;
+          if (releaseId) releaseIds.add(releaseId);
         }
-      }
+        const releaseEntries = await Promise.all(
+          [...releaseIds].map(async (id) => [id, await getDocument('releases', id).catch(() => null)] as const)
+        );
+        const releaseMap = new Map(releaseEntries.filter(([, doc]) => doc));
 
-      // Send email to each artist
-      for (const [artistEmail, items] of Object.entries(itemsByArtist)) {
-        if (RESEND_API_KEY && artistEmail) {
-          log.info('[create-order] Sending digital sale email to artist:', maskEmail(artistEmail));
+        const payeeIds = new Set<string>();
+        for (const item of digitalItems) {
+          const releaseId = (item.releaseId || item.productId || item.id) as string | undefined;
+          if (!releaseId) continue;
+          const release = releaseMap.get(releaseId) as Record<string, unknown> | undefined;
+          if (!release) continue;
+          const splits = (release.payoutSplits as Array<{ artistId?: unknown; percentage?: unknown }> | undefined);
+          if (Array.isArray(splits) && splits.length > 0) {
+            for (const s of splits) {
+              if (typeof s.artistId === 'string' && typeof s.percentage === 'number' && s.percentage > 0) {
+                payeeIds.add(s.artistId);
+              }
+            }
+          } else {
+            const aid = (item.artistId || (release as { artistId?: string; userId?: string }).artistId || (release as { artistId?: string; userId?: string }).userId) as string | undefined;
+            if (aid) payeeIds.add(aid);
+          }
+        }
 
-          const digitalHtml = buildDigitalSaleEmail(orderNumber, order, items);
+        // Fetch each payee's account doc for email + display name.
+        const payeeEntries = await Promise.all(
+          [...payeeIds].map(async (id) => {
+            const [artistDoc, userDoc] = await Promise.all([
+              getDocument('artists', id).catch(() => null),
+              getDocument('users', id).catch(() => null),
+            ]);
+            const email = (artistDoc?.email || userDoc?.email) as string | undefined;
+            const name = (artistDoc?.artistName || artistDoc?.displayName || userDoc?.displayName || userDoc?.name || 'Artist') as string;
+            return { id, email, name };
+          })
+        );
 
-          const digitalResponse = await fetchWithTimeout('https://api.resend.com/emails', {
+        // Send one short email per unique email address (a single account
+        // could appear under multiple ids in unusual edge cases; dedupe).
+        const sentTo = new Set<string>();
+        for (const payee of payeeEntries) {
+          if (!payee.email || sentTo.has(payee.email)) continue;
+          sentTo.add(payee.email);
+
+          log.info('[create-order] Sending payee sale notification to:', maskEmail(payee.email));
+
+          const html = emailWrapper(`
+            <p style="font-size:18px;line-height:1.5;margin:0 0 16px;">
+              Hey ${esc(payee.name)} 👋
+            </p>
+            <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+              You've got a new sale on Fresh Wax. Someone just bought your music.
+            </p>
+            <p style="font-size:14px;line-height:1.5;color:#999;margin:0 0 24px;">
+              Order: <strong>${esc(orderNumber)}</strong>
+            </p>
+            ${ctaButton('View your dashboard', SITE_URL + '/account/dashboard/')}
+            <p style="font-size:13px;line-height:1.5;color:#999;margin:24px 0 0;">
+              Your dashboard shows the breakdown of which tracks/releases sold and what your share is. Payouts are processed manually — we'll be in touch.
+            </p>
+          `, { title: 'New Sale on Fresh Wax', preheader: 'You have a new order on Fresh Wax' });
+
+          const response = await fetchWithTimeout('https://api.resend.com/emails', {
             method: 'POST',
-            headers: {
-              'Authorization': 'Bearer ' + RESEND_API_KEY,
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Authorization': 'Bearer ' + RESEND_API_KEY, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               from: 'Fresh Wax <orders@freshwax.co.uk>',
-              to: [artistEmail],
+              to: [payee.email],
               bcc: ['freshwaxonline@gmail.com'],
-              subject: '🎵 Digital Sale! ' + orderNumber,
-              html: digitalHtml
-            })
+              subject: '🎵 You have a new sale on Fresh Wax',
+              html,
+            }),
           }, 10000);
 
-          if (digitalResponse.ok) {
-            log.info('[create-order] ✓ Digital sale email sent to:', maskEmail(artistEmail));
+          if (response.ok) {
+            log.info('[create-order] ✓ Payee notification sent to:', maskEmail(payee.email));
           } else {
-            const error = await digitalResponse.text();
-            log.error('[create-order] ❌ Digital sale email failed:', error);
+            const error = await response.text();
+            log.error('[create-order] ❌ Payee notification failed:', error);
           }
         }
+
+        if (sentTo.size === 0 && digitalItems.length > 0) {
+          log.warn('[create-order] No payee emails resolved for digital items in order:', orderNumber);
+        }
+      } catch (payeeErr: unknown) {
+        log.error('[create-order] Payee notification error:', payeeErr);
       }
-    } catch (digitalError: unknown) {
-      log.error('[create-order] Digital sale email error:', digitalError);
     }
   }
 
