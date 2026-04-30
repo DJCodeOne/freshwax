@@ -375,10 +375,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }, 10000);
 
     if (!stripeResponse.ok) {
-      const errorData = await stripeResponse.json().catch(() => ({}));
+      const errorData = await stripeResponse.json().catch(() => ({})) as { error?: { message?: string; code?: string; param?: string } };
       log.error('[Stripe] Create session error:', errorData);
       if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
-      return ApiErrors.serverError('Failed to create checkout session');
+      // Surface Stripe's error message to the client. Stripe error messages
+      // are user-safe (no secrets leaked) and tell the buyer/admin exactly
+      // why the session was rejected (amount too small, invalid email, etc.)
+      // instead of an opaque "Failed to create checkout session".
+      const stripeMsg = errorData?.error?.message;
+      const stripeParam = errorData?.error?.param;
+      const detail = stripeMsg
+        ? (stripeParam ? `${stripeMsg} (param: ${stripeParam})` : stripeMsg)
+        : 'Failed to create checkout session';
+      return ApiErrors.serverError(detail);
     }
 
     const session = await stripeResponse.json();
