@@ -1416,7 +1416,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   } from '/dj-lobby-pusher.js?v=3.6';
 
   // Extracted modules (DJ lobby code split)
-  import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260430b';
+  import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260430c';
   import * as lobbyChat from '/dj-lobby/chat.js?v=20260410';
   import * as lobbyDm from '/dj-lobby/dm.js?v=20260410';
   import * as scheduling from '/dj-lobby/scheduling.js?v=20260410b';
@@ -1426,7 +1426,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as relayModule from '/dj-lobby/relay.js?v=20260410';
   import * as initModalModule from '/dj-lobby/init-modal.js?v=20260410';
   import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260410';
-  import * as stereoMetersModule from '/dj-lobby/stereo-meters.js?v=20260430b';
+  import * as stereoMetersModule from '/dj-lobby/stereo-meters.js?v=20260430c';
 
   // ============================================
   // MODULE FUNCTION ALIASES
@@ -2132,6 +2132,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       },
       updateAudioSourceIndicator: function(s, m) { return videoPlayer.updateAudioSourceIndicator(s, m); },
       setupAudioMeter: function(el, label) { if (_setupAudioMeterRef) _setupAudioMeterRef(el, label); },
+      setElementOutputGain: function(el, val) { return stereoMetersModule.setElementOutputGain ? stereoMetersModule.setElementOutputGain(el, val) : false; },
       setupLiveAudioMeter: function(el) {
         if (_setupAudioMeterRef) {
           var result = _setupAudioMeterRef(el, 'Live');
@@ -3639,24 +3640,42 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
     }
 
-    // Mute the other player when one unmutes (mutual exclusion)
+    // Mute the other player when one unmutes (mutual exclusion).
+    // Use audio-graph gain (silences speakers without killing the analyser tap)
+    // for any element that's been wired by setupAudioMeter. Fall back to
+    // element.muted/.volume only when no cached gain node exists.
     function enforceAudioMutualExclusion(activePlayer) {
       const obsVideo = document.getElementById('obsVideo');
       const liveVideo = document.getElementById('hlsVideo');
       const liveAudio = document.getElementById('audioElement');
+      const silence = (el) => {
+        if (!el) return;
+        const handled = stereoMetersModule.setElementOutputGain && stereoMetersModule.setElementOutputGain(el, 0);
+        if (!handled) { el.muted = true; }
+      };
+      const unsilence = (el) => {
+        if (!el) return;
+        const handled = stereoMetersModule.setElementOutputGain && stereoMetersModule.setElementOutputGain(el, 1);
+        if (!handled) {
+          el.muted = false;
+          if (el.volume === 0) el.volume = 1;
+        } else {
+          // Element was wired via setupAudioMeter; ensure native gates stay open
+          // so the analyser tap continues to receive audio.
+          el.muted = false;
+          el.volume = 1;
+        }
+      };
 
       if (activePlayer === 'obs') {
-        // Mute live stream
-        if (liveVideo) liveVideo.muted = true;
-        if (liveAudio) liveAudio.muted = true;
+        silence(liveVideo);
+        silence(liveAudio);
         updatePlayerControlIcons('live', !liveVideo?.paused, true);
         activeAudioPlayer = 'obs';
       } else if (activePlayer === 'live') {
-        // Mute OBS preview
-        if (obsVideo) obsVideo.muted = true;
-        // Restore live audio volume — setup forces it to 0 so preview takes priority
-        if (liveVideo && liveVideo.volume === 0) liveVideo.volume = 1;
-        if (liveAudio && liveAudio.volume === 0) liveAudio.volume = 1;
+        silence(obsVideo);
+        unsilence(liveVideo);
+        unsilence(liveAudio);
         updatePlayerControlIcons('obs', !obsVideo?.paused, true);
         activeAudioPlayer = 'live';
       }

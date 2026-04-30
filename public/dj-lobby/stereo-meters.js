@@ -36,6 +36,19 @@ export function init(sharedCtx) {
   ctx = sharedCtx;
 }
 
+// Control speaker output for an element without silencing the analyser tap.
+// Pass 0 to silence speakers, 1 for full volume. Returns true if a cached
+// gain node was found and updated, false if the element hasn't been wired up.
+export function setElementOutputGain(elem, gainValue) {
+  if (!elem) return false;
+  var cached = elementMeterCache.get(elem);
+  if (cached && cached.outputGain) {
+    try { cached.outputGain.gain.value = gainValue; } catch (e) { return false; }
+    return true;
+  }
+  return false;
+}
+
 export function setupAudioMeter(videoElement, prefix) {
   // Reuse cached setup if this element was already wired up. createMediaElementSource
   // throws on a second call for the same element, and resuming the cached context
@@ -46,6 +59,11 @@ export function setupAudioMeter(videoElement, prefix) {
     if (cached.audioContext.state === 'suspended') {
       cached.audioContext.resume().catch(function() {});
     }
+    // Re-assert native gates: another code path may have muted/volume=0'd the
+    // element, which would silence the analyser. Speakers stay silent via
+    // outputGain when the source toggle / lobby-mute wants them silent.
+    videoElement.muted = false;
+    videoElement.volume = 1;
     if (prefix === 'OBS') {
       ctx.setObsKWeightedAnalysers(cached.kWeightedAnalyserL, cached.kWeightedAnalyserR);
     } else if (prefix === 'Live') {
@@ -117,8 +135,19 @@ export function setupAudioMeter(videoElement, prefix) {
     limiter.attack.value = 0.001;
     limiter.release.value = 0.1;
 
+    // Output gain controls speaker level WITHOUT silencing the analyser tap.
+    // createMediaElementSource() taps audio AFTER element.volume/element.muted,
+    // so setting those to 0/true kills the analyser (LEDs + LUFS go dead).
+    // Instead we keep the element at volume=1, muted=false and silence the
+    // speaker path here — analyser still sees full audio.
+    var outputGain = audioContext.createGain();
+    outputGain.gain.value = 1;
+    videoElement.muted = false;
+    videoElement.volume = 1;
+
     source.connect(limiter);
-    limiter.connect(audioContext.destination);
+    limiter.connect(outputGain);
+    outputGain.connect(audioContext.destination);
 
     if (prefix === 'OBS') {
       ctx.setObsKWeightedAnalysers(kWeightedAnalyserL, kWeightedAnalyserR);
@@ -126,7 +155,7 @@ export function setupAudioMeter(videoElement, prefix) {
       ctx.setLiveKWeightedAnalysers(kWeightedAnalyserL, kWeightedAnalyserR);
     }
 
-    var result = { audioContext: audioContext, analyserL: analyserL, analyserR: analyserR, kWeightedAnalyserL: kWeightedAnalyserL, kWeightedAnalyserR: kWeightedAnalyserR };
+    var result = { audioContext: audioContext, analyserL: analyserL, analyserR: analyserR, kWeightedAnalyserL: kWeightedAnalyserL, kWeightedAnalyserR: kWeightedAnalyserR, outputGain: outputGain };
     elementMeterCache.set(videoElement, result);
     return result;
   } catch (e) {

@@ -134,16 +134,25 @@ export function initBroadcastMeters() {
       if (ctx && ctx.updateAudioSourceIndicator) ctx.updateAudioSourceIndicator('obs', broadcastAudioSource);
     }
 
-    // Swap audio: only one source audible at a time
+    // Swap audio: only one source audible at a time. Use the audio-graph
+    // outputGain (silences speakers without affecting analyser) when the element
+    // has been wired by setupAudioMeter; fall back to element.volume only for
+    // elements that don't have a cached graph yet (e.g. icecastAudio uses its
+    // own gain node already managed elsewhere).
     var previewEls = [document.getElementById('obsVideo'), document.getElementById('icecastAudio')];
     var outputEls = [document.getElementById('hlsVideo'), document.getElementById('audioElement')];
     var isLobbyMuted2 = lobbyMuted;
+    var setGainFor = function(el, value) {
+      if (!el) return;
+      var handled = ctx && ctx.setElementOutputGain ? ctx.setElementOutputGain(el, value) : false;
+      if (!handled) { el.volume = value; }
+    };
     if (broadcastAudioSource === 'live') {
-      previewEls.forEach(function(el) { if (el) el.volume = 0; });
-      outputEls.forEach(function(el) { if (el) el.volume = isLobbyMuted2 ? 0 : 1; });
+      previewEls.forEach(function(el) { setGainFor(el, 0); });
+      outputEls.forEach(function(el) { setGainFor(el, isLobbyMuted2 ? 0 : 1); });
     } else {
-      previewEls.forEach(function(el) { if (el) el.volume = isLobbyMuted2 ? 0 : 1; });
-      outputEls.forEach(function(el) { if (el) el.volume = 0; });
+      previewEls.forEach(function(el) { setGainFor(el, isLobbyMuted2 ? 0 : 1); });
+      outputEls.forEach(function(el) { setGainFor(el, 0); });
     }
 
     // Force restart broadcast meter animation on source switch
@@ -166,17 +175,24 @@ export function initBroadcastMeters() {
     var muteEnforcerInterval = null;
 
     function applyMuteState() {
-      // Use volume instead of .muted so the AudioContext analysers keep receiving data
+      // Use the audio-graph gain node when available (silences speakers without
+      // killing the analyser). createMediaElementSource taps after element.volume
+      // and element.muted, so those would mute the analyser too — using gain
+      // keeps LEDs/LUFS alive while the speakers stay silent.
       var previewIds = ['obsVideo', 'icecastAudio'];
       var outputIds = ['hlsVideo', 'audioElement'];
       var src = broadcastAudioSource;
+      var apply = function(id, value) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var handled = ctx && ctx.setElementOutputGain ? ctx.setElementOutputGain(el, value) : false;
+        if (!handled) { el.volume = value; }
+      };
       for (var i = 0; i < previewIds.length; i++) {
-        var el = document.getElementById(previewIds[i]);
-        if (el) el.volume = (lobbyMuted || src === 'live') ? 0 : 1;
+        apply(previewIds[i], (lobbyMuted || src === 'live') ? 0 : 1);
       }
       for (var j = 0; j < outputIds.length; j++) {
-        var el2 = document.getElementById(outputIds[j]);
-        if (el2) el2.volume = (lobbyMuted || src === 'preview') ? 0 : 1;
+        apply(outputIds[j], (lobbyMuted || src === 'preview') ? 0 : 1);
       }
     }
 
