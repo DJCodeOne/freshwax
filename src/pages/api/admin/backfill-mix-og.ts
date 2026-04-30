@@ -19,6 +19,8 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { ApiErrors, createLogger, successResponse, getR2Config } from '../../../lib/api-utils';
 import { createS3Client } from '../../../lib/s3-client';
 import { getDocument, queryCollection, setDocument, invalidateMixesCache } from '../../../lib/firebase-rest';
+import { d1UpsertMix } from '../../../lib/d1-catalog';
+import { initKVCache, invalidateMixesKVCache } from '../../../lib/kv-cache';
 import { processImageToFacebookOG, imageContentType, imageExtension } from '../../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -39,7 +41,8 @@ async function processOne(
   s3Client: ReturnType<typeof createS3Client>,
   bucket: string,
   publicDomain: string,
-  dryRun: boolean
+  dryRun: boolean,
+  db: D1Database | undefined
 ): Promise<Result> {
   const doc = await getDocument('dj-mixes', mixId);
   if (!doc) return { mixId, ok: false, error: 'Mix not found' };
@@ -91,7 +94,18 @@ async function processOne(
   }));
 
   const ogImageUrl = `${publicDomain}/${ogKey}`;
-  await setDocument('dj-mixes', mixId, { ...doc, ogImageUrl, updatedAt: new Date().toISOString() });
+  const updatedDoc = { ...doc, ogImageUrl, updatedAt: new Date().toISOString() };
+  await setDocument('dj-mixes', mixId, updatedDoc);
+
+  // Mirror to D1 — the dj-mix page reads from D1 first so without this update
+  // the OG meta tag keeps emitting the square artwork URL.
+  if (db) {
+    try {
+      await d1UpsertMix(db, mixId, updatedDoc);
+    } catch (e: unknown) {
+      log.warn(`[backfill-mix-og] D1 upsert failed for ${mixId} (non-critical):`, e);
+    }
+  }
 
   return { mixId, ok: true, sizeKB: Math.round(ogImg.buffer.length / 1024) };
 }
@@ -113,11 +127,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const r2Config = getR2Config(env);
   if (!r2Config) return ApiErrors.serverError('R2 config missing');
   const s3Client = createS3Client(r2Config);
+  const db = env?.DB;
 
   // Single-mix mode
   if (mixId) {
-    const result = await processOne(mixId, s3Client, r2Config.bucketName, r2Config.publicDomain, dryRun)
+    const result = await processOne(mixId, s3Client, r2Config.bucketName, r2Config.publicDomain, dryRun, db)
       .catch((e: unknown) => ({ mixId, ok: false, error: String(e) } as Result));
+    if (!dryRun && result.ok) {
+      invalidateMixesCache();
+      try { initKVCache(env); await invalidateMixesKVCache(); } catch { /* non-critical */ }
+    }
     log.info(`[backfill-mix-og] single result:`, result);
     return successResponse({ processed: result.ok ? 1 : 0, candidates: 1, results: [result] });
   }
@@ -137,7 +156,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const results: Result[] = [];
   for (const mix of candidates) {
     try {
-      const r = await processOne(mix.id, s3Client, r2Config.bucketName, r2Config.publicDomain, dryRun);
+      const r = await processOne(mix.id, s3Client, r2Config.bucketName, r2Config.publicDomain, dryRun, db);
       results.push(r);
     } catch (e: unknown) {
       results.push({ mixId: mix.id, ok: false, error: String(e) });
@@ -146,6 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (!dryRun && results.some((r) => r.ok)) {
     invalidateMixesCache();
+    try { initKVCache(env); await invalidateMixesKVCache(); } catch { /* non-critical */ }
   }
 
   log.info(`[backfill-mix-og] batch ${results.length} results, ${results.filter(r => r.ok).length} ok`);
