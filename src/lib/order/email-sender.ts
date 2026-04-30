@@ -136,8 +136,9 @@ export async function sendOrderEmails({ order, orderRefId, orderNumber, env }: S
   // notify everyone who'll get money from the order:
   //   - For releases with a `payoutSplits` array, every recipient.
   //   - Otherwise, the release.artistId account.
-  // The buyer's items are not enumerated in the email — payees check their
-  // dashboard for the breakdown. Keeps emails simple + privacy-safe.
+  // The email lists the specific track/release titles tied to the
+  // recipient's payouts (so a 50/50 split release shows up on both
+  // recipients' emails). Buyer name + totals are intentionally omitted.
   const digitalItems = order.items.filter((item: OrderItem) => item.type === 'track' || item.type === 'digital' || item.type === 'release');
   if (digitalItems.length > 0) {
     const RESEND_API_KEY = (env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY) as string | undefined;
@@ -154,62 +155,107 @@ export async function sendOrderEmails({ order, orderRefId, orderNumber, env }: S
         );
         const releaseMap = new Map(releaseEntries.filter(([, doc]) => doc));
 
-        const payeeIds = new Set<string>();
+        // Build per-payee item lists. A track on a 50/50 split release
+        // gets attributed to BOTH payees (each one knows what sold).
+        const itemsByPayeeId = new Map<string, OrderItem[]>();
         for (const item of digitalItems) {
           const releaseId = (item.releaseId || item.productId || item.id) as string | undefined;
           if (!releaseId) continue;
           const release = releaseMap.get(releaseId) as Record<string, unknown> | undefined;
           if (!release) continue;
           const splits = (release.payoutSplits as Array<{ artistId?: unknown; percentage?: unknown }> | undefined);
+          const recipients: string[] = [];
           if (Array.isArray(splits) && splits.length > 0) {
             for (const s of splits) {
               if (typeof s.artistId === 'string' && typeof s.percentage === 'number' && s.percentage > 0) {
-                payeeIds.add(s.artistId);
+                recipients.push(s.artistId);
               }
             }
           } else {
             const aid = (item.artistId || (release as { artistId?: string; userId?: string }).artistId || (release as { artistId?: string; userId?: string }).userId) as string | undefined;
-            if (aid) payeeIds.add(aid);
+            if (aid) recipients.push(aid);
+          }
+          for (const aid of recipients) {
+            const list = itemsByPayeeId.get(aid) || [];
+            list.push(item);
+            itemsByPayeeId.set(aid, list);
           }
         }
 
         // Fetch each payee's account doc for email + display name.
         const payeeEntries = await Promise.all(
-          [...payeeIds].map(async (id) => {
+          [...itemsByPayeeId.keys()].map(async (id) => {
             const [artistDoc, userDoc] = await Promise.all([
               getDocument('artists', id).catch(() => null),
               getDocument('users', id).catch(() => null),
             ]);
             const email = (artistDoc?.email || userDoc?.email) as string | undefined;
             const name = (artistDoc?.artistName || artistDoc?.displayName || userDoc?.displayName || userDoc?.name || 'Artist') as string;
-            return { id, email, name };
+            return { id, email, name, items: itemsByPayeeId.get(id) || [] };
           })
         );
 
-        // Send one short email per unique email address (a single account
-        // could appear under multiple ids in unusual edge cases; dedupe).
+        // Helper: a friendly title string for a single order item. Tracks
+        // get "Track Title (from Release)"; full releases just the title.
+        const formatItem = (item: OrderItem): string => {
+          const isTrack = item.type === 'track';
+          // The downloads.tracks array (set by create-order) is the
+          // authoritative source for the track title actually sold.
+          const downloadTracks = (item as OrderItem & { downloads?: { tracks?: Array<{ name?: string }>; releaseName?: string } }).downloads;
+          const trackName = downloadTracks?.tracks?.[0]?.name;
+          const releaseName = downloadTracks?.releaseName || item.title;
+          if (isTrack && trackName) {
+            // Avoid "X (from X)" when track and release share the same name
+            if (releaseName && releaseName !== trackName) {
+              return `${esc(trackName)} <span style="color:#999;">(from ${esc(releaseName)})</span>`;
+            }
+            return esc(trackName);
+          }
+          return esc(item.name || item.title || 'Untitled');
+        };
+
+        // Send one email per unique email address. Items are deduped
+        // within each payee's list (multiple line items for the same
+        // track shouldn't appear twice).
         const sentTo = new Set<string>();
         for (const payee of payeeEntries) {
           if (!payee.email || sentTo.has(payee.email)) continue;
           sentTo.add(payee.email);
 
-          log.info('[create-order] Sending payee sale notification to:', maskEmail(payee.email));
+          // Dedupe items by their formatted title so we don't list the
+          // same track twice if it appears on multiple line items.
+          const seenTitles = new Set<string>();
+          const itemRows: string[] = [];
+          for (const item of payee.items) {
+            const html = formatItem(item);
+            const key = html.toLowerCase();
+            if (seenTitles.has(key)) continue;
+            seenTitles.add(key);
+            itemRows.push(`<li style="margin:0 0 8px;font-size:15px;line-height:1.5;color:#fff;">${html}</li>`);
+          }
+          const itemsHtml = itemRows.length
+            ? `<ul style="margin:0 0 24px;padding-left:20px;list-style:disc;">${itemRows.join('')}</ul>`
+            : '';
+          const itemWord = itemRows.length === 1 ? 'this' : 'these';
+
+          log.info('[create-order] Sending payee sale notification to:', maskEmail(payee.email), `(${itemRows.length} item(s))`);
 
           const html = emailWrapper(`
             <p style="font-size:18px;line-height:1.5;margin:0 0 16px;">
               Hey ${esc(payee.name)} 👋
             </p>
             <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              You've got a new sale on Fresh Wax. Someone just bought your music.
+              You've got a new sale on Fresh Wax. Someone just bought ${itemWord}:
             </p>
+            ${itemsHtml}
             <p style="font-size:14px;line-height:1.5;color:#999;margin:0 0 24px;">
               Order: <strong>${esc(orderNumber)}</strong>
             </p>
             ${ctaButton('View your dashboard', SITE_URL + '/account/dashboard/')}
             <p style="font-size:13px;line-height:1.5;color:#999;margin:24px 0 0;">
-              Your dashboard shows the breakdown of which tracks/releases sold and what your share is. Payouts are processed manually — we'll be in touch.
+              Your dashboard shows your share + payout status. Payouts are processed manually — we'll be in touch.
             </p>
-          `, { title: 'New Sale on Fresh Wax', preheader: 'You have a new order on Fresh Wax' });
+          `, { title: 'New Sale on Fresh Wax', preheader: `You have a new order on Fresh Wax (${itemRows.length} item${itemRows.length === 1 ? '' : 's'})` });
 
           const response = await fetchWithTimeout('https://api.resend.com/emails', {
             method: 'POST',
