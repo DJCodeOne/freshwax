@@ -92,8 +92,10 @@ export function initBroadcastMeters() {
 
       if (broadcastAudioSource === 'preview' && !hasLiveAnalysers) {
         var liveAudio = document.getElementById('audioElement');
-        if (liveAudio && !liveAudio.paused && ctx && ctx.setupAudioMeter) {
-          ctx.setupAudioMeter(liveAudio, 'LiveAudio');
+        // setupAudioMeter doesn't capture analysers back into state — must use
+        // setupLiveAudioMeter so liveAnalyserL/R are set for the meter loop.
+        if (liveAudio && !liveAudio.paused && ctx && ctx.setupLiveAudioMeter) {
+          ctx.setupLiveAudioMeter(liveAudio);
         }
       }
     }
