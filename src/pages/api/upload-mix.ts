@@ -56,6 +56,7 @@ const UploadMixSchema = z.object({
   mixDescription: z.string().max(300, 'Description must be 300 characters or less').optional().default(''),
   genre: z.string().max(30, 'Genre must be 30 characters or less').optional().default('Jungle'),
   tracklist: z.string().max(1500, 'Tracklist must be 1500 characters or less').optional().default(''),
+  sourceUrl: z.string().max(500, 'Source URL must be 500 characters or less').url('Source URL must be a valid http(s) URL').or(z.literal('')).optional().default(''),
   durationSeconds: z.string().regex(/^\d+$/, 'Duration must be a number').optional().default('0'),
   userId: z.string().optional().default(''),
 });
@@ -95,6 +96,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       mixDescription: (formData.get('mixDescription') as string || '').trim(),
       genre: (formData.get('genre') as string || '').trim(),
       tracklist: (formData.get('tracklist') as string || '').trim(),
+      sourceUrl: (formData.get('sourceUrl') as string || '').trim(),
       durationSeconds: (formData.get('durationSeconds') as string || '0'),
       userId: (formData.get('userId') as string || '').trim(),
     });
@@ -111,6 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const mixDescription = parsed.data.mixDescription;
     const genre = parsed.data.genre || 'Jungle';
     const tracklistRaw = parsed.data.tracklist;
+    const sourceUrlValue = parsed.data.sourceUrl;
     const durationSeconds = parseInt(parsed.data.durationSeconds, 10) || 0;
     const userId = parsed.data.userId;
 
@@ -358,6 +361,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artworkUrl: artworkUrl,
       ...(thumbUrl && { thumbUrl }),
       ...(ogImageUrl && { ogImageUrl }),
+      ...(sourceUrlValue && { sourceUrl: sourceUrlValue }),
       upload_date: new Date().toISOString(),
       uploadedAt: new Date().toISOString(),
       folder_path: folderPath,

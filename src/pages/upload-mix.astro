@@ -308,6 +308,22 @@ Artist - Track Title
             <p class="text-xs text-gray-300 mt-1">List your tracks, one per line. Format: Artist - Track Title (track numbers added automatically)</p>
           </div>
 
+          <!-- Original Source URL -->
+          <div>
+            <label for="sourceUrl" class="block text-sm font-bold text-gray-900 mb-2 uppercase tracking-wide">
+              Original Source Link <span class="text-gray-300 text-xs">(Optional)</span>
+            </label>
+            <input
+              type="url"
+              id="sourceUrl"
+              name="sourceUrl"
+              maxlength="500"
+              class="w-full px-4 py-3 border-2 border-gray-400 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-[border-color,box-shadow]"
+              placeholder="https://hearthis.at/... or https://soundcloud.com/..."
+            />
+            <p class="text-xs text-gray-300 mt-1">Link to the original upload (hearthis.at, SoundCloud, Mixcloud, etc.). Shown on your mix page so listeners can find the source.</p>
+          </div>
+
           <!-- Audio File Upload -->
           <div>
             <label for="audio-file-input" class="block text-sm font-bold text-blue-600 mb-2 uppercase tracking-wide">
@@ -1720,7 +1736,23 @@ Artist - Track Title
     const mixTitle = mixTitleInput.value.trim();
     const mixDescription = mixDescriptionInput.value.trim();
     const tracklist = tracklistInput.value.trim();
+    const sourceUrl = (document.getElementById('sourceUrl')?.value || '').trim();
     const genreValue = genreSelect.value;
+
+    // Validate sourceUrl shape if provided — server also validates but a
+    // client-side check stops obvious typos before the file uploads.
+    if (sourceUrl) {
+      try {
+        const u = new URL(sourceUrl);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+          alert('Source link must start with http:// or https://');
+          return;
+        }
+      } catch {
+        alert('Source link is not a valid URL');
+        return;
+      }
+    }
 
     // Validate required fields
     if (!djName || !mixTitle) {
@@ -1876,6 +1908,7 @@ Artist - Track Title
             mixDescription,
             genre: finalGenre,
             tracklist,
+            ...(sourceUrl && { sourceUrl }),
             durationSeconds: audioDurationSeconds,
             userId
           })
@@ -1895,6 +1928,7 @@ Artist - Track Title
         formData.append('mixDescription', mixDescription);
         formData.append('genre', finalGenre);
         formData.append('tracklist', tracklist);
+        if (sourceUrl) formData.append('sourceUrl', sourceUrl);
         formData.append('durationSeconds', audioDurationSeconds.toString());
         formData.append('audioFile', selectedAudioFile);
         formData.append('userId', userId);

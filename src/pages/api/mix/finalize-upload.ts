@@ -25,6 +25,7 @@ const FinalizeUploadSchema = z.object({
   mixDescription: z.string().max(5000).nullish(),
   genre: z.string().max(100).nullish(),
   tracklist: z.string().max(10000).nullish(),
+  sourceUrl: z.string().max(500).url().or(z.literal('')).nullish(),
   durationSeconds: z.number().min(0).nullish(),
   userId: z.string().max(500).nullish(),
 }).strip();
@@ -86,6 +87,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       mixDescription,
       genre,
       tracklist,
+      sourceUrl,
       durationSeconds,
       userId,
     } = parseResult.data;
@@ -227,6 +229,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       tracklist: tracklist || '',
       tracklistArray,
       trackCount: tracklistArray.length,
+      ...(sourceUrl && { sourceUrl }),
       durationSeconds: durationSeconds || 0,
       durationFormatted: formatDuration(durationSeconds || 0),
       duration: formatDuration(durationSeconds || 0),

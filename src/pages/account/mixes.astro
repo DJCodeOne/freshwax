@@ -140,6 +140,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </div>
             </div>
           </div>
+
+          <!-- Original Source URL -->
+          <div class="form-group">
+            <label for="editSourceUrl">Original Source Link (optional)</label>
+            <input type="url" id="editSourceUrl" name="sourceUrl" maxlength="500" placeholder="https://hearthis.at/... or https://soundcloud.com/..." />
+            <p class="form-hint" style="font-size: 0.85rem; color: #9ca3af; margin-top: 0.25rem;">External link to the original upload (hearthis.at, SoundCloud, Mixcloud, etc.). Shown on your mix page. Leave blank to hide.</p>
+          </div>
+
           <div class="modal-actions">
             <button type="button" class="btn-cancel">Cancel</button>
             <button type="submit" class="btn-save" id="saveBtn">Save Changes</button>
@@ -279,7 +287,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                       </div>
                       <div class="mix-actions">
                         <a href="/dj-mix/${encodeURIComponent(mix.id)}/" class="btn-view" target="_blank" rel="noopener noreferrer">👁️ View</a>
-                        <button class="btn-edit" data-mix-id="${escapeHtml(mix.id)}" data-title="${title}" data-description="${description}" data-artwork="${escapeHtml(artworkUrl)}">✏️ Edit</button>
+                        <button class="btn-edit" data-mix-id="${escapeHtml(mix.id)}" data-title="${title}" data-description="${description}" data-artwork="${escapeHtml(artworkUrl)}" data-source-url="${escapeHtml(mix.sourceUrl || '')}">✏️ Edit</button>
                         <button class="btn-delete" data-mix-id="${escapeHtml(mix.id)}" data-title="${title}">🗑️ Delete</button>
                       </div>
                     </div>
@@ -350,6 +358,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         document.getElementById('editMixId').value = currentMixId;
         document.getElementById('editTitle').value = title;
         document.getElementById('editDescription').value = description;
+        const sourceUrlField = document.getElementById('editSourceUrl');
+        if (sourceUrlField) sourceUrlField.value = btn.getAttribute('data-source-url') || '';
         if (artworkPreview && artwork) {
           artworkPreview.src = artwork;
         }
@@ -574,6 +584,24 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const mixId = document.getElementById('editMixId').value;
     const title = document.getElementById('editTitle').value.trim();
     const description = document.getElementById('editDescription').value;
+    const sourceUrl = (document.getElementById('editSourceUrl')?.value || '').trim();
+
+    if (sourceUrl) {
+      try {
+        const u = new URL(sourceUrl);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+          alert('Source link must start with http:// or https://');
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Changes';
+          return;
+        }
+      } catch {
+        alert('Source link is not a valid URL');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+        return;
+      }
+    }
     
     try {
       // Get auth token for API calls
@@ -613,10 +641,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const response = await fetch('/api/update-mix/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
-        body: JSON.stringify({ 
-          mixId, 
+        body: JSON.stringify({
+          mixId,
           title,
           description,
+          sourceUrl,
           ...(artworkUrl && { artworkUrl }),
           ...(currentUserId && { userId: currentUserId })
         })

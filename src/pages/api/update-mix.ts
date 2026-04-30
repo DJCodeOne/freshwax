@@ -18,6 +18,7 @@ const UpdateMixSchema = z.object({
   description: z.string().max(5000).nullish(),
   tracklist: z.string().max(10000).nullish(),
   artworkUrl: z.string().max(2000).nullish(),
+  sourceUrl: z.string().max(500).nullish(),
   partnerId: z.string().max(500).nullish(),
 }).strip();
 
@@ -43,7 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!parseResult.success) {
       return ApiErrors.badRequest('Invalid request');
     }
-    const { mixId, title, description, tracklist, artworkUrl, partnerId } = parseResult.data;
+    const { mixId, title, description, tracklist, artworkUrl, sourceUrl, partnerId } = parseResult.data;
 
     // Get the mix
     const mixData = await getDocument('dj-mixes', mixId);
@@ -86,6 +87,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updateData.artwork_url = artworkUrl;
       updateData.artworkUrl = artworkUrl;
       updateData.imageUrl = artworkUrl;
+    }
+
+    // Source URL — empty string clears it. Validate as a real http(s) URL
+    // when set so we don't render a broken link.
+    if (sourceUrl !== undefined && sourceUrl !== null) {
+      const raw = sourceUrl.trim().slice(0, 500);
+      if (raw === '') {
+        updateData.sourceUrl = '';
+      } else {
+        try {
+          const u = new URL(raw);
+          if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+            return ApiErrors.badRequest('Source URL must use http or https');
+          }
+          updateData.sourceUrl = u.toString();
+        } catch {
+          return ApiErrors.badRequest('Invalid source URL');
+        }
+      }
     }
 
     // Handle tracklist update - strip leading track numbers for consistent display
