@@ -239,43 +239,73 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
             // If it's a single track purchase, only include that track
             if (item.type === 'track') {
-              let track = null;
+              let track: TrackData | null = null;
+              const releaseTracks: TrackData[] = (releaseData?.tracks || []) as TrackData[];
 
-              // Method 1: Match by trackId
+              // The cart builds trackIds as `<releaseId>-track-<n>` (1-indexed
+              // display number), but tracks in the release array use 0-indexed
+              // `trackNumber`. Extract the suffix and try BOTH indexings so we
+              // match either convention (compilations bit us when cart's
+              // 1-indexed "track-6" was compared raw against the full string).
+              let trackIdSuffixNum: number | null = null;
               if (item.trackId) {
-                track = (releaseData?.tracks || []).find((t: TrackData) =>
+                const m = String(item.trackId).match(/-track-(\d+)$/);
+                if (m) trackIdSuffixNum = parseInt(m[1], 10);
+              }
+
+              // Method 1: Match by direct id/trackId fields, or by parsed suffix
+              // against trackNumber (try suffix as-is and suffix-1 to cover
+              // both 0-indexed and 1-indexed track arrays).
+              if (item.trackId) {
+                track = releaseTracks.find((t: TrackData) =>
                   t.id === item.trackId ||
                   t.trackId === item.trackId ||
                   String(t.trackNumber) === String(item.trackId)
-                );
+                ) || null;
+                if (!track && trackIdSuffixNum != null) {
+                  track = releaseTracks.find((t: TrackData) =>
+                    Number(t.trackNumber) === trackIdSuffixNum ||
+                    Number(t.trackNumber) === trackIdSuffixNum - 1 ||
+                    Number(t.displayTrackNumber) === trackIdSuffixNum
+                  ) || null;
+                }
               }
 
-              // Method 2: Match by track name from item name
-              if (!track && item.name) {
-                const itemNameParts = item.name.split(' - ');
-                const trackNameFromItem = itemNameParts.length > 1 ? itemNameParts.slice(1).join(' - ') : item.name;
-                track = (releaseData?.tracks || []).find((t: TrackData) =>
-                  (t.trackName || t.name || '').toLowerCase() === trackNameFromItem.toLowerCase()
-                );
+              // Method 2: Match by track name. For compilation tracks where the
+              // stored trackName is "Artist - Title", a strict-equal check on
+              // just the title fails. Try exact first, then substring, on
+              // BOTH the item name's last-segment and item.title.
+              const splitTrailing = (s: string) => {
+                const parts = s.split(' - ');
+                return parts.length > 1 ? parts.slice(1).join(' - ') : s;
+              };
+              const candidates = [item.title, item.name ? splitTrailing(item.name) : null]
+                .filter((s): s is string => !!s)
+                .map((s) => s.toLowerCase().trim());
+
+              if (!track && candidates.length) {
+                // Pass 1: exact equality (handles cleanly-named singles)
+                track = releaseTracks.find((t: TrackData) => {
+                  const name = (t.trackName || t.name || '').toLowerCase().trim();
+                  return candidates.some((c) => name === c);
+                }) || null;
+              }
+              if (!track && candidates.length) {
+                // Pass 2: substring (handles "Artist - Title" compilations)
+                track = releaseTracks.find((t: TrackData) => {
+                  const name = (t.trackName || t.name || '').toLowerCase();
+                  return candidates.some((c) => c.length >= 3 && name.includes(c));
+                }) || null;
               }
 
-              // Method 3: Match by title field
-              if (!track && item.title) {
-                track = (releaseData?.tracks || []).find((t: TrackData) =>
-                  (t.trackName || t.name || '').toLowerCase() === item.title.toLowerCase()
-                );
-              }
-
-              log.info('[create-order] Single track found:', track?.trackName || 'NOT FOUND');
+              log.info('[create-order] Single track found:', track ? (track.trackName || track.name) : 'NOT FOUND', 'for trackId:', item.trackId);
 
               // Get artist and release name for filename
               const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
               const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
+              const artworkUrl = releaseData?.originalArtworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
 
               if (track) {
-                // Get artwork from Firebase - prefer original full-res for buyer downloads
-                const artworkUrl = releaseData?.originalArtworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
-                log.info('[create-order] Track artwork URL:', artworkUrl);
                 return {
                   ...item,
                   releaseId,
@@ -293,9 +323,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   }
                 };
               } else {
-                // Fallback: include all tracks if we can't find the specific one
-                const artworkUrl = releaseData?.originalArtworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
-                log.info('[create-order] Fallback artwork URL:', artworkUrl);
+                // No match — DO NOT fall through to all-tracks. Returning the
+                // full release for a single-track purchase gives buyers free
+                // music (Oren's "Twisted Assasin" purchase shipped 13 tracks).
+                // Save the order with placeholder URLs so the buyer can be
+                // helped manually instead of silently overdelivering.
+                log.error('[create-order] Could not match single track — returning placeholder. trackId:', item.trackId, 'item.name:', item.name, 'releaseId:', releaseId);
                 return {
                   ...item,
                   releaseId,
@@ -305,11 +338,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     artistName,
                     releaseName,
                     artworkUrl,
-                    tracks: (releaseData?.tracks || []).map((t: TrackData) => ({
-                      name: t.trackName || t.name,
-                      mp3Url: t.mp3Url || null,
-                      wavUrl: t.wavUrl || null
-                    }))
+                    tracks: [{
+                      name: item.title || (item.name ? splitTrailing(item.name) : 'Track'),
+                      mp3Url: null,
+                      wavUrl: null,
+                      _matchFailed: true,
+                    }]
                   }
                 };
               }
