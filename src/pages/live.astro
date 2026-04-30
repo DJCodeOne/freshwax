@@ -1766,16 +1766,19 @@ try {
     const PUSHER_KEY = window.PUSHER_CONFIG?.key || '';
     const PUSHER_CLUSTER = window.PUSHER_CONFIG?.cluster || 'eu';
 
-    const djAuthToken = await currentUser.getIdToken().catch(() => null);
-    if (!djAuthToken) {
-      return;
-    }
+    // Cookie-shim users have no real Firebase token; getIdToken returns null.
+    // Pusher's XHR transport doesn't go through window.fetch, so we omit the
+    // Authorization header entirely when there's no real token — the server's
+    // verifyRequestUser falls through to the __session cookie.
+    const djAuthToken = currentUser.getIdToken
+      ? await currentUser.getIdToken().catch(() => null)
+      : null;
 
     const pusher = new window.Pusher(PUSHER_KEY, {
       cluster: PUSHER_CLUSTER,
       authEndpoint: '/api/dj-lobby/pusher-auth/',
       auth: {
-        headers: { 'Authorization': `Bearer ${djAuthToken}` },
+        headers: djAuthToken ? { 'Authorization': `Bearer ${djAuthToken}` } : {},
         params: { user_id: currentUser.uid }
       }
     });

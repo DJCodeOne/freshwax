@@ -83,14 +83,14 @@ export async function downloadFile(downloadInfo, filename, button) {
     var trackIndex = downloadInfo.trackIndex;
     var fileType = downloadInfo.fileType;
 
-    // Get Firebase auth token
-    var user = ctx.auth?.currentUser;
+    // Prefer real Firebase user; fall back to Header.astro's cookie-shim user.
+    // Server falls through to __session cookie when no Bearer header.
+    var user = ctx.auth?.currentUser || window.authUser;
     if (!user) {
       throw new Error('Please sign in to download');
     }
-    var token = await user.getIdToken();
+    var token = user.getIdToken ? await user.getIdToken().catch(function() { return null; }) : null;
 
-    // Stream file from same-origin API (no CORS issues, supports progress)
     var params = new URLSearchParams({
       orderId: orderId,
       releaseId: releaseId,
@@ -104,7 +104,7 @@ export async function downloadFile(downloadInfo, filename, button) {
     var dlController = new AbortController();
     var dlTimeout = setTimeout(function() { dlController.abort(); }, 30000);
     var fileResponse = await fetch('/api/download-file/?' + params.toString(), {
-      headers: { 'Authorization': 'Bearer ' + token },
+      headers: token ? { 'Authorization': 'Bearer ' + token } : {},
       signal: dlController.signal
     });
     clearTimeout(dlTimeout);
@@ -217,12 +217,11 @@ export async function downloadZip(button) {
   button.innerHTML = 'Creating ZIP...';
 
   try {
-    // Get Firebase auth token
-    var user = ctx.auth?.currentUser;
+    var user = ctx.auth?.currentUser || window.authUser;
     if (!user) {
       throw new Error('Please sign in to download');
     }
-    var token = await user.getIdToken();
+    var token = user.getIdToken ? await user.getIdToken().catch(function() { return null; }) : null;
 
     progressText.textContent = 'Preparing download...';
 
@@ -315,7 +314,7 @@ export async function downloadZip(button) {
         });
         var fileResponse = await fetch('/api/download-file/?' + dlParams.toString(), {
           signal: abortController.signal,
-          headers: { 'Authorization': 'Bearer ' + token }
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
         });
         if (!fileResponse.ok) {
           throw new Error('HTTP ' + fileResponse.status);

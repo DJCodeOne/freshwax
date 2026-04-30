@@ -16,20 +16,20 @@ export function init(context) {
 
 export async function loadCreditBalance(userId) {
   try {
-    // Get auth token for secure API call
+    // Get auth token; fall through to __session cookie when null (cookie-shim user).
     var currentUser = ctx.getCurrentUser();
-    var idToken = currentUser ? await currentUser.getIdToken() : null;
-    if (!idToken) {
-      console.error('[Dashboard] No auth token for credit balance');
+    var idToken = currentUser && currentUser.getIdToken
+      ? await currentUser.getIdToken().catch(function() { return null; })
+      : null;
+    if (!currentUser) {
+      console.error('[Dashboard] No user for credit balance');
       return;
     }
 
     var balanceController = new AbortController();
     var balanceTimeout = setTimeout(function() { balanceController.abort(); }, 15000);
     var response = await fetch('/api/giftcards/balance/?userId=' + userId, {
-      headers: {
-        'Authorization': 'Bearer ' + idToken
-      },
+      headers: idToken ? { 'Authorization': 'Bearer ' + idToken } : {},
       signal: balanceController.signal
     });
     clearTimeout(balanceTimeout);
@@ -145,12 +145,16 @@ export function initCreditTab() {
       btnLoading.classList.remove('hidden');
 
       try {
-        var idToken = await currentUser.getIdToken();
+        var idToken = currentUser.getIdToken
+          ? await currentUser.getIdToken().catch(function() { return null; })
+          : null;
+        var redeemHeaders = { 'Content-Type': 'application/json' };
+        if (idToken) redeemHeaders['Authorization'] = 'Bearer ' + idToken;
         var redeemController = new AbortController();
         var redeemTimeout = setTimeout(function() { redeemController.abort(); }, 15000);
         var response = await fetch('/api/giftcards/redeem/', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+          headers: redeemHeaders,
           body: JSON.stringify({ code: code }),
           signal: redeemController.signal
         });

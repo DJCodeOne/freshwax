@@ -1401,17 +1401,24 @@ const firebaseConfig = {
   const auth = getAuth(app);
   
   onAuthStateChanged(auth, async (user) => {
+    // If Firebase fires null but the userId cookie is present, fall back to the
+    // shim from Header (window.authUser). Server still authenticates via the
+    // __session cookie when the Bearer header is absent.
     if (!user) {
-      window.location.href = '/login/?redirect=/account/streaming-setup/';
-      return;
+      const cookieMatch = document.cookie.match(/(?:^|;\s*)userId=([^;]+)/);
+      if (cookieMatch && window.authUser) {
+        user = window.authUser;
+      } else {
+        window.location.href = '/login/?redirect=/account/streaming-setup/';
+        return;
+      }
     }
-    
+
     // Check DJ access
     try {
-      const _idToken = await user.getIdToken();
-      const response = await fetch(`/api/get-user-type/?uid=${user.uid}`, {
-        headers: { 'Authorization': `Bearer ${_idToken}` }
-      });
+      const _idToken = await user.getIdToken().catch(() => null);
+      const headers = _idToken ? { 'Authorization': `Bearer ${_idToken}` } : {};
+      const response = await fetch(`/api/get-user-type/?uid=${user.uid}`, { headers });
       if (!response.ok) throw new Error('User type fetch failed: ' + response.status);
       const result = await response.json();
       

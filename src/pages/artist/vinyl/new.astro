@@ -417,17 +417,23 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   let currentEditingTrackId = null;
 
   onAuthStateChanged(auth, async (user) => {
+    // Cookie-shim fallback when Firebase persistence is broken in this browser.
     if (!user) {
-      window.location.href = '/login/?redirect=/artist/vinyl/new/';
-      return;
+      const cookieMatch = document.cookie.match(/(?:^|;\s*)userId=([^;]+)/);
+      if (cookieMatch && window.authUser) {
+        user = window.authUser;
+      } else {
+        window.location.href = '/login/?redirect=/artist/vinyl/new/';
+        return;
+      }
     }
     currentUser = user;
 
     // Fetch seller info
     try {
-      const _idToken = await user.getIdToken();
+      const _idToken = user.getIdToken ? await user.getIdToken().catch(() => null) : null;
       const response = await fetch(`/api/get-user-type/?uid=${user.uid}`, {
-        headers: { 'Authorization': `Bearer ${_idToken}` }
+        headers: _idToken ? { 'Authorization': `Bearer ${_idToken}` } : {}
       });
       if (!response.ok) throw new Error('User type fetch failed: ' + response.status);
       const data = await response.json();
@@ -1103,8 +1109,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     modal.style.display = 'flex';
 
     try {
-      // Get auth token for API calls
-      const idToken = currentUser ? await currentUser.getIdToken() : null;
+      // Get auth token for API calls (null for cookie-shim users — server falls
+      // back to __session cookie when no Bearer header).
+      const idToken = currentUser && currentUser.getIdToken
+        ? await currentUser.getIdToken().catch(() => null)
+        : null;
 
       // Upload images
       const imageUrls = [];

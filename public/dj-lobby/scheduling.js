@@ -546,8 +546,11 @@ export async function loadStreamKeyForGoLive() {
     if (!currentUser) {
       throw new Error('No authenticated user');
     }
-    var token = await currentUser.getIdToken();
-    log('[GoLive] Step 2: Got token, preparing request...');
+    // Cookie-shim users have no real token; server falls through to __session.
+    var token = currentUser.getIdToken
+      ? await currentUser.getIdToken().catch(function() { return null; })
+      : null;
+    log('[GoLive] Step 2: Token ready, preparing request...');
 
     if (!userInfo || !userInfo.name) {
       throw new Error('User info not loaded yet');
@@ -558,12 +561,11 @@ export async function loadStreamKeyForGoLive() {
     var controller = new AbortController();
     var timeoutId = setTimeout(function() { controller.abort(); }, 15000);
 
+    var slotsHeaders = { 'Content-Type': 'application/json' };
+    if (token) slotsHeaders['Authorization'] = 'Bearer ' + token;
     var response = await fetch('/api/livestream/slots/', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
+      headers: slotsHeaders,
       body: JSON.stringify({
         action: 'generate_key',
         djId: currentUser.uid,

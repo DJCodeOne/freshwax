@@ -847,19 +847,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   subscriptionModule.init(ctx);
   creditsModule.init(ctx);
 
-  // Load customer data via API (replaces Firestore SDK getDoc call)
+  // Load customer data via API. When the cookie-shim is in play, currentUser
+  // exists but getIdToken returns null — server falls through to __session
+  // cookie auth so the request still succeeds without a Bearer header.
   async function loadCustomerData(uid) {
     try {
-      const idToken = currentUser ? await currentUser.getIdToken() : null;
-      if (!idToken) {
-        console.error('[Dashboard] No auth token for loading customer data');
+      if (!currentUser) {
         return {};
       }
-
+      const idToken = currentUser.getIdToken
+        ? await currentUser.getIdToken().catch(() => null)
+        : null;
       const response = await fetch('/api/user-profile/', {
-        headers: {
-          'Authorization': `Bearer ${idToken}`
-        }
+        headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {}
       });
       if (!response.ok) throw new Error('Profile fetch failed: ' + response.status);
       const result = await response.json();
