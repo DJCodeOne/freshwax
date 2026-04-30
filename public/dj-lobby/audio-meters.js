@@ -101,14 +101,20 @@ export function initBroadcastMeters() {
     }
 
     // When switching to live in OBS mode, ensure live analysers exist
+    // and the source element is actually playing — a paused element produces
+    // no audio data even when the analyser is wired correctly.
     if (currentPreviewSource === 'obs' && broadcastAudioSource === 'preview') {
-      if (!state.liveAnalyserL || !state.liveAnalyserR) {
-        var liveVid = document.getElementById('hlsVideo');
-        var audioEl = document.getElementById('audioElement');
-        var sourceEl = (liveVid && !liveVid.paused) ? liveVid : ((audioEl && !audioEl.paused) ? audioEl : liveVid);
-        if (sourceEl && ctx && ctx.setupLiveAudioMeter) {
-          ctx.setupLiveAudioMeter(sourceEl);
-        }
+      var liveVid = document.getElementById('hlsVideo');
+      var audioEl = document.getElementById('audioElement');
+      var sourceEl = (liveVid && liveVid.readyState > 0) ? liveVid : ((audioEl && audioEl.readyState > 0) ? audioEl : liveVid);
+      if (sourceEl && sourceEl.paused) {
+        sourceEl.play().catch(function() {});
+      }
+      if (sourceEl && ctx && ctx.setupLiveAudioMeter) {
+        // setupLiveAudioMeter is now idempotent (caches per element) and
+        // resumes the AudioContext on every call, so calling unconditionally
+        // is safe and recovers from a suspended-context state.
+        ctx.setupLiveAudioMeter(sourceEl);
       }
     }
 

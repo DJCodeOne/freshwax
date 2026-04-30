@@ -10,6 +10,13 @@ var obsAudioContext = null;
 var liveAudioContext = null;
 var obsMeterAnimationId = null;
 
+// Cache MediaElementSource + analysers per element. createMediaElementSource()
+// can only be called once per element; a second call throws InvalidStateError.
+// Without this cache, the toggle-source flow set up the analyser once, then
+// silently failed every retry — the meters showed a frozen LUFS reading from
+// the original capture and dead LEDs because no fresh data ever arrived.
+var elementMeterCache = new WeakMap();
+
 // Store previous levels for smoothing
 var meterLevels = new Map();
 
@@ -30,8 +37,27 @@ export function init(sharedCtx) {
 }
 
 export function setupAudioMeter(videoElement, prefix) {
+  // Reuse cached setup if this element was already wired up. createMediaElementSource
+  // throws on a second call for the same element, and resuming the cached context
+  // fixes the case where the user gesture toggle happened after autoplay-policy
+  // suspended it.
+  var cached = elementMeterCache.get(videoElement);
+  if (cached) {
+    if (cached.audioContext.state === 'suspended') {
+      cached.audioContext.resume().catch(function() {});
+    }
+    if (prefix === 'OBS') {
+      ctx.setObsKWeightedAnalysers(cached.kWeightedAnalyserL, cached.kWeightedAnalyserR);
+    } else if (prefix === 'Live') {
+      ctx.setLiveKWeightedAnalysers(cached.kWeightedAnalyserL, cached.kWeightedAnalyserR);
+    }
+    return cached;
+  }
   try {
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(function() {});
+    }
     var source = audioContext.createMediaElementSource(videoElement);
     var splitter = audioContext.createChannelSplitter(2);
 
@@ -100,7 +126,9 @@ export function setupAudioMeter(videoElement, prefix) {
       ctx.setLiveKWeightedAnalysers(kWeightedAnalyserL, kWeightedAnalyserR);
     }
 
-    return { audioContext: audioContext, analyserL: analyserL, analyserR: analyserR, kWeightedAnalyserL: kWeightedAnalyserL, kWeightedAnalyserR: kWeightedAnalyserR };
+    var result = { audioContext: audioContext, analyserL: analyserL, analyserR: analyserR, kWeightedAnalyserL: kWeightedAnalyserL, kWeightedAnalyserR: kWeightedAnalyserR };
+    elementMeterCache.set(videoElement, result);
+    return result;
   } catch (e) {
     console.error('[' + prefix + '] Audio meter setup error:', e);
     return null;
