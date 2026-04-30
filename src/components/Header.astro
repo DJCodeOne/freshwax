@@ -1618,7 +1618,11 @@ const firebaseConfig = {
     }
     _authUIUpdating = true;
     setTimeout(() => { _authUIUpdating = false; }, 100);
-    const user = auth.currentUser;
+    // Prefer the cookie-shim user when Firebase Auth state is null but the
+    // userId cookie says the user is logged in (IndexedDB persistence failed
+    // in this browser). Otherwise the header shows "Login" on every refresh
+    // even though the server still authenticates them via __session cookie.
+    const user = auth.currentUser || (window.authUser && window.authUser.__isCookieShim ? window.authUser : null);
     const accountNames = document.querySelectorAll('.account-name');
     const loggedOutSections = document.querySelectorAll('.logged-out');
     const loggedInSections = document.querySelectorAll('.logged-in');
@@ -1774,9 +1778,16 @@ const firebaseConfig = {
         } catch (e){ /* Ignore storage errors */ }
       }
     } else {
-      // User logged out - clear the auth cache and admin session cookie (HttpOnly)
-      try { sessionStorage.removeItem('fw_auth_cache'); } catch (e){ /* Non-critical: best-effort cleanup on logout */ }
-      if (window.__setAuthCookies) window.__setAuthCookies({ action: 'logout' });
+      // Firebase fired null. Distinguish a real logout from IndexedDB
+      // persistence failing on a refresh — the userId cookie is the source
+      // of truth set by /api/auth/set-session. If it's still present, this
+      // is the shim path; do NOT wipe cookies (that would log the user out
+      // on every refresh in browsers where Firebase persistence is flaky).
+      const stillLoggedIn = document.cookie.includes('userId=');
+      if (!stillLoggedIn) {
+        try { sessionStorage.removeItem('fw_auth_cache'); } catch (e){ /* Non-critical: best-effort cleanup on logout */ }
+        if (window.__setAuthCookies) window.__setAuthCookies({ action: 'logout' });
+      }
     }
     // Update UI AFTER any fetch is complete
     updateAuthUI();
