@@ -1426,7 +1426,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as relayModule from '/dj-lobby/relay.js?v=20260410';
   import * as initModalModule from '/dj-lobby/init-modal.js?v=20260410';
   import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260410';
-  import * as stereoMetersModule from '/dj-lobby/stereo-meters.js?v=20260430d';
+  import * as stereoMetersModule from '/dj-lobby/stereo-meters.js?v=20260430e';
 
   // ============================================
   // MODULE FUNCTION ALIASES
@@ -2602,10 +2602,25 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // Video stream (HLS/Red5)
           videoPreview?.classList.remove('hidden');
           audioPreview?.classList.add('hidden');
-          // Setup HLS video player — muted in DJ lobby so it doesn't overlap preview audio
+          // Setup HLS video player — speaker output silenced via the audio-graph
+          // gain node (set by applyMuteState) instead of element.volume, because
+          // createMediaElementSource taps after element.volume so muting that
+          // way kills the analyser. This block runs on every loadStreamStatus
+          // poll (~10s), which previously reset element.volume=0 and crashed
+          // the LED meters / LUFS shortly after a source toggle.
           setupHlsPlayer(currentStream);
           const hlsVid = document.getElementById('hlsVideo');
-          if (hlsVid) hlsVid.volume = 0;
+          if (hlsVid) {
+            hlsVid.muted = false;
+            hlsVid.volume = 1;
+            const handled = stereoMetersModule.setElementOutputGain && stereoMetersModule.setElementOutputGain(hlsVid, 0);
+            if (!handled) {
+              // Analyser hasn't been wired yet — fall back to native mute. The
+              // first setupAudioMeter call on this element will re-enable native
+              // gates and switch to gain-based silencing.
+              hlsVid.volume = 0;
+            }
+          }
         } else {
           // Audio-only stream (BUTT/Icecast/Relay)
           log('[Stream] Showing audio placeholder for audio-only stream');
