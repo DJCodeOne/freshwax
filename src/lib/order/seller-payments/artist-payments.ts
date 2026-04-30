@@ -14,7 +14,11 @@ export async function processArtistPayments(params: SellerPaymentParams) {
   const prefix = params.logPrefix || '[PayPal]';
 
   try {
-    // Group items by artist
+    // Group items by artist. When a release defines `payoutSplits` (array of
+    // { artistId, percentage } summing to 100), the artist share for that
+    // release's items is fanned out across multiple recipients instead of
+    // routed wholesale to release.artistId. Used for split-ownership EPs
+    // like Code One & Bakkus 'Jungle Disorder' (50/50 across two accounts).
     const artistPayments: Record<string, {
       artistId: string;
       artistName: string;
@@ -40,7 +44,26 @@ export async function processArtistPayments(params: SellerPaymentParams) {
     );
     const releaseMap = new Map(releaseEntries.filter(([, doc]) => doc));
 
-    // Collect unique artist IDs from resolved releases
+    // Helper: read & validate a release's split config, or return null when
+    // it should fall back to the single-artist behaviour.
+    const getSplits = (release: Record<string, unknown> | undefined): Array<{ artistId: string; percentage: number }> | null => {
+      const raw = (release as { payoutSplits?: unknown } | undefined)?.payoutSplits;
+      if (!Array.isArray(raw) || raw.length === 0) return null;
+      const cleaned = raw
+        .map((s) => s as { artistId?: unknown; percentage?: unknown })
+        .filter((s) => typeof s.artistId === 'string' && typeof s.percentage === 'number' && s.percentage > 0)
+        .map((s) => ({ artistId: s.artistId as string, percentage: s.percentage as number }));
+      if (cleaned.length === 0) return null;
+      const total = cleaned.reduce((sum, s) => sum + s.percentage, 0);
+      // Allow tiny rounding errors but reject anything that's clearly wrong
+      if (Math.abs(total - 100) > 0.01) {
+        log.warn(`${prefix} payoutSplits don't sum to 100 (got ${total}); falling back to single-artist routing`);
+        return null;
+      }
+      return cleaned;
+    };
+
+    // Collect unique artist IDs from resolved releases (including split recipients)
     const artistIds = new Set<string>();
     for (const item of items) {
       if (item.type === 'merch') continue;
@@ -48,8 +71,13 @@ export async function processArtistPayments(params: SellerPaymentParams) {
       if (!releaseId) continue;
       const release = releaseMap.get(releaseId as string);
       if (!release) continue;
-      const aid = item.artistId || release.artistId || release.userId;
-      if (aid) artistIds.add(aid as string);
+      const splits = getSplits(release);
+      if (splits) {
+        for (const s of splits) artistIds.add(s.artistId);
+      } else {
+        const aid = item.artistId || release.artistId || release.userId;
+        if (aid) artistIds.add(aid as string);
+      }
     }
 
     // Batch-fetch all artists in parallel
@@ -71,11 +99,6 @@ export async function processArtistPayments(params: SellerPaymentParams) {
       const release = releaseMap.get(releaseId as string);
       if (!release) continue;
 
-      const artistId = (item.artistId || release.artistId || release.userId) as string;
-      if (!artistId) continue;
-
-      const artist = artistMap.get(artistId) || null;
-
       const itemTotal = (item.price || 0) * (item.quantity || 1);
 
       // Artist sets full price, fees deducted from that
@@ -86,18 +109,34 @@ export async function processArtistPayments(params: SellerPaymentParams) {
       const processingFeePerSeller = totalProcessingFee / totalItemCount;
       const artistShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
-      if (!artistPayments[artistId]) {
-        artistPayments[artistId] = {
-          artistId,
-          artistName: artist?.artistName || release.artistName || release.artist || 'Unknown Artist',
-          artistEmail: artist?.email || release.artistEmail || '',
-          amount: 0,
-          items: []
-        };
-      }
+      // Build the recipient list — either explicit splits from the release
+      // doc or a single-recipient list using the release's artistId.
+      const splits = getSplits(release);
+      const recipients = splits
+        ? splits.map((s) => ({ artistId: s.artistId, share: artistShare * (s.percentage / 100) }))
+        : (() => {
+            const aid = (item.artistId || release.artistId || release.userId) as string;
+            return aid ? [{ artistId: aid, share: artistShare }] : [];
+          })();
 
-      artistPayments[artistId].amount += artistShare;
-      artistPayments[artistId].items.push(item.name || item.title || 'Item');
+      if (recipients.length === 0) continue;
+
+      const itemLabel = item.name || item.title || 'Item';
+
+      for (const recipient of recipients) {
+        const artist = artistMap.get(recipient.artistId) || null;
+        if (!artistPayments[recipient.artistId]) {
+          artistPayments[recipient.artistId] = {
+            artistId: recipient.artistId,
+            artistName: artist?.artistName || release.artistName || release.artist || 'Unknown Artist',
+            artistEmail: artist?.email || release.artistEmail || '',
+            amount: 0,
+            items: []
+          };
+        }
+        artistPayments[recipient.artistId].amount += recipient.share;
+        artistPayments[recipient.artistId].items.push(itemLabel);
+      }
     }
 
     // Processing artist payouts
