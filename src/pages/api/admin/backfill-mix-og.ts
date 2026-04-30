@@ -112,7 +112,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
   const r2Config = getR2Config(env);
   if (!r2Config) return ApiErrors.serverError('R2 config missing');
-  const s3Client = createS3Client(env);
+  const s3Client = createS3Client(r2Config);
 
   // Single-mix mode
   if (mixId) {
