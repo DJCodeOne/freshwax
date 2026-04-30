@@ -1,11 +1,41 @@
 // csrf-protect.js
 // Global fetch interceptor for CSRF double-submit cookie pattern.
 // Automatically adds X-CSRF-Token header to all same-origin state-changing requests.
+// Also strips "Authorization: Bearer null/undefined" so the server falls through
+// to __session cookie auth (used when Firebase Auth client-side persistence fails
+// and currentUser.getIdToken() returns null).
 // Must be loaded BEFORE any fetch() calls on the page.
 (function() {
   var originalFetch = window.fetch;
+
+  function isInvalidBearer(value) {
+    if (!value) return true;
+    var lower = String(value).toLowerCase().trim();
+    return lower === 'bearer null' || lower === 'bearer undefined' || lower === 'bearer ';
+  }
+
+  function stripInvalidAuth(headers) {
+    if (!headers) return headers;
+    if (headers instanceof Headers) {
+      if (isInvalidBearer(headers.get('Authorization'))) headers.delete('Authorization');
+      return headers;
+    }
+    if (Array.isArray(headers)) {
+      return headers.filter(function(h) {
+        return !(h[0].toLowerCase() === 'authorization' && isInvalidBearer(h[1]));
+      });
+    }
+    var out = {};
+    for (var k in headers) {
+      if (k.toLowerCase() === 'authorization' && isInvalidBearer(headers[k])) continue;
+      out[k] = headers[k];
+    }
+    return out;
+  }
+
   window.fetch = function(input, init) {
     init = init || {};
+    init.headers = stripInvalidAuth(init.headers);
     var method = (init.method || 'GET').toUpperCase();
     if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
       var url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');

@@ -1086,8 +1086,40 @@ const firebaseConfig = {
     window.firebaseAuth = auth;
 
     const unsubscribeInitial = _fb.onAuthStateChanged(auth, (user) => {
-      window.authUser = user;
-      authReadyResolve(user);
+      // Cookie-auth shim: when Firebase Auth fails to restore the session
+      // client-side (common in browsers where IndexedDB persistence is blocked
+      // — Safari ITP, Firefox strict mode, some private/incognito modes,
+      // privacy extensions), fall back to the userId cookie set by the server.
+      // The server still authenticates these requests via the __session cookie
+      // (verifyRequestUser checks both Bearer header and cookie), so fetch
+      // calls work even when getIdToken() can't run. UI code that checks
+      // `currentUser` truthiness now sees the shim and lets users proceed.
+      if (!user) {
+        const userIdMatch = document.cookie.match(/(?:^|;\s*)userId=([^;]+)/);
+        if (userIdMatch) {
+          const cookieUid = userIdMatch[1];
+          const shim = {
+            uid: cookieUid,
+            displayName: null,
+            email: null,
+            photoURL: null,
+            emailVerified: true,
+            // Returns null because we can't mint a fresh ID token without
+            // Firebase Auth state. Callers must omit Authorization header
+            // when token is null — server falls back to __session cookie.
+            getIdToken: () => Promise.resolve(null),
+            __isCookieShim: true,
+          };
+          window.authUser = shim;
+          authReadyResolve(shim);
+        } else {
+          window.authUser = null;
+          authReadyResolve(null);
+        }
+      } else {
+        window.authUser = user;
+        authReadyResolve(user);
+      }
       unsubscribeInitial();
     });
   } else {

@@ -52,19 +52,29 @@ export async function verifyUserToken(idToken: string): Promise<string | null> {
 }
 
 /**
- * Extract and verify user from request headers
- * Expects Authorization: Bearer <idToken> header
- * @param request - The incoming request
- * @returns Object with userId if verified, error message if not
+ * Extract and verify user from request headers.
+ * Prefers Authorization: Bearer <idToken> header; falls back to the __session
+ * HttpOnly cookie when no header is present. Cookie fallback supports browsers
+ * where Firebase Auth client-side persistence (IndexedDB) fails — the user is
+ * still authenticated server-side via the cookie set during login. CSRF
+ * protection (SameSite=Lax cookie + X-CSRF-Token header) still applies on POST
+ * endpoints, so cross-site requests can't exploit this fallback.
  */
 export async function verifyRequestUser(request: Request): Promise<{ userId: string | null; email?: string; error?: string }> {
   const authHeader = request.headers.get('Authorization');
+  let idToken: string | null = null;
 
-  if (!authHeader?.startsWith('Bearer ')) {
-    return { userId: null, error: 'Missing or invalid Authorization header' };
+  if (authHeader?.startsWith('Bearer ')) {
+    idToken = authHeader.slice(7);
+  } else {
+    const cookieHeader = request.headers.get('Cookie') || '';
+    const match = cookieHeader.match(/(?:^|;\s*)__session=([^;]+)/);
+    if (match) idToken = match[1];
   }
 
-  const idToken = authHeader.slice(7); // Remove 'Bearer ' prefix
+  if (!idToken) {
+    return { userId: null, error: 'Missing or invalid Authorization header' };
+  }
 
   // Get full user info including email from token
   const apiKey = getEnvVar('FIREBASE_API_KEY');
