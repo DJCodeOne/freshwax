@@ -183,6 +183,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
       <div class="card">
         <div class="card-header">
+          <h2>🔗 Original Source</h2>
+        </div>
+        <div class="card-body">
+          <label class="form-label" for="mixSourceUrl">Source URL (optional)</label>
+          <input type="url" name="sourceUrl" id="mixSourceUrl" class="form-input" value={mix.sourceUrl || ''} placeholder="https://hearthis.at/... or https://soundcloud.com/..." />
+          <span class="form-hint">External link to the original upload (hearthis.at, SoundCloud, Mixcloud, etc.). Shown on the mix page under the action buttons. Leave blank to hide.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
           <h2>⚙️ Settings</h2>
         </div>
         <div class="card-body settings-body">
@@ -760,6 +771,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       genre: formData.get('genre'),
       description: formData.get('description'),
       tracklist: formData.get('tracklist'),
+      sourceUrl: formData.get('sourceUrl'),
       artworkUrl: artworkUrl,
       published: formData.get('published') === 'on',
       allowDownload: formData.get('allowDownload') === 'on',

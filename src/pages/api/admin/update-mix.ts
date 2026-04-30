@@ -2,12 +2,13 @@
 // Admin endpoint to update DJ mix metadata (no ownership check)
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { invalidateMixesCache } from '../../../lib/firebase-rest';
+import { invalidateMixesCache, getDocument } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 import { initKVCache, kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
+import { d1UpsertMix } from '../../../lib/d1-catalog';
 
 const log = createLogger('admin/update-mix');
 
@@ -18,6 +19,7 @@ const updateMixSchema = z.object({
   genre: z.string().max(30).optional().nullable(),
   description: z.string().max(500).optional().nullable(),
   artworkUrl: z.string().optional().nullable(),
+  sourceUrl: z.string().max(500).optional().nullable(),
   tracklist: z.string().max(2000).optional().nullable(),
   published: z.boolean().optional(),
   allowDownload: z.boolean().optional(),
@@ -88,6 +90,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updateData.artwork_url = body.artworkUrl || '';
     }
 
+    // Source URL (external original upload — hearthis.at, soundcloud, etc.)
+    // Validated as a real URL when non-empty so we don't render a broken link.
+    if (body.sourceUrl !== undefined && body.sourceUrl !== null) {
+      const raw = String(body.sourceUrl || '').trim().slice(0, 500);
+      if (raw === '') {
+        updateData.sourceUrl = '';
+      } else {
+        try {
+          const u = new URL(raw);
+          if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+            return ApiErrors.badRequest('Source URL must be http or https');
+          }
+          updateData.sourceUrl = u.toString();
+        } catch {
+          return ApiErrors.badRequest('Invalid source URL');
+        }
+      }
+    }
+
     // Tracklist
     if (body.tracklist !== undefined && body.tracklist !== null) {
       const tracklistRaw = String(body.tracklist || '').slice(0, 2000);
@@ -149,6 +170,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     await saUpdateDocument(serviceAccountKey, projectId, 'dj-mixes', mixId, updateData);
+
+    // Mirror to D1 — the dj-mix page reads from D1 first, so without this
+    // the page keeps rendering the pre-update doc. Fetch the freshly-merged
+    // Firestore doc and upsert it whole so D1 stays consistent.
+    const db = (env as { DB?: D1Database } | undefined)?.DB;
+    if (db) {
+      try {
+        const updated = await getDocument('dj-mixes', mixId);
+        if (updated) {
+          await d1UpsertMix(db, mixId, updated);
+        }
+      } catch (d1Err: unknown) {
+        log.warn('[update-mix] D1 mirror failed (non-critical):', d1Err);
+      }
+    }
 
     // Clear mixes cache so changes appear immediately
     invalidateMixesCache();
