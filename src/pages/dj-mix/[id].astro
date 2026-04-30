@@ -76,6 +76,7 @@ const {
   artwork_url = '/place-holder.webp',
   thumbUrl: mixThumbUrl = '',
   ogImageUrl: mixOgImageUrl = '',
+  sourceUrl = '',
   audio_url = '',
   upload_date = new Date().toISOString(),
   description = '',
@@ -369,6 +370,22 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   <span class="download-text">Download</span>
                 </button>
               </div>
+
+              {sourceUrl && (
+                <div class="mt-3 sm:mt-4 px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-900 border-2 border-gray-700 rounded-lg flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+                  <svg class="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  <span class="font-bold uppercase text-white tracking-wide whitespace-nowrap">Original Source:</span>
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer external"
+                    class="text-red-400 hover:text-red-300 underline truncate min-w-0"
+                    title={sourceUrl}
+                  >{sourceUrl}</a>
+                </div>
+              )}
             </div>
 
             <!-- Artwork Column - Bottom Right -->
