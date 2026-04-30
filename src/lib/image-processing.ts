@@ -2,7 +2,7 @@
 // WASM-based image processing for Cloudflare Workers
 // Uses @cf-wasm/photon for crop/resize + @jsquash/webp for lossy WebP encoding
 
-import { PhotonImage, SamplingFilter, crop, resize } from '@cf-wasm/photon';
+import { PhotonImage, SamplingFilter, crop, gaussian_blur, resize, watermark } from '@cf-wasm/photon';
 import encodeWebP, { init as initWebPEncode } from '@jsquash/webp/encode';
 // Direct WASM imports for Cloudflare Workers (no filesystem fetch available)
 // @ts-expect-error — .wasm imports have no type declarations; handled by Cloudflare/Vite bundler at build time
@@ -171,6 +171,82 @@ export async function processImageToWebP(
   }
 
   return { buffer: webpBuffer, width: newWidth, height: newHeight, format: 'webp', debug: debugLog };
+}
+
+/**
+ * Generate a 1200x630 Facebook OG-friendly image: source image centered as a
+ * 630x630 square on top of a heavily-blurred enlarged copy of itself filling
+ * the side bars. Matches Facebook's preferred 1.91:1 aspect ratio so shares
+ * stop cropping the top + bottom of square cover art.
+ *
+ * Roughly +200-400ms on top of the existing square processing on Workers.
+ */
+export async function processImageToFacebookOG(
+  inputBuffer: ArrayBuffer | Uint8Array,
+  quality: number = 78
+): Promise<ProcessedImage> {
+  const input = inputBuffer instanceof Uint8Array
+    ? inputBuffer
+    : new Uint8Array(inputBuffer);
+
+  const FB_W = 1200;
+  const FB_H = 630;
+  const FG_SIZE = 630;
+  const FG_X = Math.floor((FB_W - FG_SIZE) / 2); // 285
+
+  // Foreground: center-crop square then resize to 630x630
+  const fgSrc = PhotonImage.new_from_byteslice(input);
+  const ow = fgSrc.get_width();
+  const oh = fgSrc.get_height();
+  const minDim = Math.min(ow, oh);
+  const fgCropX = Math.floor((ow - minDim) / 2);
+  const fgCropY = Math.floor((oh - minDim) / 2);
+  const fgSquare = crop(fgSrc, fgCropX, fgCropY, fgCropX + minDim, fgCropY + minDim);
+  fgSrc.free();
+  const foreground = resize(fgSquare, FG_SIZE, FG_SIZE, SamplingFilter.Lanczos3);
+  fgSquare.free();
+
+  // Background: enlarge source to >=1200x630 maintaining aspect, center-crop
+  // to 1200x630, then heavy gaussian blur. Square inputs become 1200x1200
+  // pre-crop; non-square get scaled to fill.
+  const bgSrc = PhotonImage.new_from_byteslice(input);
+  const bgAspect = ow / oh;
+  let bgW: number;
+  let bgH: number;
+  if (bgAspect >= FB_W / FB_H) {
+    bgH = FB_H;
+    bgW = Math.ceil(FB_H * bgAspect);
+  } else {
+    bgW = FB_W;
+    bgH = Math.ceil(FB_W / bgAspect);
+  }
+  const bgScaled = resize(bgSrc, bgW, bgH, SamplingFilter.Nearest);
+  bgSrc.free();
+  const bgCropX = Math.floor((bgW - FB_W) / 2);
+  const bgCropY = Math.floor((bgH - FB_H) / 2);
+  const bgCanvas = crop(bgScaled, bgCropX, bgCropY, bgCropX + FB_W, bgCropY + FB_H);
+  bgScaled.free();
+  // Heavy blur — radius ~40 hides any cover art detail, leaving a colored haze.
+  gaussian_blur(bgCanvas, 40);
+
+  // Composite foreground over blurred background. watermark() uses bigint coords.
+  watermark(bgCanvas, foreground, BigInt(FG_X), BigInt(0));
+  foreground.free();
+
+  const rawPixels = bgCanvas.get_raw_pixels();
+  const w = bgCanvas.get_width();
+  const h = bgCanvas.get_height();
+  bgCanvas.free();
+
+  const webpBuffer = await encodeLossyWebP(rawPixels, w, h, quality);
+
+  return {
+    buffer: webpBuffer,
+    width: w,
+    height: h,
+    format: 'webp',
+    debug: [{ attempt: 0, size: webpBuffer.length, dimensions: `${w}x${h}` }],
+  };
 }
 
 /** Get file extension for a processed image format */

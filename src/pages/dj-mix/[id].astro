@@ -75,6 +75,7 @@ const {
   genre = 'Jungle and Drum & Bass',
   artwork_url = '/place-holder.webp',
   thumbUrl: mixThumbUrl = '',
+  ogImageUrl: mixOgImageUrl = '',
   audio_url = '',
   upload_date = new Date().toISOString(),
   description = '',
@@ -87,6 +88,12 @@ const {
   userId: mixUserId = '',
   djName: mixDjName = ''
 } = mix || {};
+
+// Facebook prefers 1200x630 OG images; fall back to square cover when the
+// 1200x630 variant doesn't exist (older mixes pre-backfill).
+const shareImage = mixOgImageUrl || (artwork_url !== '/place-holder.webp' ? artwork_url : '');
+const shareImageWidth = mixOgImageUrl ? 1200 : 800;
+const shareImageHeight = mixOgImageUrl ? 630 : 800;
 
 // Derive thumbnail URL for srcset (400w responsive variant)
 const artworkThumbUrl = mixThumbUrl || (artwork_url.includes('/artwork.webp') ? artwork_url.replace('/artwork.webp', '/thumb.webp') : '');
@@ -192,7 +199,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   title={mix ? `${title} - ${dj_name}` : 'Mix Not Found'}
   description={mix ? `${title} by ${dj_name}${genre ? ` - ${genre}` : ''}${formattedDuration ? ` (${formattedDuration})` : ''}. Listen now on Fresh Wax.` : 'Mix not found'}
   noindex={!mix}
-  image={artwork_url !== '/place-holder.webp' ? artwork_url : undefined}
+  image={shareImage || undefined}
+  imageWidth={shareImage ? shareImageWidth : undefined}
+  imageHeight={shareImage ? shareImageHeight : undefined}
   type="music.album"
   audio={mix ? {
     duration: durationSeconds ? `PT${Math.floor(durationSeconds / 3600)}H${Math.floor((durationSeconds % 3600) / 60)}M${Math.floor(durationSeconds % 60)}S` : 'PT1H',

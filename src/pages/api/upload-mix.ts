@@ -8,7 +8,7 @@ import { createS3Client } from '../../lib/s3-client';
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
 import { d1UpsertMix } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
+import { processImageToSquareWebP, processImageToFacebookOG, imageExtension, imageContentType } from '../../lib/image-processing';
 import { invalidateMixesKVCache } from '../../lib/kv-cache';
 import { errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
 import { logActivity } from '../../lib/activity-feed';
@@ -233,6 +233,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Upload artwork to R2 (or use default)
     let artworkUrl: string;
     let thumbUrl: string | undefined;
+    let ogImageUrl: string | undefined;
 
     if (artworkFile && artworkFile.size > 0) {
       const artworkBuffer = await artworkFile.arrayBuffer();
@@ -241,10 +242,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       let artworkBody: Buffer;
 
       try {
-        // Process artwork + thumbnail in parallel to avoid Worker timeout
-        const [processed, thumb] = await Promise.all([
+        // Process artwork + thumbnail + Facebook OG in parallel.
+        // OG is best-effort — failure shouldn't block upload; falls back to
+        // square cover for og:image (Facebook crops top/bottom but at least works).
+        const [processed, thumb, ogImg] = await Promise.all([
           processImageToSquareWebP(artworkBuffer, 800, 80),
           processImageToSquareWebP(artworkBuffer, 400, 75).catch(() => null),
+          processImageToFacebookOG(artworkBuffer, 78).catch((e) => {
+            log.warn('[upload-mix] Facebook OG generation failed:', e);
+            return null;
+          }),
         ]);
 
         artworkKey = `${folderPath}/artwork${imageExtension(processed.format)}`;
@@ -252,7 +259,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         artworkBody = Buffer.from(processed.buffer);
         log.info(`[upload-mix] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
 
-        // Upload artwork + thumbnail in parallel
+        // Upload artwork + thumbnail + OG in parallel
         const uploads: Promise<unknown>[] = [
           s3Client.send(new PutObjectCommand({
             Bucket: R2_CONFIG.bucketName,
@@ -277,6 +284,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
           );
         }
 
+        let ogKey: string | undefined;
+        if (ogImg) {
+          ogKey = `${folderPath}/og${imageExtension(ogImg.format)}`;
+          uploads.push(
+            s3Client.send(new PutObjectCommand({
+              Bucket: R2_CONFIG.bucketName,
+              Key: ogKey,
+              Body: Buffer.from(ogImg.buffer),
+              ContentType: imageContentType(ogImg.format),
+              CacheControl: 'public, max-age=31536000',
+            }))
+          );
+        }
+
         await Promise.all(uploads);
         uploadedR2Keys.push(artworkKey);
         artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
@@ -285,6 +306,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           uploadedR2Keys.push(thumbKey);
           thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
           log.info(`[upload-mix] Thumbnail generated: ${thumb!.width}x${thumb!.height} ${thumb!.format}`);
+        }
+
+        if (ogKey) {
+          uploadedR2Keys.push(ogKey);
+          ogImageUrl = `${R2_CONFIG.publicDomain}/${ogKey}`;
+          log.info(`[upload-mix] Facebook OG image generated: ${ogImg!.width}x${ogImg!.height} ${(ogImg!.buffer.length / 1024).toFixed(1)}KB`);
         }
       } catch (imgErr: unknown) {
         log.error('[upload-mix] WebP processing failed, using original:', imgErr);
@@ -330,6 +357,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artwork_url: artworkUrl,
       artworkUrl: artworkUrl,
       ...(thumbUrl && { thumbUrl }),
+      ...(ogImageUrl && { ogImageUrl }),
       upload_date: new Date().toISOString(),
       uploadedAt: new Date().toISOString(),
       folder_path: folderPath,

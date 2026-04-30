@@ -60,6 +60,7 @@ const CSRF_SKIP = new Set([
   '/api/livestream/whip-proxy/',
   // Admin endpoints — authenticated via X-Admin-Key / requireAdminAuth
   '/api/admin/backfill-followers/',
+  '/api/admin/backfill-mix-og/',
   '/api/admin/scan-tracklists/',
   '/api/admin/mark-royalties-paid/',
   '/api/admin/royalty-ledger/',
