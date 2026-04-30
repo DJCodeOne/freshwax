@@ -252,10 +252,10 @@ const nonce = Astro.locals.nonce || '';
           <div class="genre-filter-dropdown" id="genreDropdown">
             <div class="genre-filter-scroll">
               <button class="genre-filter-btn active" data-genre="all">All ({mixes.length})</button>
+              <a class="genre-filter-btn genre-nav-external" href="https://hearthis.at/theundergroundlair23/" target="_blank" rel="noopener noreferrer" aria-label="The Lair Archives on hearthis.at (opens in new tab)">The Lair Archives</a>
               {sortedGenres.map(({ genre, count }) => (
                 <button class="genre-filter-btn" data-genre={genre}>{genre} ({count})</button>
               ))}
-              <a class="genre-filter-btn genre-nav-external" href="https://hearthis.at/theundergroundlair23/" target="_blank" rel="noopener noreferrer" aria-label="The Lair Archives on hearthis.at (opens in new tab)">The Lair Archives</a>
             </div>
           </div>
         </div>
