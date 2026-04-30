@@ -43,8 +43,16 @@ export function setElementOutputGain(elem, gainValue) {
   if (!elem) return false;
   var cached = elementMeterCache.get(elem);
   if (cached && cached.outputGain) {
-    try { cached.outputGain.gain.value = gainValue; } catch (e) { return false; }
+    try {
+      cached.outputGain.gain.value = gainValue;
+      if (!window.__hideLiveMeterDebug) {
+        console.log('[OutputGain]', elem.id || '(unnamed)', '->', gainValue, 'caller:', new Error().stack?.split('\n')[2]?.trim());
+      }
+    } catch (e) { return false; }
     return true;
+  }
+  if (!window.__hideLiveMeterDebug) {
+    console.log('[OutputGain] MISS — no cache for', elem.id || '(unnamed)', '(falls back to element.volume)');
   }
   return false;
 }
@@ -64,6 +72,9 @@ export function setupAudioMeter(videoElement, prefix) {
     // outputGain when the source toggle / lobby-mute wants them silent.
     videoElement.muted = false;
     videoElement.volume = 1;
+    if (!window.__hideLiveMeterDebug) {
+      console.log('[setupAudioMeter CACHED]', prefix, videoElement.id, 'ctx=', cached.audioContext.state, 'gain=', cached.outputGain?.gain.value);
+    }
     if (prefix === 'OBS') {
       ctx.setObsKWeightedAnalysers(cached.kWeightedAnalyserL, cached.kWeightedAnalyserR);
     } else if (prefix === 'Live') {
@@ -157,6 +168,9 @@ export function setupAudioMeter(videoElement, prefix) {
 
     var result = { audioContext: audioContext, analyserL: analyserL, analyserR: analyserR, kWeightedAnalyserL: kWeightedAnalyserL, kWeightedAnalyserR: kWeightedAnalyserR, outputGain: outputGain };
     elementMeterCache.set(videoElement, result);
+    if (!window.__hideLiveMeterDebug) {
+      console.log('[setupAudioMeter NEW]', prefix, videoElement.id, 'ctx=', audioContext.state, 'gain=', outputGain.gain.value);
+    }
     return result;
   } catch (e) {
     console.error('[' + prefix + '] Audio meter setup error:', e);
@@ -229,22 +243,55 @@ export function animateObsMeters() {
   obsMeterAnimationId = requestAnimationFrame(animateObsMeters);
 }
 
+var __liveMeterDebugCounter = 0;
+var __liveMeterDebugLastLog = 0;
 export function animateLiveMeters() {
   var currentPreviewSource = ctx.getCurrentPreviewSource();
   var analyserState = ctx.getAnalyserState();
   var analyserL, analyserR;
+  var analyserSource = 'none';
 
   if (analyserState.liveAnalyserL && analyserState.liveAnalyserR) {
     analyserL = analyserState.liveAnalyserL;
     analyserR = analyserState.liveAnalyserR;
+    analyserSource = 'live';
   } else if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && analyserState.icecastAnalyserL && analyserState.icecastAnalyserR) {
     analyserL = analyserState.icecastAnalyserL;
     analyserR = analyserState.icecastAnalyserR;
+    analyserSource = 'icecast';
   }
 
   if (analyserL && analyserR) {
     updateLedMeter(analyserL, document.getElementById('liveLeftLeds'), true);
     updateLedMeter(analyserR, document.getElementById('liveRightLeds'), false);
+  }
+
+  // Debug: every ~1s, log the live-side audio path state so we can see exactly
+  // where the meters die. Toggle off by setting window.__hideLiveMeterDebug = 1.
+  __liveMeterDebugCounter++;
+  var now = performance.now();
+  if (!window.__hideLiveMeterDebug && now - __liveMeterDebugLastLog > 1000) {
+    __liveMeterDebugLastLog = now;
+    var lAnL = analyserState.liveAnalyserL;
+    var maxByte = 0;
+    if (lAnL) {
+      var arr = new Uint8Array(lAnL.frequencyBinCount);
+      lAnL.getByteFrequencyData(arr);
+      for (var i = 0; i < arr.length; i++) if (arr[i] > maxByte) maxByte = arr[i];
+    }
+    var hv = document.getElementById('hlsVideo');
+    var ae = document.getElementById('audioElement');
+    var liveCache = hv && elementMeterCache.get(hv);
+    var audioCache = ae && elementMeterCache.get(ae);
+    console.log('[LiveMeter]',
+      'src=', analyserSource,
+      'preview=', currentPreviewSource,
+      'maxByte=', maxByte,
+      'hlsVideo:', hv ? {p: hv.paused, m: hv.muted, v: hv.volume, ct: hv.currentTime?.toFixed(1), be: hv.buffered.length ? hv.buffered.end(hv.buffered.length-1).toFixed(1) : 0} : 'none',
+      'audioElement:', ae ? {p: ae.paused, m: ae.muted, v: ae.volume, ct: ae.currentTime?.toFixed(1)} : 'none',
+      'hlsCache:', liveCache ? {ctx: liveCache.audioContext.state, gain: liveCache.outputGain?.gain.value} : 'none',
+      'audioCache:', audioCache ? {ctx: audioCache.audioContext.state, gain: audioCache.outputGain?.gain.value} : 'none'
+    );
   }
   ctx.setLiveMeterAnimationId(requestAnimationFrame(animateLiveMeters));
 }
