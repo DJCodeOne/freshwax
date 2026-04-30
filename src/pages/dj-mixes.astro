@@ -220,6 +220,18 @@ const nonce = Astro.locals.nonce || '';
                 </svg>
               </button>
             ))}
+
+            <div class="sidebar-divider"></div>
+
+            <a class="genre-nav-btn genre-nav-external" href="https://hearthis.at/theundergroundlair23/" target="_blank" rel="noopener noreferrer" aria-label="Underground Lair archives on hearthis.at (opens in new tab)">
+              <div class="genre-nav-content">
+                <span class="genre-name">🜲 Lair Archives</span>
+                <span class="genre-count">on hearthis.at</span>
+              </div>
+              <svg class="genre-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+              </svg>
+            </a>
           </nav>
         </div>
       </aside>
@@ -247,6 +259,7 @@ const nonce = Astro.locals.nonce || '';
               {sortedGenres.map(({ genre, count }) => (
                 <button class="genre-filter-btn" data-genre={genre}>{genre} ({count})</button>
               ))}
+              <a class="genre-filter-btn genre-nav-external" href="https://hearthis.at/theundergroundlair23/" target="_blank" rel="noopener noreferrer" aria-label="Underground Lair archives on hearthis.at (opens in new tab)">🜲 Lair Archives ↗</a>
             </div>
           </div>
         </div>
