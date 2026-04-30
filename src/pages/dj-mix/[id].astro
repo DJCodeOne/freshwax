@@ -91,7 +91,13 @@ const {
 
 // Facebook prefers 1200x630 OG images; fall back to square cover when the
 // 1200x630 variant doesn't exist (older mixes pre-backfill).
-const shareImage = mixOgImageUrl || (artwork_url !== '/place-holder.webp' ? artwork_url : '');
+// Append updatedAt as a cache-busting query param so FB treats the URL as a
+// new image after backfill — without it FB serves the old preview indefinitely
+// even after "Scrape Again" until its own scraper happens to re-evaluate.
+const cacheBust = (mix && (mix as Record<string, unknown>).updatedAt) || upload_date;
+const cacheBustParam = cacheBust ? `?v=${encodeURIComponent(String(cacheBust))}` : '';
+const baseShareImage = mixOgImageUrl || (artwork_url !== '/place-holder.webp' ? artwork_url : '');
+const shareImage = baseShareImage ? baseShareImage + cacheBustParam : '';
 const shareImageWidth = mixOgImageUrl ? 1200 : 800;
 const shareImageHeight = mixOgImageUrl ? 630 : 800;
 
@@ -202,6 +208,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   image={shareImage || undefined}
   imageWidth={shareImage ? shareImageWidth : undefined}
   imageHeight={shareImage ? shareImageHeight : undefined}
+  ogUpdatedTime={cacheBust ? String(cacheBust) : undefined}
   type="music.album"
   audio={mix ? {
     duration: durationSeconds ? `PT${Math.floor(durationSeconds / 3600)}H${Math.floor((durationSeconds % 3600) / 60)}M${Math.floor(durationSeconds % 60)}S` : 'PT1H',

@@ -24,6 +24,7 @@ interface Props {
   imageAlt?: string;
   imageWidth?: number;
   imageHeight?: number;
+  ogUpdatedTime?: string;
   type?: 'website' | 'article' | 'product' | 'music.album' | 'video.other';
   noindex?: boolean;
   canonical?: string;
@@ -118,6 +119,7 @@ const {
   imageAlt,
   imageWidth,
   imageHeight,
+  ogUpdatedTime,
   type,
   noindex,
   canonical,
@@ -209,6 +211,7 @@ const csrfToken = Astro.locals.csrfToken || '';
       imageAlt={imageAlt}
       imageWidth={imageWidth}
       imageHeight={imageHeight}
+      ogUpdatedTime={ogUpdatedTime}
       type={type}
       noindex={noindex}
       canonical={canonical}

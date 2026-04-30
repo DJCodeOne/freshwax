@@ -13,6 +13,9 @@ interface Props {
   imageAlt?: string;
   imageWidth?: number;
   imageHeight?: number;
+  /** ISO timestamp emitted as og:updated_time. Tells Facebook to refresh its
+   *  cached preview when the page's share image / metadata has changed. */
+  ogUpdatedTime?: string;
   type?: 'website' | 'article' | 'product' | 'music.album' | 'profile' | 'video.other';
   noindex?: boolean;
   nofollow?: boolean;
@@ -120,6 +123,7 @@ const {
   imageAlt = title,
   imageWidth,
   imageHeight,
+  ogUpdatedTime,
   type = 'website',
   noindex = false,
   nofollow = false,
@@ -659,6 +663,7 @@ const articleSchema = article ? {
 <meta property="og:image:alt" content={imageAlt} />
 <meta property="og:site_name" content={SITE.name} />
 <meta property="og:locale" content={SITE.locale} />
+{ogUpdatedTime && <meta property="og:updated_time" content={ogUpdatedTime} />}
 <meta property="fb:app_id" content="740324388536710" />
 
 <!-- Twitter -->
