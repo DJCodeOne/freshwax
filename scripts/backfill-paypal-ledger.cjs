@@ -99,6 +99,23 @@ async function getArtist(token, artistId, cache) {
   return doc;
 }
 
+// Look up release docs to determine primary owner (release.artistId) for each item.
+// Used to scope the per-seller `items` array on the ledger entry — only items
+// owned by *this* seller go into their entry, so dashboard filter doesn't
+// over-match for split-recipient orders.
+async function getReleaseOwner(token, releaseId, cache) {
+  if (!releaseId) return null;
+  if (cache.has(releaseId)) return cache.get(releaseId);
+  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/releases/${releaseId}`;
+  const r = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  if (!r.ok) { cache.set(releaseId, null); return null; }
+  const j = await r.json();
+  const doc = Object.fromEntries(Object.entries(j.fields || {}).map(([k, v]) => [k, parseVal(v)]));
+  const owner = doc.artistId || doc.userId || doc.submittedBy || null;
+  cache.set(releaseId, owner);
+  return owner;
+}
+
 (async () => {
   console.log(`[backfill-paypal-ledger] mode = ${APPLY ? 'APPLY (writing)' : 'DRY RUN'}\n`);
   const token = await getToken();
@@ -131,6 +148,7 @@ async function getArtist(token, artistId, cache) {
   console.log('');
 
   const artistCache = new Map();
+  const releaseOwnerCache = new Map();
   let totalCreated = 0;
   const writeLog = [];
 
@@ -180,16 +198,26 @@ async function getArtist(token, artistId, cache) {
       // Match production status: pendingPayouts.status === 'pending'/'paid'
       const status = payout.status === 'paid' ? 'paid' : 'pending';
 
-      // Item summary — best effort, just for human readability in admin views
-      const itemsSummary = items.map(it => ({
-        type: it.type || 'release',
-        id: it.releaseId || it.productId || it.id || '',
-        title: it.title || it.name || 'Unknown',
-        artist: it.artist || it.artistName || artistName || '',
-        quantity: Number(it.quantity || 1),
-        unitPrice: Number(it.price || 0),
-        lineTotal: Number(it.price || 0) * Number(it.quantity || 1),
-      }));
+      // Item summary — only items where THIS seller is the primary release owner
+      // (release.artistId === artistId). Split-recipients (paid via payoutSplits)
+      // get items=[] so the artist/account.astro dashboard filter only matches
+      // their entry via submitterId, not via items.some — otherwise every
+      // co-seller's entry over-matches and pendingBalance multiplies.
+      const itemsSummary = [];
+      for (const it of items) {
+        const releaseId = it.releaseId || it.productId || it.id;
+        const owner = await getReleaseOwner(token, releaseId, releaseOwnerCache);
+        if (owner !== artistId) continue;
+        itemsSummary.push({
+          type: it.type || 'release',
+          id: releaseId || '',
+          title: it.title || it.name || 'Unknown',
+          artist: it.artist || it.artistName || artistName || '',
+          quantity: Number(it.quantity || 1),
+          unitPrice: Number(it.price || 0),
+          lineTotal: Number(it.price || 0) * Number(it.quantity || 1),
+        });
+      }
 
       const ledgerEntry = {
         orderId,
