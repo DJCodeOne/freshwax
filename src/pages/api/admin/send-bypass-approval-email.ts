@@ -62,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       </td></tr>
       <tr><td style="background:#111;padding:32px 28px;border-left:2px solid #dc2626;border-right:2px solid #dc2626;border-bottom:2px solid #dc2626;border-radius:0 0 12px 12px;">
         <p style="font-size:18px;line-height:1.5;margin:0 0 12px;color:#fff;font-weight:700;">Ez ${esc(displayName)} 👋</p>
-        <p style="font-size:15px;line-height:1.5;margin:0 0 16px;color:#d1d5db;">An admin has approved you for the Fresh Wax DJ Lobby. The standard requirements (10 mix likes) have been bypassed for your account &mdash; you can broadcast immediately.</p>
+        <p style="font-size:15px;line-height:1.5;margin:0 0 16px;color:#d1d5db;">You've been approved to use the DJ Lobby and Go Live on Fresh Wax. The standard requirements (10 mix likes) have been bypassed for your account &mdash; you can broadcast immediately.</p>
         <p style="font-size:15px;line-height:1.5;margin:0 0 24px;color:#d1d5db;">Head over to the DJ Lobby whenever you're ready to set up your stream. You can use OBS, BUTT, or relay an external station.</p>
         <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="center" style="padding:6px 0 22px;">
           <a href="${SITE_URL}/account/dj-lobby/" style="display:inline-block;background:#dc2626;color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:700;font-size:15px;letter-spacing:0.5px;text-transform:uppercase;">Go to DJ Lobby</a>
