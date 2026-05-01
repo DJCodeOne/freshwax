@@ -63,6 +63,7 @@ const CSRF_SKIP = new Set([
   '/api/admin/backfill-mix-og/',
   '/api/admin/scan-tracklists/',
   '/api/admin/send-plus-welcome-email/',
+  '/api/admin/send-bypass-approval-email/',
   '/api/admin/mark-royalties-paid/',
   '/api/admin/royalty-ledger/',
   // Cron — authenticated via CRON_SECRET / requireAdminAuth

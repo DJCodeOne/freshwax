@@ -306,6 +306,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
         log.info('[bypass-requests] Request approved successfully');
 
+        // Fire the on-brand bypass approval email. Best-effort — DJ is
+        // approved either way; just want to keep the user informed.
+        try {
+          const env = locals?.runtime?.env;
+          const requestUrl = new URL(request.url);
+          const origin = requestUrl.origin;
+          const adminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+          await fetch(`${origin}/api/admin/send-bypass-approval-email/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+            body: JSON.stringify({ email: userEmail, name: userName || undefined, reason: existingRequest.reason || undefined }),
+          }).then((r) => {
+            if (!r.ok) log.warn(`[bypass-requests] Email send returned ${r.status}`);
+          });
+        } catch (emailErr: unknown) {
+          log.warn('[bypass-requests] Email send failed:', emailErr instanceof Error ? emailErr.message : String(emailErr));
+        }
+
         return successResponse({ message: 'Request approved' });
       } else {
         // Deny - just update status

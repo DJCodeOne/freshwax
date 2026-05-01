@@ -175,6 +175,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info(`[lobby-bypass] Granted bypass to ${email} (${targetUserId})`);
 
+      // Fire the on-brand bypass approval email. Best-effort — failure
+      // doesn't reverse the grant; the grant succeeded which is what matters.
+      try {
+        const requestUrl = new URL(request.url);
+        const origin = requestUrl.origin;
+        const adminKey = adminEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+        await fetch(`${origin}/api/admin/send-bypass-approval-email/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+          body: JSON.stringify({ email, name: userName || undefined, reason: reason || undefined }),
+        }).then((r) => {
+          if (!r.ok) log.warn(`[lobby-bypass] Email send returned ${r.status}`);
+        });
+      } catch (emailErr: unknown) {
+        log.warn('[lobby-bypass] Email send failed:', emailErr instanceof Error ? emailErr.message : String(emailErr));
+      }
+
       return successResponse({ message: `Lobby access granted to ${email}`,
         userId: targetUserId });
 
