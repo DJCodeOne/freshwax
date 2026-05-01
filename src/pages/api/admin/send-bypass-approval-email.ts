@@ -12,6 +12,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 import { esc } from '../../../lib/email-wrapper';
+import { brandedEmail, brandedCta } from '../../../lib/email-templates/branded';
 
 const log = createLogger('[send-bypass-approval-email]');
 
@@ -49,33 +50,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const displayName = name || email.split('@')[0];
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#000;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#000;"><tr><td align="center" style="padding:40px 20px;">
-    <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;">
-      <tr><td style="background:#fff;padding:32px 24px;border-radius:12px 12px 0 0;text-align:center;border:2px solid #dc2626;border-bottom:none;">
-        <div style="font-size:32px;font-weight:900;letter-spacing:2px;line-height:1;"><span style="color:#000;">FRESH</span> <span style="color:#dc2626;">WAX</span></div>
-        <div style="font-size:11px;color:#666;margin-top:6px;letter-spacing:3px;font-weight:600;">JUNGLE &bull; DRUM AND BASS</div>
-      </td></tr>
-      <tr><td style="background:#dc2626;padding:18px 24px;text-align:center;border-left:2px solid #dc2626;border-right:2px solid #dc2626;">
-        <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:0.5px;line-height:1.3;">🎵 YOU&rsquo;RE APPROVED!</div>
-      </td></tr>
-      <tr><td style="background:#111;padding:32px 28px;border-left:2px solid #dc2626;border-right:2px solid #dc2626;border-bottom:2px solid #dc2626;border-radius:0 0 12px 12px;">
+    const html = brandedEmail({
+      stripHeadline: '🎵 YOU&rsquo;RE APPROVED!',
+      body: `
         <p style="font-size:18px;line-height:1.5;margin:0 0 12px;color:#fff;font-weight:700;">Ez ${esc(displayName)} 👋</p>
         <p style="font-size:15px;line-height:1.5;margin:0 0 16px;color:#d1d5db;">You've been approved to use the DJ Lobby and Go Live on Fresh Wax. The standard requirements (10 mix likes) have been bypassed for your account &mdash; you can broadcast immediately.</p>
         <p style="font-size:15px;line-height:1.5;margin:0 0 24px;color:#d1d5db;">Head over to the DJ Lobby whenever you're ready to set up your stream. You can use OBS, BUTT, your phone or tablet, or relay an external station.</p>
-        <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="center" style="padding:6px 0 22px;">
-          <a href="${SITE_URL}/account/dj-lobby/" style="display:inline-block;background:#dc2626;color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:700;font-size:15px;letter-spacing:0.5px;text-transform:uppercase;">Go to DJ Lobby</a>
-        </td></tr></table>
+        ${brandedCta('Go to DJ Lobby', SITE_URL + '/account/dj-lobby/')}
         <p style="font-size:12px;line-height:1.5;color:#9ca3af;margin:0;text-align:center;">First time setting up? Check the streaming guide on your dashboard for OBS / BUTT walkthroughs.</p>
-      </td></tr>
-      <tr><td align="center" style="padding:22px 0 0;">
-        <div style="color:#9ca3af;font-size:12px;">Automated notification from FreshWax</div>
-        <div style="margin-top:6px;"><a href="${SITE_URL}" style="font-size:12px;text-decoration:none;font-weight:600;"><span style="color:#fff;">fresh</span><span style="color:#dc2626;">wax</span><span style="color:#fff;">.co.uk</span></a></div>
-      </td></tr>
-    </table>
-  </td></tr></table>
-</body></html>`;
+      `,
+    });
 
     const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
