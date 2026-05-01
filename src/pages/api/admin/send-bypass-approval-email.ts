@@ -57,7 +57,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         <p style="font-size:15px;line-height:1.5;margin:0 0 16px;color:#d1d5db;">You've been approved to use the DJ Lobby and Go Live on Fresh Wax. The standard requirements (10 mix likes) have been bypassed for your account &mdash; you can broadcast immediately.</p>
         <p style="font-size:15px;line-height:1.5;margin:0 0 24px;color:#d1d5db;">Head over to the DJ Lobby whenever you're ready to set up your stream. You can use OBS, BUTT, your phone or tablet, or relay an external station.</p>
         ${brandedCta('Go to DJ Lobby', SITE_URL + '/account/dj-lobby/')}
-        <p style="font-size:12px;line-height:1.5;color:#9ca3af;margin:0;text-align:center;">First time setting up? Check the streaming guide on your dashboard for OBS / BUTT walkthroughs.</p>
+        <p style="font-size:12px;line-height:1.5;color:#9ca3af;margin:0;text-align:center;">First time setting up? Check the streaming guide in the DJ Lobby for OBS / BUTT walkthroughs.</p>
       `,
     });
 
