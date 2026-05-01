@@ -9,6 +9,9 @@ import { getDocument, deleteDocument, atomicIncrement, arrayUnion, queryCollecti
 import { SITE_URL } from '../../../lib/constants';
 import { createLogger } from '../../../lib/api-utils';
 import { processArtistPayments, processMerchSupplierPayments, processVinylCrateSellerPayments } from '../../../lib/order/seller-payments';
+import { recordMultiSellerSale } from '../../../lib/sales-ledger';
+import { enrichItemsForLedger } from '../../../lib/order/paypal-capture-helpers';
+import { getProcessingFee } from '../../../lib/order/seller-payments/types';
 
 const log = createLogger('[paypal-redirect]');
 import { getPayPalBaseUrl, getPayPalAccessToken, paypalFetchWithRetry } from '../../../lib/paypal-auth';
@@ -164,16 +167,47 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
       log.warn('[PayPal Redirect] Could not delete pending order:', delErr);
     }
 
+    // Calculate order subtotal for processing fee calculation (also used by ledger below)
+    const orderSubtotal = (pendingOrder.items || []).reduce((sum: number, item: Record<string, unknown>) => {
+      return sum + ((item.price || 0) * (item.quantity || 1));
+    }, 0);
+
+    // Record to sales ledger (source of truth for admin dashboard analytics).
+    // Mirror of capture-order.ts — capture-redirect.ts (mobile/redirect PayPal flow)
+    // previously didn't write here, leaving recent PayPal sales out of dashboard totals.
+    try {
+      const grossTotal = pendingOrder.totals?.total ?? orderSubtotal;
+      const paypalFee = getProcessingFee(grossTotal, 'paypal');
+      const freshWaxFee = pendingOrder.totals?.freshWaxFee || 0;
+      const itemsList = (pendingOrder.items as Record<string, unknown>[]) || [];
+      const enrichedItems = await enrichItemsForLedger(itemsList);
+      await recordMultiSellerSale({
+        orderId: result.orderId!,
+        orderNumber: result.orderNumber || '',
+        customerId: pendingOrder.customer?.userId || null,
+        customerEmail: pendingOrder.customer?.email || '',
+        customerName: pendingOrder.customer?.displayName || pendingOrder.customer?.firstName || null,
+        grossTotal,
+        shipping: pendingOrder.totals?.shipping || 0,
+        paypalFee: Math.round(paypalFee * 100) / 100,
+        freshWaxFee,
+        paymentMethod: 'paypal',
+        paymentId: paypalOrderId,
+        hasPhysical: pendingOrder.hasPhysicalItems,
+        hasDigital: enrichedItems.some((i: Record<string, unknown>) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
+        items: enrichedItems,
+        db: env?.DB
+      });
+    } catch (ledgerErr: unknown) {
+      log.error('[PayPal Redirect] Failed to record to ledger:', ledgerErr);
+      // Non-fatal: dashboard analytics will be slightly off but order itself is fine
+    }
+
     // Process artist payments via Stripe Connect (same as capture-order.ts)
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
     if (stripeSecretKey && result.orderId) {
       // Calculate total item count for fair fee splitting across all item types
       const totalItemCount = (pendingOrder.items || []).length;
-
-      // Calculate order subtotal for processing fee calculation
-      const orderSubtotal = (pendingOrder.items || []).reduce((sum: number, item: Record<string, unknown>) => {
-        return sum + ((item.price || 0) * (item.quantity || 1));
-      }, 0);
 
       // Process all seller payment types in parallel — each is independent and
       // failures in one category should not block or delay the others

@@ -118,10 +118,12 @@ try {
 }
 
 // Process orders - sort by createdAt desc
+// Orders without createdAt fall back to epoch so they don't pollute today/this-month
+// stats (some legacy free_download orders never had createdAt set).
 const orders = ordersData
   .map(order => ({
     ...order,
-    createdAt: order.createdAt ? new Date(order.createdAt) : new Date()
+    createdAt: order.createdAt ? new Date(order.createdAt) : new Date(0)
   }))
   .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
