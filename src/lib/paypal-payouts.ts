@@ -19,6 +19,14 @@ interface PayoutRecipient {
   note?: string;
   recipientType?: 'EMAIL' | 'PHONE' | 'PAYPAL_ID';
   reference?: string;
+  /**
+   * Per-payout transaction fee to deduct from `amount` BEFORE sending the
+   * payout. PayPal's Mass Pay API charges the sender by default; we shift
+   * the cost to the recipient by reducing the transferred amount. Default
+   * 0.20 (typical UK GBP domestic mass-payout fee). Pass 0 to keep the
+   * current "sender pays" behaviour.
+   */
+  feeDeduction?: number;
 }
 
 interface PayoutResult {
@@ -27,7 +35,18 @@ interface PayoutResult {
   payoutItemId?: string;
   status?: string;
   error?: string;
+  /** Gross amount before fee (for record-keeping). */
+  gross?: number;
+  /** Fee deducted from gross. */
+  fee?: number;
+  /** Net amount actually transferred to the recipient. */
+  net?: number;
 }
+
+// Default PayPal Mass Pay fee assumed for UK GBP domestic transfers.
+// International or cross-currency payouts will incur a higher fee — caller
+// can pass an explicit `feeDeduction` to override.
+export const DEFAULT_PAYPAL_FEE_GBP = 0.20;
 
 // Helper to convert PayPalConfig to mode string for shared auth
 function configToMode(config: PayPalConfig): string {
@@ -50,6 +69,23 @@ export async function createPayout(
 
     const batchId = `FW-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+    // Shift the PayPal Mass Pay fee onto the recipient by transferring the
+    // gross amount minus the fee. PayPal still bills our PayPal balance for
+    // the fee, but the recipient effectively absorbs it via the reduced
+    // payout. Caller can pass feeDeduction:0 to preserve old behaviour.
+    const gross = recipient.amount;
+    const fee = typeof recipient.feeDeduction === 'number' ? recipient.feeDeduction : DEFAULT_PAYPAL_FEE_GBP;
+    const net = +(gross - fee).toFixed(2);
+    if (net <= 0) {
+      return {
+        success: false,
+        error: `Payout amount £${gross.toFixed(2)} is too small after PayPal fee deduction of £${fee.toFixed(2)}`,
+        gross,
+        fee,
+        net,
+      };
+    }
+
     const payload = {
       sender_batch_header: {
         sender_batch_id: batchId,
@@ -60,7 +96,7 @@ export async function createPayout(
         {
           recipient_type: recipient.recipientType || 'EMAIL',
           amount: {
-            value: recipient.amount.toFixed(2),
+            value: net.toFixed(2),
             currency: recipient.currency || 'GBP',
           },
           receiver: recipient.email,
@@ -103,6 +139,9 @@ export async function createPayout(
       batchId: data.batch_header?.payout_batch_id,
       payoutItemId: data.items?.[0]?.payout_item_id,
       status: data.batch_header?.batch_status,
+      gross,
+      fee,
+      net,
     };
   } catch (error: unknown) {
     log.error('[PayPal] Payout error:', error);

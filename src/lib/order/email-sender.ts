@@ -6,7 +6,7 @@ import { updateDocument, getDocument } from '../firebase-rest';
 import { fetchWithTimeout, createLogger, maskEmail } from '../api-utils';
 import { buildOrderConfirmationEmail, buildStockistFulfillmentEmail, buildDigitalSaleEmail, buildMerchSaleEmail } from './create-order-emails';
 import type { OrderItem } from './create-order-emails';
-import { emailWrapper, ctaButton, esc } from '../email-wrapper';
+import { esc } from '../email-wrapper';
 import { SITE_URL } from '../constants';
 
 const log = createLogger('create-order');
@@ -240,22 +240,45 @@ export async function sendOrderEmails({ order, orderRefId, orderNumber, env }: S
 
           log.info('[create-order] Sending payee sale notification to:', maskEmail(payee.email), `(${itemRows.length} item(s))`);
 
-          const html = emailWrapper(`
-            <p style="font-size:18px;line-height:1.5;margin:0 0 16px;">
-              Hey ${esc(payee.name)} 👋
-            </p>
-            <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
-              You've got a new sale on Fresh Wax. Someone just bought ${itemWord}:
-            </p>
-            ${itemsHtml}
-            <p style="font-size:14px;line-height:1.5;color:#999;margin:0 0 24px;">
-              Order: <strong>${esc(orderNumber)}</strong>
-            </p>
-            ${ctaButton('View your dashboard', SITE_URL + '/account/dashboard/')}
-            <p style="font-size:13px;line-height:1.5;color:#999;margin:24px 0 0;">
-              Your dashboard shows your share + payout status. Payouts are processed manually — we'll be in touch.
-            </p>
-          `, { title: 'New Sale on Fresh Wax', preheader: `You have a new order on Fresh Wax (${itemRows.length} item${itemRows.length === 1 ? '' : 's'})` });
+          // On-brand template matching buildDigitalSaleEmail's structure:
+          // white FRESH WAX header card + red announcement strip + dark
+          // content panel with 2px red outline. Content is intentionally
+          // simple — just track titles + dashboard CTA, no buyer name,
+          // no totals.
+          const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#000;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#000;"><tr><td align="center" style="padding:40px 20px;">
+    <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;">
+      <tr><td style="background:#fff;padding:32px 24px;border-radius:12px 12px 0 0;text-align:center;border:2px solid #dc2626;border-bottom:none;">
+        <div style="font-size:32px;font-weight:900;letter-spacing:2px;line-height:1;"><span style="color:#000;">FRESH</span> <span style="color:#dc2626;">WAX</span></div>
+        <div style="font-size:11px;color:#666;margin-top:6px;letter-spacing:3px;font-weight:600;">JUNGLE &bull; DRUM AND BASS</div>
+      </td></tr>
+      <tr><td style="background:#dc2626;padding:18px 24px;text-align:center;border-left:2px solid #dc2626;border-right:2px solid #dc2626;">
+        <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:1px;">🎵 NEW SALE!</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.9);margin-top:4px;">Order ${esc(orderNumber)}</div>
+      </td></tr>
+      <tr><td style="background:#111;padding:32px 28px;border-left:2px solid #dc2626;border-right:2px solid #dc2626;border-bottom:2px solid #dc2626;border-radius:0 0 12px 12px;">
+        <p style="font-size:18px;line-height:1.5;margin:0 0 12px;color:#fff;font-weight:700;">Ez ${esc(payee.name)} 👋</p>
+        <p style="font-size:15px;line-height:1.5;margin:0 0 20px;color:#d1d5db;">Someone just bought ${itemWord} on Fresh Wax:</p>
+        <div style="background:#1f2937;border:1px solid #374151;border-radius:8px;padding:18px 20px;margin:0 0 24px;">
+          ${itemRows.length ? `<ul style="margin:0;padding:0 0 0 20px;list-style:disc;">${itemRows.join('')}</ul>` : '<p style="margin:0;color:#9ca3af;">No items.</p>'}
+        </div>
+        <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td align="center" style="padding:6px 0 22px;">
+          <a href="${SITE_URL}/account/dashboard/" style="display:inline-block;background:#dc2626;color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-weight:700;font-size:15px;letter-spacing:0.5px;text-transform:uppercase;">View Dashboard</a>
+        </td></tr></table>
+        <p style="font-size:12px;line-height:1.5;color:#9ca3af;margin:0 0 14px;text-align:center;">Your dashboard shows your share &amp; payout status. Payouts are processed manually.</p>
+        <div style="background:#1f2937;border:1px solid #374151;border-radius:6px;padding:12px 16px;margin:0;">
+          <p style="font-size:11px;line-height:1.5;color:#9ca3af;margin:0 0 4px;text-align:left;"><strong style="color:#fff;">Withdrawal fees:</strong></p>
+          <p style="font-size:11px;line-height:1.5;color:#9ca3af;margin:0;text-align:left;">&bull; <span style="color:#fff;">PayPal</span> &mdash; PayPal's typical mass-payout fee (around &pound;0.20 GBP domestic, higher for international) is deducted from your payout. You'll receive the amount minus that fee.<br>&bull; <span style="color:#fff;">Stripe Connect</span> &mdash; no fee, but standard payouts take a few working days to land in your bank.</p>
+        </div>
+      </td></tr>
+      <tr><td align="center" style="padding:22px 0 0;">
+        <div style="color:#9ca3af;font-size:12px;">Automated notification from FreshWax</div>
+        <div style="margin-top:6px;"><a href="${SITE_URL}" style="font-size:12px;text-decoration:none;font-weight:600;"><span style="color:#fff;">fresh</span><span style="color:#dc2626;">wax</span><span style="color:#fff;">.co.uk</span></a></div>
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`;
 
           const response = await fetchWithTimeout('https://api.resend.com/emails', {
             method: 'POST',
