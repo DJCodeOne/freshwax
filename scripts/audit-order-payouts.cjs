@@ -48,8 +48,12 @@ async function getToken() {
   const items = parseVal(ordFields.items) || [];
   const orderSubtotal = parseVal(ordFields.subtotal) || items.reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
   const totalItemCount = items.length;
+  const paymentMethod = parseVal(ordFields.paymentMethod);
+  // Mirror src/lib/order/seller-payments/types.ts:getProcessingFee
+  const procRate = paymentMethod === 'paypal' ? 0.029 : 0.014;
+  const procFixed = paymentMethod === 'paypal' ? 0.30 : 0.20;
   console.log(`Order: ${ORDER_ID} (${orderNumber})`);
-  console.log(`Items: ${totalItemCount}, Subtotal: £${orderSubtotal.toFixed(2)}\n`);
+  console.log(`Items: ${totalItemCount}, Subtotal: £${orderSubtotal.toFixed(2)}, paymentMethod: ${paymentMethod}\n`);
 
   // Resolve releases for digital items
   const digital = items.filter((i) => ['track', 'digital', 'release'].includes(i.type));
@@ -70,7 +74,7 @@ async function getToken() {
     if (!release) continue;
     const itemTotal = (item.price || 0) * (item.quantity || 1);
     const freshWaxFee = itemTotal * 0.01;
-    const procFee = ((orderSubtotal * 0.014) + 0.20) / totalItemCount;
+    const procFee = ((orderSubtotal * procRate) + procFixed) / totalItemCount;
     const artistShare = itemTotal - freshWaxFee - procFee;
     const splits = Array.isArray(release.payoutSplits) && release.payoutSplits.length
       ? release.payoutSplits.filter((s) => s && s.artistId && s.percentage > 0)

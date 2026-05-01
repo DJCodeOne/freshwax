@@ -4,15 +4,17 @@
 import Stripe from 'stripe';
 import { getDocument, addDocument, updateDocument, atomicIncrement } from '../../firebase-rest';
 import { createLogger } from '../../api-utils';
+import { getProcessingFee } from './types';
 import type { SellerPaymentParams } from './types';
 
 const log = createLogger('[seller-payments]');
 
 // Process vinyl crate seller payments via Stripe Connect or PayPal
 export async function processVinylCrateSellerPayments(params: SellerPaymentParams) {
-  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env, paymentMethod } = params;
   const prefix = params.logPrefix || '[PayPal]';
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+  const totalProcessingFeeForOrder = getProcessingFee(orderSubtotal, paymentMethod);
 
   const { createPayout, getPayPalConfig } = await import('../../paypal-payouts');
   const paypalConfig = getPayPalConfig(env);
@@ -106,9 +108,9 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
       const itemPrice = item.price || 0;
       const itemTotal = itemPrice * (item.quantity || 1);
       const freshWaxFee = itemTotal * 0.01;
-      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
-      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
-      const processingFeePerSeller = totalProcessingFee / totalItemCount;
+      // Processing fee: payment-method-aware (Stripe 1.4%+20p / PayPal 2.9%+30p),
+      // computed once for the order then split equally per item.
+      const processingFeePerSeller = totalProcessingFeeForOrder / totalItemCount;
       const sellerShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
       // Group by seller

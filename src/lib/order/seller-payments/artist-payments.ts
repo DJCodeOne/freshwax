@@ -3,6 +3,7 @@
 
 import { getDocument, addDocument, updateDocument, atomicIncrement } from '../../firebase-rest';
 import { createLogger } from '../../api-utils';
+import { getProcessingFee } from './types';
 import type { SellerPaymentParams } from './types';
 
 const log = createLogger('[seller-payments]');
@@ -10,8 +11,11 @@ const log = createLogger('[seller-payments]');
 // Process artist payments - creates pending payouts for manual review
 // NOTE: Automatic payouts disabled - all payouts are manual for now
 export async function processArtistPayments(params: SellerPaymentParams) {
-  const { orderId, orderNumber, items, totalItemCount, orderSubtotal } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, paymentMethod } = params;
   const prefix = params.logPrefix || '[PayPal]';
+  // Payment-method-aware processing fee. Default = stripe rates for safety
+  // if a caller forgets to pass paymentMethod.
+  const totalProcessingFeeForOrder = getProcessingFee(orderSubtotal, paymentMethod);
 
   try {
     // Group items by artist. When a release defines `payoutSplits` (array of
@@ -104,9 +108,9 @@ export async function processArtistPayments(params: SellerPaymentParams) {
       // Artist sets full price, fees deducted from that
       // 1% Fresh Wax fee
       const freshWaxFee = itemTotal * 0.01;
-      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
-      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
-      const processingFeePerSeller = totalProcessingFee / totalItemCount;
+      // Processing fee depends on payment method (Stripe 1.4%+20p / PayPal 2.9%+30p),
+      // computed once for the whole order then split equally per item.
+      const processingFeePerSeller = totalProcessingFeeForOrder / totalItemCount;
       const artistShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
       // Build the recipient list — either explicit splits from the release

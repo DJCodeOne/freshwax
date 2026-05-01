@@ -452,7 +452,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         orderSubtotal,
         stripeSecretKey,
         env,
-        logPrefix: '[PayPal]'
+        logPrefix: '[PayPal]',
+        paymentMethod: 'paypal' as const
       };
       const paymentResults = await Promise.allSettled([
         processArtistPayments(paymentParams),

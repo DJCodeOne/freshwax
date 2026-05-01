@@ -4,6 +4,7 @@
 import Stripe from 'stripe';
 import { getDocument, addDocument, updateDocument, atomicIncrement } from '../../firebase-rest';
 import { createLogger } from '../../api-utils';
+import { getProcessingFee } from './types';
 import type { SellerPaymentParams } from './types';
 
 const log = createLogger('[seller-payments]');
@@ -12,7 +13,8 @@ const log = createLogger('[seller-payments]');
 // Based on capture-redirect.ts version (superset with Stripe Connect transfers)
 // Pass skipStripeTransfers: true to skip actual Stripe/PayPal transfers (royalty-only mode)
 export async function processMerchSupplierPayments(params: SellerPaymentParams & { skipStripeTransfers?: boolean }) {
-  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env, skipStripeTransfers } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env, skipStripeTransfers, paymentMethod } = params;
+  const totalProcessingFeeForOrder = getProcessingFee(orderSubtotal, paymentMethod);
   const prefix = params.logPrefix || '[PayPal]';
 
   const stripe = skipStripeTransfers ? null : new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -92,9 +94,9 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
       const itemPrice = item.price || 0;
       const itemTotal = itemPrice * (item.quantity || 1);
       const freshWaxFee = itemTotal * 0.05;
-      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
-      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
-      const processingFeePerSeller = totalProcessingFee / totalItemCount;
+      // Processing fee: payment-method-aware (Stripe 1.4%+20p / PayPal 2.9%+30p),
+      // computed once for the order then split equally per item.
+      const processingFeePerSeller = totalProcessingFeeForOrder / totalItemCount;
       const supplierShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
       if (!supplierPayments[supplierId]) {
