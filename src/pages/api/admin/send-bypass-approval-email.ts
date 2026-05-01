@@ -58,7 +58,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         <div style="font-size:11px;color:#666;margin-top:6px;letter-spacing:3px;font-weight:600;">JUNGLE &bull; DRUM AND BASS</div>
       </td></tr>
       <tr><td style="background:#dc2626;padding:18px 24px;text-align:center;border-left:2px solid #dc2626;border-right:2px solid #dc2626;">
-        <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:1px;">🎙️ YOU'RE APPROVED TO GO LIVE!</div>
+        <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:0.5px;line-height:1.3;">🎵 YOU&rsquo;RE APPROVED!</div>
       </td></tr>
       <tr><td style="background:#111;padding:32px 28px;border-left:2px solid #dc2626;border-right:2px solid #dc2626;border-bottom:2px solid #dc2626;border-radius:0 0 12px 12px;">
         <p style="font-size:18px;line-height:1.5;margin:0 0 12px;color:#fff;font-weight:700;">Ez ${esc(displayName)} 👋</p>
