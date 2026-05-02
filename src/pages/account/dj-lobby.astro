@@ -2696,7 +2696,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
               if (isHls && typeof Hls !== 'undefined' && Hls.isSupported()) {
                 // HLS via Hls.js (Chrome, Firefox, Edge)
-                const hls = new Hls({ lowLatencyMode: true, backBufferLength: 30 });
+                const hls = new Hls({ lowLatencyMode: false, backBufferLength: 30 });
                 hls.loadSource(audioUrl);
                 hls.attachMedia(audioEl);
                 audioEl._hlsInstance = hls;

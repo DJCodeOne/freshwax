@@ -617,7 +617,7 @@ export async function setupAudioPlayer(streamData, deps) {
       if (window.audioHlsPlayer) window.audioHlsPlayer.destroy();
       window.audioHlsPlayer = new Hls({
         enableWorker: true,
-        lowLatencyMode: true,
+        lowLatencyMode: false,
         maxBufferLength: 20,
         maxMaxBufferLength: 45,
         liveSyncDurationCount: 2,

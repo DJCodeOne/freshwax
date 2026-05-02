@@ -283,7 +283,7 @@ export async function startRelayAudioPreview(stationUrl) {
     if (typeof Hls !== 'undefined' && Hls.isSupported()) {
       relayHlsPlayer = new Hls({
         enableWorker: true,
-        lowLatencyMode: true
+        lowLatencyMode: false
       });
       relayHlsPlayer.loadSource(stationUrl);
       relayHlsPlayer.attachMedia(relayAudio);

@@ -294,7 +294,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         if (typeof Hls !== 'undefined' && Hls.isSupported()) {
           var hls = new Hls({
             enableWorker: true,
-            lowLatencyMode: true,
+            lowLatencyMode: false,
             backBufferLength: 30
           });
           hls.loadSource(hlsUrl);
