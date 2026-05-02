@@ -72,44 +72,54 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }, 403);
     }
 
-    // Find the slot with this stream key (skip cache for real-time validation)
-    const allSlots = await queryCollection('livestreamSlots', {
+    // Key adoption model — see POST handler below for the full rationale.
+    // Step 1: identify owner via key history.
+    const keyHistorySlots = await queryCollection('livestreamSlots', {
       filters: [{ field: 'streamKey', op: 'EQUAL', value: streamKey }],
+      limit: 10,
       skipCache: true
     });
 
-    // Filter out cancelled slots and find the most recent active one
-    const activeSlots = allSlots.filter(s => s.status !== 'cancelled' && !s.cancelled);
-
-    if (activeSlots.length === 0) {
-      // Check if there was a cancelled slot with this key
-      if (allSlots.length > 0) {
-        return jsonResponse({
-          valid: false,
-          reason: 'This stream key was cancelled. Please generate a new one.',
-        }, 403);
-      }
+    if (keyHistorySlots.length === 0) {
       return jsonResponse({
         valid: false,
-        reason: 'Stream key not found. Please book a slot first.',
+        reason: 'Stream key not recognised. Please book a slot first.',
       }, 403);
     }
 
-    // Use the most recent active slot
-    const slot = activeSlots.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )[0];
+    const ownerDjId = keyHistorySlots[0].djId as string;
+    if (!ownerDjId) {
+      return jsonResponse({ valid: false, reason: 'Key ownership unclear' }, 403);
+    }
+
+    // Step 2: find owner's currently active slot
+    const ownerActiveSlots = await queryCollection('livestreamSlots', {
+      filters: [{ field: 'djId', op: 'EQUAL', value: ownerDjId }],
+      limit: 20,
+      skipCache: true
+    });
+
+    const allowedStatuses = ['scheduled', 'in_lobby', 'live', 'queued', 'connecting'];
+    const activeSlot = ownerActiveSlots
+      .filter(s => allowedStatuses.includes(s.status as string))
+      .filter(s => !s.cancelled)
+      .filter(s => {
+        const startWin = new Date(s.startTime).getTime() - RED5_CONFIG.security.keyValidityWindow;
+        const endWin = new Date(s.endTime).getTime() + RED5_CONFIG.timing.endGracePeriod;
+        const nowMs = Date.now();
+        return nowMs >= startWin && nowMs <= endWin;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+    if (!activeSlot) {
+      return jsonResponse({
+        valid: false,
+        reason: 'No active slot booked for this DJ.',
+      }, 403);
+    }
+
+    const slot = activeSlot;
     const slotId = slot.id;
-    
-    // Check slot status - must be scheduled, in_lobby, or live (for reconnection)
-    const allowedStatuses = ['scheduled', 'in_lobby', 'live', 'queued'];
-    if (!allowedStatuses.includes(slot.status)) {
-      return jsonResponse({
-        valid: false,
-        reason: `Slot is ${slot.status}. Cannot stream.`,
-        slotStatus: slot.status,
-      }, 403);
-    }
     
     // Validate timing
     const slotStart = new Date(slot.startTime);
@@ -243,85 +253,130 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }, 401);
     }
 
-    // Find the slot with this stream key (skip cache for real-time validation)
-    const allSlots = await queryCollection('livestreamSlots', {
+    // -----------------------------------------------------------------
+    // Key adoption model: stream keys are personal to a DJ rather than
+    // per-session. The first slot a key was generated for permanently
+    // identifies its owner; from then on, the same key keeps working
+    // across future sessions as long as the owner has *some* active
+    // slot booked. DJs no longer need to update their OBS profile each
+    // time they go live.
+    //
+    // Auth flow:
+    //   1. Look up the slot history for this exact key — that establishes
+    //      ownership (which DJ this key belongs to). Cancelled / completed
+    //      slots count for ownership; we just need the djId.
+    //   2. Find the owner's *currently active* slot (any status the DJ
+    //      could legitimately be streaming into).
+    //   3. Validate timing against the active slot. The key's encoded
+    //      timestamp is irrelevant — what matters is the owner has a
+    //      booked slot right now.
+    //
+    // A different DJ trying to publish using someone else's key fails
+    // step 2 because the key's owner won't be them, and the slot lookup
+    // is owner-scoped. Genuine sharing is still an account compromise
+    // (same as Twitch / Stream Deck) — handle that with key rotation.
+    // -----------------------------------------------------------------
+
+    // Step 1: identify the owning DJ via key history
+    const keyHistorySlots = await queryCollection('livestreamSlots', {
       filters: [{ field: 'streamKey', op: 'EQUAL', value: streamKey }],
+      limit: 10,
       skipCache: true
     });
 
-    // Filter out cancelled slots and find the most recent active one
-    const activeSlots = allSlots.filter(s => s.status !== 'cancelled' && !s.cancelled);
-
-    if (activeSlots.length === 0) {
-      // Provide helpful message if key was cancelled
-      if (allSlots.length > 0) {
-        return jsonResponse({
-          valid: false,
-          reason: 'Stream key cancelled - generate new',
-        }, 401);
-      }
+    if (keyHistorySlots.length === 0) {
+      log.warn('[validate-stream] Unknown stream key (never assigned):', streamKey.substring(0, 20) + '...');
       return jsonResponse({
         valid: false,
-        reason: 'Stream key not found',
+        reason: 'Stream key not recognised',
       }, 401);
     }
 
-    // Use the most recent active slot
-    const slot = activeSlots.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )[0];
+    // All slots with this key should belong to the same DJ (keys are
+    // signed per-DJ). Take the first.
+    const ownerDjId = keyHistorySlots[0].djId as string;
+    const ownerDjName = keyHistorySlots[0].djName as string;
+
+    if (!ownerDjId) {
+      log.error('[validate-stream] Key history slot has no djId:', keyHistorySlots[0].id);
+      return jsonResponse({ valid: false, reason: 'Key ownership unclear' }, 401);
+    }
+
+    // Step 2: find owner's currently active slot
+    const ownerActiveSlots = await queryCollection('livestreamSlots', {
+      filters: [{ field: 'djId', op: 'EQUAL', value: ownerDjId }],
+      limit: 20,
+      skipCache: true
+    });
+
+    const allowedStatuses = ['scheduled', 'in_lobby', 'live', 'queued', 'connecting'];
+    const activeSlot = ownerActiveSlots
+      .filter(s => allowedStatuses.includes(s.status as string))
+      .filter(s => !s.cancelled)
+      // Slot's window must include now (with the same grace as the timing check).
+      // Don't accept publishes against far-future or far-past slots.
+      .filter(s => {
+        const startWin = new Date(s.startTime).getTime() - RED5_CONFIG.security.keyValidityWindow;
+        const endWin = new Date(s.endTime).getTime() + RED5_CONFIG.timing.endGracePeriod;
+        const nowMs = Date.now();
+        return nowMs >= startWin && nowMs <= endWin;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+    if (!activeSlot) {
+      log.warn(`[validate-stream] ${ownerDjName} has no active slot for publish (key=${streamKey.substring(0, 20)}...)`);
+      return jsonResponse({
+        valid: false,
+        reason: 'No active slot booked. Schedule one or use Go Live first.',
+      }, 401);
+    }
+
+    const slot = activeSlot;
     const slotId = slot.id;
 
-    // Validate timing
+    // Step 3: timing + ban + final checks against the active slot
     const slotStart = new Date(slot.startTime);
     const slotEnd = new Date(slot.endTime);
     const validation = validateStreamKeyTiming(streamKey, slotStart, slotEnd);
-
     if (!validation.valid) {
-      return jsonResponse({
-        valid: false,
-        reason: validation.reason,
-      }, 401);
+      return jsonResponse({ valid: false, reason: validation.reason }, 401);
     }
 
-    // Check if slot is cancelled
-    if (slot.cancelled) {
-      return jsonResponse({
-        valid: false,
-        reason: 'Slot cancelled',
-      }, 401);
-    }
-
-    // Check if DJ is banned
     if (slot.djId) {
       const artist = await getDocument('artists', slot.djId);
       if (artist && (artist.suspended || artist.banned)) {
-        return jsonResponse({
-          valid: false,
-          reason: 'Account suspended',
-        }, 401);
+        return jsonResponse({ valid: false, reason: 'Account suspended' }, 401);
       }
     }
 
-    // All checks passed - allow the stream
-    log.info('[validate-stream] Stream approved:', slot.djName, slotId);
-
-    // Update slot to connecting (non-critical - don't fail validation if this fails)
-    try {
-      await updateDocument('livestreamSlots', slotId, {
-        status: slot.status === 'live' ? 'live' : 'connecting',
-        lastValidation: new Date().toISOString(),
-        clientIp: clientIp,
-      });
-    } catch (updateErr: unknown) {
-      log.warn('[validate-stream] Non-critical: Failed to update slot status:', updateErr);
+    // Adoption: if the active slot's streamKey is different from what the
+    // DJ is publishing with, point the slot at the actual key being used
+    // so listeners' /live page renders the correct HLS path. This is the
+    // server-side complement of the auto-adopt in handleGoLive.
+    const updates: Record<string, unknown> = {
+      status: slot.status === 'live' ? 'live' : 'connecting',
+      lastValidation: new Date().toISOString(),
+      clientIp: clientIp,
+    };
+    if (slot.streamKey !== streamKey) {
+      log.info(`[validate-stream] Adopting personal key for ${ownerDjName}: slot ${slot.streamKey} → ${streamKey}`);
+      updates.streamKey = streamKey;
+      // Build the matching playback URL — same shape buildHlsUrl produces.
+      updates.hlsUrl = `${RED5_CONFIG.server.hlsBaseUrl.replace(/\/$/, '').replace(/\/live$/, '')}/live/${streamKey}/index.m3u8`;
+      updates.broadcastMode = 'video';
     }
 
-    // Return 200 to allow the stream
+    try {
+      await updateDocument('livestreamSlots', slotId, updates);
+    } catch (updateErr: unknown) {
+      log.warn('[validate-stream] Non-critical: Failed to update slot:', updateErr);
+    }
+
+    log.info('[validate-stream] Stream approved:', ownerDjName, slotId);
     return jsonResponse({
       valid: true,
       slotId: slotId,
-      djName: slot.djName,
+      djName: ownerDjName,
     });
 
   } catch (error: unknown) {
