@@ -1,7 +1,7 @@
 // src/lib/livestream-slots/activation.ts
 // Activation handlers: go live, go live now, early start
 import { queryCollection, setDocument, updateDocument } from '../firebase-rest';
-import { buildRtmpUrl, buildHlsUrl } from '../red5';
+import { buildRtmpUrl, buildHlsUrl, findActiveRtmpStreamForDj } from '../red5';
 import { broadcastLiveStatus } from '../pusher';
 import { logActivity } from '../activity-feed';
 import { createLogger, ApiErrors, fetchWithTimeout, successResponse } from '../api-utils';
@@ -28,13 +28,30 @@ export async function handleGoLive(
   nowISO: string,
   invalidateStatusCacheFn: () => Promise<void>
 ): Promise<Response> {
-  const { djId, djName, streamKey, title, genre, twitchUsername, twitchStreamKey, broadcastMode } = data as {
-    djId?: string; djName?: string; streamKey?: string; title?: string;
+  const { djId, djName, title, genre, twitchUsername, twitchStreamKey, broadcastMode } = data as {
+    djId?: string; djName?: string; title?: string;
     genre?: string; twitchUsername?: string; twitchStreamKey?: string; broadcastMode?: string;
   };
+  let { streamKey } = data as { streamKey?: string };
+  let { broadcastMode: effectiveBroadcastMode } = { broadcastMode };
 
   if (!djId || !djName || !streamKey) {
     return ApiErrors.badRequest('DJ ID, name, and stream key required');
+  }
+
+  // Auto-adopt MediaMTX truth: if the DJ's OBS is already publishing under a
+  // different stream key (eg. profile still has yesterday's key), use the key
+  // MediaMTX is actually receiving. Skip for browser/relay modes — those don't
+  // come in via RTMP. Falls back to the slot key on any error.
+  if (broadcastMode !== 'browser' && broadcastMode !== 'relay') {
+    const activeRtmp = await findActiveRtmpStreamForDj(djId);
+    if (activeRtmp && activeRtmp.streamKey !== streamKey) {
+      log.warn(`[go-live] Adopting MediaMTX key for ${djName}: ${streamKey} → ${activeRtmp.streamKey} (audio=${activeRtmp.hasAudio} video=${activeRtmp.hasVideo})`);
+      streamKey = activeRtmp.streamKey;
+      // Force video mode — DJ has a real RTMP source going, don't fall back to
+      // the icecast placeholder feed even if the client requested it.
+      effectiveBroadcastMode = 'video';
+    }
   }
 
   // Verify the authenticated user matches the DJ going live
@@ -109,7 +126,7 @@ export async function handleGoLive(
   // Determine HLS URL based on broadcast mode
   // 'placeholder' = use Icecast relay with static image (freshwax-main)
   // 'video' = use OBS video stream (stream key path)
-  const useIcecastRelay = broadcastMode === 'placeholder';
+  const useIcecastRelay = effectiveBroadcastMode === 'placeholder';
   const hlsUrl = useIcecastRelay
     ? 'https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8'
     : buildHlsUrl(streamKey);
@@ -127,7 +144,7 @@ export async function handleGoLive(
     streamKey,
     rtmpUrl: buildRtmpUrl(streamKey),
     hlsUrl,
-    broadcastMode: broadcastMode || 'video', // Store for reference
+    broadcastMode: effectiveBroadcastMode || 'video', // Store for reference
     status: 'live',
     createdAt: nowISO,
     startedAt: nowISO,

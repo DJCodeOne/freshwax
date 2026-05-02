@@ -251,6 +251,69 @@ export function buildHlsUrl(streamKey: string): string {
 }
 
 // =============================================================================
+// MEDIAMTX LIVE STREAM DETECTION
+// =============================================================================
+
+/**
+ * Look up the MediaMTX path that this DJ is *actually* publishing to right now,
+ * regardless of what stream key the slot was generated with. Lets the go-live
+ * flow tolerate DJs whose OBS profile still has yesterday's key — we just adopt
+ * the key MediaMTX already has audio + video on, so the slot's hlsUrl points
+ * to the real stream instead of an empty placeholder path.
+ *
+ * Match rule: path name `live/fwx_<djIdShort>_*` where djIdShort is the first
+ * 8 chars of the DJ's UID (matches the format from generateStreamKey).
+ *
+ * Returns null on network errors, no match, or if MediaMTX API is unreachable —
+ * caller falls back to the request's stream key in that case.
+ */
+export async function findActiveRtmpStreamForDj(djId: string): Promise<{
+  streamKey: string;
+  pathName: string;
+  bytesReceived: number;
+  hasAudio: boolean;
+  hasVideo: boolean;
+} | null> {
+  if (!djId) return null;
+  const djIdShort = djId.substring(0, 8);
+  const apiBase = RED5_CONFIG.server.hlsBaseUrl.replace(/\/live\/?$/, '');
+  const url = `${apiBase}/v3/paths/list`;
+
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(TIMEOUTS.SHORT) });
+    if (!r.ok) return null;
+    const data = await r.json() as { items?: Array<Record<string, unknown>> };
+    const items = data.items || [];
+
+    const candidates = items.filter((p) => {
+      const name = String(p.name || '');
+      if (!name.startsWith(`live/fwx_${djIdShort}_`)) return false;
+      if (!p.ready) return false;
+      const source = p.source as Record<string, unknown> | null | undefined;
+      if (!source || source.type !== 'rtmpConn') return false;
+      return true;
+    });
+    if (candidates.length === 0) return null;
+
+    // If somehow more than one (DJ left a stale connection), pick the one with
+    // the most bytes received — that's the active session.
+    candidates.sort((a, b) => Number(b.bytesReceived || 0) - Number(a.bytesReceived || 0));
+    const winner = candidates[0];
+    const tracks = (winner.tracks as string[]) || [];
+    const pathName = String(winner.name);
+    return {
+      streamKey: pathName.replace(/^live\//, ''),
+      pathName,
+      bytesReceived: Number(winner.bytesReceived || 0),
+      hasAudio: tracks.some((t) => /audio/i.test(t)),
+      hasVideo: tracks.some((t) => /^h26|video/i.test(t)),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// =============================================================================
 // WEBHOOK SIGNATURE VERIFICATION
 // =============================================================================
 

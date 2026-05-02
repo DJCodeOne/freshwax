@@ -369,6 +369,50 @@ async function autoEndExpiredSlots(
         } catch (autoEndError: unknown) {
           log.error('Failed to auto-end slot:', autoEndError);
         }
+      } else {
+        // Slot is past its booked endTime but DJ is still streaming, no other DJ
+        // is queued, and they haven't hit max duration → keep the broadcast
+        // seamless by extending endTime. This avoids the "stream cut off at the
+        // hour" problem when the DJ wants more time and nobody's after them.
+        // Extend to either the next booked DJ's startTime, or the next hour
+        // boundary if nothing's queued. The same streamKey stays valid because
+        // validateStreamKeyTiming reads the slot's current endTime.
+        const nextBooked = upcomingAllSlots
+          .filter((s: Record<string, unknown>) => s.djId !== liveSlot.djId
+            && ['scheduled', 'in_lobby', 'queued'].includes(s.status as string))
+          .map((s: Record<string, unknown>) => new Date(s.startTime as string))
+          .filter((d: Date) => d.getTime() > now.getTime())
+          .sort((a: Date, b: Date) => a.getTime() - b.getTime())[0];
+
+        const nextHour = new Date(now);
+        nextHour.setMinutes(0, 0, 0);
+        nextHour.setHours(nextHour.getHours() + 1);
+
+        const newEnd = nextBooked && nextBooked.getTime() < nextHour.getTime()
+          ? nextBooked
+          : nextHour;
+
+        // Only extend if it actually moves forward (avoid no-op writes when
+        // we're already past nextHour but a new nextBooked sits earlier — that
+        // would shrink the window).
+        if (newEnd.getTime() > slotEnd.getTime()) {
+          log.info(`Extending slot ${liveSlot.id} for ${liveSlot.djName}: endTime ${slotEnd.toISOString()} → ${newEnd.toISOString()} (no DJ queued)`);
+          try {
+            await updateDocument('livestreamSlots', liveSlot.id, {
+              endTime: newEnd.toISOString(),
+              updatedAt: now.toISOString(),
+              extended: true,
+              lastExtendedAt: now.toISOString(),
+            });
+            await syncSlotStatusToD1(db, liveSlot.id, 'live', { endTime: newEnd.toISOString() });
+            invalidateCache();
+            clearCache('livestreamSlots');
+            await kvDelete('general', { prefix: 'status' });
+            await invalidateStatusCacheFn();
+          } catch (extendErr: unknown) {
+            log.warn('Failed to extend slot endTime:', extendErr);
+          }
+        }
       }
     }
   }
