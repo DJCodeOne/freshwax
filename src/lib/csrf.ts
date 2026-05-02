@@ -44,7 +44,6 @@ const CSRF_SKIP = new Set([
   // The endpoints validate session auth independently.
   '/api/dj-lobby/pusher-auth/',
   '/api/dj-lobby/presence/',
-  '/api/dj-lobby/takeover/',
   '/api/dj-lobby/broadcast-mode/',
   // Livestream slots — authenticated via Bearer token (Firebase ID token)
   '/api/livestream/slots/',

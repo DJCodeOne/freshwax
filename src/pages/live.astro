@@ -877,87 +877,10 @@ try {
         <button id="leaveLobbyBtn" class="lobby-btn cancel">Leave</button>
       </div>
       
-      <!-- Slot Available for Takeover -->
-      <div id="slotAvailableSection" class="slot-available-section hidden">
-        <div class="slot-available-alert">
-          <span class="alert-icon">🔓</span>
-          <div class="alert-text">
-            <strong>Slot Available!</strong>
-            <p>Previous DJ missed their window. First to claim gets it!</p>
-          </div>
-        </div>
-        <button id="claimSlotBtn" class="lobby-btn claim">🎧 Claim This Slot</button>
-      </div>
-      
-      <!-- Takeover Request Section -->
-      <div id="takeoverSection" class="takeover-section hidden">
-        <div class="takeover-divider"></div>
-        <div class="takeover-header">
-          <span class="takeover-icon">🔄</span>
-          <h3>Request Takeover</h3>
-        </div>
-        <div class="takeover-current-dj">
-          <span class="lobby-label">Currently Live:</span>
-          <div class="current-dj-info">
-            <img id="takeoverDjAvatar" src="/place-holder.webp" alt="Current DJ avatar" class="current-dj-avatar" width="40" height="40" loading="lazy" decoding="async" />
-            <span id="takeoverDjName">-</span>
-          </div>
-        </div>
-        <p class="takeover-desc">Want to take over this session? The current DJ will need to approve your request.</p>
-        <button id="requestTakeoverBtn" class="takeover-request-btn">
-          <span>🎧 Request Takeover</span>
-        </button>
-        <div id="takeoverPending" class="takeover-pending hidden">
-          <span class="pending-icon">⏳</span>
-          <span>Waiting for approval...</span>
-          <button id="cancelTakeoverBtn" class="cancel-takeover-btn">Cancel</button>
-        </div>
-        <div id="takeoverApproved" class="takeover-approved hidden">
-          <div class="approved-header">
-            <span class="approved-icon">✓</span>
-            <h3>Takeover Approved!</h3>
-          </div>
-          <p>You now have control of this stream. Use these credentials:</p>
-          <div class="takeover-credentials">
-            <div class="takeover-cred-item">
-              <span class="lobby-label">Stream Key:</span>
-              <code id="takeoverStreamKey">-</code>
-              <button class="copy-key-btn" id="copyTakeoverKeyBtn">Copy</button>
-            </div>
-            <div class="takeover-cred-item">
-              <span class="lobby-label">RTMP URL:</span>
-              <code>rtmp://rtmp.freshwax.co.uk/live</code>
-              <button class="copy-key-btn" id="copyTakeoverRtmpBtn">Copy</button>
-            </div>
-          </div>
-          <p class="takeover-note">Connect with your streaming software to take over the stream.</p>
-        </div>
-      </div>
-      
       <div id="lobbyStatusMsg" class="lobby-status-msg hidden"></div>
     </div>
   </div>
-  
-  <!-- Incoming Takeover Request Notification (for streaming DJ) -->
-  <div id="incomingTakeoverNotification" class="incoming-takeover-notification hidden">
-    <div class="incoming-takeover-content">
-      <div class="incoming-takeover-header">
-        <span class="pulse-badge-large">⚡ TAKEOVER REQUEST</span>
-      </div>
-      <div class="incoming-takeover-dj">
-        <img id="incomingTakeoverAvatar" src="/place-holder.webp" alt="Requesting DJ avatar" width="48" height="48" loading="lazy" decoding="async" />
-        <div>
-          <strong id="incomingTakeoverName">DJ Name</strong>
-          <span>wants to take over your stream</span>
-        </div>
-      </div>
-      <div class="incoming-takeover-actions">
-        <button id="acceptIncomingTakeoverBtn" class="accept-takeover-btn">✓ Accept</button>
-        <button id="declineIncomingTakeoverBtn" class="decline-takeover-btn">✕ Decline</button>
-      </div>
-    </div>
-  </div>
-  
+
   <div id="shareModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Share live stream">
     <div class="modal-overlay"></div>
     <div class="modal-content share-modal-content">
@@ -1492,9 +1415,6 @@ try {
   let playlistFallbackTimer = null;
   const PLAYLIST_FALLBACK_DELAY = 3 * 1000; // 3 seconds
 
-  // Takeover fallback interval (promoted to module scope for cleanup)
-  let takeoverFallbackInterval = null;
-  
   function clearChatMessages() {
     const chatMessages = document.getElementById('chatMessages');
     const fsChatMessages = document.getElementById('fsChatMessages');
@@ -1712,181 +1632,12 @@ try {
         document.getElementById('playlistBtn')?.classList.remove('hidden');
         document.getElementById('djLobbyBtn')?.classList.remove('hidden');
         
-        // Show DJ-only elements for approved DJs and admins
-        if ((userInfo.isDj && userInfo.isApproved) || userInfo.isAdmin) {
-          document.getElementById('takeoverSection')?.classList.remove('hidden');
-          
-          // Subscribe to incoming takeover requests
-          subscribeToIncomingTakeover();
-          setupTakeoverActions();
-        }
       }
     } catch (e) {
       console.error('Could not check user status:', e);
     }
   }
-  
-  // Subscribe to incoming takeover requests (for streaming DJs) - Using Pusher
-  async function subscribeToIncomingTakeover() {
-    if (!currentUser || !userInfo?.isDj) return;
-    
-    // Wait for Pusher to be available (loaded by live-stream.js)
-    const waitForPusher = () => new Promise((resolve) => {
-      if (window.Pusher) return resolve();
-      const check = setInterval(() => {
-        if (window.Pusher) {
-          clearInterval(check);
-          resolve();
-        }
-      }, 100);
-      // Timeout after 5 seconds
-      setTimeout(() => { clearInterval(check); resolve(); }, 5000);
-    });
-    
-    await waitForPusher();
 
-    if (!window.Pusher) {
-      // Fallback: poll API every 10 seconds
-      takeoverFallbackInterval = setInterval(async () => {
-        try {
-          const response = await fetch(`/api/dj-lobby/takeover/?userId=${currentUser.uid}`);
-          if (!response.ok) return;
-          const result = await response.json();
-          if (result.success && result.incoming?.status === 'pending') {
-            showTakeoverNotification(result.incoming);
-          } else {
-            hideTakeoverNotification();
-          }
-        } catch (e) { /* Silent polling failure */ }
-      }, 10000);
-      return;
-    }
-    
-    // Subscribe to private channel for takeover notifications
-    const PUSHER_KEY = window.PUSHER_CONFIG?.key || '';
-    const PUSHER_CLUSTER = window.PUSHER_CONFIG?.cluster || 'eu';
-
-    // Cookie-shim users have no real Firebase token; getIdToken returns null.
-    // Pusher's XHR transport doesn't go through window.fetch, so we omit the
-    // Authorization header entirely when there's no real token — the server's
-    // verifyRequestUser falls through to the __session cookie.
-    const djAuthToken = currentUser.getIdToken
-      ? await currentUser.getIdToken().catch(() => null)
-      : null;
-
-    const pusher = new window.Pusher(PUSHER_KEY, {
-      cluster: PUSHER_CLUSTER,
-      authEndpoint: '/api/dj-lobby/pusher-auth/',
-      auth: {
-        headers: djAuthToken ? { 'Authorization': `Bearer ${djAuthToken}` } : {},
-        params: { user_id: currentUser.uid }
-      }
-    });
-    
-    const privateChannel = pusher.subscribe(`private-dj-${currentUser.uid}`);
-    
-    privateChannel.bind('takeover-request', (data) => {
-      showTakeoverNotification(data);
-    });
-    
-    privateChannel.bind('takeover-cancelled', () => {
-      hideTakeoverNotification();
-    });
-    
-  }
-  
-  function showTakeoverNotification(data) {
-    const notification = document.getElementById('incomingTakeoverNotification');
-    document.getElementById('incomingTakeoverName').textContent = data.requesterName || 'A DJ';
-    document.getElementById('incomingTakeoverAvatar').src = data.requesterAvatar || '/place-holder.webp';
-    notification.classList.remove('hidden');
-    notification.dataset.requesterId = data.requesterId;
-  }
-  
-  function hideTakeoverNotification() {
-    document.getElementById('incomingTakeoverNotification').classList.add('hidden');
-  }
-  
-  // Setup takeover action buttons
-  function setupTakeoverActions() {
-    document.getElementById('acceptIncomingTakeoverBtn')?.addEventListener('click', async () => {
-      const notification = document.getElementById('incomingTakeoverNotification');
-      const requesterId = notification.dataset.requesterId;
-
-      if (!requesterId || !currentUser) return;
-
-      try {
-        const token = await currentUser.getIdToken();
-        // First get stream key
-        const keyResponse = await fetch('/api/livestream/slots/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ action: 'getStreamKey', djId: currentUser.uid })
-        });
-        if (!keyResponse.ok) {
-          alert('Failed to retrieve stream key');
-          return;
-        }
-        const keyResult = await keyResponse.json();
-
-        // Approve takeover via API (handles Firestore + Pusher)
-        const approveResponse = await fetch('/api/dj-lobby/takeover/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({
-            action: 'approve',
-            requesterId: currentUser.uid,
-            streamKey: keyResult.streamKey || 'Contact admin for key',
-            serverUrl: keyResult.serverUrl || 'rtmp://rtmp.freshwax.co.uk/live'
-          })
-        });
-        if (!approveResponse.ok) {
-          alert('Failed to approve takeover');
-          return;
-        }
-        const approveResult = await approveResponse.json();
-
-        if (approveResult.success) {
-          notification.classList.add('hidden');
-          alert('Takeover approved! Stream key has been shared.');
-        } else {
-          alert('Failed to accept takeover: ' + (approveResult.error || 'Unknown error'));
-        }
-      } catch (e) {
-        console.error('Accept takeover error:', e);
-        alert('Failed to accept takeover');
-      }
-    });
-
-    document.getElementById('declineIncomingTakeoverBtn')?.addEventListener('click', async () => {
-      const notification = document.getElementById('incomingTakeoverNotification');
-      const requesterId = notification.dataset.requesterId;
-
-      if (!requesterId || !currentUser) return;
-
-      try {
-        const token = await currentUser.getIdToken();
-        // Decline takeover via API (handles Firestore + Pusher)
-        const response = await fetch('/api/dj-lobby/takeover/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({
-            action: 'decline',
-            requesterId: currentUser.uid
-          })
-        });
-        if (!response.ok) return;
-        const result = await response.json();
-
-        if (result.success) {
-          notification.classList.add('hidden');
-        }
-      } catch (e) {
-        console.error('Decline takeover error:', e);
-      }
-    });
-  }
-  
   // OPTIMIZED: Load schedule with caching to reduce API calls
   async function loadSchedule(forceRefresh = false) {
     const now = Date.now();
@@ -2112,142 +1863,8 @@ try {
     document.getElementById('lobbyStreamKey').textContent = slot.streamKey || 'Loading...';
     
     updateLobbyCountdown(slot);
-    
-    // Check if someone is currently live and show takeover option
-    checkForTakeoverOption(slot);
   }
-  
-  // Check if there's a live stream that can be taken over
-  async function checkForTakeoverOption(mySlot) {
-    const takeoverSection = document.getElementById('takeoverSection');
-    if (!takeoverSection) return;
-    
-    // Only show takeover option for approved DJs
-    if (!(userInfo?.isDj && userInfo?.isApproved) && !userInfo?.isAdmin) {
-      takeoverSection.classList.add('hidden');
-      return;
-    }
-    
-    try {
-      const response = await fetch('/api/livestream/slots/');
-      if (!response.ok) return;
-      const result = await response.json();
 
-      if (!result.success) return;
-      
-      // Find currently live slot
-      const now = Date.now();
-      const liveSlot = result.slots?.find(s => 
-        s.status === 'live' && 
-        new Date(s.endTime).getTime() > now &&
-        s.djId !== currentUser?.uid // Not my own slot
-      );
-      
-      if (liveSlot) {
-        // Show takeover section
-        takeoverSection.classList.remove('hidden');
-        document.getElementById('takeoverDjName').textContent = liveSlot.djName;
-        document.getElementById('takeoverDjAvatar').src = liveSlot.djAvatar || '/place-holder.webp';
-        
-        // Store live slot ID for takeover request
-        takeoverSection.dataset.slotId = liveSlot.id;
-        
-        // Check if we already have a pending request
-        if (liveSlot.takeoverRequest?.requesterId === currentUser?.uid && 
-            liveSlot.takeoverRequest?.status === 'pending') {
-          showTakeoverPending();
-        }
-      } else {
-        takeoverSection.classList.add('hidden');
-      }
-    } catch (error) {
-      console.error('Error checking for takeover option:', error);
-    }
-  }
-  
-  let takeoverPollInterval = null;
-  
-  function showTakeoverPending() {
-    document.getElementById('requestTakeoverBtn')?.classList.add('hidden');
-    document.getElementById('takeoverPending')?.classList.remove('hidden');
-    document.getElementById('takeoverApproved')?.classList.add('hidden');
-    
-    // Start polling for approval
-    startTakeoverPolling();
-  }
-  
-  function hideTakeoverPending() {
-    document.getElementById('requestTakeoverBtn')?.classList.remove('hidden');
-    document.getElementById('takeoverPending')?.classList.add('hidden');
-    document.getElementById('takeoverApproved')?.classList.add('hidden');
-    
-    // Stop polling
-    stopTakeoverPolling();
-  }
-  
-  function showTakeoverApproved(streamKey) {
-    document.getElementById('requestTakeoverBtn')?.classList.add('hidden');
-    document.getElementById('takeoverPending')?.classList.add('hidden');
-    document.getElementById('takeoverApproved')?.classList.remove('hidden');
-    document.getElementById('takeoverStreamKey').textContent = streamKey;
-    
-    // Stop polling
-    stopTakeoverPolling();
-  }
-  
-  function startTakeoverPolling() {
-    if (takeoverPollInterval) return;
-    
-    takeoverPollInterval = setInterval(async () => {
-      const takeoverSection = document.getElementById('takeoverSection');
-      const slotId = takeoverSection?.dataset.slotId;
-      
-      if (!slotId || !currentUser) {
-        stopTakeoverPolling();
-        return;
-      }
-      
-      try {
-        // Check if takeover was approved
-        const response = await fetch('/api/livestream/slots/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'getStreamKey',
-            slotId,
-            djId: currentUser.uid
-          })
-        });
-
-        if (!response.ok) return;
-        const result = await response.json();
-
-        if (result.success && result.streamKey) {
-          // Takeover was approved! Show the key
-          showTakeoverApproved(result.streamKey);
-        }
-      } catch (error) {
-        console.error('Error polling takeover status:', error);
-      }
-    }, 3000); // Poll every 3 seconds
-  }
-  
-  function stopTakeoverPolling() {
-    if (takeoverPollInterval) {
-      clearInterval(takeoverPollInterval);
-      takeoverPollInterval = null;
-    }
-  }
-  
-  // Copy takeover key
-  window.copyTakeoverKey = function() {
-    const key = document.getElementById('takeoverStreamKey')?.textContent;
-    if (key && key !== '-') {
-      navigator.clipboard.writeText(key);
-      showCopyFeedback('Stream key copied!');
-    }
-  };
-  
   // Copy functions for lobby
   window.copyLobbyStreamKey = function() {
     const key = document.getElementById('lobbyStreamKey')?.textContent;
@@ -2276,95 +1893,7 @@ try {
   // Attach event listeners for copy buttons
   document.getElementById('copyLobbyStreamKeyBtn')?.addEventListener('click', () => window.copyLobbyStreamKey());
   document.getElementById('copyRtmpUrlBtn')?.addEventListener('click', () => window.copyRtmpUrl());
-  document.getElementById('copyTakeoverKeyBtn')?.addEventListener('click', () => window.copyTakeoverKey());
-  document.getElementById('copyTakeoverRtmpBtn')?.addEventListener('click', () => window.copyRtmpUrl());
 
-  // Request takeover button handler
-  document.getElementById('requestTakeoverBtn')?.addEventListener('click', async () => {
-    const takeoverSection = document.getElementById('takeoverSection');
-    const slotId = takeoverSection?.dataset.slotId;
-    
-    if (!slotId || !currentUser) {
-      if (window.showToast) {
-        window.showToast('Please log in to request a takeover');
-      } else {
-        alert('Please log in to request a takeover');
-      }
-      return;
-    }
-    
-    const btn = document.getElementById('requestTakeoverBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span>⏳ Sending request...</span>';
-    
-    try {
-      const response = await fetch('/api/livestream/slots/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'requestTakeover',
-          slotId,
-          requesterId: currentUser.uid,
-          requesterName: userInfo?.name || userInfo?.displayName || 'DJ',
-          requesterAvatar: userInfo?.avatarUrl || null
-        })
-      });
-
-      if (!response.ok) throw new Error('Takeover request failed');
-      const result = await response.json();
-      
-      if (result.success) {
-        showTakeoverPending();
-      } else {
-        alert(result.error || 'Failed to send takeover request');
-        btn.disabled = false;
-        btn.innerHTML = '<span>🎧 Request Takeover</span>';
-      }
-    } catch (error) {
-      console.error('Error requesting takeover:', error);
-      alert('Failed to send takeover request');
-      btn.disabled = false;
-      btn.innerHTML = '<span>🎧 Request Takeover</span>';
-    }
-  });
-  
-  // Cancel takeover request button handler
-  document.getElementById('cancelTakeoverBtn')?.addEventListener('click', async () => {
-    const takeoverSection = document.getElementById('takeoverSection');
-    const slotId = takeoverSection?.dataset.slotId;
-    
-    if (!slotId || !currentUser) return;
-    
-    // Stop polling immediately
-    stopTakeoverPolling();
-    
-    try {
-      const response = await fetch('/api/livestream/slots/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'cancelTakeoverRequest',
-          slotId,
-          requesterId: currentUser.uid
-        })
-      });
-
-      if (!response.ok) throw new Error('Cancel request failed');
-      const result = await response.json();
-      
-      if (result.success) {
-        hideTakeoverPending();
-      } else {
-        alert(result.error || 'Failed to cancel request');
-        // Restart polling if cancel failed
-        startTakeoverPolling();
-      }
-    } catch (error) {
-      console.error('Error cancelling takeover:', error);
-      startTakeoverPolling();
-    }
-  });
-  
   // DJ Ready state
   let isDjReady = false;
   let slotExpired = false;
@@ -2378,23 +1907,21 @@ try {
     const readyBtn = document.getElementById('readyBtn');
     const gracePeriod = document.getElementById('lobbyGracePeriod');
     const graceCountdown = document.getElementById('graceCountdown');
-    const slotAvailable = document.getElementById('slotAvailableSection');
-    
+
     const update = () => {
       const now = new Date();
       const start = new Date(slot.startTime);
       const secsUntilStart = Math.floor((start - now) / 1000);
-      
+
       // Before start time
       if (secsUntilStart > 0) {
         gracePeriod?.classList.add('hidden');
-        slotAvailable?.classList.add('hidden');
-        
+
         const mins = Math.floor(secsUntilStart / 60);
         const s = secsUntilStart % 60;
         countdown.textContent = `${mins}:${s.toString().padStart(2, '0')}`;
         if (countdownLabel) countdownLabel.textContent = 'Time until live:';
-        
+
         // Enable go live 2 mins before if ready
         if (isDjReady && secsUntilStart <= 120) {
           goLiveBtn.disabled = false;
@@ -2405,24 +1932,23 @@ try {
         lobbyCountdownTimeout = setTimeout(update, 1000);
         return;
       }
-      
+
       // After start time - check grace period
       const secsLate = Math.abs(secsUntilStart);
       const graceRemaining = GRACE_PERIOD_SECONDS - secsLate;
-      
+
       if (graceRemaining > 0 && !isDjReady && !slotExpired) {
         // In grace period - DJ is late but can still claim
         countdown.textContent = 'LATE';
         if (countdownLabel) countdownLabel.textContent = 'Your slot started!';
         gracePeriod?.classList.remove('hidden');
-        slotAvailable?.classList.add('hidden');
-        
+
         const gMins = Math.floor(graceRemaining / 60);
         const gSecs = graceRemaining % 60;
         if (graceCountdown) {
           graceCountdown.textContent = `${gMins}:${gSecs.toString().padStart(2, '0')}`;
         }
-        
+
         // DJ can still press ready and go live
         goLiveBtn.disabled = !isDjReady;
 
@@ -2435,53 +1961,26 @@ try {
         countdown.textContent = 'NOW!';
         if (countdownLabel) countdownLabel.textContent = 'You\'re ready!';
         gracePeriod?.classList.add('hidden');
-        slotAvailable?.classList.add('hidden');
         goLiveBtn.disabled = false;
         readyBtn?.classList.add('hidden');
         return;
       }
-      
-      // Grace period expired - slot is up for grabs
+
+      // Grace period expired
       if (!slotExpired) {
         slotExpired = true;
-        handleSlotExpired(slot);
       }
-      
+
       countdown.textContent = 'EXPIRED';
       if (countdownLabel) countdownLabel.textContent = 'Slot forfeited';
       gracePeriod?.classList.add('hidden');
       goLiveBtn.disabled = true;
       readyBtn?.classList.add('hidden');
-      
-      // Show slot available for others (but not for the late DJ)
-      // The late DJ sees their slot is forfeited
     };
-    
+
     update();
   }
-  
-  function handleSlotExpired(slot) {
-    // Notify server that slot is available for takeover
-    notifySlotAvailable(slot.id);
-  }
-  
-  async function notifySlotAvailable(slotId) {
-    try {
-      const token = await currentUser?.getIdToken();
-      await fetch('/api/livestream/manage/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'slot_expired',
-          slotId,
-          token
-        })
-      });
-    } catch (err) {
-      console.error('Failed to notify slot expiry:', err);
-    }
-  }
-  
+
   function setDjReady() {
     isDjReady = true;
     
@@ -2569,9 +2068,8 @@ try {
     }
     
     document.getElementById('lobbyGracePeriod')?.classList.add('hidden');
-    document.getElementById('slotAvailableSection')?.classList.add('hidden');
   }
-  
+
   function renderCalendar() {
     const grid = document.getElementById('calendarGrid');
     if (!grid) return;
@@ -3352,101 +2850,7 @@ try {
   document.getElementById('leaveLobbyBtn')?.addEventListener('click', () => {
     document.getElementById('lobbyPanel')?.classList.add('hidden');
   });
-  
-  // Claim available slot handler
-  document.getElementById('claimSlotBtn')?.addEventListener('click', async () => {
-    const claimBtn = document.getElementById('claimSlotBtn');
-    if (!claimBtn) return;
-    
-    claimBtn.disabled = true;
-    claimBtn.textContent = '⏳ Claiming...';
-    
-    try {
-      const token = await currentUser.getIdToken();
-      const response = await fetch('/api/livestream/manage/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'claim_slot',
-          token
-        })
-      });
 
-      if (!response.ok) throw new Error('Claim slot failed');
-      const result = await response.json();
-      
-      if (result.success) {
-        // Successfully claimed - update UI
-        document.getElementById('slotAvailableSection')?.classList.add('hidden');
-        document.getElementById('lobbyStreamKey').textContent = result.streamKey || 'Ready!';
-        
-        // Reset and show ready state
-        isDjReady = true;
-        setDjReady();
-        
-        alert('Slot claimed! You can now go live.');
-        
-        // Refresh schedule
-        scheduleCache = null;
-        await loadSchedule(true);
-      } else {
-        alert(result.error || 'Failed to claim slot - someone else may have claimed it first.');
-        claimBtn.disabled = false;
-        claimBtn.textContent = '🎧 Claim This Slot';
-      }
-    } catch (err) {
-      console.error('Failed to claim slot:', err);
-      alert('Network error. Please try again.');
-      claimBtn.disabled = false;
-      claimBtn.textContent = '🎧 Claim This Slot';
-    }
-  });
-  
-  // Poll for available slots (for DJs not currently in the late slot)
-  let availableSlotPollInterval = null;
-  
-  function startAvailableSlotPolling() {
-    if (availableSlotPollInterval) return;
-    
-    availableSlotPollInterval = setInterval(async () => {
-      // Only poll if user is a DJ and lobby panel is visible
-      if (!userInfo?.isDj || document.getElementById('lobbyPanel')?.classList.contains('hidden')) {
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/livestream/slots/?checkAvailable=true');
-        if (!response.ok) return;
-        const result = await response.json();
-        
-        if (result.availableSlot) {
-          // There's an available slot - show claim option
-          const slotAvailable = document.getElementById('slotAvailableSection');
-          const mySlotId = myUpcomingSlot?.id;
-          
-          // Don't show to the DJ who forfeited their own slot
-          if (result.availableSlot.id !== mySlotId) {
-            slotAvailable?.classList.remove('hidden');
-          }
-        }
-      } catch (err) {
-        console.error('Error polling for available slots:', err);
-      }
-    }, 5000); // Poll every 5 seconds
-  }
-  
-  function stopAvailableSlotPolling() {
-    if (availableSlotPollInterval) {
-      clearInterval(availableSlotPollInterval);
-      availableSlotPollInterval = null;
-    }
-  }
-  
-  // Start polling when page loads for DJs
-  if (userInfo?.isDj) {
-    startAvailableSlotPolling();
-  }
-  
   // End Stream button handler
   document.getElementById('endStreamBtn')?.addEventListener('click', async () => {
     if (!confirm('Are you sure you want to end your stream?')) return;
@@ -3575,21 +2979,9 @@ try {
 
   // Clean up module-scoped intervals on View Transition navigation
   document.addEventListener('astro:before-swap', function() {
-    if (takeoverFallbackInterval) {
-      clearInterval(takeoverFallbackInterval);
-      takeoverFallbackInterval = null;
-    }
-    if (takeoverPollInterval) {
-      clearInterval(takeoverPollInterval);
-      takeoverPollInterval = null;
-    }
     if (countdownInterval) {
       clearInterval(countdownInterval);
       countdownInterval = null;
-    }
-    if (availableSlotPollInterval) {
-      clearInterval(availableSlotPollInterval);
-      availableSlotPollInterval = null;
     }
     if (refreshInterval) {
       clearInterval(refreshInterval);
@@ -3743,7 +3135,7 @@ try {
     document.body.classList.remove('header-hidden', 'live-page');
     var hz = document.querySelector('.header-hover-zone');
     if (hz) hz.remove();
-    // Note: module-scoped intervals (fullscreenStats, takeover, countdown, etc.)
+    // Note: module-scoped intervals (fullscreenStats, countdown, etc.)
     // are cleaned up in their own module script blocks above.
   }, { once: true });
 </script>

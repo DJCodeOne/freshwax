@@ -461,7 +461,7 @@ export async function openGoLiveInline() {
   var currentStream = ctx ? ctx.getCurrentStream() : null;
 
   if (currentStream && currentStream.djId !== (currentUser ? currentUser.uid : null)) {
-    alert('Someone is already live! Use the Takeover feature if you want to take over.');
+    alert('Someone is already live. Wait until their session ends or has been booked over.');
     return;
   }
 

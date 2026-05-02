@@ -272,13 +272,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               <span class="toggle-label">Allow "Go Live After Current DJ"</span>
             </label>
             <span class="form-hint">Let DJs queue to go live after the current stream</span>
-            
-            <label class="toggle-row standalone">
-              <input type="checkbox" id="allowTakeover" checked>
-              <span class="toggle-slider"></span>
-              <span class="toggle-label">Allow Stream Takeover</span>
-            </label>
-            <span class="form-hint">Let DJs request to take over a live stream</span>
           </div>
         </div>
       </div>
@@ -773,7 +766,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       allowBypassRequests: true,
       allowGoLiveNow: true,
       allowGoLiveAfter: true,
-      allowTakeover: true
     },
     releaseDefaults: {
       defaultStatus: 'pending',
@@ -914,7 +906,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       allowBypassRequests: document.getElementById('allowBypassRequests').checked,
       allowGoLiveNow: document.getElementById('allowGoLiveNow').checked,
       allowGoLiveAfter: document.getElementById('allowGoLiveAfter').checked,
-      allowTakeover: document.getElementById('allowTakeover').checked
     };
 
     // Release defaults

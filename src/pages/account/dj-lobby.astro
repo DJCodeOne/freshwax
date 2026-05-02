@@ -1,6 +1,6 @@
 ---
 // src/pages/account/dj-lobby.astro
-// DJ-only lobby with stream preview, private chat, streaming instructions, and takeover system
+// DJ-only lobby with stream preview, private chat, streaming instructions
 import '../../styles/dj-lobby.css';
 import '../../styles/dj-lobby-modals.css';
 import LiveChat from '../../components/live/LiveChat.astro';
@@ -369,61 +369,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <p id="endStreamStatus" class="end-stream-status">No active stream</p>
         </div>
         
-        <!-- Takeover Section -->
-        <div class="takeover-section" id="takeoverBox">
-          <div class="section-header">
-            <h3>🔄 Stream Takeover</h3>
-          </div>
-          
-          <div id="takeoverRequest" class="takeover-content hidden">
-            <p>Request to take over from <strong id="takeoverFromName">DJ</strong></p>
-            <button id="requestTakeoverBtn" class="takeover-btn">Request Takeover</button>
-            <p id="takeoverPending" class="takeover-pending hidden">⏳ Waiting for response... <span id="takeoverCountdown"></span></p>
-            <p id="takeoverAttemptsLeft" class="takeover-attempts">3 requests remaining this session</p>
-            <p id="takeoverLimitReached" class="takeover-limit hidden">⚠️ No requests remaining this session</p>
-          </div>
-          
-          <div id="incomingTakeover" class="incoming-takeover hidden">
-            <div class="incoming-badge">⚡ TAKEOVER REQUEST</div>
-            <div class="incoming-dj">
-              <img id="incomingDjAvatar" src="/place-holder.webp" alt="Incoming DJ avatar" width="48" height="48" loading="lazy" decoding="async" />
-              <div>
-                <strong id="incomingDjName">DJ Name</strong>
-                <span>wants to take over</span>
-              </div>
-            </div>
-            <div class="incoming-actions">
-              <button id="acceptTakeoverBtn" class="accept-btn">✓ Accept</button>
-              <button id="declineTakeoverBtn" class="decline-btn">✕ Decline</button>
-            </div>
-          </div>
-          
-          <div id="takeoverApproved" class="takeover-approved hidden">
-            <div class="approved-badge">✓ APPROVED</div>
-            <p>Copy these into OBS:</p>
-            <div class="takeover-creds">
-              <div class="cred-row">
-                <label>Server</label>
-                <div class="cred-value">
-                  <code id="takeoverServerUrl">-</code>
-                  <button class="copy-btn" data-copy="takeoverServerUrl">Copy</button>
-                </div>
-              </div>
-              <div class="cred-row">
-                <label>Key</label>
-                <div class="cred-value">
-                  <code id="takeoverStreamKey">-</code>
-                  <button class="copy-btn" data-copy="takeoverStreamKey">Copy</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div id="noStreamTakeover" class="no-stream-msg">
-            <p>No stream to takeover</p>
-          </div>
-        </div>
-
         <!-- Streaming Setup Link -->
         <div class="setup-link-section">
           <a href="/account/streaming-setup/" class="setup-link-btn">
@@ -1406,14 +1351,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import {
     initDjLobbyPusher,
     sendChatMessage,
-    requestTakeover,
-    approveTakeover,
-    declineTakeover,
     openDmConversation,
     sendDm,
     cleanup as cleanupPusher,
     getOnlineDjs
-  } from '/dj-lobby-pusher.js?v=3.6';
+  } from '/dj-lobby-pusher.js?v=3.7';
 
   // Extracted modules (DJ lobby code split)
   import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260430c';
@@ -1777,12 +1719,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     console.log('[DJ-Lobby] OBS preview check started');
   }, 2000);
 
-  // Takeover limiting - max 3 attempts per session
-  let takeoverAttempts = 0;
-  const MAX_TAKEOVER_ATTEMPTS = 3;
-  let takeoverTimeout = null;
-  let takeoverPending = false;
-  
   // DM System
   let dmTargetDj = null;
   let dmMessages = [];
@@ -2265,7 +2201,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
     
     // Initialize Pusher-based real-time features (replaces Firebase onSnapshot)
-    // This handles: presence, chat, takeover, DMs
+    // This handles: presence, chat, DMs
     await initDjLobbyPusher(currentUser, userInfo);
     
     // Setup UI event listeners
@@ -2338,7 +2274,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (peakHoldTimer) clearInterval(peakHoldTimer);
         if (initCheckInterval) clearInterval(initCheckInterval);
         if (bypassPollInterval) clearInterval(bypassPollInterval);
-        if (takeoverTimeout) clearInterval(takeoverTimeout);
         // Cancel requestAnimationFrame loops for audio meters
         if (obsMeterAnimationId) cancelAnimationFrame(obsMeterAnimationId);
         if (liveMeterAnimationId) cancelAnimationFrame(liveMeterAnimationId);
@@ -2349,7 +2284,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         peakHoldTimer = null;
         initCheckInterval = null;
         bypassPollInterval = null;
-        takeoverTimeout = null;
         obsMeterAnimationId = null;
         liveMeterAnimationId = null;
 
@@ -2491,8 +2425,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const videoPreview = document.getElementById('videoPreview');
       const audioPreview = document.getElementById('audioPreview');
       const timeRemaining = document.getElementById('timeRemaining');
-      const takeoverRequest = document.getElementById('takeoverRequest');
-      const noStreamTakeover = document.getElementById('noStreamTakeover');
 
       if (result.success && result.isLive && result.primaryStream) {
         currentStream = result.primaryStream;
@@ -2726,10 +2658,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           }
         }
 
-        // Handle takeover UI and End Stream button based on who is streaming
+        // Handle End Stream button based on who is streaming
         if (currentStream.djId === currentUser?.uid) {
-          takeoverRequest?.classList.add('hidden');
-          noStreamTakeover?.classList.add('hidden');
           // Enable End Stream button for current streamer
           updateEndStreamButton(true, true);
 
@@ -2804,10 +2734,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             }
           }
         } else {
-          takeoverRequest?.classList.remove('hidden');
-          noStreamTakeover?.classList.add('hidden');
-          const takeoverFromName = document.getElementById('takeoverFromName');
-          if (takeoverFromName) takeoverFromName.textContent = currentStream.djName || 'current DJ';
           // Disable End Stream button - not your stream (unless admin)
           updateEndStreamButton(true, false);
         }
@@ -2863,8 +2789,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         videoPreview?.classList.add('hidden');
         audioPreview?.classList.add('hidden');
         timeRemaining?.classList.add('hidden');
-        takeoverRequest?.classList.add('hidden');
-        noStreamTakeover?.classList.remove('hidden');
 
         // Cleanup HLS player when stream ends
         cleanupHlsPlayer();
@@ -3135,30 +3059,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   let isFadingOut = false;
 
 
-  // REPLACED BY PUSHER MODULE - takeover events now handled via private Pusher channel
-  // function subscribeToTakeover() { ... }
-  
-  function showIncomingTakeover(data) {
-    const div = document.getElementById('incomingTakeover');
-    document.getElementById('incomingDjName').textContent = data.requesterName || 'A DJ';
-    document.getElementById('incomingDjAvatar').src = data.requesterAvatar || '/place-holder.webp';
-    div.classList.remove('hidden');
-    div.dataset.requesterId = data.requesterId;
-  }
-  
-  function hideIncomingTakeover() {
-    document.getElementById('incomingTakeover').classList.add('hidden');
-  }
-  
-  function showTakeoverApproved(data) {
-    const div = document.getElementById('takeoverApproved');
-    document.getElementById('takeoverServerUrl').textContent = data.serverUrl || 'rtmp://rtmp.freshwax.co.uk/live';
-    document.getElementById('takeoverStreamKey').textContent = data.streamKey || '-';
-    div.classList.remove('hidden');
-    document.getElementById('takeoverRequest').classList.add('hidden');
-    document.getElementById('noStreamTakeover').classList.add('hidden');
-  }
-  
   // REPLACED BY PUSHER MODULE - chat messages now handled via Pusher channel
   // function subscribeToChat() { ... }
   
@@ -3257,36 +3157,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       status.textContent = 'No active stream';
       status.classList.remove('live');
     }
-  }
-  
-  function updateTakeoverAttemptsUI() {
-    const attemptsLeft = MAX_TAKEOVER_ATTEMPTS - takeoverAttempts;
-    const attemptsEl = document.getElementById('takeoverAttemptsLeft');
-    const limitEl = document.getElementById('takeoverLimitReached');
-    const btn = document.getElementById('requestTakeoverBtn');
-    
-    if (attemptsLeft <= 0) {
-      attemptsEl.classList.add('hidden');
-      limitEl.classList.remove('hidden');
-      btn.classList.add('disabled');
-      btn.disabled = true;
-    } else {
-      attemptsEl.classList.remove('hidden');
-      limitEl.classList.add('hidden');
-      attemptsEl.textContent = `${attemptsLeft} request${attemptsLeft !== 1 ? 's' : ''} remaining this session`;
-      if (!takeoverPending) {
-        btn.classList.remove('disabled');
-        btn.disabled = false;
-      }
-    }
-  }
-  
-  function clearTakeoverTimeout() {
-    if (takeoverTimeout) {
-      clearInterval(takeoverTimeout);
-      takeoverTimeout = null;
-    }
-    takeoverPending = false;
   }
   
   function setupEventListeners() {
@@ -4127,155 +3997,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Reset GO LIVE button
         goLiveBtnText.textContent = 'GO LIVE!';
         goLiveBtn.disabled = false;
-      }
-    });
-    
-    // Takeover
-    document.getElementById('requestTakeoverBtn')?.addEventListener('click', async () => {
-      if (!currentStream || !currentUser) return;
-      if (takeoverPending) return;
-      
-      // Check if limit reached
-      if (takeoverAttempts >= MAX_TAKEOVER_ATTEMPTS) {
-        return;
-      }
-      
-      try {
-        // Increment attempts
-        takeoverAttempts++;
-        takeoverPending = true;
-        updateTakeoverAttemptsUI();
-        
-        // Send takeover request via API (handles Firestore + Pusher)
-        const token = await currentUser.getIdToken();
-        const response = await fetch('/api/dj-lobby/takeover/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({
-            action: 'request',
-            requesterId: currentUser.uid,
-            requesterName: userInfo.name,
-            requesterAvatar: userInfo.avatar,
-            targetDjId: currentStream.djId,
-            targetDjName: currentStream.djName
-          })
-        });
-        if (!response.ok) throw new Error('Takeover request failed: ' + response.status);
-        const result = await response.json();
-        if (!result.success) throw new Error(result.error);
-
-        document.getElementById('requestTakeoverBtn').classList.add('hidden');
-        document.getElementById('takeoverPending').classList.remove('hidden');
-
-        // Start 20-second timeout countdown
-        let countdown = 20;
-        const countdownEl = document.getElementById('takeoverCountdown');
-        countdownEl.textContent = `(${countdown}s)`;
-
-        takeoverTimeout = setInterval(async () => {
-          countdown--;
-          countdownEl.textContent = `(${countdown}s)`;
-
-          if (countdown <= 0) {
-            clearInterval(takeoverTimeout);
-            takeoverTimeout = null;
-            takeoverPending = false;
-
-            // Reset UI - timeout expired
-            document.getElementById('takeoverPending').classList.add('hidden');
-
-            // Check if more attempts available
-            if (takeoverAttempts < MAX_TAKEOVER_ATTEMPTS) {
-              document.getElementById('requestTakeoverBtn').classList.remove('hidden');
-              document.getElementById('requestTakeoverBtn').classList.remove('disabled');
-            }
-
-            updateTakeoverAttemptsUI();
-
-            // Clean up the pending request via API
-            try {
-              const cancelToken = await currentUser.getIdToken();
-              await fetch('/api/dj-lobby/takeover/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cancelToken}` },
-                body: JSON.stringify({
-                  action: 'cancel',
-                  requesterId: currentUser.uid
-                })
-              });
-            } catch (cancelErr) {
-              // Silent failure - non-critical cleanup
-            }
-          }
-        }, 1000);
-        
-      } catch (e) {
-        console.error('Takeover error:', e);
-        alert('Failed to send takeover request');
-        takeoverPending = false;
-      }
-    });
-    
-    document.getElementById('acceptTakeoverBtn')?.addEventListener('click', async () => {
-      const div = document.getElementById('incomingTakeover');
-      const requesterId = div.dataset.requesterId;
-      if (!requesterId || !currentUser) return;
-
-      try {
-        // Get current stream key from the live stream or generated key
-        let streamKeyToPass = currentStreamKey;
-        let serverUrl = 'rtmp://rtmp.freshwax.co.uk/live';
-
-        // If we have a current stream, use its key
-        if (currentStream && currentStream.djId === currentUser.uid && currentStream.streamKey) {
-          streamKeyToPass = currentStream.streamKey;
-        }
-
-        // If no stream key available, try to fetch it
-        if (!streamKeyToPass) {
-          const token = await currentUser.getIdToken();
-          const response = await fetch('/api/livestream/slots/?action=checkStreamKey&djId=' + currentUser.uid, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (!response.ok) throw new Error('Stream key check failed: ' + response.status);
-          const result = await response.json();
-          if (result.success && result.streamKey) {
-            streamKeyToPass = result.streamKey;
-          }
-        }
-
-        // Use the Pusher module to approve takeover (handles API + Pusher broadcast)
-        const approved = await approveTakeover(requesterId, streamKeyToPass, serverUrl);
-
-        if (approved) {
-          hideIncomingTakeover();
-          alert('Takeover approved! The new DJ can now use your stream key.');
-        } else {
-          alert('Failed to approve takeover. Please try again.');
-        }
-      } catch (e) {
-        console.error('Accept error:', e);
-        alert('Failed to approve takeover');
-      }
-    });
-    
-    document.getElementById('declineTakeoverBtn')?.addEventListener('click', async () => {
-      const div = document.getElementById('incomingTakeover');
-      const requesterId = div.dataset.requesterId;
-      if (!requesterId) return;
-
-      try {
-        // Use the Pusher module to decline takeover (handles API + Pusher broadcast)
-        const declined = await declineTakeover(requesterId);
-
-        if (declined) {
-          hideIncomingTakeover();
-        } else {
-          alert('Failed to decline takeover');
-        }
-      } catch (e) {
-        console.error('Decline error:', e);
-        alert('Failed to decline takeover');
       }
     });
     

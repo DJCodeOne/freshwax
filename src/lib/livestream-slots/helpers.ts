@@ -107,7 +107,6 @@ export const DEFAULT_SETTINGS = {
   sessionEndCountdown: 10,
   allowGoLiveNow: true,
   allowGoLiveAfter: true,
-  allowTakeover: true
 };
 
 // Use secure stream key generation from red5.ts

@@ -59,7 +59,6 @@ const DEFAULT_SETTINGS = {
     allowBypassRequests: true,
     allowGoLiveNow: true,
     allowGoLiveAfter: true,
-    allowTakeover: true
   },
   releaseDefaults: {
     defaultStatus: 'pending',

@@ -11,7 +11,7 @@ import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils
 const log = createLogger('livestream/manage');
 
 const livestreamManageSchema = z.object({
-  action: z.enum(['start', 'stop', 'update', 'schedule', 'dj_ready', 'slot_expired', 'claim_slot']),
+  action: z.enum(['start', 'stop', 'update', 'schedule', 'dj_ready']),
   djId: z.string().min(1),
   streamId: z.string().optional(),
 }).strip();
@@ -273,91 +273,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         
         return successResponse({ message: 'DJ marked as ready' });
       }
-      
-      case 'slot_expired': {
-        // Mark slot as expired/available for takeover
-        const { slotId } = data;
-        if (!slotId) {
-          return ApiErrors.badRequest('Slot ID is required');
-        }
-        
-        const slotData = await getDocument('livestreamSlots', slotId);
 
-        if (!slotData) {
-          return ApiErrors.notFound('Slot not found');
-        }
-
-        // Only the original DJ or an admin can mark their slot as expired
-        // (This gets called when the 3-minute grace period ends)
-        if (slotData.djId !== djId) {
-          return ApiErrors.forbidden('Cannot expire another DJ slot');
-        }
-
-        // Mark as available for takeover
-        await updateDocument('livestreamSlots', slotId, {
-          status: 'available',
-          expiredAt: nowISO,
-          originalDjId: slotData.djId,
-          originalDjName: slotData.djName,
-          djId: null, // Clear DJ assignment
-          djName: 'Available',
-          djReady: false,
-          updatedAt: nowISO
-        });
-        
-        return successResponse({ message: 'Slot marked as available' });
-      }
-      
-      case 'claim_slot': {
-        // Claim an available slot (first come first served)
-
-        // Find available slots
-        const availableSlots = await queryCollection('livestreamSlots', {
-          filters: [{ field: 'status', op: 'EQUAL', value: 'available' }],
-          limit: 1
-        });
-
-        if (availableSlots.length === 0) {
-          return ApiErrors.notFound('No slots available');
-        }
-
-        const availableSlot = availableSlots[0];
-        const slotId = availableSlot.id;
-        const slotData = availableSlot;
-
-        // Check if DJ is approved
-        const artistDoc = await getDocument('artists', djId);
-        if (!artistDoc || !artistDoc.approved) {
-          return ApiErrors.forbidden('You must be an approved DJ to claim slots');
-        }
-
-        const artistData = artistDoc;
-
-        // Note: REST API doesn't support transactions, so there's a small race condition risk
-        // Double-check still available
-        const freshSlot = await getDocument('livestreamSlots', slotId);
-        if (!freshSlot || freshSlot.status !== 'available') {
-          return ApiErrors.conflict('Slot no longer available');
-        }
-
-        // Claim the slot
-        await updateDocument('livestreamSlots', slotId, {
-          status: 'in_lobby',
-          djId: djId,
-          djName: artistData.artistName || artistData.displayName || 'DJ',
-          djAvatar: artistData.avatarUrl || null,
-          djReady: true, // Already ready since they're claiming
-          djReadyAt: nowISO,
-          claimedAt: nowISO,
-          claimedFromExpiry: true,
-          updatedAt: nowISO
-        });
-
-        return successResponse({ slotId: slotId,
-          streamKey: slotData.streamKey,
-          message: 'Slot claimed successfully' });
-      }
-      
       default:
         return ApiErrors.badRequest('Invalid action');
     }

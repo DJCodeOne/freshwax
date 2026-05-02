@@ -703,8 +703,6 @@ html, body{ overflow:auto; }
 .lobby-btn.ready:hover{ background:#2563eb; }
 .lobby-btn.ready.is-ready{ background:#10b981; cursor:default; }
 .lobby-btn.ready.is-ready::before{ content:'✓ '; }
-.lobby-btn.claim{ background:#f59e0b; color:#000; font-weight:700; width:100%; }
-.lobby-btn.claim:hover{ background:#d97706; }
 .lobby-ready-status{ margin-bottom:1rem; }
 .ready-indicator{ display:flex; align-items:center; gap:.5rem; padding:.5rem .75rem; background:#1a1a1a; border-radius:8px; box-shadow:none; border:1px solid #333; }
 .ready-dot{ width:10px; height:10px; border-radius:50%; background:#666; transition:background-color .3s, color .3s, border-color .3s, box-shadow .3s; }
@@ -718,54 +716,13 @@ html, body{ overflow:auto; }
 50% { border-color:#f87171; } }
 .grace-warning{ display:block; color:#f87171; font-size:.875rem; margin-bottom:.25rem; }
 .grace-countdown{ font-family:'Inter',sans-serif; font-size:2rem; color:#dc2626; letter-spacing:2px; }
-.slot-available-section{ margin-top:1.5rem; padding-top:1.5rem; border-top:2px solid #f59e0b; }
-.slot-available-alert{ display:flex; align-items:flex-start; gap:.75rem; padding:1rem; background:rgba(245,158,11,.1); border:1px solid #f59e0b; border-radius:8px; margin-bottom:1rem; }
-.slot-available-alert .alert-icon{ font-size:1.5rem; }
-.slot-available-alert .alert-text strong{ display:block; color:#f59e0b; margin-bottom:.25rem; }
-.slot-available-alert .alert-text p{ margin:0; color:#ccc; font-size:.875rem; }
 .lobby-status-msg{ margin-top:.75rem; padding:.5rem; border-radius:8px; box-shadow:none; font-size:.8125rem; text-align:center; }
 .copy-key-btn{ margin-top:.5rem; padding:.375rem .75rem; background:#333; border:0; border-radius:4px; color:#fff; font-size:.75rem; cursor:pointer; transition:background .2s; }
 .copy-key-btn:hover{ background:#10b981; }
-.takeover-section{ margin-top:1.5rem; padding-top:1.5rem; }
-.takeover-divider{ height:1px; background:linear-gradient(to right, transparent, #444, transparent); margin-bottom:1.5rem; }
-.takeover-header{ display:flex; align-items:center; gap:.5rem; margin-bottom:.75rem; }
-.takeover-header .takeover-icon{ font-size:1.25rem; }
-.takeover-header h4{ color:#fbbf24; margin:0; font-size:1rem; }
-.takeover-current-dj{ margin-bottom:.75rem; }
 .current-dj-info{ display:flex; align-items:center; gap:.5rem; margin-top:.375rem; padding:.5rem; background:rgba(220,38,38,.1); border:1px solid #dc2626; border-radius:8px; }
 .current-dj-avatar{ width:28px; height:28px; border-radius:50%; object-fit:cover; }
 .current-dj-info span{ color:#fff; font-weight:600; }
-.takeover-desc{ color:#bbb; font-size:.8125rem; margin:0 0 1rem 0; }
-.takeover-request-btn{ width:100%; padding:.875rem; background:linear-gradient(135deg, #f59e0b, #d97706); border:0; border-radius:8px; color:#fff; font-weight:600; font-size:.9375rem; cursor:pointer; }
-.takeover-request-btn:hover{ background:linear-gradient(135deg, #fbbf24, #f59e0b); transform:translateY(-2px); box-shadow:0 4px 12px rgba(245,158,11,.3); }
-.takeover-request-btn:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
-.takeover-pending{ display:flex; align-items:center; justify-content:center; gap:.5rem; padding:.875rem; background:rgba(245,158,11,.15); border:1px dashed #f59e0b; border-radius:8px; color:#fbbf24; }
-.takeover-pending .pending-icon{ animation:spin 2s linear infinite; }
-.cancel-takeover-btn{ margin-left:auto; padding:.375rem .75rem; background:#444; border:0; border-radius:4px; color:#fff; font-size:.75rem; cursor:pointer; }
-.takeover-approved{ background:linear-gradient(135deg, rgba(34,197,94,.2), rgba(22,163,74,.1)); border:2px solid #22c55e; border-radius:8px; padding:1rem; margin-top:1rem; }
-.takeover-approved .approved-header{ display:flex; align-items:center; gap:.5rem; margin-bottom:.75rem; }
-.takeover-approved .approved-icon{ width:24px; height:24px; background:#22c55e; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold; }
-.takeover-approved h4{ color:#22c55e; margin:0; }
-.takeover-approved>p{ color:#ccc; font-size:.875rem; margin:0 0 1rem 0; }
-.takeover-credentials{ background:#000; border-radius:8px; box-shadow:none; padding:.75rem; margin-bottom:.75rem; }
-.takeover-cred-item{ margin-bottom:.75rem; }
-.takeover-cred-item:last-child{ margin-bottom:0; }
-.takeover-cred-item code{ display:block; background:#111; padding:.5rem; border-radius:4px; color:#10b981; font-family:monospace; font-size:.75rem; word-break:break-all; margin:.25rem 0; }
-.takeover-note{ color:#bbb; font-size:.8125rem; margin:0; }
-.incoming-takeover-notification{ position:fixed; top:100px; right:20px; z-index:1000; animation:slideInRight .3s ease-out; }
-.incoming-takeover-content{ background:linear-gradient(135deg, #fef2f2, #fee2e2); border:3px solid #dc2626; border-radius:16px; padding:1.5rem; max-width:350px; }
-.incoming-takeover-header{ margin-bottom:1rem; }
 .pulse-badge-large{ display:inline-block; background:#dc2626; color:#fff; padding:.5rem 1rem; border-radius:20px; font-weight:700; font-size:.9rem; animation:pulse-badge 1s infinite; }
-.incoming-takeover-dj{ display:flex; align-items:center; gap:1rem; margin-bottom:1.25rem; }
-.incoming-takeover-dj img{ width:56px; height:56px; border-radius:50%; border:3px solid #dc2626; }
-.incoming-takeover-dj strong{ display:block; font-size:1.1rem; color:#111; }
-.incoming-takeover-dj span{ color:#aaa; font-size:.9rem; }
-.incoming-takeover-actions{ display:flex; gap:.75rem; }
-.accept-takeover-btn, .decline-takeover-btn{ flex:1; padding:.75rem 1rem; border:0; border-radius:8px; font-weight:600; font-size:.95rem; cursor:pointer; }
-.accept-takeover-btn{ background:#10b981; color:#fff; }
-.accept-takeover-btn:hover{ background:#059669; }
-.decline-takeover-btn{ background:#6b7280; color:#fff; }
-.decline-takeover-btn:hover{ background:#4b5563; }
 @media (max-width:1024px){ .live-layout{ padding:.75rem; gap:.75rem; }
 .player-container{ min-height:300px; } }
 @media (hover:none) and (pointer:coarse){ button,
