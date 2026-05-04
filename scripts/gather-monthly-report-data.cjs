@@ -165,11 +165,14 @@ async function listCol(token, col, limit, where) {
     .map(r => {
       const rel = myReleases.find(x => x.id === r.id);
       const releaseArtist = rel?.artistName || rel?.artist || '';
+      const totalTracks = trackCountFor(rel);
       return {
         title: rel?.title || r.title || r.id,
         artist: releaseArtist || '—',
         units: r.units,
         gross: Math.round(r.gross * 100) / 100,
+        totalTracks,
+        distinctTracksSold: r.tracks.size,
         tracks: Array.from(r.tracks.values())
           .sort((a, b) => b.units - a.units)
           .map(t => ({
@@ -235,17 +238,29 @@ async function listCol(token, col, limit, where) {
     return t;
   }
 
+  function trackCountFor(rel) {
+    if (!rel) return 0;
+    if (Array.isArray(rel.tracks)) return rel.tracks.length;
+    if (Array.isArray(rel.tracklist)) return rel.tracklist.length;
+    if (typeof rel.trackCount === 'number') return rel.trackCount;
+    return 0;
+  }
+
   const topReleases = Array.from(releaseStats.values())
     .sort((a, b) => b.units - a.units)
     .slice(0, 8)
     .map(r => {
       const rel = myReleases.find(x => x.id === r.id);
       const releaseArtist = rel?.artistName || rel?.artist || '';
+      const totalTracks = trackCountFor(rel);
       return {
         title: rel?.title || r.title || r.id,
         artist: releaseArtist || '—',
         units: r.units,
         gross: Math.round(r.gross * 100) / 100,
+        totalTracks,
+        // How many distinct tracks of the release sold this period
+        distinctTracksSold: r.tracks.size,
         tracks: Array.from(r.tracks.values())
           .sort((a, b) => b.units - a.units)
           .map(t => ({

@@ -420,10 +420,17 @@ function buildHtml(r) {
   <h2>Top Releases This Period <span class="sub">ranked by units sold · tracks listed below each release</span></h2>
   <table class="data">
     <thead>
-      <tr><th>#</th><th>Release / Track</th><th class="num">Units</th><th class="num">Gross</th><th class="num">Avg Price</th></tr>
+      <tr><th>#</th><th>Release / Track</th><th class="num">Units</th><th class="num">Gross</th><th class="num">Tracks Sold</th></tr>
     </thead>
     <tbody>
-      ${r.topReleases.map((rel, i) => `
+      ${r.topReleases.map((rel, i) => {
+        const total = rel.totalTracks || 0;
+        const distinct = rel.distinctTracksSold || 0;
+        const coverPct = total > 0 ? Math.round((distinct / total) * 100) : 0;
+        const coverage = total > 0
+          ? `${distinct} / ${total} <span style="color:#666; font-size:8.5pt">(${coverPct}%)</span>`
+          : `${distinct}`;
+        return `
       <tr class="release-row">
         <td style="color:#666; width: 30px;">${i + 1}</td>
         <td>
@@ -432,7 +439,7 @@ function buildHtml(r) {
         </td>
         <td class="num">${rel.units}</td>
         <td class="num">${gbp(rel.gross)}</td>
-        <td class="num" style="color:#888">${gbp(rel.gross / rel.units)}</td>
+        <td class="num">${coverage}</td>
       </tr>
       ${(rel.tracks || []).map(t => `
       <tr class="track-row">
@@ -440,9 +447,10 @@ function buildHtml(r) {
         <td class="track-title">${escape(t.title || '—')}</td>
         <td class="num">${t.units}</td>
         <td class="num">${gbp(t.gross)}</td>
-        <td class="num">${gbp(t.gross / t.units)}</td>
+        <td class="num"></td>
       </tr>`).join('')}
-      `).join('')}
+      `;
+      }).join('')}
     </tbody>
   </table>` : ''}
 
@@ -486,10 +494,17 @@ function buildHtml(r) {
   <h2>All-Time Top Releases <span class="sub">cumulative since ${escape(r.lifetime.firstSaleDate || '—')}</span></h2>
   <table class="data">
     <thead>
-      <tr><th>#</th><th>Release / Track</th><th class="num">Units</th><th class="num">Gross</th><th class="num">Avg</th></tr>
+      <tr><th>#</th><th>Release / Track</th><th class="num">Units</th><th class="num">Gross</th><th class="num">Tracks Sold</th></tr>
     </thead>
     <tbody>
-      ${r.lifetime.topReleases.map((rel, i) => `
+      ${r.lifetime.topReleases.map((rel, i) => {
+        const total = rel.totalTracks || 0;
+        const distinct = rel.distinctTracksSold || 0;
+        const coverPct = total > 0 ? Math.round((distinct / total) * 100) : 0;
+        const coverage = total > 0
+          ? `${distinct} / ${total} <span style="color:#666; font-size:8.5pt">(${coverPct}%)</span>`
+          : `${distinct}`;
+        return `
       <tr class="release-row">
         <td style="color:#666; width: 30px;">${i + 1}</td>
         <td>
@@ -498,7 +513,7 @@ function buildHtml(r) {
         </td>
         <td class="num">${rel.units}</td>
         <td class="num">${gbp(rel.gross)}</td>
-        <td class="num" style="color:#888">${gbp(rel.gross / rel.units)}</td>
+        <td class="num">${coverage}</td>
       </tr>
       ${(rel.tracks || []).map(t => `
       <tr class="track-row">
@@ -506,9 +521,10 @@ function buildHtml(r) {
         <td class="track-title">${escape(t.title || '—')}</td>
         <td class="num">${t.units}</td>
         <td class="num">${gbp(t.gross)}</td>
-        <td class="num">${gbp(t.gross / t.units)}</td>
+        <td class="num"></td>
       </tr>`).join('')}
-      `).join('')}
+      `;
+      }).join('')}
     </tbody>
   </table>` : ''}
 
