@@ -6,7 +6,7 @@
 import { requireAdminAuth } from '../../lib/admin';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
-import { saQueryCollection } from '../../lib/firebase-service-account';
+import { saQueryCollection, saGetDocument } from '../../lib/firebase-service-account';
 import { createLogger } from '../../lib/api-utils';
 import '../../styles/admin/index.css';
 
@@ -299,6 +299,41 @@ const thisMonthPayouts = ledgerData
   })
   .reduce((sum, e) => sum + (e.artistPayout || 0), 0);
 
+// Treasury — current PayPal balance + reconciliation against ledger.
+// Reads the latest snapshot from treasury/paypal Firestore doc (set via
+// scripts/record-treasury-balance.cjs). Compute matches the standalone
+// reconcile-paypal.cjs script.
+let treasuryDoc: Record<string, unknown> | null = null;
+if (serviceAccountKey) {
+  try {
+    treasuryDoc = await saGetDocument(serviceAccountKey, projectId, 'treasury', 'paypal');
+  } catch (treasuryErr: unknown) {
+    log.warn('Treasury doc fetch failed:', treasuryErr);
+  }
+}
+const PAYPAL_FEE_RATE = 0.029, PAYPAL_FEE_FIXED = 0.30;
+const paypalOrdersForRecon = realOrders.filter(o =>
+  (o.paymentMethod === 'paypal' || o.paymentMethod === 'paypal_manual')
+);
+let paypalCustomerRevenue = 0;
+let paypalMerchantFees = 0;
+for (const o of paypalOrdersForRecon) {
+  const t = Number((o.totals as Record<string, unknown>)?.total ?? o.total ?? 0);
+  paypalCustomerRevenue += t;
+  paypalMerchantFees += (t * PAYPAL_FEE_RATE) + PAYPAL_FEE_FIXED;
+}
+const fwReceivedFromPaypal = paypalCustomerRevenue - paypalMerchantFees;
+const paypalLedger = ledgerData.filter(e => Number(e.artistPayout || 0) > 0 && (e.paymentMethod === 'paypal' || e.paymentMethod === 'paypal_manual'));
+const paypalAlreadyPaid = paypalLedger.filter(e => e.artistPayoutStatus === 'paid').reduce((s, e) => s + Number(e.artistPayout || 0), 0);
+const paypalStillPending = paypalLedger.filter(e => e.artistPayoutStatus !== 'paid').reduce((s, e) => s + Number(e.artistPayout || 0), 0);
+const paypalExpectedBalance = fwReceivedFromPaypal - paypalAlreadyPaid;
+const paypalActualBalance = treasuryDoc && typeof treasuryDoc.balance === 'number' ? treasuryDoc.balance : null;
+const reconciliationGap = paypalActualBalance != null ? paypalActualBalance - paypalExpectedBalance : null;
+const cashAfterPending = paypalActualBalance != null ? paypalActualBalance - paypalStillPending : null;
+const lifetimeArtistPayoutTotal = paypalLedger.reduce((s, e) => s + Number(e.artistPayout || 0), 0);
+const lifetimeNetPosition = paypalCustomerRevenue - paypalMerchantFees - lifetimeArtistPayoutTotal;
+const treasuryUpdatedAt = treasuryDoc?.recordedAt as string | undefined;
+
 // Format helpers
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
@@ -494,6 +529,98 @@ Astro.response.headers.set('Pragma', 'no-cache');
           <span class="month-value">{formatCurrency(monthRevenue)}</span>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Treasury / PayPal Reconciliation -->
+  <div class="card mb-4 earnings-card">
+    <div class="card-header">
+      <h2>🏦 Treasury — PayPal</h2>
+      <span style="color: #888; font-size: 0.8rem;">
+        {paypalActualBalance != null
+          ? `Last recorded ${treasuryUpdatedAt ? new Date(treasuryUpdatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}`
+          : 'No balance recorded — run scripts/record-treasury-balance.cjs <amount>'}
+      </span>
+    </div>
+    <div class="card-body">
+      {paypalActualBalance != null ? (
+        <>
+        <div class="earnings-grid">
+          <div class={`earning-stat ${cashAfterPending != null && cashAfterPending >= 0 ? 'success' : 'danger'}`}>
+            <div class="earning-icon">💷</div>
+            <div class="earning-info">
+              <span class="earning-label">PayPal Balance</span>
+              <span class="earning-value">{formatCurrency(paypalActualBalance)}</span>
+              <span class="earning-detail">Cash on hand</span>
+            </div>
+          </div>
+          <div class="earning-stat warning">
+            <div class="earning-icon">⏳</div>
+            <div class="earning-info">
+              <span class="earning-label">Pending Payouts</span>
+              <span class="earning-value">{formatCurrency(paypalStillPending)}</span>
+              <span class="earning-detail">PayPal-flow only</span>
+            </div>
+          </div>
+          <div class={`earning-stat ${cashAfterPending != null && cashAfterPending >= 0 ? 'success' : 'danger'}`}>
+            <div class="earning-icon">{cashAfterPending != null && cashAfterPending >= 0 ? '✓' : '⚠'}</div>
+            <div class="earning-info">
+              <span class="earning-label">After Settling Pending</span>
+              <span class="earning-value">{formatCurrency(cashAfterPending)}</span>
+              <span class="earning-detail">{cashAfterPending != null && cashAfterPending >= 0 ? 'Surplus' : 'Shortfall — top up'}</span>
+            </div>
+          </div>
+          <div class="earning-stat info">
+            <div class="earning-icon">🔍</div>
+            <div class="earning-info">
+              <span class="earning-label">Reconciliation Gap</span>
+              <span class="earning-value">{formatCurrency(reconciliationGap)}</span>
+              <span class="earning-detail">{reconciliationGap != null && reconciliationGap >= 0 ? 'Cash > expected' : 'Cash < expected (find missing)'}</span>
+            </div>
+          </div>
+          <div class={`earning-stat ${lifetimeNetPosition >= 0 ? 'success' : 'danger'}`}>
+            <div class="earning-icon">{lifetimeNetPosition > 0.10 ? '📈' : lifetimeNetPosition < -0.10 ? '📉' : '⚖'}</div>
+            <div class="earning-info">
+              <span class="earning-label">Lifetime P&amp;L</span>
+              <span class="earning-value">{formatCurrency(lifetimeNetPosition)}</span>
+              <span class="earning-detail">{lifetimeNetPosition > 0.10 ? 'Profit' : lifetimeNetPosition < -0.10 ? 'Loss' : 'Break-even'}</span>
+            </div>
+          </div>
+          <div class="earning-stat muted">
+            <div class="earning-icon">📊</div>
+            <div class="earning-info">
+              <span class="earning-label">Already Paid Out</span>
+              <span class="earning-value">{formatCurrency(paypalAlreadyPaid)}</span>
+              <span class="earning-detail">Lifetime via PayPal</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trace -->
+        <div class="month-comparison" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="month-stat">
+            <span class="month-label">PayPal Customer Revenue</span>
+            <span class="month-value">{formatCurrency(paypalCustomerRevenue)}</span>
+          </div>
+          <div class="month-stat">
+            <span class="month-label">PayPal Merchant Fees</span>
+            <span class="month-value" style="color:#f87171">−{formatCurrency(paypalMerchantFees)}</span>
+          </div>
+          <div class="month-stat">
+            <span class="month-label">FW Received</span>
+            <span class="month-value">{formatCurrency(fwReceivedFromPaypal)}</span>
+          </div>
+          <div class="month-stat">
+            <span class="month-label">Expected Balance</span>
+            <span class="month-value">{formatCurrency(paypalExpectedBalance)}</span>
+          </div>
+        </div>
+        </>
+      ) : (
+        <p style="color: #888; padding: 1rem 0;">
+          No PayPal balance recorded yet. Run <code>node scripts/record-treasury-balance.cjs &lt;amount&gt;</code> to record the current balance and a reconciliation summary will appear here.
+        </p>
+      )}
     </div>
   </div>
 
