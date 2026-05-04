@@ -135,17 +135,28 @@ async function listCol(token, col, limit, where) {
     ? new Set(lifetimeDates.map(d => `${d.getUTCFullYear()}-${d.getUTCMonth()}`)).size
     : 0;
 
-  // All-time top releases (units across all entries)
+  // All-time top releases (units across all entries) with per-track breakdown
   const lifetimeReleaseStats = new Map();
   for (const e of myAllTime) {
     for (const it of e.items || []) {
       const rid = it.id || it.releaseId;
       if (!rid || !myReleaseIds.has(rid)) continue;
-      const cur = lifetimeReleaseStats.get(rid) || { id: rid, units: 0, gross: 0, title: it.title || '' };
-      cur.units += Number(it.quantity || 1);
-      cur.gross += Number(it.lineTotal || (Number(it.unitPrice || 0) * Number(it.quantity || 1)));
-      cur.title = cur.title || it.title;
-      lifetimeReleaseStats.set(rid, cur);
+      const units = Number(it.quantity || 1);
+      const lineTotal = Number(it.lineTotal || (Number(it.unitPrice || 0) * units));
+      let r = lifetimeReleaseStats.get(rid);
+      if (!r) {
+        r = { id: rid, units: 0, gross: 0, title: it.title || '', tracks: new Map() };
+        lifetimeReleaseStats.set(rid, r);
+      }
+      r.units += units;
+      r.gross += lineTotal;
+      const trackKey = (it.title || '').trim();
+      if (trackKey) {
+        const t = r.tracks.get(trackKey) || { title: trackKey, units: 0, gross: 0 };
+        t.units += units;
+        t.gross += lineTotal;
+        r.tracks.set(trackKey, t);
+      }
     }
   }
   const lifetimeTopReleases = Array.from(lifetimeReleaseStats.values())
@@ -153,11 +164,19 @@ async function listCol(token, col, limit, where) {
     .slice(0, 5)
     .map(r => {
       const rel = myReleases.find(x => x.id === r.id);
+      const releaseArtist = rel?.artistName || rel?.artist || '';
       return {
         title: rel?.title || r.title || r.id,
-        artist: rel?.artistName || rel?.artist || '—',
+        artist: releaseArtist || '—',
         units: r.units,
         gross: Math.round(r.gross * 100) / 100,
+        tracks: Array.from(r.tracks.values())
+          .sort((a, b) => b.units - a.units)
+          .map(t => ({
+            title: cleanTrackTitle(t.title, releaseArtist),
+            units: t.units,
+            gross: Math.round(t.gross * 100) / 100,
+          })),
       };
     });
 
@@ -175,31 +194,67 @@ async function listCol(token, col, limit, where) {
     if (idx >= 0 && idx < days) daily[idx] += Number(e.grossTotal || 0);
   }
 
-  // Top releases — by units sold across period entries' items
+  // Top releases — by units sold across period entries' items.
+  // For each release we also keep a per-track breakdown so the PDF can
+  // show which specific tracks were bought, not just the EP/album title.
   const releaseStats = new Map();
   for (const e of myInPeriod) {
     for (const it of e.items || []) {
       const rid = it.id || it.releaseId;
       if (!rid) continue;
-      // Only count items belonging to this artist
       if (!myReleaseIds.has(rid)) continue;
-      const cur = releaseStats.get(rid) || { id: rid, units: 0, gross: 0, title: it.title || '' };
-      cur.units += Number(it.quantity || 1);
-      cur.gross += Number(it.lineTotal || (Number(it.unitPrice || 0) * Number(it.quantity || 1)));
-      cur.title = cur.title || it.title;
-      releaseStats.set(rid, cur);
+      const units = Number(it.quantity || 1);
+      const lineTotal = Number(it.lineTotal || (Number(it.unitPrice || 0) * units));
+      let r = releaseStats.get(rid);
+      if (!r) {
+        r = { id: rid, units: 0, gross: 0, title: it.title || '', tracks: new Map() };
+        releaseStats.set(rid, r);
+      }
+      r.units += units;
+      r.gross += lineTotal;
+      // Item title is usually "Artist - Track Title" or just track title.
+      // Strip a leading "Artist - " when the artist matches the release artist
+      // so we don't duplicate it in the track list.
+      const trackKey = (it.title || '').trim();
+      if (trackKey) {
+        const t = r.tracks.get(trackKey) || { title: trackKey, units: 0, gross: 0 };
+        t.units += units;
+        t.gross += lineTotal;
+        r.tracks.set(trackKey, t);
+      }
     }
   }
-  // Enrich with release name + artist
-  const topReleases = Array.from(releaseStats.values()).sort((a, b) => b.units - a.units).slice(0, 8).map(r => {
-    const rel = myReleases.find(x => x.id === r.id);
-    return {
-      title: rel?.title || r.title || r.id,
-      artist: rel?.artistName || rel?.artist || '—',
-      units: r.units,
-      gross: r.gross,
-    };
-  });
+
+  function cleanTrackTitle(raw, releaseArtist) {
+    if (!raw) return '';
+    let t = raw.trim();
+    if (releaseArtist) {
+      const prefix = releaseArtist.trim().toLowerCase() + ' - ';
+      if (t.toLowerCase().startsWith(prefix)) t = t.slice(prefix.length);
+    }
+    return t;
+  }
+
+  const topReleases = Array.from(releaseStats.values())
+    .sort((a, b) => b.units - a.units)
+    .slice(0, 8)
+    .map(r => {
+      const rel = myReleases.find(x => x.id === r.id);
+      const releaseArtist = rel?.artistName || rel?.artist || '';
+      return {
+        title: rel?.title || r.title || r.id,
+        artist: releaseArtist || '—',
+        units: r.units,
+        gross: Math.round(r.gross * 100) / 100,
+        tracks: Array.from(r.tracks.values())
+          .sort((a, b) => b.units - a.units)
+          .map(t => ({
+            title: cleanTrackTitle(t.title, releaseArtist),
+            units: t.units,
+            gross: Math.round(t.gross * 100) / 100,
+          })),
+      };
+    });
 
   // Sales by category — best effort from item.type
   const cats = { 'Digital Releases': { units: 0, gross: 0 }, 'Merch': { units: 0, gross: 0 }, 'Vinyl': { units: 0, gross: 0 } };

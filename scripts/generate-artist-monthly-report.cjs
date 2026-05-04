@@ -213,6 +213,24 @@ function buildHtml(r) {
   table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
   table.data .release-title { color: #fff; font-weight: 500; }
   table.data .release-artist { color: #888; font-size: 8.5pt; display: block; }
+  table.data tr.release-row td { background: #161616; }
+  table.data tr.track-row td {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    background: #101010;
+    border-top: 1px solid #1a1a1a;
+    color: #aaa;
+    font-size: 9pt;
+  }
+  table.data tr.track-row td.track-title { padding-left: 36px; position: relative; }
+  table.data tr.track-row td.track-title::before {
+    content: "↳";
+    position: absolute;
+    left: 22px;
+    color: #555;
+    font-size: 8pt;
+  }
+  table.data tr.track-row td.num { color: #999; }
 
   .category-row {
     display: grid;
@@ -383,7 +401,7 @@ function buildHtml(r) {
   </div>` : ''}
 
   <footer>
-    Page 1 of 3 · <strong>Fresh<span class="red">Wax</span></strong> · freshwax.co.uk · For questions about this statement contact support@freshwax.co.uk
+    <strong>Fresh<span class="red">Wax</span></strong> · freshwax.co.uk · For questions about this statement contact support@freshwax.co.uk
   </footer>
 </div>
 
@@ -394,19 +412,19 @@ function buildHtml(r) {
     <div class="brand-mark"><span class="fresh">FRESH</span><span class="wax">WAX</span></div>
     <div class="doc-title">
       <strong>${escape(r.artistName)}</strong>
-      ${escape(r.period)} · Page 2 of 3
+      ${escape(r.period)}
     </div>
   </div>
 
   ${r.topReleases.length > 0 ? `
-  <h2>Top Releases This Period <span class="sub">ranked by units sold</span></h2>
+  <h2>Top Releases This Period <span class="sub">ranked by units sold · tracks listed below each release</span></h2>
   <table class="data">
     <thead>
-      <tr><th>#</th><th>Release</th><th class="num">Units</th><th class="num">Gross</th><th class="num">Avg Price</th></tr>
+      <tr><th>#</th><th>Release / Track</th><th class="num">Units</th><th class="num">Gross</th><th class="num">Avg Price</th></tr>
     </thead>
     <tbody>
       ${r.topReleases.map((rel, i) => `
-      <tr>
+      <tr class="release-row">
         <td style="color:#666; width: 30px;">${i + 1}</td>
         <td>
           <span class="release-title">${escape(rel.title)}</span>
@@ -415,7 +433,16 @@ function buildHtml(r) {
         <td class="num">${rel.units}</td>
         <td class="num">${gbp(rel.gross)}</td>
         <td class="num" style="color:#888">${gbp(rel.gross / rel.units)}</td>
+      </tr>
+      ${(rel.tracks || []).map(t => `
+      <tr class="track-row">
+        <td></td>
+        <td class="track-title">${escape(t.title || '—')}</td>
+        <td class="num">${t.units}</td>
+        <td class="num">${gbp(t.gross)}</td>
+        <td class="num">${gbp(t.gross / t.units)}</td>
       </tr>`).join('')}
+      `).join('')}
     </tbody>
   </table>` : ''}
 
@@ -437,32 +464,10 @@ function buildHtml(r) {
     <div class="stat-mini"><div class="v" style="color:#4ade80">${gbp(r.lifetime.netEarnings)}</div><div class="l">Net Earnings</div></div>
     <div class="stat-mini"><div class="v" style="color:#fbbf24">${gbp(r.lifetime.paidOut)}</div><div class="l">Paid Out</div></div>
   </div>
-  ${r.lifetime.topReleases.length > 0 ? `
-  <table class="data" style="margin-top: 12px;">
-    <thead>
-      <tr>
-        <th colspan="5" style="background:#1a1a1a; color:#aaa; text-transform:uppercase; font-size:7.5pt; letter-spacing:1px; padding: 8px 14px;">All-Time Top Releases</th>
-      </tr>
-      <tr><th>#</th><th>Release</th><th class="num">Units</th><th class="num">Gross</th><th class="num">Avg</th></tr>
-    </thead>
-    <tbody>
-      ${r.lifetime.topReleases.map((rel, i) => `
-      <tr>
-        <td style="color:#666; width: 30px;">${i + 1}</td>
-        <td>
-          <span class="release-title">${escape(rel.title)}</span>
-          <span class="release-artist">${escape(rel.artist)}</span>
-        </td>
-        <td class="num">${rel.units}</td>
-        <td class="num">${gbp(rel.gross)}</td>
-        <td class="num" style="color:#888">${gbp(rel.gross / rel.units)}</td>
-      </tr>`).join('')}
-    </tbody>
-  </table>` : ''}
   ` : '<div class="empty-note">No sales recorded for this account yet — your first sale will populate this section.</div>'}
 
   <footer>
-    Page 2 of 3 · <strong>Fresh<span class="red">Wax</span></strong> · freshwax.co.uk · For questions about this statement contact support@freshwax.co.uk
+    <strong>Fresh<span class="red">Wax</span></strong> · freshwax.co.uk · For questions about this statement contact support@freshwax.co.uk
   </footer>
 </div>
 
@@ -473,9 +478,39 @@ function buildHtml(r) {
     <div class="brand-mark"><span class="fresh">FRESH</span><span class="wax">WAX</span></div>
     <div class="doc-title">
       <strong>${escape(r.artistName)}</strong>
-      ${escape(r.period)} · Page 3 of 3
+      ${escape(r.period)}
     </div>
   </div>
+
+  ${r.lifetime.topReleases.length > 0 ? `
+  <h2>All-Time Top Releases <span class="sub">cumulative since ${escape(r.lifetime.firstSaleDate || '—')}</span></h2>
+  <table class="data">
+    <thead>
+      <tr><th>#</th><th>Release / Track</th><th class="num">Units</th><th class="num">Gross</th><th class="num">Avg</th></tr>
+    </thead>
+    <tbody>
+      ${r.lifetime.topReleases.map((rel, i) => `
+      <tr class="release-row">
+        <td style="color:#666; width: 30px;">${i + 1}</td>
+        <td>
+          <span class="release-title">${escape(rel.title)}</span>
+          <span class="release-artist">${escape(rel.artist)}</span>
+        </td>
+        <td class="num">${rel.units}</td>
+        <td class="num">${gbp(rel.gross)}</td>
+        <td class="num" style="color:#888">${gbp(rel.gross / rel.units)}</td>
+      </tr>
+      ${(rel.tracks || []).map(t => `
+      <tr class="track-row">
+        <td></td>
+        <td class="track-title">${escape(t.title || '—')}</td>
+        <td class="num">${t.units}</td>
+        <td class="num">${gbp(t.gross)}</td>
+        <td class="num">${gbp(t.gross / t.units)}</td>
+      </tr>`).join('')}
+      `).join('')}
+    </tbody>
+  </table>` : ''}
 
   <h2>Orders This Period</h2>
   ${r.orders.length > 0 ? `
@@ -535,16 +570,13 @@ function buildHtml(r) {
     <div class="waterfall-row total"><span class="label">Net earnings this period</span><span class="amount">${gbp(r.netEarnings)}</span></div>
   </div>
 
-  <h2 style="margin-top: 28px;">Notes</h2>
-  <div style="color:#aaa; font-size: 9.5pt; line-height: 1.7;">
-    Fresh Wax pays out on the 14th and 28th of every month. Payouts via PayPal incur the standard PayPal recipient fee (typically 2.9% + £0.30). Payouts via Stripe Connect are free but take 2–5 business days. To change your payout method, visit your <span style="color:#ef4444">Account → Payout Settings</span>.
-    <br><br>
-    Pending balance includes sales from the most recent settlement window and will be released on the next payout date once funds have cleared. Refunds and chargebacks may adjust your balance.
+  <h2>Notes</h2>
+  <div style="color:#aaa; font-size: 8.5pt; line-height: 1.5;">
+    Fresh Wax pays out on the 14th and 28th of every month. PayPal payouts incur the standard PayPal recipient fee (~2.9% + £0.30). Stripe Connect payouts are free but take 2–5 business days. Change your payout method at <span style="color:#ef4444">Account → Payout Settings</span>. Pending balance is released on the next payout date once funds have cleared. Refunds and chargebacks may adjust your balance.
   </div>
 
   <footer>
-    <strong>Fresh<span class="red">Wax</span></strong> Records Ltd · freshwax.co.uk · support@freshwax.co.uk<br>
-    Statement period: ${escape(r.periodStart)} to ${escape(r.periodEnd)}. All figures in GBP. Generated automatically — please retain for your records.
+    <strong>Fresh<span class="red">Wax</span></strong> Records Ltd · freshwax.co.uk · support@freshwax.co.uk · Statement period ${escape(r.periodStart)} to ${escape(r.periodEnd)} · All figures in GBP
   </footer>
 </div>
 
