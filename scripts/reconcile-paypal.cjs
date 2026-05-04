@@ -21,12 +21,7 @@ function loadEnv() {
 loadEnv();
 
 const balanceArg = parseFloat(process.argv[2]);
-if (Number.isNaN(balanceArg)) {
-  console.error('Usage: node scripts/reconcile-paypal.cjs <currentPaypalBalanceGBP>');
-  console.error('Example: node scripts/reconcile-paypal.cjs 15.42');
-  process.exit(1);
-}
-const PAYPAL_BALANCE = balanceArg;
+const HAS_BALANCE_ARG = !Number.isNaN(balanceArg);
 
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 const PRIVATE_KEY = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
@@ -57,6 +52,30 @@ function rule(c, n) { return c.repeat(n); }
   const token = (await tr.json()).access_token;
 
   const FB = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery`;
+
+  // Resolve PayPal balance: arg wins, else read from treasury/paypal Firestore doc.
+  let PAYPAL_BALANCE = balanceArg;
+  let balanceSource = 'argument';
+  let balanceRecordedAt = null;
+  if (!HAS_BALANCE_ARG) {
+    try {
+      const tr = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/treasury/paypal`, { headers: { Authorization: 'Bearer ' + token } });
+      if (tr.ok) {
+        const j = await tr.json();
+        const f = Object.fromEntries(Object.entries(j.fields || {}).map(([k, v]) => [k, parseVal(v)]));
+        if (typeof f.balance === 'number') {
+          PAYPAL_BALANCE = f.balance;
+          balanceSource = 'treasury/paypal';
+          balanceRecordedAt = f.recordedAt;
+        }
+      }
+    } catch (_) { /* fall through */ }
+  }
+  if (Number.isNaN(PAYPAL_BALANCE) || PAYPAL_BALANCE === undefined) {
+    console.error('No PayPal balance available. Pass as argument or record one with:');
+    console.error('  node scripts/record-treasury-balance.cjs <balance>');
+    process.exit(1);
+  }
 
   // Pull all paid orders, salesLedger, pendingPayouts
   async function listCol(col, limit) {
@@ -115,6 +134,7 @@ function rule(c, n) { return c.repeat(n); }
   console.log(rule('=', W));
   console.log(pad('FreshWax × PayPal Reconciliation', W));
   console.log(pad(new Date().toISOString().slice(0, 19).replace('T', ' ') + ' (UTC)', W));
+  console.log(pad(`PayPal balance source: ${balanceSource}${balanceRecordedAt ? ' · recorded ' + balanceRecordedAt.slice(0, 19).replace('T', ' ') : ''}`, W));
   console.log(rule('=', W));
 
   console.log('\n[ Customer side — money in ]');
