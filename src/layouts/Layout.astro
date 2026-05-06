@@ -17,6 +17,21 @@ const pusherConfig = {
   cluster: import.meta.env.PUBLIC_PUSHER_CLUSTER || PUSHER_CLUSTER
 };
 
+// Build ID — embedded into every HTML page so the client can detect
+// when a deploy has happened and force a hard reload to pull fresh JS
+// chunks. Without this, View Transitions swap in new HTML referencing
+// new chunk hashes while the old in-memory modules (Firebase auth,
+// session manager, etc.) keep running against stale code, which causes
+// the "I'm logged in but tabs ask me to sign in" symptom.
+//
+// Source preference: Cloudflare Pages commit SHA → git SHA → build time.
+// All resolve at build time so the value is baked into static HTML.
+const BUILD_ID =
+  process.env.CF_PAGES_COMMIT_SHA ||
+  import.meta.env.CF_PAGES_COMMIT_SHA ||
+  process.env.GITHUB_SHA ||
+  String(Date.now());
+
 interface Props {
   title: string;
   description?: string;
@@ -228,8 +243,66 @@ const csrfToken = Astro.locals.csrfToken || '';
     
     <ViewTransitions />
 
+    <!-- Build ID — read by deploy-detection script below -->
+    <meta name="build-id" content={BUILD_ID} />
+
     <!-- Named slot for page-specific head content (preloads, etc.) -->
     <slot name="head" />
+
+    <!-- Deploy detection: when a fresh build lands and the user navigates
+         (via View Transitions or otherwise), compare the in-memory build-id
+         captured on first load with whatever the swapped-in HTML claims.
+         A mismatch means new chunks/Astro bundles are live but the user is
+         still running the old in-memory modules — force a hard reload so
+         they pick up the new code. Eliminates the "logged-in but tabs say
+         sign in" issue after deploys. -->
+    <script is:inline nonce={nonce} define:vars={{ INITIAL_BUILD_ID: BUILD_ID }}>
+      (function() {
+        if (!INITIAL_BUILD_ID) return;
+        // Track the build-id we first booted with for this tab.
+        try { sessionStorage.setItem('fwx_build_id', INITIAL_BUILD_ID); } catch (e) { /* private mode */ }
+
+        var reloading = false;
+        function checkForNewDeploy() {
+          if (reloading) return;
+          var currentMeta = document.querySelector('meta[name="build-id"]');
+          var currentBuildId = currentMeta && currentMeta.getAttribute('content');
+          if (!currentBuildId) return;
+          if (currentBuildId !== INITIAL_BUILD_ID) {
+            reloading = true;
+            // Hard reload — bypasses any cached JS bundles and resets all
+            // in-memory state including Firebase auth singletons.
+            window.location.reload();
+          }
+        }
+        // Astro View Transitions fires after-swap when the new DOM is in
+        // place — the new build-id meta tag is now visible.
+        document.addEventListener('astro:after-swap', checkForNewDeploy);
+
+        // Also check when the tab regains focus / becomes visible — covers
+        // users who left a tab open across a deploy and come back to it.
+        // We probe HEAD on the same URL to read the live build-id without a
+        // full navigation, and reload only on confirmed mismatch.
+        var lastVisibilityCheck = 0;
+        function probeBuildIdRemote() {
+          var now = Date.now();
+          if (now - lastVisibilityCheck < 30000) return; // throttle: 30s
+          lastVisibilityCheck = now;
+          fetch(window.location.pathname, { method: 'HEAD', cache: 'no-store' })
+            .then(function(res) {
+              var liveBuildId = res.headers.get('x-build-id');
+              if (liveBuildId && liveBuildId !== INITIAL_BUILD_ID) {
+                reloading = true;
+                window.location.reload();
+              }
+            })
+            .catch(function() { /* network blip — ignore */ });
+        }
+        document.addEventListener('visibilitychange', function() {
+          if (document.visibilityState === 'visible') probeBuildIdRemote();
+        });
+      })();
+    </script>
 
     <!-- Global error monitoring — captures uncaught errors and unhandled rejections -->
     <script is:inline nonce={nonce}>

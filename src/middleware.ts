@@ -16,6 +16,14 @@ import {
   shouldSkipCsrf,
 } from './lib/csrf';
 
+// Build ID — same source order as Layout.astro so the meta tag and the
+// X-Build-Id response header always agree. Resolved once at worker
+// init so the value is constant across requests within a single deploy.
+const BUILD_ID =
+  (typeof process !== 'undefined' && process.env?.CF_PAGES_COMMIT_SHA) ||
+  (typeof process !== 'undefined' && process.env?.GITHUB_SHA) ||
+  String(Date.now());
+
 // Endpoints that bypass Content-Type validation (they have their own body parsing)
 const CONTENT_TYPE_SKIP = new Set([
   '/api/stripe/webhook/',
@@ -384,6 +392,14 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     newHeaders.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
     newHeaders.set('X-Frame-Options', 'DENY');
   }
+
+  // Build ID header — set on every response so the client-side deploy
+  // detector (Layout.astro inline script) can probe `HEAD <current url>`
+  // when a tab regains focus and detect a fresh deploy without needing a
+  // full page navigation. Source preference: Cloudflare commit SHA →
+  // GitHub SHA → static fallback. Resolved at module-init time so it's
+  // constant across the worker's life.
+  newHeaders.set('X-Build-Id', BUILD_ID);
 
   // Add security headers to HTML responses
   const contentType = response.headers.get('content-type') || '';
