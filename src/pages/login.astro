@@ -265,7 +265,7 @@ const csrfToken = Astro.locals.csrfToken || '';
   <!-- Firebase SDK -->
   <script type="module" define:vars={{ redirectTo, firebaseConfig }} nonce={nonce}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+    import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, reload } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -276,10 +276,12 @@ const csrfToken = Astro.locals.csrfToken || '';
     // Flag to prevent onAuthStateChanged from redirecting while login handlers are running
     let loginInProgress = false;
 
-    // Check if user is already logged in - redirect them immediately
-    onAuthStateChanged(auth, (user) => {
+    // Check if user is already logged in - redirect them immediately.
+    // Refresh the user record before reading emailVerified — the flag is
+    // cached per device and may be stale if the user verified elsewhere.
+    onAuthStateChanged(auth, async (user) => {
       if (user && !loginInProgress) {
-        // Track verification status for interactive feature restrictions
+        try { await reload(user); } catch (_e) { /* fall through to cached */ }
         if (!user.emailVerified) {
           sessionStorage.setItem('fw_email_unverified', 'true');
         } else {
@@ -559,6 +561,14 @@ const csrfToken = Astro.locals.csrfToken || '';
         const creationTime = user.metadata?.creationTime;
         const createdAt = creationTime ? new Date(creationTime).getTime() : Date.now();
         const isNewUser = createdAt >= EMAIL_VERIFY_CUTOFF;
+
+        // CRITICAL: refresh user state from Firebase Auth servers before
+        // checking emailVerified. The flag is cached per device — if a user
+        // verifies on their phone but tries to log in on desktop, the
+        // desktop's signInWithEmailAndPassword returns a stale `false` and
+        // we'd reject a user who's already verified server-side. reload()
+        // forces an authoritative read.
+        try { await reload(user); } catch (_e) { /* if reload fails, fall through to cached value */ }
 
         if (!user.emailVerified && isNewUser) {
             // Sign them out immediately
