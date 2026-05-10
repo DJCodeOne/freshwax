@@ -219,13 +219,41 @@ const [completedPayouts, recentOrders, ledgerEntriesRaw, artists, releases] = aw
   queryCollection('releases', { limit: 500 }),
 ]);
 
-// Index ledger by orderId for quick lookups
+// Index ledger by orderId for quick lookups.
+// Multi-payee orders (e.g. Oren's £12.50 split 3 ways) produce one
+// salesLedger row PER payee, each holding that payee's proportional
+// share of the fees. To show order-level fee totals on the admin
+// payments table we SUM all entries for the same orderId rather than
+// overwriting — otherwise we'd display just the last payee's slice.
 const ledgerEntries = ledgerEntriesRaw;
-const ledgerByOrderId: Record<string, unknown> = {};
+const ledgerByOrderId: Record<string, {
+  orderId: string;
+  freshWaxFee: number;
+  stripeFee: number;
+  paypalFee: number;
+  actualPaypalFee: number;
+  artistPayout: number;
+  rowCount: number;
+}> = {};
 for (const entry of ledgerEntries) {
-  if (entry.orderId) {
-    ledgerByOrderId[entry.orderId] = entry;
-  }
+  if (!entry.orderId) continue;
+  const oid = entry.orderId as string;
+  const cur = ledgerByOrderId[oid] || {
+    orderId: oid,
+    freshWaxFee: 0,
+    stripeFee: 0,
+    paypalFee: 0,
+    actualPaypalFee: 0,
+    artistPayout: 0,
+    rowCount: 0,
+  };
+  cur.freshWaxFee += Number(entry.freshWaxFee || 0);
+  cur.stripeFee += Number(entry.stripeFee || 0);
+  cur.paypalFee += Number(entry.paypalFee || 0);
+  cur.actualPaypalFee += Number(entry.actualPaypalFee || 0);
+  cur.artistPayout += Number(entry.artistPayout || 0);
+  cur.rowCount++;
+  ledgerByOrderId[oid] = cur;
 }
 
 // Build artist maps from pre-fetched data
@@ -530,18 +558,46 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                     <td class="font-bold">{formatCurrency(itemTotal)}</td>
                     <td>
                       {(() => {
-                        // Use ledger data if available (source of truth)
+                        // Source of truth precedence: order totals (the values the
+                        // checkout flow recorded against the actual payment) →
+                        // ledger SUM (covers older orders before order.totals was
+                        // populated, summed across per-payee rows so multi-payee
+                        // orders show the correct order-level total) →
+                        // computed fallback (1% FW; 2.9% + £0.30 PayPal /
+                        // 1.4% + £0.20 Stripe).
                         const ledger = ledgerByOrderId[order.id];
-                        const freshWaxFee = ledger?.freshWaxFee ?? order.totals?.freshWaxFee ?? (itemTotal * 0.01);
-                        const stripeFee = ledger?.stripeFee ?? order.totals?.stripeFee ?? 0;
-                        // PayPal fee can be in multiple fields - check all possible locations
-                        const paypalFee = ledger?.actualPaypalFee ?? ledger?.paypalFee ?? order.actualPaypalFee ?? order.paypalFee ?? order.totals?.paypalFee ?? order.totals?.serviceFees ?? 0;
-                        const processingFee = order.paymentMethod === 'paypal' ? paypalFee : stripeFee;
+                        const freshWaxFee = (order.totals?.freshWaxFee ?? null) != null
+                          ? Number(order.totals.freshWaxFee)
+                          : (ledger?.freshWaxFee && ledger.freshWaxFee > 0)
+                            ? ledger.freshWaxFee
+                            : itemTotal * 0.01;
+                        let processingFee;
+                        if (order.paymentMethod === 'paypal' || order.paymentMethod === 'paypal_manual') {
+                          processingFee = (order.actualPaypalFee ?? null) != null
+                            ? Number(order.actualPaypalFee)
+                            : (order.paypalFee ?? null) != null
+                              ? Number(order.paypalFee)
+                              : (ledger?.actualPaypalFee && ledger.actualPaypalFee > 0)
+                                ? ledger.actualPaypalFee
+                                : (ledger?.paypalFee && ledger.paypalFee > 0)
+                                  ? ledger.paypalFee
+                                  : (order.totals?.paypalFee ?? null) != null
+                                    ? Number(order.totals.paypalFee)
+                                    : (itemTotal * 0.029) + 0.30; // PayPal Commercial UK
+                        } else if (order.paymentMethod === 'stripe') {
+                          processingFee = (order.totals?.stripeFee ?? null) != null
+                            ? Number(order.totals.stripeFee)
+                            : (ledger?.stripeFee && ledger.stripeFee > 0)
+                              ? ledger.stripeFee
+                              : (itemTotal * 0.014) + 0.20; // Stripe UK domestic
+                        } else {
+                          processingFee = 0;
+                        }
                         return (
                           <div style="font-size: 0.75rem; line-height: 1.4;">
                             <div style="color: #666;">FW: {formatCurrency(freshWaxFee)}</div>
                             <div style="color: #666;">{order.paymentMethod === 'stripe' ? 'Stripe' : 'PayPal'}: {formatCurrency(processingFee)}</div>
-                            {ledger && <div style="color: #16a34a; font-size: 0.65rem;">✓ Ledger</div>}
+                            {ledger && <div style="color: #16a34a; font-size: 0.65rem;">✓ Ledger ({ledger.rowCount} {ledger.rowCount === 1 ? 'row' : 'rows'})</div>}
                           </div>
                         );
                       })()}
