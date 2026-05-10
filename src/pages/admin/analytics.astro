@@ -38,7 +38,12 @@ const serviceAccountKey = clientEmail && privateKey ? JSON.stringify({
 const now = new Date();
 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+// End of last month = midnight on the first of THIS month. Previously this was
+// `new Date(year, month, 0)` which evaluates to 00:00 on the last day of
+// last month, so any order placed after midnight on the final day was
+// missing from "Last Month" (e.g. Oren's £12.50 order at 22:47 on Apr 30
+// was excluded from April).
+const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 const startOfYear = new Date(now.getFullYear(), 0, 1);
 
 // Fetch ledger, orders, and releases in parallel (independent queries)
@@ -118,23 +123,54 @@ function correctItemPrice(price: number): number {
   return price;
 }
 
-// Calculate metrics from LEDGER (source of truth)
-function calculateMetricsFromLedger(entries: Record<string, unknown>[]) {
+// Calculate metrics from ORDERS (authoritative for revenue/fee totals).
+//
+// Why orders, not ledger: the salesLedger collection has one row PER PAYEE
+// for multi-payee orders (3 rows for a 3-way split). Iterating it gives:
+//   · inflated order counts (12 rows for 7 PayPal orders + 2 free downloads)
+//   · gross totals that look right (per-payee shares sum back to order
+//     gross) but fee totals that don't (per-payee fee shares can have
+//     rounding artifacts when the split script wrote rounded sub-cent
+//     values, e.g. 0.13 × 2 = 0.26 but the real fee was 0.42).
+// Orders are one-per-payment and order.totals has the values the checkout
+// flow originally recorded against the real payment, so they're the
+// authoritative source for analytics aggregates.
+function calculateMetricsFromOrders(filteredOrders: Record<string, unknown>[]) {
   let revenue = 0;
   let stripeFees = 0;
   let paypalFees = 0;
   let freshWaxFees = 0;
+  let orderCount = 0;
 
-  entries.forEach(entry => {
-    // Use actual values from ledger
-    revenue += entry.grossTotal ?? 0;
-    stripeFees += entry.stripeFee ?? 0;
-    paypalFees += entry.actualPaypalFee ?? entry.paypalFee ?? 0;
-    freshWaxFees += entry.freshWaxFee ?? 0;
-  });
+  for (const o of filteredOrders) {
+    const totals = (o.totals as Record<string, unknown>) || {};
+    const t = Number(totals.total ?? o.total ?? 0);
+    // Free downloads + £0 placeholders don't count toward revenue or fees
+    if (t === 0) continue;
+    revenue += t;
+    orderCount++;
+
+    const fwFee = Number(totals.freshWaxFee ?? (t * 0.01));
+    freshWaxFees += fwFee;
+
+    const method = o.paymentMethod as string;
+    if (method === 'paypal' || method === 'paypal_manual') {
+      // Precedence: actualPaypalFee (set from a webhook) → paypalFee →
+      // computed (2.9% + £0.30 UK Commercial). The ledger's paypalFee
+      // is deliberately skipped because of the per-payee rounding issue
+      // described above.
+      const ppFee = Number(
+        o.actualPaypalFee ?? o.paypalFee ?? totals.paypalFee ?? ((t * 0.029) + 0.30)
+      );
+      paypalFees += ppFee;
+    } else if (method === 'stripe') {
+      const stFee = Number(totals.stripeFee ?? ((t * 0.014) + 0.20));
+      stripeFees += stFee;
+    }
+  }
 
   const totalFees = stripeFees + paypalFees + freshWaxFees;
-  const avgOrder = entries.length > 0 ? revenue / entries.length : 0;
+  const avgOrder = orderCount > 0 ? revenue / orderCount : 0;
 
   return {
     revenue,
@@ -142,23 +178,31 @@ function calculateMetricsFromLedger(entries: Record<string, unknown>[]) {
     stripeFees,
     paypalFees,
     freshWaxFees,
-    orders: entries.length,
+    orders: orderCount,
     avgOrder
   };
 }
 
-// Filter ledger entries by date range
-const thisMonthLedger = ledgerEntries.filter(e => new Date(e.timestamp) >= startOfMonth);
-const lastMonthLedger = ledgerEntries.filter(e => {
-  const ts = new Date(e.timestamp);
-  return ts >= startOfLastMonth && ts <= endOfLastMonth;
-});
-const thisYearLedger = ledgerEntries.filter(e => new Date(e.timestamp) >= startOfYear);
+// Filter orders by date range using createdAt — exclude obvious non-revenue
+// (cancelled, test_mode, £0 free downloads) so the totals reflect real money.
+function inRange(o: Record<string, unknown>, start: Date, end?: Date) {
+  const ts = o.createdAt ? new Date(o.createdAt as string) : null;
+  if (!ts) return false;
+  if (ts < start) return false;
+  if (end && ts >= end) return false;
+  return true;
+}
+const revenueOrders = orders.filter((o: Record<string, unknown>) =>
+  o.paymentMethod !== 'test_mode' &&
+  o.paymentMethod !== 'free_download' &&
+  o.paymentMethod !== 'free' &&
+  o.status !== 'cancelled'
+);
 
-const thisMonth = calculateMetricsFromLedger(thisMonthLedger);
-const lastMonth = calculateMetricsFromLedger(lastMonthLedger);
-const thisYear = calculateMetricsFromLedger(thisYearLedger);
-const allTime = calculateMetricsFromLedger(ledgerEntries);
+const thisMonth = calculateMetricsFromOrders(revenueOrders.filter(o => inRange(o, startOfMonth)));
+const lastMonth = calculateMetricsFromOrders(revenueOrders.filter(o => inRange(o, startOfLastMonth, endOfLastMonth)));
+const thisYear = calculateMetricsFromOrders(revenueOrders.filter(o => inRange(o, startOfYear)));
+const allTime = calculateMetricsFromOrders(revenueOrders);
 
 // Calculate growth percentages
 function calcGrowth(current, previous) {
