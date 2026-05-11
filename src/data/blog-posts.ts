@@ -15,6 +15,52 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'monthly-update-may-2026',
+    title: "May 2026 Update — What's Freshly Cut",
+    excerpt: "Busy month behind the scenes at Fresh Wax. Sign-in is smoother, stream keys are now permanent to your account, payouts have been overhauled and reconciled, and monthly statement PDFs are landing in your inbox at month-end.",
+    featuredImage: '/blog-may-2026-update.jpg',
+    category: 'Updates',
+    publishedAt: '2026-05-11',
+    author: 'Fresh Wax',
+    tags: ['updates', 'platform', 'livestream', 'payouts', 'monthly update', 'may 2026'],
+    content: `
+      <p>Busy month behind the scenes at Fresh Wax. Here's what's been freshly cut.</p>
+
+      <h2>For Everyone</h2>
+      <p>Sign-in is smoother. A few things that used to trip people up:</p>
+      <ul>
+        <li><strong>Verify your email on your phone, then log in on your desktop</strong> — finally works without sending you back to the verification screen. The site now refreshes your verification state on every sign-in, so a confirmation on one device is recognised on every device.</li>
+        <li><strong>After I ship an update to the site</strong>, you'll no longer get stuck in a "you're signed in but please sign in" loop. The site picks up new versions and refreshes itself in the background — silent, no popup, no logout. First click after a deploy just works.</li>
+        <li><strong>More accurate fee totals</strong> across all the admin and dashboard views. What you see is what was actually charged — no more split-row rounding artifacts inflating or deflating the numbers.</li>
+      </ul>
+
+      <h2>For DJs</h2>
+      <p><strong>Stream keys are now permanent to your account.</strong> Set them up in OBS once, and they stay valid every time you go live. No more updating settings each session. Your key is tied to your DJ account, not the specific slot — so as long as you have a booking active, the same key works.</p>
+      <p>If you're broadcasting and nobody's booked after you, the slot now <strong>extends automatically</strong> so you can keep the set running past the hour mark. Listeners stay connected, no cut-off. The slot keeps rolling forward in hour-long increments until either someone else is queued or you decide to wrap up.</p>
+      <p>DJ Lobby video preview is back in working order — you can now see your own OBS feed directly in the lobby while you're streaming, exactly as your listeners see it. Plus a handful of smaller livestream wrinkles ironed out: cleaner reconnection handling, more reliable preview thumbnails, and the broadcast mode toggle now actually persists between sessions.</p>
+
+      <h2>For Artists &amp; Labels</h2>
+      <p>I've completely overhauled how payouts are tracked. <strong>Multi-payee releases with split ownership</strong> (50/50 EPs, label-and-artist arrangements, anything where the sale needs to be divided between multiple people) are now handled automatically — your share is calculated and credited correctly, every time. No manual reconciliation needed on your end.</p>
+      <p>I've also gone back through every historical sale and <strong>reconciled the books</strong> so everyone is paid the exact correct amount. Fees from PayPal (the actual rates they charge, not estimates) and Fresh Wax's 1% platform fee are now accurately reflected in your dashboard. If you had a £0.30 or £0.40 discrepancy sitting in your pending balance from an earlier sale, it's been corrected.</p>
+      <p>Coming soon: <strong>monthly statement PDFs landing in your inbox at month-end</strong>. Full sales breakdown, top-performing releases with track-by-track sales, all-time totals, pending payouts, and a clear waterfall showing how gross revenue becomes your net earnings. First batch goes out at the end of May — you don't need to opt in, it'll just arrive.</p>
+
+      <h2>Behind The Scenes</h2>
+      <p>A handful of smaller improvements you might not notice individually but add up:</p>
+      <ul>
+        <li>The admin payments page now shows order-level fee totals instead of per-payee slices, so the numbers on screen match what PayPal actually charged.</li>
+        <li>Analytics reports correctly count orders even when they span multiple artists or include split payouts.</li>
+        <li>Treasury reconciliation against the live PayPal balance, so I can spot any discrepancies before they become anyone's problem.</li>
+        <li>Faster sign-in on slow connections and a couple of fixes to the partner approval flow.</li>
+      </ul>
+
+      <h2>Coming Up</h2>
+      <p>More livestream features, deeper artist analytics, and the first of the regularly scheduled DJ residencies. Keep an eye on the live page over the next few weeks.</p>
+      <p>If you hit anything weird, drop me a message — there's a contact form on the site and I read every email. Always listening, always tweaking.</p>
+
+      <p><strong>Stay locked.</strong></p>
+    `
+  },
+  {
     slug: 'final-polish-jungle-disorder-ep',
     title: 'Final Polish Before Launch — The Jungle Disorder EP Drops Friday',
     excerpt: 'Fresh Wax is in the final stretch before full production launch. To mark the occasion, Code One and DJ Bakkus drop The Jungle Disorder EP this Friday.',
