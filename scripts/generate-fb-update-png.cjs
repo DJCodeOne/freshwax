@@ -273,7 +273,6 @@ const html = `<!DOCTYPE html>
     <div class="section-body">
       <p>I've completely overhauled how payouts are tracked. <strong>Multi-payee releases</strong> with split ownership (50/50 EPs and similar arrangements) are now handled automatically — your share is calculated and credited correctly, every time.</p>
       <p>I've also gone back through every historical sale and <strong>reconciled the books</strong> so everyone is paid the exact correct amount, with fees from PayPal and Fresh Wax accurately reflected in your dashboard.</p>
-      <p>Coming soon: <span class="accent">monthly statement PDFs</span> landing in your inbox at month-end. Full sales breakdown, top-performing releases (track-by-track), all-time totals, pending payouts, the lot.</p>
     </div>
   </div>
 

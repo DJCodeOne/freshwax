@@ -17,7 +17,7 @@ export const blogPosts: BlogPost[] = [
   {
     slug: 'monthly-update-may-2026',
     title: "May 2026 Update — What's Freshly Cut",
-    excerpt: "Busy month behind the scenes at Fresh Wax. Sign-in is smoother, stream keys are now permanent to your account, payouts have been overhauled and reconciled, and monthly statement PDFs are landing in your inbox at month-end.",
+    excerpt: "Busy month behind the scenes at Fresh Wax. Sign-in is smoother, stream keys are now permanent to your account, and payouts have been completely overhauled and reconciled.",
     featuredImage: '/blog-may-2026-update.jpg',
     category: 'Updates',
     publishedAt: '2026-05-11',
@@ -42,7 +42,6 @@ export const blogPosts: BlogPost[] = [
       <h2>For Artists &amp; Labels</h2>
       <p>I've completely overhauled how payouts are tracked. <strong>Multi-payee releases with split ownership</strong> (50/50 EPs, label-and-artist arrangements, anything where the sale needs to be divided between multiple people) are now handled automatically — your share is calculated and credited correctly, every time. No manual reconciliation needed on your end.</p>
       <p>I've also gone back through every historical sale and <strong>reconciled the books</strong> so everyone is paid the exact correct amount. Fees from PayPal (the actual rates they charge, not estimates) and Fresh Wax's 1% platform fee are now accurately reflected in your dashboard. If you had a £0.30 or £0.40 discrepancy sitting in your pending balance from an earlier sale, it's been corrected.</p>
-      <p>Coming soon: <strong>monthly statement PDFs landing in your inbox at month-end</strong>. Full sales breakdown, top-performing releases with track-by-track sales, all-time totals, pending payouts, and a clear waterfall showing how gross revenue becomes your net earnings. First batch goes out at the end of May — you don't need to opt in, it'll just arrive.</p>
 
       <h2>Behind The Scenes</h2>
       <p>A handful of smaller improvements you might not notice individually but add up:</p>
