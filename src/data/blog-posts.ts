@@ -60,7 +60,7 @@ export const blogPosts: BlogPost[] = [
 
       <h2>Listen, Buy, Support</h2>
       <p>You can stream previews on the <a href="/item/hangry_records_FW-1780739181417/">release page</a> right now. Full digital download is £8.50 for all eight tracks, individual tracks are £2.50 each, and there's a limited vinyl pressing available for £15 — vinyl gets the full digital bundle thrown in as well, so you've got the WAVs the moment you click buy while the record itself is on its way to you.</p>
-      <p>Every purchase splits between the artists, the label, and the charities. Whether you're playing it out, prepping a set, or just listening — you're backing the music and the cause at the same time.</p>
+      <p>Every purchase splits between the label and the charities. Whether you're playing it out, prepping a set, or just listening — you're backing the music and the cause at the same time.</p>
 
       <p><strong><a href="/item/hangry_records_FW-1780739181417/">Hear it & grab a copy →</a></strong></p>
 
