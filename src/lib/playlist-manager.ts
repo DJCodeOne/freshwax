@@ -53,8 +53,18 @@ export class PlaylistManager {
 
   private get ctx(): PlaylistContext {
     const self = this as unknown as PlaylistContext;
-    // Attach getAuthToken so sub-modules can include auth headers in API calls
-    self.getAuthToken = () => this.getAuthToken();
+    // Attach getAuthToken so sub-modules can include auth headers in API calls.
+    // CRITICAL: `self === this`, so a naïve `self.getAuthToken = () => this.getAuthToken()`
+    // overwrites the class method on the instance with a wrapper that calls
+    // itself — infinite recursion the first time anything tries to add a track
+    // ("Maximum call stack size exceeded at getAuthToken"). Pull the method
+    // off the prototype and bind it once instead, so the wrapper actually
+    // invokes the original implementation.
+    if (typeof self.getAuthToken !== 'function' || (self as { __getAuthTokenBound?: boolean }).__getAuthTokenBound !== true) {
+      const proto = Object.getPrototypeOf(this) as { getAuthToken: () => Promise<string | null> };
+      self.getAuthToken = proto.getAuthToken.bind(this);
+      (self as { __getAuthTokenBound?: boolean }).__getAuthTokenBound = true;
+    }
     return self;
   }
 
