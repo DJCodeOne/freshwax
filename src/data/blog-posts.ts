@@ -16,24 +16,24 @@ export interface BlogPost {
 export const blogPosts: BlogPost[] = [
   {
     slug: 'welcome-hangry-records-jungle-dnb-vol-1',
-    title: 'Welcome Hangry Records — Jungle &amp; DnB Volume.1',
-    excerpt: 'Hangry Records joins Fresh Wax with the re-issue of their first ever release: an eight-track jungle and drum &amp; bass compilation, with the majority of profits going to mental health and homelessness charities.',
+    title: 'Welcome Hangry Records — Jungle & DnB Volume.1',
+    excerpt: 'Hangry Records joins Fresh Wax with the re-issue of their first ever release: an eight-track jungle and drum & bass compilation, with the majority of profits going to mental health and homelessness charities.',
     featuredImage: 'https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/cover.webp',
     category: 'Releases',
     publishedAt: '2026-06-06',
     author: 'Fresh Wax',
     tags: ['hangry records', 'compilation', 'various artists', 'jungle', 'drum and bass', 'release', 'charity', 'new label', 'london'],
     content: `
-      <p>Fresh Wax is proud to welcome <strong>Hangry Records</strong> to the platform. The London-based non-profit label has been quietly putting out some of the rawest jungle and drum &amp; bass coming out of the UK underground since 2020, and they've chosen to debut on Fresh Wax with the record that started it all — <strong>Jungle &amp; DnB Volume.1</strong>, the very first release on the label, originally cut in April 2020 and now available here both as a full digital download and on a limited vinyl pressing.</p>
+      <p>Fresh Wax is proud to welcome <strong>Hangry Records</strong> to the platform. The London-based non-profit label has been quietly putting out some of the rawest jungle and drum & bass coming out of the UK underground since 2020, and they've chosen to debut on Fresh Wax with the record that started it all — <strong>Jungle & DnB Volume.1</strong>, the very first release on the label, originally cut in April 2020 and now available here both as a full digital download and on a limited vinyl pressing.</p>
 
       <h2>Who Hangry Are</h2>
       <p>The label puts it best in their own words: <em>"Hangry Records is a non-profit label. We want to help and bring awareness to worthy causes, whilst pushing and showing appreciation to underground producers that are killing it with their sound."</em></p>
-      <p>That's the whole brief — underground producers, worthy causes. No A&amp;R algorithm, no streaming-bait edits, no label politics. Just the music and where the money goes. Since Volume.1 dropped in 2020 they've released through to <em>Jungle &amp; DnB Volume.5</em> (with Vol.6 in the works), built out the darker <em>Tunes From The Crypt</em> series across seven volumes, dropped <em>Femme Frequencies Volume.1</em> as an all-female lineup in 2025, and put out solo EPs from artists in their roster (SuM's <em>Ink Stains EP</em> being a recent highlight).</p>
+      <p>That's the whole brief — underground producers, worthy causes. No A&R algorithm, no streaming-bait edits, no label politics. Just the music and where the money goes. Since Volume.1 dropped in 2020 they've released through to <em>Jungle & DnB Volume.5</em> (with Vol.6 in the works), built out the darker <em>Tunes From The Crypt</em> series across seven volumes, dropped <em>Femme Frequencies Volume.1</em> as an all-female lineup in 2025, and put out solo EPs from artists in their roster (SuM's <em>Ink Stains EP</em> being a recent highlight).</p>
 
       <h2>About The Release</h2>
       <p>Volume.1 is a properly stitched-together compilation, every track from a different producer in the underground:</p>
       <ol>
-        <li><strong>16AJ &amp; Thermadore — FadeAway</strong></li>
+        <li><strong>16AJ & Thermadore — FadeAway</strong></li>
         <li><strong>Abstract Drumz — Higher</strong></li>
         <li><strong>Illicit — Departures</strong></li>
         <li><strong>MAC V — Panopticon</strong></li>
@@ -42,7 +42,7 @@ export const blogPosts: BlogPost[] = [
         <li><strong>Sargy — Ultimate Reality</strong></li>
         <li><strong>SuM — Time Wound</strong></li>
       </ol>
-      <p>Eight producers, eight cuts, one record. Amen breaks, sub pressure, dancefloor weight — proper underground jungle and drum &amp; bass with the grit kept in. The kind of compilation that exists to back the artists on it: this is somebody's first credit, somebody's calling-card, somebody's statement of intent. Several of the names here — Sargy, Polarity, Abstract Drumz, SuM — have gone on to land tracks on later Hangry volumes, so Volume.1 is where the family tree starts.</p>
+      <p>Eight producers, eight cuts, one record. Amen breaks, sub pressure, dancefloor weight — proper underground jungle and drum & bass with the grit kept in. The kind of compilation that exists to back the artists on it: this is somebody's first credit, somebody's calling-card, somebody's statement of intent. Several of the names here — Sargy, Polarity, Abstract Drumz, SuM — have gone on to land tracks on later Hangry volumes, so Volume.1 is where the family tree starts.</p>
 
       <h2>The Cause Behind The Record</h2>
       <p>This is where Hangry separates itself from a regular indie label. <strong>The majority of profits from this record go directly to charity</strong> — split between two organisations Hangry has been backing:</p>
@@ -59,7 +59,7 @@ export const blogPosts: BlogPost[] = [
       <p>You can stream previews on the <a href="/item/hangry_records_FW-1780739181417/">release page</a> right now. Full digital download is £8.50 for all eight tracks, individual tracks are £2.50 each, and there's a limited vinyl pressing available for £15 — vinyl gets the full digital bundle thrown in as well, so you've got the WAVs the moment you click buy while the record itself is on its way to you.</p>
       <p>Every purchase splits between the artists, the label, and the charities. Whether you're playing it out, prepping a set, or just listening — you're backing the music and the cause at the same time.</p>
 
-      <p><strong><a href="/item/hangry_records_FW-1780739181417/">Hear it &amp; grab a copy →</a></strong></p>
+      <p><strong><a href="/item/hangry_records_FW-1780739181417/">Hear it & grab a copy →</a></strong></p>
 
       <h2>Find Hangry Records</h2>
       <p>If you want to dig deeper into the catalogue — and you should — Hangry are live on:</p>
