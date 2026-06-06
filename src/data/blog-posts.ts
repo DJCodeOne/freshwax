@@ -73,7 +73,7 @@ export const blogPosts: BlogPost[] = [
         <li><a href="https://www.facebook.com/HangryRecordsLondon/" target="_blank" rel="noopener">Facebook</a></li>
       </ul>
 
-      <p>Welcome to Fresh Wax, Hangry. Looking forward to Volume.2 and everything after it.</p>
+      <p>Welcome to Fresh Wax, Hangry. Looking forward to whatever you drop next.</p>
     `
   },
   {
