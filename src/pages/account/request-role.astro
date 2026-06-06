@@ -2,9 +2,21 @@
 // Request Role Page
 // Users can request Artist, Merch Seller, or Vinyl Seller roles
 import '../../styles/global.css';
+import { FIREBASE_API_KEY } from '../../lib/constants';
 const csrfToken = Astro.locals.csrfToken || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 const nonce = Astro.locals.nonce || '';
+// This page renders standalone (no Layout, no Header), so nothing else sets
+// window.FIREBASE_CONFIG — the inline script used to fall back to {} which
+// throws auth/invalid-api-key. Pass the firebaseConfig in via define:vars.
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || FIREBASE_API_KEY,
+  authDomain: 'freshwax-store.firebaseapp.com',
+  projectId: 'freshwax-store',
+  storageBucket: 'freshwax-store.firebasestorage.app',
+  messagingSenderId: '675435782973',
+  appId: '1:675435782973:web:e8459c2ec4a5f6d683db54',
+};
 ---
 <html lang="en-GB">
 <head>
@@ -422,11 +434,12 @@ const nonce = Astro.locals.nonce || '';
     }
   </style>
 
-  <script type="module">
+  <script type="module" define:vars={{ firebaseConfig }}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-    const firebaseConfig = window.FIREBASE_CONFIG || {};
+    // firebaseConfig is injected via define:vars from the front-matter — see
+    // why above (page is layout-less, nothing else sets window.FIREBASE_CONFIG).
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
