@@ -1063,6 +1063,33 @@ const firebaseConfig = {
     if (typeof str !== 'string') return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
+
+  // -------- AUTH DEBUG (temporary) --------
+  // Default OFF. Toggle on by running `localStorage.setItem('fwx_auth_debug','1')`
+  // in the console then refreshing — logs every step of the auth flow so we can
+  // see exactly where it breaks for a given user. Snapshot helper available as
+  // window.__fwxAuthStatus().
+  const DBG = (() => { try { return localStorage.getItem('fwx_auth_debug') === '1'; } catch (_e) { return false; } })();
+  function fwxLog(/* ...args */) {
+    if (!DBG) return;
+    const args = Array.prototype.slice.call(arguments);
+    args.unshift('[fwx-auth]');
+    console.log.apply(console, args);
+  }
+  window.__fwxAuthStatus = function () {
+    const m = document.cookie.match(/(?:^|;\s*)userId=([^;]+)/);
+    return {
+      cookieUserId: m ? m[1] : null,
+      cookieRaw: document.cookie,
+      authPresent: !!auth,
+      authCurrentUser: auth && auth.currentUser ? { uid: auth.currentUser.uid, email: auth.currentUser.email } : null,
+      windowAuthUser: window.authUser ? { uid: window.authUser.uid, isCookieShim: !!window.authUser.__isCookieShim } : null,
+      firebaseConfigApiKey: (firebaseConfig.apiKey || '').slice(0, 8) + '…',
+      hasSession_check: document.cookie.includes('userId='),
+    };
+  };
+  fwxLog('Header script loaded. firebaseConfig.apiKey present:', !!firebaseConfig.apiKey, 'first chars:', (firebaseConfig.apiKey || '').slice(0, 8));
+
   // Auth state — module-scope vars populated conditionally
   let auth = null;
   let signOutFn = null;
@@ -1074,6 +1101,7 @@ const firebaseConfig = {
 
   // Only load Firebase Auth SDK (118KB) if user has a session cookie
   const _hasSession = document.cookie.includes('userId=');
+  fwxLog('_hasSession (userId cookie present):', _hasSession, '| full cookie string length:', document.cookie.length);
 
   if (_hasSession) {
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
@@ -1085,14 +1113,19 @@ const firebaseConfig = {
     try {
       app = initializeApp(firebaseConfig);
       auth = _fb.getAuth(app);
+      fwxLog('Firebase initializeApp + getAuth OK');
     } catch (e) {
+      fwxLog('Firebase initializeApp threw, retrying via getApp/getApps:', e && e.message);
       const { getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
       app = getApps().length ? getApp() : initializeApp(firebaseConfig);
       auth = _fb.getAuth(app);
+      fwxLog('Firebase retry path getAuth OK:', !!auth);
     }
     window.firebaseAuth = auth;
 
+    fwxLog('Wiring initial onAuthStateChanged listener');
     const unsubscribeInitial = _fb.onAuthStateChanged(auth, (user) => {
+      fwxLog('Initial onAuthStateChanged fired. user:', user ? { uid: user.uid, email: user.email } : null);
       // Cookie-auth shim: when Firebase Auth fails to restore the session
       // client-side (common in browsers where IndexedDB persistence is blocked
       // — Safari ITP, Firefox strict mode, some private/incognito modes,
@@ -1615,13 +1648,31 @@ const firebaseConfig = {
   let _authUIUpdating = false;
   function updateAuthUI() {
     if (_authUIUpdating) return;
+    fwxLog('updateAuthUI() called. auth present:', !!auth, '| auth.currentUser:', auth && auth.currentUser ? auth.currentUser.uid : null, '| window.authUser:', window.authUser ? { uid: window.authUser.uid, shim: !!window.authUser.__isCookieShim } : null);
     if (!auth) {
-      // Firebase Auth not loaded (anonymous) — show logged-out UI
-      document.querySelectorAll('.logged-out').forEach(el => { el.classList.remove('fwx-hidden'); el.style.display = 'block'; });
-      document.querySelectorAll('.logged-in').forEach(el => { el.classList.add('fwx-hidden'); el.style.display = 'none'; });
-      document.querySelectorAll('.account-name').forEach(el => { el.textContent = 'Login'; });
-      document.querySelectorAll('.fwx-logo-link').forEach(logo => { logo.classList.remove('admin-mode'); logo.href = '/'; });
-      return;
+      // Firebase Auth not loaded (anonymous OR Firebase failed to import)
+      // — but maybe we still have a userId cookie. Check that BEFORE giving
+      // up so a fresh page-load with a stale Firebase doesn't flash "Login".
+      const userIdMatchNoAuth = document.cookie.match(/(?:^|;\s*)userId=([^;]+)/);
+      if (userIdMatchNoAuth) {
+        fwxLog('updateAuthUI: no auth instance, but userId cookie found — running logged-in UI from cookie shim');
+        if (!window.authUser) {
+          window.authUser = {
+            uid: userIdMatchNoAuth[1], displayName: null, email: null, photoURL: null,
+            emailVerified: true, getIdToken: () => Promise.resolve(null), __isCookieShim: true,
+          };
+        }
+        // Fall through to the normal flow below — `auth` is null so we can't
+        // dereference it, but the rest of updateAuthUI reads from `user` (a
+        // local) and window.authUser, both of which we just primed.
+      } else {
+        fwxLog('updateAuthUI: no auth instance AND no userId cookie — showing logged-out UI');
+        document.querySelectorAll('.logged-out').forEach(el => { el.classList.remove('fwx-hidden'); el.style.display = 'block'; });
+        document.querySelectorAll('.logged-in').forEach(el => { el.classList.add('fwx-hidden'); el.style.display = 'none'; });
+        document.querySelectorAll('.account-name').forEach(el => { el.textContent = 'Login'; });
+        document.querySelectorAll('.fwx-logo-link').forEach(logo => { logo.classList.remove('admin-mode'); logo.href = '/'; });
+        return;
+      }
     }
     _authUIUpdating = true;
     setTimeout(() => { _authUIUpdating = false; }, 100);
@@ -1634,7 +1685,7 @@ const firebaseConfig = {
     //      flashed "Login" on every page navigation for already-logged-in
     //      users with stale Firebase state — what users were seeing in their
     //      "logged in but header says Login" reports.
-    let user = auth.currentUser
+    let user = (auth && auth.currentUser)
       || (window.authUser && window.authUser.__isCookieShim ? window.authUser : null);
     if (!user) {
       const userIdMatch = document.cookie.match(/(?:^|;\s*)userId=([^;]+)/);
@@ -1653,6 +1704,7 @@ const firebaseConfig = {
         if (!window.authUser) window.authUser = user;
       }
     }
+    fwxLog('updateAuthUI: resolved user =', user ? { uid: user.uid, name: user.displayName, shim: !!user.__isCookieShim } : null);
     const accountNames = document.querySelectorAll('.account-name');
     const loggedOutSections = document.querySelectorAll('.logged-out');
     const loggedInSections = document.querySelectorAll('.logged-in');
@@ -1741,7 +1793,9 @@ const firebaseConfig = {
   }
 
   // Auth state change listener (only set once, skip if Firebase not loaded)
+  fwxLog('About to wire persistent auth listener. auth present:', !!auth, '| onAuthStateChangedFn present:', !!onAuthStateChangedFn);
   if (auth && onAuthStateChangedFn) onAuthStateChangedFn(auth, async (user) => {
+    fwxLog('Persistent onAuthStateChanged fired. user:', user ? { uid: user.uid, email: user.email } : null);
     if (user) {
       // userId/customerId cookies are set by __setAuthCookies during login
       // (HttpOnly — cannot be set via document.cookie)
@@ -1891,6 +1945,7 @@ const firebaseConfig = {
 
   // Re-initialize on View Transitions page load
   document.addEventListener('astro:page-load', async () => {
+    fwxLog('astro:page-load fired. auth present:', !!auth, '| auth.currentUser:', auth && auth.currentUser ? auth.currentUser.uid : null);
     initHeader();
     updateHeaderCartBadge();
     if (typeof initGoPlusModal === 'function') initGoPlusModal();
