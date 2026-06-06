@@ -65,14 +65,19 @@ export function buildStockistFulfillmentEmail(orderId: string, orderNumber: stri
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding: 4px 0; color: #111; font-size: 13px;">Vinyl revenue (asking price):</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(vinylRevenue) + '</td></tr>' +
     (shippingPassThrough > 0
-      ? '<tr><td style="padding: 4px 0; color: #111; font-size: 13px;">Shipping reimbursement (covers postage):</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(shippingPassThrough) + '</td></tr>'
+      ? '<tr><td style="padding: 4px 0; color: #111; font-size: 13px;">Postage charged to customer:</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(shippingPassThrough) + '</td></tr>'
       : ''
     ) +
+    '<tr><td style="padding: 6px 0 4px 0; color: #111; font-size: 13px; border-top: 1px solid #d1d5db;">Subtotal received from customer:</td><td style="padding: 6px 0 4px 0; text-align: right; color: #111; font-size: 13px; border-top: 1px solid #d1d5db;">' + formatPrice(vinylRevenue + shippingPassThrough) + '</td></tr>' +
     '<tr><td style="padding: 4px 0; color: #b91c1c; font-size: 12px;">Less: Stripe processing fee:</td><td style="padding: 4px 0; text-align: right; color: #b91c1c; font-size: 12px;">−' + formatPrice(stripeFee) + '</td></tr>' +
     '<tr><td style="padding: 4px 0; color: #b91c1c; font-size: 12px;">Less: Fresh Wax 1% fee:</td><td style="padding: 4px 0; text-align: right; color: #b91c1c; font-size: 12px;">−' + formatPrice(freshWaxFee) + '</td></tr>' +
     '<tr><td style="padding: 6px 0 4px 0; color: #16a34a; font-size: 14px; font-weight: 700; border-top: 1px solid ' + paymentStatusColor + ';">Your Payment (net):</td><td style="padding: 6px 0 4px 0; text-align: right; color: #16a34a; font-size: 14px; font-weight: 700; border-top: 1px solid ' + paymentStatusColor + ';">' + formatPrice(artistPayment) + '</td></tr>' +
-    '<tr><td colspan="2" style="padding: 4px 0 4px 0; border-top: 1px dashed #ccc;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Customer Paid:</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(customerPaid) + '</td></tr>' +
+    (shippingPassThrough > 0
+      ? '<tr><td colspan="2" style="padding: 6px 0 0 0; color: #6b7280; font-size: 11px; font-style: italic;">(Postage of ' + formatPrice(shippingPassThrough) + ' is included to cover your actual shipping cost)</td></tr>'
+      : ''
+    ) +
+    '<tr><td colspan="2" style="padding: 8px 0 4px 0; border-top: 1px dashed #ccc;"></td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Customer Paid (vinyl + postage):</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table></div>' +
 
     (isTestMode ? '<div style="margin-top: 12px; padding: 8px; background: #fef3c7; border-radius: 4px; font-size: 12px; color: #92400e;">⚠️ This is a test order - no real payment was processed</div>' : '') +
