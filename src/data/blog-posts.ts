@@ -51,7 +51,7 @@ export const blogPosts: BlogPost[] = [
       <p>This is where Hangry separates itself from a regular drum and bass label. <strong>The majority of profits from this record go directly to charity</strong> — split between two organisations Hangry has been backing:</p>
       <ul>
         <li><strong><a href="https://www.crisis.org.uk/" target="_blank" rel="noopener">Crisis</a></strong> — the national charity for people experiencing homelessness in the UK.</li>
-        <li><strong><a href="https://www.forwardtrust.org.uk/" target="_blank" rel="noopener">The Forward Trust</a></strong> — supporting people with mental health challenges and addiction recovery.</li>
+        <li><strong><a href="https://www.forwardtrust.org.uk/" target="_blank" rel="noopener">The Forward Trust</a></strong> — mental health and addiction support.</li>
       </ul>
       <p>The original 2020 cut of this record raised money for Mind and Shelter UK; the label-wide focus has since shifted toward Crisis and The Forward Trust, both doing work that hits close to home for communities the dance music scene draws from and gives back to. Every digital download, every vinyl shipped from this release contributes.</p>
 
@@ -67,7 +67,7 @@ export const blogPosts: BlogPost[] = [
       <h2>Find Hangry Records</h2>
       <p>If you want to dig deeper into the catalogue — and you should — Hangry are live on:</p>
       <ul>
-        <li><a href="https://hangryrecords.bandcamp.com/" target="_blank" rel="noopener">Bandcamp</a> (the full back catalogue, including the <em>Tunes From The Crypt</em> series and the volume-by-volume compilations)</li>
+        <li><a href="https://hangryrecords.bandcamp.com/" target="_blank" rel="noopener">Bandcamp</a> (the full back catalogue)</li>
         <li><a href="https://www.instagram.com/hangry_records/" target="_blank" rel="noopener">Instagram</a> (@hangry_records — release announcements, artist features)</li>
         <li><a href="https://soundcloud.com/hangryrecords" target="_blank" rel="noopener">SoundCloud</a></li>
         <li><a href="https://www.facebook.com/HangryRecordsLondon/" target="_blank" rel="noopener">Facebook</a></li>
