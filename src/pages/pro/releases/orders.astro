@@ -1,0 +1,265 @@
+---
+// Pro Dashboard — Vinyl orders awaiting fulfillment by this artist.
+// Lists each vinyl/physical order containing items belonging to the current
+// user (artistId match), shows the shipping address, and lets them mark as
+// shipped + attach tracking info inline. The data comes from salesLedger
+// (queried per-seller via artistId) and is hydrated from the orders collection.
+import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+const nonce = Astro.locals.nonce || '';
+---
+<ProDashboardLayout title="Vinyl Orders" activeSection="/pro/releases/orders">
+  <div class="orders-page">
+    <div class="page-header">
+      <h2 style="margin:0 0 .5rem 0;">Vinyl Orders</h2>
+      <p class="subtitle">Orders waiting to be shipped — mark as shipped here once posted.</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value" id="pendingCount">-</div><div class="stat-label">Awaiting Shipment</div></div>
+      <div class="stat-card"><div class="stat-value" id="shippedCount">-</div><div class="stat-label">Shipped</div></div>
+      <div class="stat-card"><div class="stat-value" id="totalOrders">-</div><div class="stat-label">Total Orders</div></div>
+    </div>
+
+    <div class="filters-bar">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-status="all">All</button>
+        <button class="filter-tab" data-status="pending">Awaiting Shipment</button>
+        <button class="filter-tab" data-status="shipped">Shipped</button>
+      </div>
+    </div>
+
+    <div id="ordersList" class="orders-list">
+      <div class="loading">Loading orders…</div>
+    </div>
+
+    <div id="emptyState" class="empty-state" style="display:none;">
+      <div class="empty-icon">📦</div>
+      <h3>No vinyl orders yet</h3>
+      <p>Vinyl orders for your releases will appear here once customers buy.</p>
+    </div>
+
+    <div class="info-box">
+      <p><strong>Need help with an order?</strong> Contact the Fresh Wax team — we'll step in for refunds, returns or anything you can't resolve directly.</p>
+      <a href="/contact/" class="btn btn-small">Contact Us</a>
+    </div>
+  </div>
+
+  <style>
+    .orders-page { max-width: 1100px; }
+    .page-header { margin-bottom: 1.25rem; }
+    .subtitle { color: var(--text-secondary, #a3a3a3); margin: 0; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+    .stat-card { background: var(--card-bg, #1a1a1a); border: 1px solid var(--border, #2a2a2a); border-radius: 10px; padding: 1rem 1.25rem; }
+    .stat-value { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+    .stat-label { font-size: .8rem; color: var(--text-secondary, #a3a3a3); margin-top: .25rem; text-transform: uppercase; letter-spacing: .5px; }
+    .filters-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .filter-tabs { display: flex; gap: .25rem; background: var(--card-bg, #1a1a1a); border: 1px solid var(--border, #2a2a2a); border-radius: 8px; padding: .25rem; }
+    .filter-tab { background: transparent; border: 0; color: var(--text-secondary, #a3a3a3); padding: .5rem 1rem; border-radius: 6px; cursor: pointer; font: inherit; font-size: .85rem; }
+    .filter-tab.active { background: var(--primary, #dc2626); color: #fff; }
+    .orders-list { display: grid; gap: 1rem; }
+    .order-card { background: var(--card-bg, #1a1a1a); border: 1px solid var(--border, #2a2a2a); border-radius: 12px; padding: 1.25rem; }
+    .order-card.shipped { border-color: #16a34a; }
+    .order-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .75rem; margin-bottom: 1rem; }
+    .order-num { font-weight: 700; font-size: 1.05rem; }
+    .order-date { color: var(--text-secondary, #a3a3a3); font-size: .85rem; }
+    .badge { display: inline-block; padding: .25rem .6rem; border-radius: 999px; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+    .badge.pending { background: #f59e0b; color: #1a1a1a; }
+    .badge.shipped { background: #16a34a; color: #fff; }
+    .grid-two { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    @media (max-width: 720px) { .grid-two { grid-template-columns: 1fr; } }
+    .panel-title { font-size: .75rem; color: var(--text-secondary, #a3a3a3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: .5rem; }
+    .shipping-block { background: var(--bg-elevated, #111); border: 1px solid var(--border, #2a2a2a); border-radius: 8px; padding: .9rem 1rem; line-height: 1.5; font-size: .95rem; }
+    .shipping-block strong { font-size: 1rem; }
+    .items-list { list-style: none; margin: 0; padding: 0; }
+    .items-list li { padding: .4rem 0; border-bottom: 1px solid var(--border, #2a2a2a); display: flex; justify-content: space-between; font-size: .9rem; }
+    .items-list li:last-child { border-bottom: 0; }
+    .tracking-form { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border, #2a2a2a); display: grid; gap: .5rem; grid-template-columns: 1fr 1.5fr 2fr auto; align-items: end; }
+    @media (max-width: 720px) { .tracking-form { grid-template-columns: 1fr; } }
+    .tracking-form label { font-size: .75rem; color: var(--text-secondary, #a3a3a3); text-transform: uppercase; letter-spacing: .5px; }
+    .tracking-form input, .tracking-form select { width: 100%; background: var(--bg-elevated, #111); border: 1px solid var(--border, #2a2a2a); color: inherit; border-radius: 6px; padding: .55rem .75rem; font: inherit; font-size: .9rem; }
+    .tracking-current { margin-top: 1rem; padding: .9rem 1rem; background: rgba(22,163,74,.1); border: 1px solid #16a34a; border-radius: 8px; font-size: .9rem; }
+    .tracking-current a { color: #16a34a; }
+    .btn { background: var(--primary, #dc2626); color: #fff; border: 0; padding: .6rem 1.25rem; border-radius: 6px; cursor: pointer; font: inherit; font-size: .9rem; font-weight: 600; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-small { display: inline-block; padding: .4rem .8rem; font-size: .85rem; text-decoration: none; }
+    .info-box { margin-top: 2rem; padding: 1rem 1.25rem; background: var(--card-bg, #1a1a1a); border: 1px solid var(--border, #2a2a2a); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .info-box p { margin: 0; font-size: .9rem; }
+    .loading, .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-secondary, #a3a3a3); }
+    .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); padding: .75rem 1.25rem; border-radius: 8px; color: #fff; font-weight: 600; z-index: 1000; }
+    .toast.ok { background: #16a34a; }
+    .toast.err { background: #dc2626; }
+  </style>
+
+  <script is:inline nonce={nonce}>
+    (async () => {
+      let allOrders = [];
+      let currentFilter = 'all';
+      const ordersList = document.getElementById('ordersList');
+      const emptyState = document.getElementById('emptyState');
+
+      function fmtAddr(s) {
+        if (!s) return '';
+        const lines = [s.name, s.line1, s.line2, [s.city, s.postalCode].filter(Boolean).join(' '), s.state, s.country].filter(Boolean);
+        return lines.map(l => '<div>' + escapeHtml(l) + '</div>').join('');
+      }
+      function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+      function toast(msg, kind = 'ok') {
+        const t = document.createElement('div');
+        t.className = 'toast ' + kind;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3500);
+      }
+
+      async function getToken() {
+        const user = window.authUser || (window.ctx && window.ctx.auth && window.ctx.auth.currentUser);
+        if (!user) return null;
+        try { return await user.getIdToken(); } catch (_e) { return null; }
+      }
+
+      function render() {
+        const filtered = currentFilter === 'all' ? allOrders : allOrders.filter(o => o.status === currentFilter);
+        if (!filtered.length) {
+          ordersList.innerHTML = '';
+          emptyState.style.display = '';
+          return;
+        }
+        emptyState.style.display = 'none';
+        ordersList.innerHTML = filtered.map(o => {
+          const isShipped = o.status === 'shipped' || (o.tracking && o.tracking.trackingNumber);
+          const date = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+          const itemsHtml = (o.items || []).map(i =>
+            '<li><span>' + escapeHtml(i.name) + (i.quantity > 1 ? ' &times; ' + i.quantity : '') + '</span><span>&pound;' + ((i.price || 0) * (i.quantity || 1)).toFixed(2) + '</span></li>'
+          ).join('');
+          const trackingPanel = isShipped
+            ? '<div class="tracking-current">Shipped on ' + (o.tracking && o.tracking.shippedAt ? new Date(o.tracking.shippedAt).toLocaleDateString('en-GB') : '—')
+              + ' &nbsp;|&nbsp; ' + escapeHtml(o.tracking && o.tracking.courier || '')
+              + ' &nbsp;|&nbsp; <strong>' + escapeHtml(o.tracking && o.tracking.trackingNumber || '') + '</strong>'
+              + (o.tracking && o.tracking.trackingUrl ? ' &nbsp;|&nbsp; <a href="' + escapeHtml(o.tracking.trackingUrl) + '" target="_blank" rel="noopener">Track</a>' : '')
+              + '</div>'
+            : '<form class="tracking-form" data-order-id="' + escapeHtml(o.id) + '">'
+              + '<div><label>Courier</label><select name="courier" required>'
+              + '<option value="">—</option>'
+              + '<option value="Royal Mail">Royal Mail</option>'
+              + '<option value="Evri">Evri (Hermes)</option>'
+              + '<option value="DPD">DPD</option>'
+              + '<option value="UPS">UPS</option>'
+              + '<option value="DHL">DHL</option>'
+              + '<option value="FedEx">FedEx</option>'
+              + '<option value="USPS">USPS</option>'
+              + '<option value="Other">Other</option>'
+              + '</select></div>'
+              + '<div><label>Tracking Number</label><input name="trackingNumber" required maxlength="200" placeholder="e.g. AB1234567GB"></div>'
+              + '<div><label>Tracking URL (optional)</label><input name="trackingUrl" type="url" placeholder="https://…"></div>'
+              + '<button class="btn" type="submit">Mark Shipped</button>'
+              + '</form>';
+          return ''
+            + '<div class="order-card ' + (isShipped ? 'shipped' : 'pending') + '">'
+            + '  <div class="order-head">'
+            + '    <div><span class="order-num">' + escapeHtml(o.orderNumber || o.id) + '</span> &nbsp;<span class="order-date">' + date + '</span></div>'
+            + '    <span class="badge ' + (isShipped ? 'shipped' : 'pending') + '">' + (isShipped ? 'Shipped' : 'Awaiting Shipment') + '</span>'
+            + '  </div>'
+            + '  <div class="grid-two">'
+            + '    <div>'
+            + '      <div class="panel-title">📍 Ship To</div>'
+            + '      <div class="shipping-block">' + (fmtAddr(o.shipping) || '<em>No address on file</em>') + '</div>'
+            + '    </div>'
+            + '    <div>'
+            + '      <div class="panel-title">Items in this order</div>'
+            + '      <ul class="items-list">' + itemsHtml + '</ul>'
+            + '    </div>'
+            + '  </div>'
+            + '  ' + trackingPanel
+            + '</div>';
+        }).join('');
+
+        // Wire up the tracking forms
+        ordersList.querySelectorAll('.tracking-form').forEach(form => {
+          form.addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const btn = form.querySelector('button[type=submit]');
+            btn.disabled = true; btn.textContent = 'Submitting…';
+            try {
+              const token = await getToken();
+              if (!token) { toast('Not signed in', 'err'); btn.disabled = false; btn.textContent = 'Mark Shipped'; return; }
+              const fd = new FormData(form);
+              const body = {
+                orderId: form.dataset.orderId,
+                status: 'shipped',
+                tracking: {
+                  courier: fd.get('courier'),
+                  trackingNumber: fd.get('trackingNumber'),
+                  trackingUrl: fd.get('trackingUrl') || undefined,
+                }
+              };
+              const r = await fetch('/api/pro/update-order-tracking/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(body),
+              });
+              const j = await r.json();
+              if (!r.ok || !j.success) throw new Error(j.error || ('HTTP ' + r.status));
+              toast('Marked as shipped — buyer notified');
+              // Refresh
+              await load();
+            } catch (e) {
+              toast(e instanceof Error ? e.message : String(e), 'err');
+              btn.disabled = false; btn.textContent = 'Mark Shipped';
+            }
+          });
+        });
+      }
+
+      function updateStats() {
+        const pending = allOrders.filter(o => o.status !== 'shipped').length;
+        const shipped = allOrders.filter(o => o.status === 'shipped').length;
+        document.getElementById('pendingCount').textContent = pending;
+        document.getElementById('shippedCount').textContent = shipped;
+        document.getElementById('totalOrders').textContent = allOrders.length;
+      }
+
+      async function load() {
+        const token = await getToken();
+        if (!token) {
+          ordersList.innerHTML = '<div class="loading">Please sign in to view your orders.</div>';
+          return;
+        }
+        try {
+          const r = await fetch('/api/pro/dashboard-data/?type=vinylOrders', { headers: { Authorization: 'Bearer ' + token } });
+          const j = await r.json();
+          if (!r.ok || !j.success) throw new Error(j.error || ('HTTP ' + r.status));
+          allOrders = j.orders || [];
+          updateStats();
+          render();
+        } catch (e) {
+          ordersList.innerHTML = '<div class="loading" style="color: #dc2626;">Failed to load: ' + escapeHtml(e instanceof Error ? e.message : String(e)) + '</div>';
+        }
+      }
+
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentFilter = tab.dataset.status;
+          render();
+        });
+      });
+
+      // Wait briefly for the auth context to wire up if needed.
+      function waitForAuth() {
+        return new Promise(resolve => {
+          const start = Date.now();
+          (function check() {
+            if (window.authUser || (window.ctx && window.ctx.auth && window.ctx.auth.currentUser)) return resolve();
+            if (Date.now() - start > 3000) return resolve();
+            setTimeout(check, 100);
+          })();
+        });
+      }
+      await waitForAuth();
+      load();
+    })();
+  </script>
+</ProDashboardLayout>

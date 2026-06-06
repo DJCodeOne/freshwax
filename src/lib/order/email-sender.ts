@@ -70,7 +70,12 @@ export async function sendOrderEmails({ order, orderRefId, orderNumber, env }: S
     // Don't fail the order if email fails
   }
 
-  // Send fulfillment email to stockist/label for vinyl orders
+  // Send fulfillment email for vinyl orders. Originally there was one shared
+  // stockist address; now we group by artistEmail so each artist/label gets
+  // their own fulfillment email with the buyer's shipping address (matches the
+  // pattern used by sendDigitalSaleEmails). STOCKIST_EMAIL still receives a
+  // BCC so the central team has full oversight, and items whose artistEmail
+  // is missing fall back to going straight to the stockist as before.
   const vinylItems = order.items.filter((item: OrderItem) => item.type === 'vinyl');
   if (vinylItems.length > 0) {
     try {
@@ -78,36 +83,51 @@ export async function sendOrderEmails({ order, orderRefId, orderNumber, env }: S
       const STOCKIST_EMAIL = env?.VINYL_STOCKIST_EMAIL || import.meta.env.VINYL_STOCKIST_EMAIL || 'stockist@freshwax.co.uk';
 
       if (RESEND_API_KEY && STOCKIST_EMAIL) {
-        log.info('[create-order] Sending vinyl fulfillment email to stockist:', STOCKIST_EMAIL);
+        // Group items by artist email; items without an artistEmail are
+        // bucketed under STOCKIST_EMAIL for central fulfillment.
+        const groups: { [email: string]: OrderItem[] } = {};
+        for (const item of vinylItems) {
+          const target = (item.artistEmail as string | undefined) || STOCKIST_EMAIL;
+          if (!groups[target]) groups[target] = [];
+          groups[target].push(item);
+        }
 
-        const fulfillmentHtml = buildStockistFulfillmentEmail(orderRefId, orderNumber, order, vinylItems);
+        for (const [recipientEmail, recipientItems] of Object.entries(groups)) {
+          const goesToStockist = recipientEmail === STOCKIST_EMAIL;
+          const bccList = goesToStockist
+            ? ['freshwaxonline@gmail.com']
+            : [STOCKIST_EMAIL, 'freshwaxonline@gmail.com'];
 
-        const fulfillmentResponse = await fetchWithTimeout('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + RESEND_API_KEY,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
-            to: [STOCKIST_EMAIL],
-            bcc: ['freshwaxonline@gmail.com'],
-            subject: '📦 VINYL FULFILLMENT REQUIRED - ' + orderNumber,
-            html: fulfillmentHtml
-          })
-        }, 10000);
+          log.info('[create-order] Sending vinyl fulfillment email to:', maskEmail(recipientEmail));
+          const fulfillmentHtml = buildStockistFulfillmentEmail(orderRefId, orderNumber, order, recipientItems);
 
-        if (fulfillmentResponse.ok) {
-          const result = await fulfillmentResponse.json();
-          log.info('[create-order] ✓ Stockist email sent! ID:', result.id);
-        } else {
-          const error = await fulfillmentResponse.text();
-          log.error('[create-order] ❌ Stockist email failed:', error);
+          const fulfillmentResponse = await fetchWithTimeout('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + RESEND_API_KEY,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
+              to: [recipientEmail],
+              bcc: bccList,
+              subject: '📦 VINYL FULFILLMENT REQUIRED - ' + orderNumber,
+              html: fulfillmentHtml
+            })
+          }, 10000);
+
+          if (fulfillmentResponse.ok) {
+            const result = await fulfillmentResponse.json();
+            log.info('[create-order] ✓ Vinyl fulfillment email sent! ID:', result.id);
+          } else {
+            const error = await fulfillmentResponse.text();
+            log.error('[create-order] ❌ Vinyl fulfillment email failed:', error);
+          }
         }
       }
     } catch (stockistError: unknown) {
-      log.error('[create-order] Stockist email error:', stockistError);
-      // Don't fail the order if stockist email fails
+      log.error('[create-order] Vinyl fulfillment email error:', stockistError);
+      // Don't fail the order if fulfillment email fails
     }
 
     // Mark vinyl crates listings as sold (single-item listings from marketplace sellers)

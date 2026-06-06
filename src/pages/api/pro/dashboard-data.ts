@@ -35,6 +35,8 @@ export const GET: APIRoute = async ({ request }) => {
         return await handleMerch(userId);
       case 'orders':
         return await handleOrders(userId);
+      case 'vinylOrders':
+        return await handleVinylOrders(userId);
       case 'stock':
         return await handleStock(userId);
       case 'analytics':
@@ -111,6 +113,88 @@ async function handleOrders(userId: string) {
       customerEmail: o.customerEmail || ''
     }))
   });
+}
+
+// List vinyl-release orders that this artist needs to fulfill.
+//
+// Music releases don't carry a top-level sellerId on the order doc (that field
+// is merch-only). The artist link lives in items[].artistId, which Firestore
+// can't query directly on a nested array. We use salesLedger as the index:
+// entries are written per-seller with artistId, and hasPhysical=true marks any
+// order that included a physical item from this artist. We hydrate each unique
+// orderId from the orders collection to get the shipping address and tracking
+// state, then filter the items array to only those belonging to this artist.
+async function handleVinylOrders(userId: string) {
+  const ledger = await queryCollection('salesLedger', {
+    filters: [
+      { field: 'artistId', op: 'EQUAL', value: userId },
+      { field: 'hasPhysical', op: 'EQUAL', value: true },
+    ],
+    orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+  });
+
+  const seen = new Set<string>();
+  const orderIds: string[] = [];
+  for (const entry of (ledger || []) as Record<string, unknown>[]) {
+    const oid = entry.orderId as string | undefined;
+    if (oid && !seen.has(oid)) { seen.add(oid); orderIds.push(oid); }
+  }
+
+  const orderDocs = await Promise.all(orderIds.map(id => getDocument('orders', id).catch(() => null)));
+
+  const orders = orderDocs
+    .filter((o): o is Record<string, unknown> => !!o)
+    .map(order => {
+      const allItems = (order.items as Record<string, unknown>[]) || [];
+      // Only show items that belong to this artist and are vinyl/physical.
+      const myItems = allItems.filter(it => {
+        const matchesArtist = it.artistId === userId;
+        const isPhysical = it.type === 'vinyl' || it.format === 'vinyl' || it.type === 'merch';
+        return matchesArtist && isPhysical;
+      });
+      if (myItems.length === 0) return null;
+
+      const tracking = (order.tracking as Record<string, unknown>) || {};
+      const customer = (order.customer as Record<string, unknown>) || {};
+      const shipping = (order.shipping as Record<string, unknown>) || {};
+
+      return {
+        id: order.id || (order as { _id?: string })._id,
+        orderNumber: order.orderNumber || null,
+        status: order.status || (tracking.trackingNumber ? 'shipped' : 'pending'),
+        items: myItems.map(it => ({
+          name: it.name || it.title || 'Unnamed',
+          quantity: it.quantity || 1,
+          price: it.price || 0,
+          format: it.format || it.type || 'vinyl',
+        })),
+        shippingFeePaid: myItems.reduce((acc, it) => acc + ((it.vinylShippingUK as number) || (it.shippingFee as number) || 0), 0),
+        customer: {
+          name: customer.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : (shipping.name as string) || 'Customer',
+          email: customer.email || null,
+        },
+        shipping: {
+          name: shipping.name || null,
+          line1: shipping.line1 || shipping.address1 || null,
+          line2: shipping.line2 || shipping.address2 || null,
+          city: shipping.city || null,
+          state: shipping.state || null,
+          postalCode: shipping.postalCode || shipping.zip || null,
+          country: shipping.country || null,
+        },
+        tracking: {
+          courier: tracking.courier || null,
+          trackingNumber: tracking.trackingNumber || null,
+          trackingUrl: tracking.trackingUrl || null,
+          shippedAt: tracking.addedAt || tracking.shippedAt || null,
+        },
+        createdAt: order.createdAt || null,
+        paymentStatus: order.paymentStatus || null,
+      };
+    })
+    .filter(Boolean);
+
+  return jsonResponse({ success: true, orders });
 }
 
 async function handleStock(userId: string) {
