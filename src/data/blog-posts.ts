@@ -15,6 +15,65 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'welcome-hangry-records-jungle-dnb-vol-1',
+    title: 'Welcome Hangry Records — Jungle &amp; DnB Volume.1',
+    excerpt: 'Hangry Records joins Fresh Wax with the re-issue of their first ever release: an eight-track jungle and drum &amp; bass compilation, with the majority of profits going to mental health and homelessness charities.',
+    featuredImage: 'https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/cover.webp',
+    category: 'Releases',
+    publishedAt: '2026-06-06',
+    author: 'Fresh Wax',
+    tags: ['hangry records', 'compilation', 'various artists', 'jungle', 'drum and bass', 'release', 'charity', 'new label', 'london'],
+    content: `
+      <p>Fresh Wax is proud to welcome <strong>Hangry Records</strong> to the platform. The London-based non-profit label has been quietly putting out some of the rawest jungle and drum &amp; bass coming out of the UK underground since 2020, and they've chosen to debut on Fresh Wax with the record that started it all — <strong>Jungle &amp; DnB Volume.1</strong>, the very first release on the label, originally cut in April 2020 and now available here both as a full digital download and on a limited vinyl pressing.</p>
+
+      <h2>Who Hangry Are</h2>
+      <p>The label puts it best in their own words: <em>"Hangry Records is a non-profit label. We want to help and bring awareness to worthy causes, whilst pushing and showing appreciation to underground producers that are killing it with their sound."</em></p>
+      <p>That's the whole brief — underground producers, worthy causes. No A&amp;R algorithm, no streaming-bait edits, no label politics. Just the music and where the money goes. Since Volume.1 dropped in 2020 they've released through to <em>Jungle &amp; DnB Volume.5</em> (with Vol.6 in the works), built out the darker <em>Tunes From The Crypt</em> series across seven volumes, dropped <em>Femme Frequencies Volume.1</em> as an all-female lineup in 2025, and put out solo EPs from artists in their roster (SuM's <em>Ink Stains EP</em> being a recent highlight).</p>
+
+      <h2>About The Release</h2>
+      <p>Volume.1 is a properly stitched-together compilation, every track from a different producer in the underground:</p>
+      <ol>
+        <li><strong>16AJ &amp; Thermadore — FadeAway</strong></li>
+        <li><strong>Abstract Drumz — Higher</strong></li>
+        <li><strong>Illicit — Departures</strong></li>
+        <li><strong>MAC V — Panopticon</strong></li>
+        <li><strong>Mom$ — Vogued</strong></li>
+        <li><strong>Polarity — Final Heaven</strong></li>
+        <li><strong>Sargy — Ultimate Reality</strong></li>
+        <li><strong>SuM — Time Wound</strong></li>
+      </ol>
+      <p>Eight producers, eight cuts, one record. Amen breaks, sub pressure, dancefloor weight — proper underground jungle and drum &amp; bass with the grit kept in. The kind of compilation that exists to back the artists on it: this is somebody's first credit, somebody's calling-card, somebody's statement of intent. Several of the names here — Sargy, Polarity, Abstract Drumz, SuM — have gone on to land tracks on later Hangry volumes, so Volume.1 is where the family tree starts.</p>
+
+      <h2>The Cause Behind The Record</h2>
+      <p>This is where Hangry separates itself from a regular indie label. <strong>The majority of profits from this record go directly to charity</strong> — split between two organisations Hangry has been backing:</p>
+      <ul>
+        <li><strong><a href="https://www.crisis.org.uk/" target="_blank" rel="noopener">Crisis</a></strong> — the national charity for people experiencing homelessness in the UK.</li>
+        <li><strong><a href="https://www.forwardtrust.org.uk/" target="_blank" rel="noopener">The Forward Trust</a></strong> — supporting people with mental health challenges and addiction recovery.</li>
+      </ul>
+      <p>The original 2020 cut of this record raised money for Mind and Shelter UK; the label-wide focus has since shifted toward Crisis and The Forward Trust, both doing work that hits close to home for communities the dance music scene draws from and gives back to. Every digital download, every vinyl shipped from this release contributes.</p>
+
+      <h2>For Jake</h2>
+      <p>The record carries a dedication — <em>"To our Soldier who gained his Wings too soon, Jake Arnold. Rest in Paradise and Parties 💚"</em>. Releases like this are how scenes remember the people who shaped them. The tracks are the celebration; the dedication is the love behind it.</p>
+
+      <h2>Listen, Buy, Support</h2>
+      <p>You can stream previews on the <a href="/item/hangry_records_FW-1780739181417/">release page</a> right now. Full digital download is £8.50 for all eight tracks, individual tracks are £2.50 each, and there's a limited vinyl pressing available for £15 — vinyl gets the full digital bundle thrown in as well, so you've got the WAVs the moment you click buy while the record itself is on its way to you.</p>
+      <p>Every purchase splits between the artists, the label, and the charities. Whether you're playing it out, prepping a set, or just listening — you're backing the music and the cause at the same time.</p>
+
+      <p><strong><a href="/item/hangry_records_FW-1780739181417/">Hear it &amp; grab a copy →</a></strong></p>
+
+      <h2>Find Hangry Records</h2>
+      <p>If you want to dig deeper into the catalogue — and you should — Hangry are live on:</p>
+      <ul>
+        <li><a href="https://hangryrecords.bandcamp.com/" target="_blank" rel="noopener">Bandcamp</a> (the full back catalogue, including the <em>Tunes From The Crypt</em> series and the volume-by-volume compilations)</li>
+        <li><a href="https://www.instagram.com/hangry_records/" target="_blank" rel="noopener">Instagram</a> (@hangry_records — release announcements, artist features)</li>
+        <li><a href="https://soundcloud.com/hangryrecords" target="_blank" rel="noopener">SoundCloud</a></li>
+        <li><a href="https://www.facebook.com/HangryRecordsLondon/" target="_blank" rel="noopener">Facebook</a></li>
+      </ul>
+
+      <p>Welcome to Fresh Wax, Hangry. Looking forward to Volume.2 and everything after it.</p>
+    `
+  },
+  {
     slug: 'monthly-update-may-2026',
     title: "May 2026 Update — What's Freshly Cut",
     excerpt: "Busy month behind the scenes at Fresh Wax. Sign-in is smoother, stream keys are now permanent to your account, and payouts have been completely overhauled and reconciled.",
