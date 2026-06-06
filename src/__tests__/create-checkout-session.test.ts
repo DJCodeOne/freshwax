@@ -450,7 +450,10 @@ describe('Stripe Create Checkout Session', () => {
 
     expect(response.status).toBe(500);
     const body = await response.json();
-    expect(body.error).toContain('Failed to create checkout session');
+    // Endpoint surfaces Stripe's error message verbatim — they're user-safe
+    // and tell the buyer/admin exactly why the session was rejected
+    // (see create-checkout-session.ts comment around the error branch).
+    expect(body.error).toContain('Invalid API key');
 
     // Reservation should have been released on Stripe failure
     expect(mockReleaseReservation).toHaveBeenCalledWith('res_test_123');
