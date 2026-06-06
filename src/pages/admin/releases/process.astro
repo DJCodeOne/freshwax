@@ -14,6 +14,7 @@ export const prerender = false;
 
 // Use local API endpoint instead of external worker
 const WORKER_URL = '/api';
+const AUDIO_PROCESSOR_URL = import.meta.env.AUDIO_PROCESSOR_URL || 'http://localhost:8089';
 const nonce = Astro.locals.nonce || '';
 Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
@@ -30,6 +31,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="flex items-center gap-2">
         <span id="workerStatus" class="badge badge-pending">Checking...</span>
         <span id="workerUrl" class="text-muted" style="font-size: 0.85rem;">Local API</span>
+        <span id="audioStatus" class="badge badge-pending" title="Local audio processor — WAV→MP3 conversion">Audio: checking…</span>
       </div>
     </div>
   </div>
@@ -60,7 +62,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   </div>
 
   <Fragment slot="scripts">
-    <script is:inline define:vars={{ WORKER_URL }} nonce={nonce}>
+    <script is:inline define:vars={{ WORKER_URL, AUDIO_PROCESSOR_URL }} nonce={nonce}>
       const workerStatus = document.getElementById('workerStatus');
       const submissionCount = document.getElementById('submissionCount');
       const submissionsContainer = document.getElementById('submissionsContainer');
@@ -81,6 +83,85 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       async function checkWorkerHealth() {
         workerStatus.textContent = 'Online';
         workerStatus.className = 'badge badge-live';
+        // Also probe the local audio processor and display its state
+        const audioStatus = document.getElementById('audioStatus');
+        const ready = await checkAudioProcessor();
+        if (audioStatus) {
+          if (ready) { audioStatus.textContent = 'Audio: ready'; audioStatus.className = 'badge badge-live'; }
+          else if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+            audioStatus.textContent = 'Audio: localhost only'; audioStatus.className = 'badge badge-pending';
+          } else { audioStatus.textContent = 'Audio: offline (start scripts/audio-processor.cjs)'; audioStatus.className = 'badge badge-danger'; }
+        }
+      }
+
+      // Audio processor (local Node service on :8089) — only reachable in local dev
+      // (browsers block https→http://localhost as mixed content)
+      async function checkAudioProcessor() {
+        if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return false;
+        try {
+          const r = await fetch(`${AUDIO_PROCESSOR_URL}/health`, { method: 'GET', signal: AbortSignal.timeout(2000) });
+          if (!r.ok) return false;
+          const d = await r.json();
+          return d.status === 'healthy' && d.r2Configured;
+        } catch (_e) { return false; }
+      }
+
+      // Convert each WAV → MP3 via the local processor.
+      // Returns the array of {trackIndex, mp3Url, previewUrl} for fix-track-urls.
+      async function convertTracksToMp3(releaseId, r2FolderPath, trackList) {
+        const fixes = [];
+        for (const t of trackList) {
+          if (!t.wavUrl) { log(`Track ${t.trackNumber}: no wavUrl, skipping`); continue; }
+          let sourceKey;
+          try {
+            const u = new URL(t.wavUrl);
+            sourceKey = decodeURIComponent(u.pathname.replace(/^\//, ''));
+          } catch (_e) {
+            log(`Track ${t.trackNumber}: bad wavUrl ${t.wavUrl}`); continue;
+          }
+          log(`Converting track ${t.trackNumber}: ${t.title}...`);
+          try {
+            const resp = await fetch(`${AUDIO_PROCESSOR_URL}/process-track`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sourceKey,
+                releaseFolder: r2FolderPath,
+                trackNumber: t.trackNumber,
+                trackTitle: t.title,
+                originalWavUrl: t.wavUrl,
+              }),
+              signal: AbortSignal.timeout(600000), // 10 min per track ceiling
+            });
+            const result = await resp.json();
+            if (result.success === false || result.error) {
+              log(`Track ${t.trackNumber} failed: ${result.error || 'unknown'}`);
+              continue;
+            }
+            const mp3Url = result.mp3Url;
+            const wavUrl = result.wavUrl;
+            const previewUrl = result.previewUrl || result.mp3Url;
+            if (!mp3Url) { log(`Track ${t.trackNumber}: processor returned no mp3Url`); continue; }
+            log(`Track ${t.trackNumber} OK -> MP3 ${mp3Url}`);
+            fixes.push({ trackIndex: t.trackIndex, mp3Url, wavUrl, previewUrl });
+          } catch (err) {
+            log(`Track ${t.trackNumber} error: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }
+        return fixes;
+      }
+
+      async function patchTrackUrls(releaseId, trackFixes) {
+        const resp = await fetch('/api/admin/fix-track-urls/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ releaseId, trackFixes, adminKey: window.ADMIN_KEY }),
+        });
+        if (!resp.ok) {
+          const errBody = await resp.text().catch(() => '');
+          throw new Error(`fix-track-urls returned ${resp.status}: ${errBody.slice(0, 200)}`);
+        }
+        return resp.json();
       }
 
       // Load submissions
@@ -183,7 +264,36 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               log(`WARNING: ${data.warning}`);
               showToast('Processed with warnings — check log', 'error');
             } else {
-              showToast('Release processed successfully!');
+              showToast('Release processed — converting audio...');
+            }
+
+            // Audio conversion: only when running locally with the processor up
+            try {
+              if (data.trackList && data.r2FolderPath) {
+                const audioReady = await checkAudioProcessor();
+                if (audioReady) {
+                  log(`Audio processor available. Converting ${data.trackList.length} tracks...`);
+                  btn.textContent = 'Converting audio...';
+                  const fixes = await convertTracksToMp3(data.releaseId, data.r2FolderPath, data.trackList);
+                  if (fixes.length > 0) {
+                    log(`Updating Firestore with ${fixes.length} converted track URL(s)...`);
+                    await patchTrackUrls(data.releaseId, fixes);
+                    log(`Firestore updated. Release is now in SEPARATE format (MP3 + WAV).`);
+                    showToast('Release processed + audio converted!');
+                  } else {
+                    log('No tracks were converted (all failed or skipped).');
+                    showToast('Processed but audio conversion failed — check log', 'error');
+                  }
+                } else {
+                  log('Audio processor not running on localhost:8089.');
+                  log('Release saved in WAV-only format. Start scripts/audio-processor.cjs and re-run, or convert later.');
+                  showToast('Saved as WAV-only — audio processor not running', 'error');
+                }
+              }
+            } catch (convErr) {
+              const cmsg = convErr instanceof Error ? convErr.message : String(convErr);
+              log(`Audio conversion error: ${cmsg}`);
+              showToast('Audio conversion failed — release is in WAV-only state', 'error');
             }
 
             // Remove row with animation

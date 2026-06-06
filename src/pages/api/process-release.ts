@@ -429,6 +429,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artist: metadata.artistName,
       title: metadata.releaseName,
       tracks: tracks.length,
+      trackList: tracks.map((t, i) => ({
+        trackIndex: i,
+        trackNumber: t.trackNumber ?? i + 1,
+        title: t.title ?? t.trackName ?? `Track ${i + 1}`,
+        wavUrl: t.wavUrl,
+      })),
+      r2FolderPath: releaseFolder,
       coverUrl: artworkUrl,
       ...(trackCountMismatch ? { warning: `Track count mismatch: metadata has ${metadataTrackCount} tracks but only ${tracks.length} audio file(s) were found. Submission files kept for re-processing.` } : {})
     });
