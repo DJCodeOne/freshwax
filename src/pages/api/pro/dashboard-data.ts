@@ -229,12 +229,16 @@ async function handleOverview(userId: string) {
       queryCollection('releases', {
         filters: [{ field: 'artistId', op: 'EQUAL', value: userId }]
       }),
-      queryCollection('sales', {
+      // salesLedger is where the Stripe webhook writes per-seller entries
+      // (recordMultiSellerSale in src/lib/sales-ledger.ts). The entries use
+      // `timestamp` rather than `createdAt`, and the artist's actual take-home
+      // for the period is `artistPayout` (grossTotal minus fees + platform cut).
+      queryCollection('salesLedger', {
         filters: [
           { field: 'artistId', op: 'EQUAL', value: userId },
-          { field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startOfMonth.toISOString() }
+          { field: 'timestamp', op: 'GREATER_THAN_OR_EQUAL', value: startOfMonth.toISOString() }
         ],
-        orderBy: { field: 'createdAt', direction: 'DESCENDING' }
+        orderBy: { field: 'timestamp', direction: 'DESCENDING' }
       })
     ]);
 
@@ -245,7 +249,8 @@ async function handleOverview(userId: string) {
 
     let monthTotal = 0;
     (sales || []).forEach((s: Record<string, unknown>) => {
-      monthTotal += s.amount || s.price || 0;
+      const payout = (s.artistPayout as number) || (s.amount as number) || (s.price as number) || 0;
+      monthTotal += payout;
     });
 
     return {
