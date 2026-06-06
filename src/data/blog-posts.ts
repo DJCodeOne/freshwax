@@ -16,7 +16,10 @@ export interface BlogPost {
 export const blogPosts: BlogPost[] = [
   {
     slug: 'welcome-hangry-records-jungle-dnb-vol-1',
-    title: 'Welcome Hangry Records — Jungle & DnB Volume.1',
+    // Non-breaking spaces inside "Jungle & DnB Volume.1" keep that phrase
+    // together as one unbreakable block, so the natural wrap lands at the
+    // em-dash instead of mid-phrase between & and DnB.
+    title: 'Welcome Hangry Records — Jungle & DnB Volume.1',
     excerpt: 'Hangry Records joins Fresh Wax with the re-issue of their first ever release: an eight-track jungle and drum & bass compilation, with the majority of profits going to mental health and homelessness charities.',
     featuredImage: 'https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/cover.webp',
     category: 'Releases',
@@ -45,7 +48,7 @@ export const blogPosts: BlogPost[] = [
       <p>Eight producers, eight cuts, one record. Amen breaks, sub pressure, dancefloor weight — proper underground jungle and drum & bass with the grit kept in. The kind of compilation that exists to back the artists on it: this is somebody's first credit, somebody's calling-card, somebody's statement of intent. Several of the names here — Sargy, Polarity, Abstract Drumz, SuM — have gone on to land tracks on later Hangry volumes, so Volume.1 is where the family tree starts.</p>
 
       <h2>The Cause Behind The Record</h2>
-      <p>This is where Hangry separates itself from a regular indie label. <strong>The majority of profits from this record go directly to charity</strong> — split between two organisations Hangry has been backing:</p>
+      <p>This is where Hangry separates itself from a regular drum and bass label. <strong>The majority of profits from this record go directly to charity</strong> — split between two organisations Hangry has been backing:</p>
       <ul>
         <li><strong><a href="https://www.crisis.org.uk/" target="_blank" rel="noopener">Crisis</a></strong> — the national charity for people experiencing homelessness in the UK.</li>
         <li><strong><a href="https://www.forwardtrust.org.uk/" target="_blank" rel="noopener">The Forward Trust</a></strong> — supporting people with mental health challenges and addiction recovery.</li>
