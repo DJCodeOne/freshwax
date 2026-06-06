@@ -33,6 +33,22 @@ export default defineConfig({
 
   vite: {
     plugins: [tailwindcss()],
+    // Bake a single stable BUILD_ID into every bundle + SSR'd HTML so the
+    // deploy-detection script (Layout.astro) and the X-Build-Id header
+    // (middleware.ts) always agree within a single deploy and always differ
+    // across deploys. process.env evaluates at build time (Node), so the
+    // resolved string gets baked into the build — at runtime nothing has to
+    // touch process.env (which is empty on Cloudflare Workers) or Date.now()
+    // (which can return 0 at module top-scope on a cold isolate). GITHUB_SHA
+    // is auto-set by GitHub Actions; CF_PAGES_COMMIT_SHA is the Cloudflare
+    // equivalent if someone builds via Pages' built-in CI instead.
+    define: {
+      'import.meta.env.BUILD_ID': JSON.stringify(
+        process.env.CF_PAGES_COMMIT_SHA ||
+        process.env.GITHUB_SHA ||
+        ('dev-' + Date.now())
+      ),
+    },
     ssr: {
       // firebase-admin is dynamically imported by complete-upload.ts at runtime;
       // externalize so Vite doesn't try to bundle it (not installed as a dependency).

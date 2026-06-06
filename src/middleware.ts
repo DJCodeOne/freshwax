@@ -16,13 +16,12 @@ import {
   shouldSkipCsrf,
 } from './lib/csrf';
 
-// Build ID — same source order as Layout.astro so the meta tag and the
-// X-Build-Id response header always agree. Resolved once at worker
-// init so the value is constant across requests within a single deploy.
-const BUILD_ID =
-  (typeof process !== 'undefined' && process.env?.CF_PAGES_COMMIT_SHA) ||
-  (typeof process !== 'undefined' && process.env?.GITHUB_SHA) ||
-  String(Date.now());
+// Build ID — same source as Layout.astro so the meta tag in HTML and the
+// X-Build-Id response header always agree. Baked at build time via
+// vite.define in astro.config.mjs. The old runtime-resolved version returned
+// "0" on Cloudflare Workers because process.env is empty and Date.now() at
+// module top-scope on a cold isolate doesn't return a real timestamp.
+const BUILD_ID: string = import.meta.env.BUILD_ID;
 
 // Endpoints that bypass Content-Type validation (they have their own body parsing)
 const CONTENT_TYPE_SKIP = new Set([

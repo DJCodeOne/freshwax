@@ -24,13 +24,10 @@ const pusherConfig = {
 // session manager, etc.) keep running against stale code, which causes
 // the "I'm logged in but tabs ask me to sign in" symptom.
 //
-// Source preference: Cloudflare Pages commit SHA → git SHA → build time.
-// All resolve at build time so the value is baked into static HTML.
-const BUILD_ID =
-  process.env.CF_PAGES_COMMIT_SHA ||
-  import.meta.env.CF_PAGES_COMMIT_SHA ||
-  process.env.GITHUB_SHA ||
-  String(Date.now());
+// Baked at build time via vite.define in astro.config.mjs — see comment
+// there for why we don't compute this at runtime (process.env empty on
+// CF Workers, Date.now() unstable at module top-scope).
+const BUILD_ID = import.meta.env.BUILD_ID;
 
 interface Props {
   title: string;
@@ -837,8 +834,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         var durations = [340.166, 291.366];
         var totalLoop = 631.532;
 
-        function syncVideo(v) {
-          var sources = v.getAttribute('data-sources').split(',');
+        function calcPosition() {
           var now = (Date.now() / 1000) % totalLoop;
           var idx = 0;
           var elapsed = 0;
@@ -846,16 +842,36 @@ const csrfToken = Astro.locals.csrfToken || '';
             if (now < elapsed + durations[i]) { idx = i; break; }
             elapsed += durations[i];
           }
-          var seekTo = now - elapsed;
-          v.setAttribute('data-src-index', String(idx));
+          return { idx: idx, seekTo: now - elapsed };
+        }
+
+        function syncVideo(v) {
+          var sources = v.getAttribute('data-sources').split(',');
+          var pos = calcPosition();
+          v.setAttribute('data-src-index', String(pos.idx));
           var src = v.querySelector('source');
-          if (src) src.setAttribute('src', sources[idx]);
-          else v.setAttribute('src', sources[idx]);
+          if (src) src.setAttribute('src', sources[pos.idx]);
+          else v.setAttribute('src', sources[pos.idx]);
           v.load();
           v.addEventListener('loadedmetadata', function() {
-            v.currentTime = seekTo;
+            try { v.currentTime = pos.seekTo; } catch (e) { /* seek can fail before metadata settles */ }
             v.play().catch(function() { /* non-critical: autoplay failure is expected */ });
           }, { once: true });
+        }
+
+        // Heartbeat: catch missed `ended` events and resume suspended/hidden videos.
+        // Why: hidden videos with preload="none" can have ended/play events dropped by the
+        // browser; this re-aligns them to the time-synced cycle every 10s.
+        function checkVideo(v) {
+          var pos = calcPosition();
+          var currentIdx = parseInt(v.getAttribute('data-src-index'), 10);
+          var wrongSource = isNaN(currentIdx) || currentIdx !== pos.idx;
+          var stalled = v.ended || (v.paused && v.readyState >= 2);
+          if (wrongSource || stalled) {
+            syncVideo(v);
+          } else if (!v.paused && Math.abs(v.currentTime - pos.seekTo) > 15) {
+            try { v.currentTime = pos.seekTo; } catch (e) { /* drift correction best-effort */ }
+          }
         }
 
         function initBgVideos() {
@@ -864,11 +880,18 @@ const csrfToken = Astro.locals.csrfToken || '';
             if (v._bgCycleInit) return;
             v._bgCycleInit = true;
             syncVideo(v);
-            v.addEventListener('ended', function() {
-              syncVideo(v);
-            });
+            v.addEventListener('ended', function() { syncVideo(v); });
           });
         }
+
+        if (!window._bgVideoHeartbeat) {
+          window._bgVideoHeartbeat = setInterval(function() {
+            document.querySelectorAll('.stream-bg-video[data-sources]').forEach(function(v) {
+              if (v._bgCycleInit) checkVideo(v);
+            });
+          }, 10000);
+        }
+
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', initBgVideos, { once: true });
         } else {

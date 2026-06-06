@@ -14,6 +14,11 @@ interface ImportMetaEnv {
   readonly BASE_URL: string;
   readonly SITE: string;
 
+  // ---- Deploy detection (baked at build time via vite.define) ----
+  // Same string in HTML meta tag + X-Build-Id response header; changes per
+  // deploy. Layout.astro + middleware.ts both read this.
+  readonly BUILD_ID: string;
+
   // ---- Firebase (server-side) ----
   readonly FIREBASE_PROJECT_ID: string;
   readonly FIREBASE_API_KEY: string;
