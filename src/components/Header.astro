@@ -1618,11 +1618,34 @@ const firebaseConfig = {
     }
     _authUIUpdating = true;
     setTimeout(() => { _authUIUpdating = false; }, 100);
-    // Prefer the cookie-shim user when Firebase Auth state is null but the
-    // userId cookie says the user is logged in (IndexedDB persistence failed
-    // in this browser). Otherwise the header shows "Login" on every refresh
-    // even though the server still authenticates them via __session cookie.
-    const user = auth.currentUser || (window.authUser && window.authUser.__isCookieShim ? window.authUser : null);
+    // Auth source order:
+    //   1. auth.currentUser     — Firebase has restored the session
+    //   2. window.authUser shim — Firebase failed, initial-load shim created
+    //   3. userId cookie probe  — Firebase + shim haven't run yet, but the
+    //      server set the userId cookie (non-HttpOnly) during login so we
+    //      know the user IS logged in. Without this third tier the header
+    //      flashed "Login" on every page navigation for already-logged-in
+    //      users with stale Firebase state — what users were seeing in their
+    //      "logged in but header says Login" reports.
+    let user = auth.currentUser
+      || (window.authUser && window.authUser.__isCookieShim ? window.authUser : null);
+    if (!user) {
+      const userIdMatch = document.cookie.match(/(?:^|;\s*)userId=([^;]+)/);
+      if (userIdMatch) {
+        user = {
+          uid: userIdMatch[1],
+          displayName: null,
+          email: null,
+          photoURL: null,
+          emailVerified: true,
+          getIdToken: () => Promise.resolve(null),
+          __isCookieShim: true,
+        };
+        // Don't clobber a real Firebase user if it appears later — only
+        // backfill window.authUser when nothing else has claimed it yet.
+        if (!window.authUser) window.authUser = user;
+      }
+    }
     const accountNames = document.querySelectorAll('.account-name');
     const loggedOutSections = document.querySelectorAll('.logged-out');
     const loggedInSections = document.querySelectorAll('.logged-in');
@@ -1865,21 +1888,19 @@ const firebaseConfig = {
     updateHeaderCartBadge();
     if (typeof initGoPlusModal === 'function') initGoPlusModal();
 
-    // Ensure auth state is available for new page components
-    // Re-create authReady promise for components that might be waiting
-    if (auth && auth.currentUser !== undefined) {
-      // Auth is already initialized, update window.authUser and re-apply UI
-      window.authUser = auth.currentUser;
-
-      // Create a new resolved promise for any new components
-      window.authReady = Promise.resolve(auth.currentUser);
-
-      // Re-apply auth UI state (avatar, name, etc.) since DOM was swapped
-      updateAuthUI();
-
-      // Dispatch custom event for components that listen for auth state
-      window.dispatchEvent(new CustomEvent('auth-state-ready', { detail: { user: auth.currentUser } }));
+    // Re-apply auth UI on every page swap. The View Transitions DOM swap
+    // replaces the header markup with fresh server-rendered (logged-out)
+    // HTML, so we must re-run updateAuthUI to restore the logged-in state.
+    // Always call it — updateAuthUI handles all three auth sources
+    // (Firebase currentUser, shim, userId cookie) and the missing-Firebase
+    // case explicitly. Old guard skipped the call when auth was null,
+    // leaving the header in the SSR "Login" state for cookie-only users.
+    if (auth) {
+      window.authUser = auth.currentUser || window.authUser;
+      window.authReady = Promise.resolve(window.authUser);
     }
+    updateAuthUI();
+    window.dispatchEvent(new CustomEvent('auth-state-ready', { detail: { user: window.authUser } }));
   });
 </script>
 
