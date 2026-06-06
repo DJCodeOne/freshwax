@@ -65,10 +65,18 @@ function generateSignedUrl(urlPath, ttlSeconds) {
   return urlPath + '?expires=' + expires + '&sig=' + sig;
 }
 
+// Signature check + expiry. Thumbnails skip the expiry check because they're
+// low-sensitivity (YouTube preview images) AND they get persisted in the
+// client's saved playlist — without this skip, every saved track's thumbnail
+// 403s a week later and the UI shows broken images even though the track
+// itself is still valid for the user. Audio paths still enforce expiry so
+// shared signed URLs can't be used to stream the music library forever.
 function verifySignedUrl(pathname, query) {
   if (!query || !query.expires || !query.sig) return false;
   const expiresInt = parseInt(query.expires, 10);
-  if (isNaN(expiresInt) || Math.floor(Date.now() / 1000) > expiresInt) return false;
+  if (isNaN(expiresInt)) return false;
+  const isThumb = pathname.startsWith('/thumb/');
+  if (!isThumb && Math.floor(Date.now() / 1000) > expiresInt) return false;
   const payload = pathname + ':' + query.expires;
   const expected = crypto.createHmac('sha256', ACCESS_TOKEN).update(payload).digest('hex');
   return timingSafeCompare(expected, query.sig);
