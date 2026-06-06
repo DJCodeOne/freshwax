@@ -7,6 +7,12 @@ import { SITE_URL } from '../lib/constants';
 
 interface Props {
   title: string;
+  /** Optional override for og:title + twitter:title (the social-share preview
+   *  card text). Defaults to `${title} | Fresh Wax`, but Facebook's link card
+   *  is narrow (~50 chars before wrap) so long blog/article titles end up
+   *  broken mid-phrase. Pass a shorter version here when needed — the SERP
+   *  / `<title>` tag still uses the full `title` prop. */
+  ogTitle?: string;
   description: string;
   canonical?: string;
   image?: string;
@@ -117,6 +123,7 @@ interface Props {
 
 const {
   title,
+  ogTitle,
   description,
   canonical,
   image = '/og-image.webp',
@@ -152,6 +159,12 @@ const SITE = {
 const fullTitle = title === 'Home'
   ? `${SITE.tagline} | ${SITE.name}`
   : `${title} | ${SITE.name}`;
+
+// Social-share title (og:title + twitter:title). Defaults to the SERP-style
+// `${title} | Fresh Wax` so existing pages are unaffected, but pages can pass
+// a shorter `ogTitle` prop when their full title doesn't fit Facebook's
+// ~50-char one-line link card and ends up wrapping mid-phrase.
+const socialTitle = ogTitle ?? fullTitle;
 
 // SERP title: truncate to 60 chars max to avoid Google truncation
 const SERP_MAX = 60;
@@ -653,7 +666,7 @@ const articleSchema = article ? {
   type
 } />
 <meta property="og:url" content={canonicalUrl} />
-<meta property="og:title" content={fullTitle} />
+<meta property="og:title" content={socialTitle} />
 <meta property="og:description" content={description} />
 <meta property="og:image" content={imageUrl} />
 <meta property="og:image:secure_url" content={imageUrl} />
@@ -670,7 +683,7 @@ const articleSchema = article ? {
 <meta name="twitter:card" content={video ? "player" : "summary_large_image"} />
 <meta name="twitter:site" content={SITE.twitter} />
 <meta name="twitter:creator" content={SITE.twitter} />
-<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:title" content={socialTitle} />
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={imageUrl} />
 <meta name="twitter:image:alt" content={imageAlt} />

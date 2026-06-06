@@ -43,6 +43,12 @@ function sanitizeHtml(html: string): string {
 
 // Prepare SEO data
 const seoTitle = post?.title || 'Post Not Found';
+// og:title bypasses the '| Fresh Wax' suffix that SEO.astro adds for the
+  // SERP <title> tag. Facebook's link-card width is narrow (~50 chars before
+  // a mid-phrase wrap), so dropping the 13-char suffix lets typical blog
+  // headlines stay on one line. og:site_name already shows 'Fresh Wax'
+  // above the title in the card so the suffix is redundant there anyway.
+  const seoOgTitle = seoTitle;
 const seoDescription = post?.excerpt || (post?.content ? generateExcerpt(post.content) : 'Read this article on Fresh Wax blog.');
 const seoImage = post?.featuredImage || '/og-image.webp';
 const publishedTime = post?.publishedAt || new Date().toISOString();
@@ -53,6 +59,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
 
 <Layout
   title={seoTitle}
+  ogTitle={seoOgTitle}
   description={seoDescription}
   image={seoImage}
   type="article"

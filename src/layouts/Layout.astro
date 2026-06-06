@@ -31,6 +31,9 @@ const BUILD_ID = import.meta.env.BUILD_ID;
 
 interface Props {
   title: string;
+  /** Optional shorter title for og:title + twitter:title — see SEO.astro
+   *  for context. Default behaviour unchanged when omitted. */
+  ogTitle?: string;
   description?: string;
   image?: string;
   imageAlt?: string;
@@ -126,6 +129,7 @@ interface Props {
 
 const {
   title,
+  ogTitle,
   description = 'Independent UK jungle and drum & bass record label and music store. Digital downloads, limited edition vinyl pressings, DJ mixes, and official merchandise.',
   image,
   imageAlt,
@@ -216,8 +220,9 @@ const csrfToken = Astro.locals.csrfToken || '';
     </style>
     
     <!-- SEO Component - comprehensive meta tags and structured data -->
-    <SEO 
+    <SEO
       title={title}
+      ogTitle={ogTitle}
       description={description}
       image={image}
       imageAlt={imageAlt}
