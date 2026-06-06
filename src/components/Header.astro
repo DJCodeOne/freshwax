@@ -1099,9 +1099,17 @@ const firebaseConfig = {
   window.authUser = null;
   window.firebaseAuth = null;
 
-  // Only load Firebase Auth SDK (118KB) if user has a session cookie
-  const _hasSession = document.cookie.includes('userId=');
-  fwxLog('_hasSession (userId cookie present):', _hasSession, '| full cookie string length:', document.cookie.length);
+  // Load Firebase Auth SDK (118KB) if either:
+  //   (a) the userId cookie is present (normal happy path), OR
+  //   (b) the user is on an auth-y page where they're likely signed in.
+  // Case (b) is the self-healing path for users whose Firebase IndexedDB
+  // persistence is still valid but their session cookies got wiped/expired.
+  // Without it, Header stays anonymous forever even though Firebase remembers
+  // them — exactly the "signed in but Login shown" symptom users were hitting.
+  const _hasCookie = document.cookie.includes('userId=');
+  const _isAuthPath = /^\/(account|admin|pro|artist|dj-lobby|live\/(?:fullpage|embed))/.test(location.pathname);
+  const _hasSession = _hasCookie || _isAuthPath;
+  fwxLog('_hasCookie:', _hasCookie, '| _isAuthPath:', _isAuthPath, '| _hasSession (will load Firebase?):', _hasSession, '| path:', location.pathname);
 
   if (_hasSession) {
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
@@ -1813,8 +1821,18 @@ const firebaseConfig = {
           const data = await response.json();
           if (data.success) {
             setCachedUserType(data.isArtist ? 'artist' : 'customer', data.isAdmin, data.avatarUrl || null, data.displayName || data.name || null, user.uid);
-            // Set __session cookie with ID token for SSR admin page auth (HttpOnly)
-            if (data.isAdmin && window.__setAuthCookies) {
+            // Sync session cookies (__session HttpOnly + userId/customerId for
+            // header visibility) for ALL users, not just admins. Without this,
+            // any user whose Firebase IndexedDB still has them but whose cookies
+            // expired/were cleared would never get their cookies back — meaning
+            // the next page load goes back to the anonymous skip-Firebase path
+            // and they show up as "Login" in the header forever.
+            if (window.__setAuthCookies && !document.cookie.includes('userId=')) {
+              fwxLog('Firebase user found without userId cookie — calling __setAuthCookies to self-heal');
+              window.__setAuthCookies({ token: idToken, action: 'login', isPartner: data.isArtist || false });
+            } else if (data.isAdmin && window.__setAuthCookies) {
+              // Existing path: admins need __session refreshed for SSR auth even
+              // when userId cookie is already present.
               window.__setAuthCookies({ token: idToken, action: 'login', isPartner: data.isArtist || false });
             }
             // Also set fw_auth_cache for instant auth on other pages (comments, ratings, etc.)
