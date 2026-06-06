@@ -36,10 +36,16 @@ export function buildStockistFulfillmentEmail(orderId: string, orderNumber: stri
   const paymentStatusText = order.paymentStatus === 'completed' ? 'PAID' : 'PENDING';
   const paymentMethodText = isTestMode ? 'Test Mode' : (order.paymentMethod === 'stripe' ? 'Stripe' : order.paymentMethod || 'Card');
 
-  // Payment breakdown - fees are added on top, so artist gets their full asking price (subtotal)
-  const artistPayment = order.totals.subtotal; // Artist gets their asking price
+  // Payment breakdown — same model as digital sales: the FreshWax fee and the
+  // Stripe processing fee come OUT of the asking price (see
+  // src/lib/stripe-webhook/payments.ts). 100% of vinyl shipping passes through
+  // to the artist to fund the actual postage. Net payment = vinyl revenue +
+  // shipping − FreshWax fee − Stripe fee.
+  const vinylRevenue = order.totals.subtotal;
+  const shippingPassThrough = order.totals.shipping || 0;
   const stripeFee = order.totals.stripeFee || 0;
   const freshWaxFee = order.totals.freshWaxFee || 0;
+  const artistPayment = vinylRevenue + shippingPassThrough - stripeFee - freshWaxFee;
   const customerPaid = order.totals.total;
 
   // Payment confirmation section with breakdown
@@ -57,10 +63,15 @@ export function buildStockistFulfillmentEmail(orderId: string, orderNumber: stri
     '<div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid ' + paymentStatusColor + ';">' +
     '<div style="font-weight: 700; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Payment Breakdown</div>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
-    '<tr><td style="padding: 4px 0; color: #111; font-size: 14px; font-weight: 700;">Your Payment:</td><td style="padding: 4px 0; text-align: right; color: #16a34a; font-size: 14px; font-weight: 700;">' + formatPrice(artistPayment) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #111; font-size: 13px;">Vinyl revenue (asking price):</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(vinylRevenue) + '</td></tr>' +
+    (shippingPassThrough > 0
+      ? '<tr><td style="padding: 4px 0; color: #111; font-size: 13px;">Shipping reimbursement (covers postage):</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(shippingPassThrough) + '</td></tr>'
+      : ''
+    ) +
+    '<tr><td style="padding: 4px 0; color: #b91c1c; font-size: 12px;">Less: Stripe processing fee:</td><td style="padding: 4px 0; text-align: right; color: #b91c1c; font-size: 12px;">−' + formatPrice(stripeFee) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #b91c1c; font-size: 12px;">Less: Fresh Wax 1% fee:</td><td style="padding: 4px 0; text-align: right; color: #b91c1c; font-size: 12px;">−' + formatPrice(freshWaxFee) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0 4px 0; color: #16a34a; font-size: 14px; font-weight: 700; border-top: 1px solid ' + paymentStatusColor + ';">Your Payment (net):</td><td style="padding: 6px 0 4px 0; text-align: right; color: #16a34a; font-size: 14px; font-weight: 700; border-top: 1px solid ' + paymentStatusColor + ';">' + formatPrice(artistPayment) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 4px 0 4px 0; border-top: 1px dashed #ccc;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #9ca3af; font-size: 12px;">Stripe Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #9ca3af; font-size: 12px;">' + formatPrice(stripeFee) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #9ca3af; font-size: 12px;">Fresh Wax 1% (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #9ca3af; font-size: 12px;">' + formatPrice(freshWaxFee) + '</td></tr>' +
     '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Customer Paid:</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table></div>' +
 
