@@ -143,6 +143,18 @@ export class PlaylistManager {
   async addPersonalItemToQueue(itemId: string) { const item = this.personalPlaylist.find(i => i.id === itemId); if (!item) return { success: false, error: 'Track not found in your playlist' }; return this.addItem(item.url); }
   getPersonalPlaylist(): PersonalPlaylistItem[] { return [...this.personalPlaylist]; }
   clearPersonalPlaylist(): void { clearPersonalPlaylistHelper(this.ctx, () => this.renderUI()); }
+  /**
+   * Persist the current personalPlaylist (used after in-place enrichment
+   * — e.g. lazy-fetched YouTube titles for items that were saved with a
+   * placeholder title — so the next render skips the re-fetch). Best-effort:
+   * writes localStorage synchronously, fires the server save in background.
+   */
+  persistPersonalPlaylist(): void {
+    try { savePersonalPlaylistToStorage(this.personalPlaylist); } catch { /* storage full / disabled */ }
+    if (this.userId) {
+      try { savePersonalPlaylistToServer(this.personalPlaylist, this.userId); } catch { /* best-effort */ }
+    }
+  }
 
   // Event handlers
   private async handleTrackEnded(): Promise<void> { return handleTrackEndedHelper(this.ctx, () => this.playCurrent(), () => this.renderUI()); }

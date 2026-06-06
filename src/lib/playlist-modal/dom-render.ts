@@ -22,6 +22,59 @@ import { copyToClipboard } from './dom-state';
 // Queue & personal playlist rendering
 // ---------------------------------------------------------------------------
 
+/**
+ * Derive a thumbnail URL for an item that's missing one. YouTube embedIds
+ * give us a free mqdefault image URL without any network call — covers the
+ * common case where a track was added when the oEmbed lookup failed.
+ */
+function deriveThumbnail(item: PlaylistItem): string | null {
+  if (item.thumbnail) return item.thumbnail;
+  const ytId = item.embedId || (item.url ? getYouTubeId(item.url) : null);
+  if (ytId) return `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+  return null;
+}
+
+/**
+ * Async-fetch missing titles from /api/youtube/title for items that have a
+ * YouTube videoId but a placeholder/empty title. Persists the fetched title
+ * back to the item so the next render uses it directly. After all fetches
+ * complete, calls onUpdated so the caller can save the enriched items to
+ * storage / server.
+ */
+async function lazyFetchTitles(
+  items: PlaylistItem[],
+  onTitleFetched: (item: PlaylistItem, title: string) => void,
+  onUpdated?: () => void,
+): Promise<void> {
+  const targets = items.filter((it) => {
+    const t = it.title || '';
+    if (!isPlaceholderTitle(t)) return false;
+    const id = it.embedId || (it.url ? getYouTubeId(it.url) : null);
+    return !!id;
+  });
+  if (targets.length === 0) return;
+
+  let updates = 0;
+  await Promise.all(targets.map(async (item) => {
+    const videoId = item.embedId || (item.url ? getYouTubeId(item.url) : null);
+    if (!videoId) return;
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), TIMEOUTS.API_EXTENDED);
+      const r = await fetch(`/api/youtube/title/?videoId=${encodeURIComponent(videoId)}`, { signal: ctrl.signal });
+      clearTimeout(t);
+      if (!r.ok) return;
+      const data = await r.json();
+      if (data?.success && data.title) {
+        item.title = data.title;
+        onTitleFetched(item, data.title);
+        updates++;
+      }
+    } catch { /* ignore — best-effort enrichment */ }
+  }));
+  if (updates > 0 && onUpdated) onUpdated();
+}
+
 /** Render queue items in compact DJ waitlist format */
 export function renderQueue(
   state: ModalState,
@@ -51,20 +104,21 @@ export function renderQueue(
     const isUsersTrack = state.currentUserId && item.addedBy === state.currentUserId;
     const position = index + 1;
     const positionLabel = isCurrentTrack ? '\u25B6' : `#${position}`;
+    const thumbUrl = deriveThumbnail(item);
 
     return `
-      <div class="playlist-grid-item ${isCurrentTrack ? 'active' : ''} ${isUsersTrack ? 'your-track' : ''}" data-id="${item.id}">
+      <div class="playlist-grid-item ${isCurrentTrack ? 'active' : ''} ${isUsersTrack ? 'your-track' : ''}" data-id="${item.id}" data-item-id="${item.id}">
         <div class="dj-position-badge">${positionLabel}</div>
         <div class="playlist-grid-thumb">
-          ${item.thumbnail
-            ? `<img src="${escapeHtml(item.thumbnail)}" alt="${escapeHtml(item.title || 'Video')}" loading="lazy" />`
+          ${thumbUrl
+            ? `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(item.title || 'Video')}" loading="lazy" />`
             : `<div class="playlist-grid-thumb-placeholder">
                 <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               </div>`
           }
         </div>
         <div class="playlist-grid-info">
-          <div class="playlist-grid-title">${escapeHtml(item.title || 'Untitled')}</div>
+          <div class="playlist-grid-title" data-queue-title-id="${item.id}">${escapeHtml(item.title || 'Untitled')}</div>
           <div class="dj-name-display">Selector: ${escapeHtml(djName)}${isUsersTrack ? ' (You)' : ''}</div>
         </div>
         <div class="playlist-grid-actions">
@@ -87,6 +141,13 @@ export function renderQueue(
       </div>
     `;
   }).join('');
+
+  // Async-fill missing titles for YouTube items. Update DOM in place once
+  // each lookup resolves so the user sees the real title without a re-render.
+  lazyFetchTitles(queue, (item, title) => {
+    const el = queueDiv.querySelector(`.playlist-grid-title[data-queue-title-id="${item.id}"]`);
+    if (el) el.textContent = title;
+  });
 
   // Add copy button listeners
   queueDiv.querySelectorAll('.playlist-copy-btn').forEach(btn => {
@@ -340,16 +401,18 @@ export function renderPersonalPlaylistPage(
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, sortedItems.length, MAX_ITEMS);
   const pageItems = sortedItems.slice(startIndex, endIndex);
 
-  grid.innerHTML = pageItems.map((item) => `
+  grid.innerHTML = pageItems.map((item) => {
+    const thumbUrl = deriveThumbnail(item);
+    return `
     <div class="personal-playlist-item" data-id="${item.id}">
       <div class="personal-item-thumb">
-        ${item.thumbnail
-          ? `<img src="${escapeHtml(item.thumbnail)}" alt="${escapeHtml(item.title || 'Track')}" loading="lazy" />`
+        ${thumbUrl
+          ? `<img src="${escapeHtml(thumbUrl)}" alt="${escapeHtml(item.title || 'Track')}" loading="lazy" />`
           : `<svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(139,92,246,0.5)"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`
         }
       </div>
       <div class="personal-item-info">
-        <div class="personal-item-title">${escapeHtml(item.title || 'Untitled')}</div>
+        <div class="personal-item-title" data-personal-title-id="${item.id}">${escapeHtml(item.title || 'Untitled')}</div>
         <div class="personal-item-meta">
           <span class="personal-item-platform">${platformName(item.platform, item.url, item.title)}</span>
           ${item.addedAt ? `<span class="personal-item-date">${formatAddedDate(item.addedAt)}</span>` : ''}
@@ -370,7 +433,27 @@ export function renderPersonalPlaylistPage(
         </button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
+
+  // Async-fill missing titles for YouTube items in the personal playlist.
+  // Update the DOM as each one resolves, and persist the enriched items
+  // back to storage + server so re-renders don't re-fetch.
+  lazyFetchTitles(
+    pageItems,
+    (item, title) => {
+      const el = grid.querySelector(`.personal-item-title[data-personal-title-id="${item.id}"]`);
+      if (el) el.textContent = title;
+    },
+    () => {
+      // Persist the enriched titles. Best-effort — failures shouldn't block UI.
+      try {
+        if (state.playlistManager && typeof state.playlistManager.persistPersonalPlaylist === 'function') {
+          state.playlistManager.persistPersonalPlaylist();
+        }
+      } catch { /* ignore */ }
+    },
+  );
 
   grid.querySelectorAll('.personal-add-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
