@@ -229,6 +229,94 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     .release-actions {
       display: flex;
       gap: 0.5rem;
+      align-items: center;
+    }
+
+    .release-card.has-shipping {
+      grid-template-columns: 80px 1fr auto;
+      grid-template-rows: auto auto;
+    }
+
+    .shipping-edit {
+      grid-column: 1 / -1;
+      display: none;
+      padding: 1rem;
+      margin-top: 0.75rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+    }
+
+    .shipping-edit.open {
+      display: block;
+    }
+
+    .shipping-edit h4 {
+      margin: 0 0 0.5rem;
+      font-size: 0.9rem;
+      color: var(--text-primary, #fff);
+    }
+
+    .shipping-edit .hint {
+      font-size: 0.78rem;
+      color: var(--text-muted, #666);
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+
+    .shipping-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .shipping-row label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .shipping-row input {
+      padding: 0.5rem 0.65rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 4px;
+      color: var(--text-primary, #fff);
+      font-size: 0.9rem;
+    }
+
+    .shipping-row input:focus {
+      outline: none;
+      border-color: var(--accent, #22c55e);
+    }
+
+    .shipping-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .shipping-actions .status {
+      font-size: 0.8rem;
+      color: var(--text-muted, #666);
+      margin-left: auto;
+    }
+
+    .shipping-actions .status.ok {
+      color: #22c55e;
+    }
+
+    .shipping-actions .status.err {
+      color: #ef4444;
+    }
+
+    @media (max-width: 640px) {
+      .shipping-row {
+        grid-template-columns: 1fr;
+      }
     }
 
     .action-btn {
@@ -360,13 +448,31 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       releasesList.style.display = 'flex';
 
       releasesList.innerHTML = filtered.map(release => {
-        const statusClass = release.status === 'approved' || release.status === 'live' ? 'status-live' : 
+        const statusClass = release.status === 'approved' || release.status === 'live' ? 'status-live' :
                            release.status === 'pending' ? 'status-pending' :
                            release.status === 'rejected' ? 'status-rejected' : 'status-draft';
         const statusText = release.status === 'approved' ? 'live' : release.status || 'draft';
-        
+        const isVinyl = release.vinylRelease === true;
+        const ukVal = release.vinylShippingUK != null ? release.vinylShippingUK : '';
+        const euVal = release.vinylShippingEU != null ? release.vinylShippingEU : '';
+        const intlVal = release.vinylShippingIntl != null ? release.vinylShippingIntl : '';
+        const shippingEditor = isVinyl ? `
+          <div class="shipping-edit" data-shipping-for="${release.id}">
+            <h4>Vinyl shipping rates</h4>
+            <p class="hint">Leave a field blank to use your account default (set on <a href="/artist/account/#vinyl-shipping-section">your account page</a>). Enter 0 for free shipping.</p>
+            <div class="shipping-row">
+              <label>UK (£)<input type="number" step="0.01" min="0" max="999" data-region="UK" value="${ukVal}"></label>
+              <label>EU (£)<input type="number" step="0.01" min="0" max="999" data-region="EU" value="${euVal}"></label>
+              <label>International (£)<input type="number" step="0.01" min="0" max="999" data-region="Intl" value="${intlVal}"></label>
+            </div>
+            <div class="shipping-actions">
+              <button class="action-btn" data-action="save-shipping">Save shipping</button>
+              <span class="status"></span>
+            </div>
+          </div>
+        ` : '';
         return `
-          <div class="release-card" data-id="${release.id}">
+          <div class="release-card${isVinyl ? ' has-shipping' : ''}" data-id="${release.id}">
             <img src="${escapeHtml(release.artwork || '/place-holder.webp')}" alt="${escapeHtml(release.title)}" class="release-artwork" width="100" height="100" loading="lazy">
             <div class="release-info">
               <div class="release-title">${escapeHtml(release.title || 'Untitled')}</div>
@@ -378,11 +484,83 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             </div>
             <div class="release-actions">
               <span class="release-status ${statusClass}">${statusText}</span>
+              ${isVinyl ? `<button class="action-btn" data-action="toggle-shipping">Shipping</button>` : ''}
               <a href="/item/${release.id}/" class="action-btn" target="_blank" rel="noopener noreferrer">View</a>
             </div>
+            ${shippingEditor}
           </div>
         `;
       }).join('');
+
+      attachShippingHandlers();
+    }
+
+    function attachShippingHandlers() {
+      releasesList.querySelectorAll('[data-action="toggle-shipping"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const card = btn.closest('.release-card');
+          const edit = card?.querySelector('.shipping-edit');
+          if (edit) edit.classList.toggle('open');
+        });
+      });
+      releasesList.querySelectorAll('[data-action="save-shipping"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const editor = btn.closest('.shipping-edit');
+          const card = btn.closest('.release-card');
+          if (!editor || !card) return;
+          const releaseId = card.dataset.id;
+          const status = editor.querySelector('.status');
+          const inputs = editor.querySelectorAll('input[data-region]');
+          const payload = { releaseId };
+          let invalid = false;
+          inputs.forEach(input => {
+            const region = input.dataset.region;
+            const raw = input.value.trim();
+            const key = region === 'UK' ? 'vinylShippingUK' : region === 'EU' ? 'vinylShippingEU' : 'vinylShippingIntl';
+            if (raw === '') {
+              payload[key] = null;
+            } else {
+              const num = parseFloat(raw);
+              if (!Number.isFinite(num) || num < 0 || num > 999) { invalid = true; return; }
+              payload[key] = num;
+            }
+          });
+          if (invalid) {
+            status.textContent = 'Invalid amount';
+            status.className = 'status err';
+            return;
+          }
+          btn.disabled = true;
+          status.textContent = 'Saving...';
+          status.className = 'status';
+          try {
+            const user = auth.currentUser;
+            if (!user) throw new Error('Not signed in');
+            const idToken = await user.getIdToken();
+            const r = await fetch('/api/pro/update-release-shipping/', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const data = await r.json();
+            if (!r.ok || !data.success) throw new Error(data.error || 'Save failed');
+            status.textContent = 'Saved';
+            status.className = 'status ok';
+            // Update local cache so re-renders show the new values
+            const local = allReleases.find(rel => rel.id === releaseId);
+            if (local && data.shipping) {
+              local.vinylShippingUK = data.shipping.vinylShippingUK;
+              local.vinylShippingEU = data.shipping.vinylShippingEU;
+              local.vinylShippingIntl = data.shipping.vinylShippingIntl;
+            }
+          } catch (e) {
+            status.textContent = e instanceof Error ? e.message : 'Save failed';
+            status.className = 'status err';
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
     }
 
     // Filter tabs

@@ -72,7 +72,14 @@ async function handleReleases(userId: string) {
       trackCount: r.trackCount || 0,
       salesCount: r.salesCount || 0,
       plays: r.plays || 0,
-      createdAt: r.createdAt || null
+      createdAt: r.createdAt || null,
+      // Vinyl shipping fields — used by /pro/releases/ to render the per-release
+      // shipping editor. `null` means "no per-release override; cart will fall
+      // back to artist-account defaults then hardcoded values".
+      vinylRelease: r.vinylRelease === true,
+      vinylShippingUK: r.vinylShippingUK ?? null,
+      vinylShippingEU: r.vinylShippingEU ?? null,
+      vinylShippingIntl: r.vinylShippingIntl ?? null,
     }))
   });
 }
