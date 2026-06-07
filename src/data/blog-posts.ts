@@ -27,7 +27,7 @@ export const blogPosts: BlogPost[] = [
     author: 'Fresh Wax',
     tags: ['hangry records', 'compilation', 'various artists', 'jungle', 'drum and bass', 'release', 'charity', 'new label', 'london'],
     content: `
-      <p>Fresh Wax is proud to welcome <strong>Hangry Records</strong> to the platform. The London-based non-profit label has been quietly putting out some of the rawest jungle and drum & bass coming out of the UK underground since 2020, and they've chosen to debut on Fresh Wax with the record that started it all — <strong>Jungle & DnB Volume.1</strong>, the very first release on the label, originally cut in April 2020 and now available here both as a full digital download and on a limited vinyl pressing.</p>
+      <p>Fresh Wax is proud to welcome <strong>Hangry Records</strong> to the platform. The London-based non-profit label has been quietly putting out some of the rawest jungle and drum & bass coming out of the UK underground since 2020, and they've chosen to debut on Fresh Wax with the record that started it all — <strong>Jungle & DnB Volume.1</strong>, the very first release on the label, originally cut in April 2020 and now available here both as a full digital download and on a limited two-record vinyl pressing.</p>
 
       <h2>Who Hangry Are</h2>
       <p>The label puts it best in their own words: <em>"Hangry Records is a non-profit label. We want to help and bring awareness to worthy causes, whilst pushing and showing appreciation to underground producers that are killing it with their sound."</em></p>
@@ -45,7 +45,7 @@ export const blogPosts: BlogPost[] = [
         <li><strong>Sargy — Ultimate Reality</strong></li>
         <li><strong>SuM — Time Wound</strong></li>
       </ol>
-      <p>Eight producers, eight cuts, one record. Amen breaks, sub pressure, dancefloor weight — proper underground jungle and drum & bass with the grit kept in. The kind of compilation that exists to back the artists on it: this is somebody's first credit, somebody's calling-card, somebody's statement of intent. Several of the names here — Sargy, Polarity, Abstract Drumz, SuM — have gone on to land tracks on later Hangry volumes, so Volume.1 is where the family tree starts.</p>
+      <p>Eight producers, eight cuts pressed across a two-record set. Amen breaks, sub pressure, dancefloor weight — proper underground jungle and drum & bass with the grit kept in. The kind of compilation that exists to back the artists on it: this is somebody's first credit, somebody's calling-card, somebody's statement of intent. Several of the names here — Sargy, Polarity, Abstract Drumz, SuM — have gone on to land tracks on later Hangry volumes, so Volume.1 is where the family tree starts.</p>
 
       <h2>The Cause Behind The Record</h2>
       <p>This is where Hangry separates itself from a regular drum and bass label. <strong>The majority of profits from this record go directly to charity</strong> — split between two organisations Hangry has been backing:</p>
@@ -59,7 +59,7 @@ export const blogPosts: BlogPost[] = [
       <p>The record carries a dedication — <em>"To our Soldier who gained his Wings too soon, Jake Arnold. Rest in Paradise and Parties 💚"</em>. Releases like this are how scenes remember the people who shaped them. The tracks are the celebration; the dedication is the love behind it.</p>
 
       <h2>Listen, Buy, Support</h2>
-      <p>You can stream previews on the <a href="/item/hangry_records_FW-1780739181417/">release page</a> right now. Full digital download is £8.50 for all eight tracks, individual tracks are £2.50 each, and there's a limited vinyl pressing available for £15 — vinyl gets the full digital bundle thrown in as well, so the WAVs, MP3s and artwork all land in your downloads the moment you click buy while the record itself is on its way to you.</p>
+      <p>You can stream previews on the <a href="/item/hangry_records_FW-1780739181417/">release page</a> right now. Full digital download is £8.50 for all eight tracks, individual tracks are £2.50 each, and the vinyl is a two-record set — each record presses four of the eight tracks at £15 a piece. Grab one for half the pressing, or both for the full eight on wax. Every vinyl includes the full digital bundle thrown in regardless, so the WAVs, MP3s and artwork all land in your downloads the moment you click buy while the record itself is on its way to you.</p>
       <p>Every purchase splits between the label and the charities. Whether you're playing it out, prepping a set, or just listening — you're backing the music and the cause at the same time.</p>
 
       <p><strong><a href="/item/hangry_records_FW-1780739181417/">Hear it & grab a copy →</a></strong></p>
