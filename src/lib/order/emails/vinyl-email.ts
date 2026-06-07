@@ -17,11 +17,14 @@ export function buildStockistFulfillmentEmail(orderId: string, orderNumber: stri
     minute: '2-digit'
   });
 
-  // Build vinyl items table
+  // Build vinyl items table — append the part name when this is a multi-part
+  // pressing (e.g. "Volume.2 — Part 1") so the stockist/label knows which
+  // record to pull from inventory and slip in the envelope.
   let itemsHtml = '';
   for (const item of vinylItems) {
+    const partSuffix = item.vinylPartName ? ` — ${item.vinylPartName}` : '';
     itemsHtml += '<tr>' +
-      '<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: 600;">' + escapeHtml(item.name) + '</td>' +
+      '<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: 600;">' + escapeHtml(item.name + partSuffix) + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">' + (item.quantity || 1) + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">&pound;' + (item.price * (item.quantity || 1)).toFixed(2) + '</td>' +
       '</tr>';

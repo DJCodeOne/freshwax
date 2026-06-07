@@ -198,6 +198,11 @@ export function initCartListeners() {
     const artist = button.getAttribute('data-artist');
     const labelName = button.getAttribute('data-label-name');
     const artwork = button.getAttribute('data-artwork');
+    // Multi-part vinyl: button carries which part is being purchased so cart
+    // dedupe and stock checks key off (releaseId, partId) rather than (releaseId)
+    // alone. Null for everything except multi-part vinyl releases.
+    const vinylPartId = button.getAttribute('data-vinyl-part-id') || null;
+    const vinylPartName = button.getAttribute('data-vinyl-part-name') || null;
 
     // Check if user already owns this release
     try {
@@ -252,6 +257,10 @@ export function initCartListeners() {
     let existingIndex = -1;
     for (let i = 0; i < items.length; i++) {
       if (items[i].id === releaseId && items[i].type === productType) {
+        // For multi-part vinyl, Part 1 and Part 2 are distinct SKUs even though
+        // they share releaseId + type='vinyl'. Match on vinylPartId too so
+        // they don't get merged into a single line item.
+        if (productType === 'vinyl' && (items[i].vinylPartId || null) !== vinylPartId) continue;
         existingIndex = i;
         break;
       }
@@ -272,7 +281,9 @@ export function initCartListeners() {
         price: price,
         image: artwork,
         artwork: artwork,
-        quantity: 1
+        quantity: 1,
+        vinylPartId: vinylPartId,
+        vinylPartName: vinylPartName,
       });
     }
 

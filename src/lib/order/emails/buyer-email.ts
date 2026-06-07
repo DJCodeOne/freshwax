@@ -36,6 +36,7 @@ export function buildOrderConfirmationEmail(orderId: string, orderNumber: string
       '<div style="font-weight: 600; color: #111; font-size: 15px; margin-bottom: 4px; text-align: left;">' + escapeHtml(item.name) + '</div>' +
       '<div style="font-size: 13px; color: #6b7280; text-align: left;">' +
       typeLabel +
+      (item.vinylPartName ? ' &bull; ' + escapeHtml(item.vinylPartName) : '') +
       (item.size ? ' &bull; Size: ' + escapeHtml(item.size) : '') +
       (item.color ? ' &bull; ' + escapeHtml(item.color) : '') +
       (item.quantity > 1 ? ' &bull; Qty: ' + item.quantity : '') +

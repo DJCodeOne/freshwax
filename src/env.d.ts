@@ -452,6 +452,12 @@ interface CartItem {
   color?: string | { name: string } | null;
   isPreOrder?: boolean;
   releaseDate?: string | null;
+  // Multi-part vinyl: which pressed part this line refers to (e.g. 'part-1').
+  // Set only when type='vinyl' and the release has vinylParts. Cart dedupe,
+  // stock checks, order docs and shipping emails all key off this id alongside
+  // releaseId so Part 1 and Part 2 stay as separate line items.
+  vinylPartId?: string | null;
+  vinylPartName?: string | null;
 }
 
 /**

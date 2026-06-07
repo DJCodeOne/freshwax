@@ -86,11 +86,34 @@ export async function validateStock(items: CartItem[]): Promise<{ available: boo
         if (releaseId) {
           const release = releaseMap.get(releaseId);
           if (release) {
-            const vinylStock = release.vinylStock ?? 0;
-            const vinylReserved = release.vinylReserved ?? 0;
-            const available = vinylStock - vinylReserved;
-            if (available < quantity) {
-              unavailableItems.push(`${item.name} (Vinyl) - only ${available} available`);
+            // Multi-part vinyl: scope stock check to the part the cart line
+            // names. Without this a buyer could put Part 2 (stock=0, not yet
+            // pressed) in their cart and the check would pass against the
+            // legacy vinylStock field — exactly the kind of state the variant
+            // picker is meant to prevent.
+            const parts = Array.isArray(release.vinylParts) ? release.vinylParts as Record<string, unknown>[] : [];
+            if (item.vinylPartId && parts.length > 0) {
+              const partIdx = parts.findIndex((_p, idx) => `part-${idx + 1}` === item.vinylPartId);
+              const part = partIdx >= 0 ? parts[partIdx] : null;
+              if (!part) {
+                unavailableItems.push(`${item.name} - vinyl part not found`);
+              } else if (part.pressed === false) {
+                unavailableItems.push(`${item.name} - not yet pressed`);
+              } else {
+                const partStock = (part.stock as number) ?? 0;
+                const partReserved = (part.reserved as number) ?? 0;
+                const available = partStock - partReserved;
+                if (available < quantity) {
+                  unavailableItems.push(`${item.name} - only ${available} available`);
+                }
+              }
+            } else {
+              const vinylStock = release.vinylStock ?? 0;
+              const vinylReserved = release.vinylReserved ?? 0;
+              const available = vinylStock - vinylReserved;
+              if (available < quantity) {
+                unavailableItems.push(`${item.name} (Vinyl) - only ${available} available`);
+              }
             }
           }
         }
@@ -202,7 +225,18 @@ export async function validateAndGetPrices(
             const release = releaseMap.get(releaseId);
             if (release) {
               if (itemType === 'vinyl') {
-                serverPrice = release.vinylPrice || release.price || item.price;
+                // Multi-part: prefer the part's price so each Part can carry
+                // its own price (e.g. a heavy double LP Part 2 could be £18
+                // while Part 1 stays at £15). Falls back to release-level
+                // vinylPrice when no part is named.
+                const parts = Array.isArray(release.vinylParts) ? release.vinylParts as Record<string, unknown>[] : [];
+                if (item.vinylPartId && parts.length > 0) {
+                  const part = parts.find((_p, idx) => `part-${idx + 1}` === item.vinylPartId);
+                  serverPrice = (part?.price as number) || release.vinylPrice || release.price || item.price;
+                  if (part?.name) item.vinylPartName = part.name as string;
+                } else {
+                  serverPrice = release.vinylPrice || release.price || item.price;
+                }
 
                 item.vinylShippingUK = release.vinylShippingUK;
                 item.vinylShippingEU = release.vinylShippingEU;

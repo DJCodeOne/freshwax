@@ -23,7 +23,33 @@ async function prefetchReservationDocs(
 }
 
 // Internal: rollback reservations already made if a subsequent one fails
-async function rollbackReservations(reserved: { itemType: string; productId: string; variantKey: string; quantity: number }[]): Promise<void> {
+// Build a vinyl-release update payload that either tweaks the part's reserved
+// counter (multi-part schema) or the release's vinylReserved counter (legacy
+// single-vinyl). delta is positive when reserving, negative when releasing /
+// rolling back. Keeps the three vinyl-release branches below in sync.
+function buildVinylReservationUpdate(
+  release: Record<string, unknown>,
+  vinylPartId: string | null | undefined,
+  delta: number,
+  now: string,
+): Record<string, unknown> {
+  const parts = Array.isArray(release.vinylParts) ? (release.vinylParts as Record<string, unknown>[]) : [];
+  if (vinylPartId && parts.length > 0) {
+    const idx = parts.findIndex((_p, i) => `part-${i + 1}` === vinylPartId);
+    if (idx < 0) return { updatedAt: now };
+    const nextParts = parts.map((p, i) => {
+      if (i !== idx) return p;
+      return { ...p, reserved: Math.max(0, ((p.reserved as number) ?? 0) + delta) };
+    });
+    return { vinylParts: nextParts, updatedAt: now };
+  }
+  return {
+    vinylReserved: Math.max(0, ((release.vinylReserved as number) ?? 0) + delta),
+    updatedAt: now,
+  };
+}
+
+async function rollbackReservations(reserved: { itemType: string; productId: string; variantKey: string; quantity: number; vinylPartId?: string | null }[]): Promise<void> {
   const MAX_RETRIES = 3;
 
   // Batch pre-fetch all documents needed for rollback
@@ -81,10 +107,7 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
             : await getDocument('releases', res.productId);
           if (!release) break;
 
-          const updateData: Record<string, unknown> = {
-            vinylReserved: Math.max(0, (release.vinylReserved ?? 0) - res.quantity),
-            updatedAt: new Date().toISOString()
-          };
+          const updateData = buildVinylReservationUpdate(release, res.vinylPartId, -res.quantity, new Date().toISOString());
 
           if (release._updateTime) {
             await updateDocumentConditional('releases', res.productId, updateData, release._updateTime as string);
@@ -144,7 +167,7 @@ export async function reserveStock(
   }
 
   // Build list of reservations to make (tagged by type for release/cleanup)
-  const reservations: { itemType: string; productId: string; variantKey: string; quantity: number }[] = [];
+  const reservations: { itemType: string; productId: string; variantKey: string; quantity: number; vinylPartId?: string | null }[] = [];
 
   for (const item of merchItems) {
     const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
@@ -163,7 +186,11 @@ export async function reserveStock(
       itemType: 'vinyl-release',
       productId: item.releaseId || item.productId,
       variantKey: '',
-      quantity: item.quantity || 1
+      quantity: item.quantity || 1,
+      // Multi-part: tag the reservation with which part is being held so
+      // rollback / release / cleanup all decrement the right counter.
+      // Null/undefined for legacy single-vinyl releases.
+      vinylPartId: item.vinylPartId || null,
     });
   }
 
@@ -258,7 +285,7 @@ export async function reserveStock(
         }
       }
     } else if (res.itemType === 'vinyl-release') {
-      // --- VINYL RELEASE RESERVATION (vinylReserved counter) ---
+      // --- VINYL RELEASE RESERVATION (vinylReserved counter, or part.reserved for multi-part) ---
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
           // Use pre-fetched data on first attempt, fresh fetch on retry
@@ -270,19 +297,39 @@ export async function reserveStock(
             return { success: false, error: `Release not found: ${res.productId}` };
           }
 
-          const vinylStock = (release.vinylStock as number) ?? 0;
-          const vinylReserved = (release.vinylReserved as number) ?? 0;
-          const available = vinylStock - vinylReserved;
-
-          if (available < res.quantity) {
-            await rollbackReservations(reservedSoFar);
-            return { success: false, error: `Insufficient vinyl stock. Available: ${available}` };
+          // Multi-part: check the part's stock and refuse if the part isn't
+          // pressed yet (defence-in-depth — the UI also disables those
+          // buttons, but never trust the client).
+          const parts = Array.isArray(release.vinylParts) ? release.vinylParts as Record<string, unknown>[] : [];
+          if (res.vinylPartId && parts.length > 0) {
+            const partIdx = parts.findIndex((_p, i) => `part-${i + 1}` === res.vinylPartId);
+            const part = partIdx >= 0 ? parts[partIdx] : null;
+            if (!part) {
+              await rollbackReservations(reservedSoFar);
+              return { success: false, error: `Vinyl part not found: ${res.vinylPartId}` };
+            }
+            if (part.pressed === false) {
+              await rollbackReservations(reservedSoFar);
+              return { success: false, error: `Vinyl part not yet pressed: ${part.name || res.vinylPartId}` };
+            }
+            const partStock = (part.stock as number) ?? 0;
+            const partReserved = (part.reserved as number) ?? 0;
+            const available = partStock - partReserved;
+            if (available < res.quantity) {
+              await rollbackReservations(reservedSoFar);
+              return { success: false, error: `Insufficient stock for ${part.name || res.vinylPartId}. Available: ${available}` };
+            }
+          } else {
+            const vinylStock = (release.vinylStock as number) ?? 0;
+            const vinylReserved = (release.vinylReserved as number) ?? 0;
+            const available = vinylStock - vinylReserved;
+            if (available < res.quantity) {
+              await rollbackReservations(reservedSoFar);
+              return { success: false, error: `Insufficient vinyl stock. Available: ${available}` };
+            }
           }
 
-          const updateData: Record<string, unknown> = {
-            vinylReserved: vinylReserved + res.quantity,
-            updatedAt: now.toISOString()
-          };
+          const updateData = buildVinylReservationUpdate(release, res.vinylPartId, res.quantity, now.toISOString());
 
           if (release._updateTime) {
             await updateDocumentConditional('releases', res.productId, updateData, release._updateTime as string);
@@ -403,7 +450,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
     }
 
     // Batch pre-fetch all documents needed for release
-    const resItems = (reservation.items || []) as { itemType: string; productId: string; variantKey: string; quantity: number }[];
+    const resItems = (reservation.items || []) as { itemType: string; productId: string; variantKey: string; quantity: number; vinylPartId?: string | null }[];
     const { merchMap, releaseMap, listingMap } = await prefetchReservationDocs(resItems);
 
     // Decrement reserved counts on each product
@@ -457,10 +504,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
               : await getDocument('releases', res.productId);
             if (!release) break;
 
-            const updateData: Record<string, unknown> = {
-              vinylReserved: Math.max(0, ((release.vinylReserved as number) ?? 0) - res.quantity),
-              updatedAt: new Date().toISOString()
-            };
+            const updateData = buildVinylReservationUpdate(release, res.vinylPartId, -res.quantity, new Date().toISOString());
 
             if (release._updateTime) {
               await updateDocumentConditional('releases', res.productId, updateData, release._updateTime as string);

@@ -47,6 +47,12 @@ export interface CartItem {
   artistVinylShippingUK?: number;
   artistVinylShippingEU?: number;
   artistVinylShippingIntl?: number;
+  // Multi-part vinyl: which pressed part this line refers to (e.g. 'part-1').
+  // Set only when type='vinyl' and the release.vinylParts array is present.
+  // Stock checks scope to vinylParts[idx].stock, prices to vinylParts[idx].price,
+  // fulfillment emails name the part via vinylPartName.
+  vinylPartId?: string | null;
+  vinylPartName?: string | null;
   downloads?: Record<string, unknown>;
   [key: string]: unknown;
 }

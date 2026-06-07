@@ -319,6 +319,97 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       }
     }
 
+    .parts-edit {
+      grid-column: 1 / -1;
+      display: none;
+      padding: 1rem;
+      margin-top: 0.75rem;
+      background: var(--bg-tertiary, #1a1a1a);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 6px;
+    }
+
+    .parts-edit.open {
+      display: block;
+    }
+
+    .parts-edit h4 {
+      margin: 0 0 0.5rem;
+      font-size: 0.9rem;
+      color: var(--text-primary, #fff);
+    }
+
+    .parts-edit .hint {
+      font-size: 0.78rem;
+      color: var(--text-muted, #666);
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+
+    .part-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto auto;
+      gap: 0.75rem;
+      align-items: end;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border-color, #262626);
+    }
+
+    .part-row:last-of-type {
+      border-bottom: none;
+      margin-bottom: 0.5rem;
+    }
+
+    .part-row .part-name {
+      font-weight: 600;
+      color: var(--text-primary, #fff);
+      font-size: 0.9rem;
+    }
+
+    .part-row label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary, #a3a3a3);
+    }
+
+    .part-row input[type="number"] {
+      padding: 0.4rem 0.55rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 4px;
+      color: var(--text-primary, #fff);
+      font-size: 0.9rem;
+      width: 80px;
+    }
+
+    .part-row input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent, #22c55e);
+    }
+
+    .part-row .pressed-toggle {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--text-primary, #fff);
+      font-size: 0.85rem;
+      padding-bottom: 0.4rem;
+    }
+
+    @media (max-width: 640px) {
+      .part-row {
+        grid-template-columns: 1fr 1fr;
+      }
+      .part-row .part-name {
+        grid-column: 1 / -1;
+      }
+      .part-row .pressed-toggle {
+        grid-column: 1 / -1;
+      }
+    }
+
     .action-btn {
       padding: 0.5rem 0.75rem;
       background: var(--bg-tertiary, #1a1a1a);
@@ -471,6 +562,31 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             </div>
           </div>
         ` : '';
+        const parts = Array.isArray(release.vinylParts) ? release.vinylParts : [];
+        const hasParts = parts.length > 0;
+        const partsEditor = hasParts ? `
+          <div class="parts-edit" data-parts-for="${release.id}">
+            <h4>Vinyl parts</h4>
+            <p class="hint">Edit stock + price for each pressed part. Toggle "Pressed" off until that part is finished — buyers will see "Coming soon" instead of being able to buy it.</p>
+            ${parts.map((p, idx) => {
+              const partId = 'part-' + (idx + 1);
+              const priceVal = p.price != null ? p.price : '';
+              const stockVal = p.stock != null ? p.stock : '';
+              return `
+                <div class="part-row" data-part-id="${partId}">
+                  <span class="part-name">${escapeHtml(p.name || ('Part ' + (idx + 1)))}</span>
+                  <label>Price (£)<input type="number" step="0.01" min="0" max="999" data-field="price" value="${priceVal}"></label>
+                  <label>Stock<input type="number" step="1" min="0" max="99999" data-field="stock" value="${stockVal}"></label>
+                  <label class="pressed-toggle"><input type="checkbox" data-field="pressed"${p.pressed ? ' checked' : ''}> Pressed</label>
+                </div>
+              `;
+            }).join('')}
+            <div class="shipping-actions">
+              <button class="action-btn" data-action="save-parts">Save parts</button>
+              <span class="status"></span>
+            </div>
+          </div>
+        ` : '';
         return `
           <div class="release-card${isVinyl ? ' has-shipping' : ''}" data-id="${release.id}">
             <img src="${escapeHtml(release.artwork || '/place-holder.webp')}" alt="${escapeHtml(release.title)}" class="release-artwork" width="100" height="100" loading="lazy">
@@ -484,15 +600,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             </div>
             <div class="release-actions">
               <span class="release-status ${statusClass}">${statusText}</span>
+              ${hasParts ? `<button class="action-btn" data-action="toggle-parts">Parts</button>` : ''}
               ${isVinyl ? `<button class="action-btn" data-action="toggle-shipping">Shipping</button>` : ''}
               <a href="/item/${release.id}/" class="action-btn" target="_blank" rel="noopener noreferrer">View</a>
             </div>
+            ${partsEditor}
             ${shippingEditor}
           </div>
         `;
       }).join('');
 
       attachShippingHandlers();
+      attachPartsHandlers();
     }
 
     function attachShippingHandlers() {
@@ -552,6 +671,83 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               local.vinylShippingUK = data.shipping.vinylShippingUK;
               local.vinylShippingEU = data.shipping.vinylShippingEU;
               local.vinylShippingIntl = data.shipping.vinylShippingIntl;
+            }
+          } catch (e) {
+            status.textContent = e instanceof Error ? e.message : 'Save failed';
+            status.className = 'status err';
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+
+    function attachPartsHandlers() {
+      releasesList.querySelectorAll('[data-action="toggle-parts"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const card = btn.closest('.release-card');
+          const edit = card?.querySelector('.parts-edit');
+          if (edit) edit.classList.toggle('open');
+        });
+      });
+      releasesList.querySelectorAll('[data-action="save-parts"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const editor = btn.closest('.parts-edit');
+          const card = btn.closest('.release-card');
+          if (!editor || !card) return;
+          const releaseId = card.dataset.id;
+          const status = editor.querySelector('.status');
+          const rows = editor.querySelectorAll('.part-row');
+          const partUpdates = [];
+          let invalid = false;
+          rows.forEach(row => {
+            const partId = row.dataset.partId;
+            const priceRaw = row.querySelector('input[data-field="price"]').value.trim();
+            const stockRaw = row.querySelector('input[data-field="stock"]').value.trim();
+            const pressed = row.querySelector('input[data-field="pressed"]').checked;
+            const upd = { partId };
+            if (priceRaw !== '') {
+              const num = parseFloat(priceRaw);
+              if (!Number.isFinite(num) || num < 0 || num > 999) { invalid = true; return; }
+              upd.price = num;
+            }
+            if (stockRaw !== '') {
+              const num = parseInt(stockRaw, 10);
+              if (!Number.isFinite(num) || num < 0 || num > 99999) { invalid = true; return; }
+              upd.stock = num;
+            }
+            upd.pressed = pressed;
+            partUpdates.push(upd);
+          });
+          if (invalid) {
+            status.textContent = 'Invalid value';
+            status.className = 'status err';
+            return;
+          }
+          btn.disabled = true;
+          status.textContent = 'Saving...';
+          status.className = 'status';
+          try {
+            const user = auth.currentUser;
+            if (!user) throw new Error('Not signed in');
+            const idToken = await user.getIdToken();
+            const r = await fetch('/api/pro/update-release-vinyl-parts/', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ releaseId, parts: partUpdates })
+            });
+            const data = await r.json();
+            if (!r.ok || !data.success) throw new Error(data.error || 'Save failed');
+            status.textContent = 'Saved';
+            status.className = 'status ok';
+            const local = allReleases.find(rel => rel.id === releaseId);
+            if (local && Array.isArray(data.parts)) {
+              data.parts.forEach((p, i) => {
+                if (!local.vinylParts || !local.vinylParts[i]) return;
+                local.vinylParts[i].price = p.price;
+                local.vinylParts[i].stock = p.stock;
+                local.vinylParts[i].pressed = p.pressed;
+              });
             }
           } catch (e) {
             status.textContent = e instanceof Error ? e.message : 'Save failed';

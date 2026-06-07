@@ -80,6 +80,17 @@ async function handleReleases(userId: string) {
       vinylShippingUK: r.vinylShippingUK ?? null,
       vinylShippingEU: r.vinylShippingEU ?? null,
       vinylShippingIntl: r.vinylShippingIntl ?? null,
+      // Multi-part vinyl: stripped down to the editable bits per part so the
+      // pro dashboard can render the per-part stock/price editor and the label
+      // can adjust as they press more (e.g. Vol.2 Part 2 going from stock=0
+      // pressed=false to stock=200 pressed=true once it's pressed).
+      vinylParts: Array.isArray(r.vinylParts) ? (r.vinylParts as Record<string, unknown>[]).map(p => ({
+        name: p.name ?? null,
+        price: p.price ?? null,
+        stock: p.stock ?? null,
+        pressed: p.pressed !== false,
+        trackNumbers: Array.isArray(p.trackNumbers) ? p.trackNumbers : [],
+      })) : [],
     }))
   });
 }

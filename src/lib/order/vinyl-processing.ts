@@ -27,14 +27,79 @@ export async function updateVinylStock(items: CartItem[], orderNumber: string, o
       const qty = item.quantity || 1;
       log.info('[order-utils] Updating vinyl stock for:', item.name, 'qty:', qty);
 
-      // Atomic decrement stock and reserved - prevents race conditions on concurrent purchases
+      const preCheck = preCheckMap.get(releaseId as string) || null;
+      const parts = preCheck && Array.isArray(preCheck.vinylParts) ? preCheck.vinylParts as Record<string, unknown>[] : [];
+
+      // Multi-part vinyl: stock + reserved live inside the named vinylParts
+      // entry, not at the release root. atomicIncrement can't target array
+      // elements, so we use read-modify-write with conditional updates and a
+      // small retry loop to handle concurrent sales of the same part.
+      if (item.vinylPartId && parts.length > 0) {
+        const partIdx = parts.findIndex((_p, i) => `part-${i + 1}` === item.vinylPartId);
+        if (partIdx < 0) {
+          log.error('[order-utils] Vinyl part not found:', item.vinylPartId, 'for release', releaseId);
+          continue;
+        }
+        let previousStock = 0;
+        let newStock = 0;
+        const MAX_RETRIES = 3;
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          const fresh = attempt === 0 ? preCheck : await getDocument('releases', releaseId as string);
+          if (!fresh) break;
+          const freshParts = Array.isArray(fresh.vinylParts) ? fresh.vinylParts as Record<string, unknown>[] : [];
+          if (partIdx >= freshParts.length) break;
+          const part = { ...freshParts[partIdx] };
+          previousStock = (part.stock as number) ?? 0;
+          newStock = Math.max(0, previousStock - qty);
+          part.stock = newStock;
+          part.sold = ((part.sold as number) ?? 0) + qty;
+          // Clear out the reservation we placed during checkout so the counter
+          // doesn't double-count the held quantity after the sale completes.
+          part.reserved = Math.max(0, ((part.reserved as number) ?? 0) - qty);
+          const nextParts = freshParts.map((p, i) => (i === partIdx ? part : p));
+          try {
+            if (fresh._updateTime) {
+              await updateDocumentConditional('releases', releaseId as string, { vinylParts: nextParts, updatedAt: now }, fresh._updateTime as string);
+            } else {
+              await updateDocument('releases', releaseId as string, { vinylParts: nextParts, updatedAt: now });
+            }
+            break;
+          } catch (writeErr: unknown) {
+            const msg = writeErr instanceof Error ? writeErr.message : String(writeErr);
+            if (msg.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+            throw writeErr;
+          }
+        }
+
+        await addDocument('vinyl-stock-movements', {
+          releaseId,
+          releaseName: item.name || preCheck?.releaseName,
+          vinylPartId: item.vinylPartId,
+          vinylPartName: item.vinylPartName || null,
+          type: 'sell',
+          quantity: qty,
+          stockDelta: -qty,
+          previousStock,
+          newStock,
+          orderId,
+          orderNumber,
+          notes: `Order ${orderNumber} (${item.vinylPartName || item.vinylPartId})`,
+          createdAt: now,
+          createdBy: 'system',
+        }, idToken);
+
+        log.info('[order-utils] ✓ Vinyl part stock updated:', item.name, item.vinylPartName || item.vinylPartId, previousStock, '->', newStock);
+        continue;
+      }
+
+      // Legacy single-vinyl: atomic decrement stock and reserved - prevents
+      // race conditions on concurrent purchases
       const incrementFields: Record<string, number> = {
         vinylStock: -qty,
         vinylSold: qty
       };
 
       // Also clear the reservation counter if it was reserved (use pre-fetched data)
-      const preCheck = preCheckMap.get(releaseId as string) || null;
       if (preCheck && (preCheck.vinylReserved ?? 0) > 0) {
         incrementFields.vinylReserved = -Math.min(qty, preCheck.vinylReserved as number);
       }

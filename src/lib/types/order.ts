@@ -59,14 +59,19 @@ export interface OrderAddress {
 
 export interface OrderItem {
   id: string;
-  type: 'release' | 'merch' | 'giftcard' | 'track';
+  type: 'release' | 'merch' | 'giftcard' | 'track' | 'vinyl' | 'digital';
   title: string;
+  name?: string;
   quantity: number;
   price: number;
   artistId?: string;
   size?: string;
   color?: string;
   imageUrl?: string;
+  // Multi-part vinyl: which pressed part this line refers to. Used by buyer +
+  // stockist fulfillment emails so they know which of the two records to pull.
+  vinylPartId?: string | null;
+  vinylPartName?: string | null;
 }
 
 // ============================================

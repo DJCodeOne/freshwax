@@ -543,36 +543,81 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                     </button>
                   )}
 
-                  <button
-                    data-release-id={id}
-                    data-product-type="vinyl"
-                    data-price={vinylPrice || 0}
-                    data-digital-price={digitalPrice}
-                    data-title={releaseName}
-                    data-artist={artistName}
-                    data-artist-id={artistId}
-                    data-label-name={labelName}
-                    data-artwork={coverArtUrl}
-                    data-includes-digital="true"
-                    data-is-preorder={isPreOrder ? 'true' : 'false'}
-                    disabled={!vinylRelease || !vinylAvailable}
-                    class={`add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-colors font-black uppercase text-base w-full ${
-                      vinylRelease && vinylAvailable
-                        ? (isPreOrder
-                            ? ' bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white cursor-pointer'
-                            : ' bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white cursor-pointer')
-                        : 'bg-gray-500 text-gray-300 cursor-not-allowed'
-                    }`}
-                    style={vinylRelease && vinylAvailable && !isPreOrder ? 'animation: buy-glow-pulse-red 2s ease-in-out infinite; box-shadow: 0 0 12px rgba(220, 38, 38, 0.7), 0 0 24px rgba(220, 38, 38, 0.5), 0 0 48px rgba(220, 38, 38, 0.3);' : undefined}
-                  >
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
-                      <circle cx="12" cy="12" r="3" fill="currentColor"/>
-                    </svg>
-                    {vinylRelease && vinylAvailable
-                      ? (isPreOrder ? `Pre-order Vinyl + Digital - £${vinylPrice?.toFixed(2)}` : `Vinyl + Digital - £${vinylPrice?.toFixed(2)}`)
-                      : 'Vinyl Unavailable'}
-                  </button>
+                  {tracklistGroups.length === 0 && (
+                    <button
+                      data-release-id={id}
+                      data-product-type="vinyl"
+                      data-price={vinylPrice || 0}
+                      data-digital-price={digitalPrice}
+                      data-title={releaseName}
+                      data-artist={artistName}
+                      data-artist-id={artistId}
+                      data-label-name={labelName}
+                      data-artwork={coverArtUrl}
+                      data-includes-digital="true"
+                      data-is-preorder={isPreOrder ? 'true' : 'false'}
+                      disabled={!vinylRelease || !vinylAvailable}
+                      class={`add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-colors font-black uppercase text-base w-full ${
+                        vinylRelease && vinylAvailable
+                          ? (isPreOrder
+                              ? ' bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white cursor-pointer'
+                              : ' bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white cursor-pointer')
+                          : 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                      }`}
+                      style={vinylRelease && vinylAvailable && !isPreOrder ? 'animation: buy-glow-pulse-red 2s ease-in-out infinite; box-shadow: 0 0 12px rgba(220, 38, 38, 0.7), 0 0 24px rgba(220, 38, 38, 0.5), 0 0 48px rgba(220, 38, 38, 0.3);' : undefined}
+                    >
+                      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                        <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                      </svg>
+                      {vinylRelease && vinylAvailable
+                        ? (isPreOrder ? `Pre-order Vinyl + Digital - £${vinylPrice?.toFixed(2)}` : `Vinyl + Digital - £${vinylPrice?.toFixed(2)}`)
+                        : 'Vinyl Unavailable'}
+                    </button>
+                  )}
+
+                  {tracklistGroups.length > 0 && vinylRelease && tracklistGroups.map((part, idx) => {
+                    const partId = `part-${idx + 1}`;
+                    const canBuy = part.pressed && part.stock > 0;
+                    return (
+                      <button
+                        data-release-id={id}
+                        data-product-type="vinyl"
+                        data-vinyl-part-id={partId}
+                        data-vinyl-part-name={part.name}
+                        data-price={part.price || vinylPrice || 0}
+                        data-digital-price={digitalPrice}
+                        data-title={`${releaseName} (${part.name})`}
+                        data-artist={artistName}
+                        data-artist-id={artistId}
+                        data-label-name={labelName}
+                        data-artwork={coverArtUrl}
+                        data-includes-digital="true"
+                        data-is-preorder={isPreOrder ? 'true' : 'false'}
+                        disabled={!canBuy}
+                        class={`add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-colors font-black uppercase text-base w-full ${
+                          canBuy
+                            ? (isPreOrder
+                                ? ' bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white cursor-pointer'
+                                : ' bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white cursor-pointer')
+                            : 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                        }`}
+                        style={canBuy && !isPreOrder ? 'animation: buy-glow-pulse-red 2s ease-in-out infinite; box-shadow: 0 0 12px rgba(220, 38, 38, 0.7), 0 0 24px rgba(220, 38, 38, 0.5), 0 0 48px rgba(220, 38, 38, 0.3);' : undefined}
+                      >
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                          <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                        </svg>
+                        {canBuy
+                          ? (isPreOrder
+                              ? `Pre-order ${part.name} + Digital - £${(part.price || 0).toFixed(2)}`
+                              : `${part.name} + Digital - £${(part.price || 0).toFixed(2)}`)
+                          : (!part.pressed
+                              ? `${part.name} — Coming Soon`
+                              : `${part.name} — Sold Out`)}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {vinylRelease && vinylAvailable && (
