@@ -125,6 +125,10 @@ const {
   hasLimitedEdition = false,
   limitedEditionDetails = '',
   vinyl = {},
+  // Multi-part vinyl: when present, the tracklist groups tracks under each
+  // part (Part 1 / Part 2) and the buy flow exposes per-part variants.
+  // Absent = legacy single-vinyl SKU (use vinylStock/vinylPrice).
+  vinylParts = [],
   // NYOP fields
   nyopEnabled = false,
   nyopMinPrice = 0,
@@ -287,6 +291,43 @@ const tracksWithIds = tracks.map((track, index) => {
 });
 
 tracksWithIds.sort((a, b) => a.track_number - b.track_number);
+
+// Build per-part tracklist groups when this release is a multi-part vinyl
+// pressing. Each group keeps the tracks in the order Hangry / the label
+// listed them in the part, NOT alphabetical — that's the side-A→side-B
+// running order for the record itself. Falls back to a single "All Tracks"
+// group when vinylParts is empty (every existing non-multi-part release).
+interface TracklistGroup {
+  name: string;
+  pressed: boolean;
+  stock: number;
+  price: number;
+  tracks: typeof tracksWithIds;
+}
+let tracklistGroups: TracklistGroup[] = [];
+if (Array.isArray(vinylParts) && vinylParts.length > 0) {
+  tracklistGroups = vinylParts.map((part: Record<string, unknown>) => {
+    const trackNumbers = (part.trackNumbers as number[]) || [];
+    const partTracks = trackNumbers
+      .map(n => tracksWithIds.find(t => t.track_number === n))
+      .filter((t): t is typeof tracksWithIds[number] => t !== undefined);
+    return {
+      name: (part.name as string) || 'Part',
+      pressed: part.pressed !== false,
+      stock: typeof part.stock === 'number' ? part.stock : 0,
+      price: typeof part.price === 'number' ? part.price : 0,
+      tracks: partTracks,
+    };
+  });
+  // Capture any tracks not assigned to a part (shouldn't happen for current
+  // Hangry releases — all 8 tracks land in one of the two parts — but a future
+  // release could include digital-only bonus tracks).
+  const assigned = new Set(tracklistGroups.flatMap(g => g.tracks.map(t => t.track_number)));
+  const orphans = tracksWithIds.filter(t => !assigned.has(t.track_number));
+  if (orphans.length > 0) {
+    tracklistGroups.push({ name: 'Digital Only', pressed: false, stock: 0, price: 0, tracks: orphans });
+  }
+}
 
 const formattedDate = release ? new Date(releaseDate).toLocaleDateString('en-GB', {
   day: 'numeric',
@@ -753,7 +794,100 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           </div>
 
           <div class="space-y-2" id="full-track-list">
-            {tracksWithIds.map((track) => (
+            {tracklistGroups.length > 0 && tracklistGroups.map((group) => (
+              <>
+                <div class="vinyl-part-header mt-4 mb-2 flex items-center gap-3 px-2 md:px-4 py-2 bg-gradient-to-r from-red-900 to-red-950 border-l-4 border-red-500 shadow-md">
+                  <span class="text-base md:text-lg font-black text-white uppercase tracking-wider">{group.name}</span>
+                  <span class="text-xs md:text-sm font-bold text-red-200 uppercase">Vinyl Side</span>
+                  {!group.pressed && (
+                    <span class="ml-auto text-xs md:text-sm font-bold text-yellow-300 uppercase tracking-wider">Coming soon</span>
+                  )}
+                  {group.pressed && group.stock === 0 && (
+                    <span class="ml-auto text-xs md:text-sm font-bold text-gray-400 uppercase tracking-wider">Sold out</span>
+                  )}
+                </div>
+                {group.tracks.map((track) => (
+                  <div class="track-row px-2 md:px-4 py-3 md:py-4 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 border-2 border-gray-600 hover:border-red-600 transition-colors shadow-md">
+                    <div class="flex items-center gap-2 md:gap-6">
+                      <span class="text-xs sm:text-sm md:text-lg font-black text-red-500 w-4 sm:w-5 md:w-8 text-center flex-shrink-0">
+                        {track.track_number}
+                      </span>
+                      <button
+                        class="play-button flex-shrink-0 w-12 h-12 md:w-14 md:h-14 flex items-center justify-center bg-gradient-to-br from-red-600 to-red-800 text-white hover:from-red-700 hover:to-red-900 transition-colors border-2 border-white shadow-lg rounded-full"
+                        data-track-id={track.id}
+                        data-release-id={id}
+                        data-preview-url={track.preview_url || ''}
+                        data-track-title={track.title}
+                        title="Play"
+                        aria-label={`Play ${track.title}`}
+                      >
+                        <svg class="w-8 h-8 md:w-8 md:h-8 play-icon ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <svg class="w-8 h-8 md:w-8 md:h-8 pause-icon hidden" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+                        </svg>
+                      </button>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-xs sm:text-sm md:text-xl font-black text-white truncate uppercase drop-shadow-md">
+                          {track.title}
+                          {track.remixer && (
+                            <span class="text-xs sm:text-sm md:text-lg font-bold text-gray-300"> ({track.remixer} Remix)</span>
+                          )}
+                        </p>
+                        {(track.artist || track.featured) && (
+                          <p class="text-xs sm:text-xs md:text-base font-bold text-gray-300 truncate mt-0.5">
+                            {track.artist}
+                            {track.featured && (
+                              <span class="text-gray-300"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                      <div class="hidden lg:block">
+                        <canvas
+                          class="track-waveform cursor-pointer bg-gray-900 border-2 border-gray-600 rounded shadow-inner"
+                          width="150"
+                          height="40"
+                          data-track-id={track.id}
+                          data-release-id={id}
+                        ></canvas>
+                      </div>
+                      <div class="hidden lg:flex items-center gap-8 text-sm text-gray-300 font-bold ml-8">
+                        <div class="text-center">
+                          <p class="text-gray-300 uppercase mb-1">Duration</p>
+                          <span class="text-white font-black">{track.duration && track.duration !== '0' && track.duration !== '0:00' ? track.duration : '--'}</span>
+                        </div>
+                        <div class="text-center">
+                          <p class="text-gray-300 uppercase mb-1">Key</p>
+                          <span class="text-white font-black">{track.key}</span>
+                        </div>
+                        <div class="text-center">
+                          <p class="text-gray-300 uppercase mb-1">BPM</p>
+                          <span class="text-white font-black">{track.bpm && track.bpm !== '' && track.bpm !== '0' ? track.bpm : '--'}</span>
+                        </div>
+                      </div>
+                      {actualTrackPrice > 0 && !nyopEnabled && (
+                        <button
+                          class="buy-track flex-shrink-0 font-black text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 active:from-green-800 active:to-green-900 transition-colors px-4 md:px-8 py-2.5 border-2 border-white shadow-lg uppercase text-sm md:text-base"
+                          data-track-id={track.id}
+                          data-track-title={track.title}
+                          data-track-price={actualTrackPrice}
+                          data-release-id={id}
+                          data-artist={artistName}
+                          data-artist-id={artistId}
+                          data-artwork={coverArtUrl}
+                          title="Buy this track"
+                        >
+                          Buy
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </>
+            ))}
+            {tracklistGroups.length === 0 && tracksWithIds.map((track) => (
               <div class="track-row px-2 md:px-4 py-3 md:py-4 bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 border-2 border-gray-600 hover:border-red-600 transition-colors shadow-md">
                 <div class="flex items-center gap-2 md:gap-6">
                   <span class="text-xs sm:text-sm md:text-lg font-black text-red-500 w-4 sm:w-5 md:w-8 text-center flex-shrink-0">

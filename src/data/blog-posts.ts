@@ -34,18 +34,25 @@ export const blogPosts: BlogPost[] = [
       <p>That's the whole brief — underground producers, worthy causes. No A&R algorithm, no streaming-bait edits, no label politics. Just the music and where the money goes. Since Volume.1 dropped in 2020 they've released through to <em>Jungle & DnB Volume.5</em> (with Vol.6 in the works), built out the darker <em>Tunes From The Crypt</em> series across seven volumes, dropped <em>Femme Frequencies Volume.1</em> as an all-female lineup in 2025, and put out solo EPs from artists in their roster (SuM's <em>Ink Stains EP</em> being a recent highlight).</p>
 
       <h2>About The Release</h2>
-      <p>Volume.1 is a properly stitched-together compilation, every track from a different producer in the underground:</p>
+      <p>Volume.1 is a properly stitched-together compilation, every track from a different producer in the underground. The pressing is split across two records — four tracks per record, two tracks per side — so it stays friendly to mix out of without cramming the wax.</p>
+
+      <h3>Part 1</h3>
       <ol>
-        <li><strong>16AJ & Thermadore — FadeAway</strong></li>
         <li><strong>Abstract Drumz — Higher</strong></li>
-        <li><strong>Illicit — Departures</strong></li>
         <li><strong>MAC V — Panopticon</strong></li>
-        <li><strong>Mom$ — Vogued</strong></li>
         <li><strong>Polarity — Final Heaven</strong></li>
         <li><strong>Sargy — Ultimate Reality</strong></li>
+      </ol>
+
+      <h3>Part 2</h3>
+      <ol start="5">
+        <li><strong>16AJ & Thermadore — FadeAway</strong></li>
+        <li><strong>Illicit — Departures</strong></li>
+        <li><strong>Mom$ — Vogued</strong></li>
         <li><strong>SuM — Time Wound</strong></li>
       </ol>
-      <p>Eight producers, eight cuts pressed across a two-record set. Amen breaks, sub pressure, dancefloor weight — proper underground jungle and drum & bass with the grit kept in. The kind of compilation that exists to back the artists on it: this is somebody's first credit, somebody's calling-card, somebody's statement of intent. Several of the names here — Sargy, Polarity, Abstract Drumz, SuM — have gone on to land tracks on later Hangry volumes, so Volume.1 is where the family tree starts.</p>
+
+      <p>Eight producers, eight cuts across a two-record set. Amen breaks, sub pressure, dancefloor weight — proper underground jungle and drum & bass with the grit kept in. The kind of compilation that exists to back the artists on it: this is somebody's first credit, somebody's calling-card, somebody's statement of intent. Several of the names here — Sargy, Polarity, Abstract Drumz, SuM — have gone on to land tracks on later Hangry volumes, so Volume.1 is where the family tree starts.</p>
 
       <h2>The Cause Behind The Record</h2>
       <p>This is where Hangry separates itself from a regular drum and bass label. <strong>The majority of profits from this record go directly to charity</strong> — split between two organisations Hangry has been backing:</p>
