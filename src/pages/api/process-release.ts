@@ -401,6 +401,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Vinyl
       vinylRelease: metadata.vinylRelease || false,
       vinylPrice: Math.max(0, parseFloat(metadata.vinylPrice) || 0),
+      // When the artist flags vinyl available but doesn't specify a pressing
+      // quantity, default to the "unlimited / not tracked" sentinel 99999 so
+      // the item page's `vinylStock > 0` check shows vinyl as available.
+      // Without this, the release publishes with vinylStock undefined →
+      // treated as 0 → "vinyl unavailable" on item/[id] and an admin has to
+      // backfill (see Hangry Vols.1 and 2 incidents). Labels with a real
+      // pressing count can supply vinylStock / vinylRecordCount and that
+      // value is used instead.
+      vinylStock: metadata.vinylRelease
+        ? (Number.isFinite(parseInt(metadata.vinylStock)) && parseInt(metadata.vinylStock) >= 0
+            ? parseInt(metadata.vinylStock)
+            : (parseInt(metadata.vinylRecordCount) > 0 ? parseInt(metadata.vinylRecordCount) : 99999))
+        : 0,
+      vinylRecordCount: metadata.vinylRecordCount || (metadata.vinylRelease ? '99999' : ''),
+      vinylSize: metadata.vinylSize || '',
+      vinylRPM: metadata.vinylRPM || '',
+      vinylWeight: metadata.vinylWeight || '',
+      vinylShippingUK: metadata.vinylShippingUK ?? null,
+      vinylShippingEU: metadata.vinylShippingEU ?? null,
+      vinylShippingIntl: metadata.vinylShippingIntl ?? null,
 
       // Status
       status: 'pending',
