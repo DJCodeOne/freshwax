@@ -17,6 +17,10 @@ const fixTrackUrlsSchema = z.object({
     mp3Url: z.string().optional(),
     wavUrl: z.string().optional(),
     previewUrl: z.string().optional(),
+    // Track duration as "M:SS" string — written when the audio processor's
+    // ffprobe step gives us a real value, ignored when empty so callers that
+    // don't supply it (older clients) don't clear an existing duration.
+    duration: z.string().max(20).optional(),
   })).min(1),
 });
 
@@ -55,11 +59,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Apply fixes
     for (const fix of trackFixes) {
-      const { trackIndex, mp3Url, wavUrl, previewUrl } = fix;
+      const { trackIndex, mp3Url, wavUrl, previewUrl, duration } = fix;
       if (trackIndex >= 0 && trackIndex < tracks.length) {
         if (mp3Url !== undefined) tracks[trackIndex].mp3Url = mp3Url;
         if (wavUrl !== undefined) tracks[trackIndex].wavUrl = wavUrl;
         if (previewUrl !== undefined) tracks[trackIndex].previewUrl = previewUrl;
+        // Only write duration when caller actually supplied a non-empty value.
+        // Empty/undefined means "leave whatever's there alone" so re-processing
+        // a release without ffprobe support doesn't blank out existing
+        // durations from a previous successful run.
+        if (duration) tracks[trackIndex].duration = duration;
       }
     }
 

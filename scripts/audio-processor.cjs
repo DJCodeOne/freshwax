@@ -300,6 +300,29 @@ function createPreview(inputPath, outputPath) {
 }
 
 /**
+ * Read duration of a local audio file with ffprobe and return as "M:SS".
+ * Returns empty string on any failure so callers can pass it straight into
+ * the existing string-typed `duration` field without special-casing.
+ */
+function probeDuration(filePath) {
+  try {
+    const r = require('child_process').spawnSync('ffprobe', [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1:nokey=1',
+      filePath
+    ], { encoding: 'utf8', timeout: 15000 });
+    if (r.status !== 0) return '';
+    const secs = parseFloat((r.stdout || '').trim());
+    if (!Number.isFinite(secs) || secs <= 0) return '';
+    const total = Math.round(secs);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  } catch (_e) { return ''; }
+}
+
+/**
  * Process a single audio track
  * SMART PROCESSING:
  * - WAV/FLAC/AIFF source → Create MP3 only, keep original WAV URL (no duplication)
@@ -310,16 +333,19 @@ async function processTrack(sourceKey, releaseFolder, trackNumber, trackTitle, o
   console.log(`[Processor] Processing track ${trackNumber}: ${trackTitle}`);
   console.log(`[Processor] Source: ${sourceKey} (${sourceFormat})`);
 
-  // If there's already an original WAV URL and source is MP3, skip - we have both formats
+  // If there's already an original WAV URL and source is MP3, skip - we have both formats.
+  // We still ffprobe the source remotely so the caller gets a duration field.
   if (sourceFormat === 'mp3' && originalWavUrl) {
-    console.log(`[Processor] Source is MP3 but original WAV exists - skipping`);
+    console.log(`[Processor] Source is MP3 but original WAV exists - skipping conversion`);
     const sourceUrl = `${R2_CONFIG.publicDomain}/${sourceKey}`;
+    const duration = probeDuration(sourceUrl);
     return {
       trackNumber,
       title: trackTitle,
       mp3Url: sourceUrl,
       wavUrl: originalWavUrl,
       previewUrl: sourceUrl,
+      duration,
       skipped: true,
       reason: 'Already has both MP3 and WAV'
     };
@@ -401,12 +427,19 @@ async function processTrack(sourceKey, releaseFolder, trackNumber, trackTitle, o
       console.log(`  WAV: ${wavUrl} [ORIGINAL - no duplication]`);
     }
 
+    // Probe duration from the source file we already downloaded — same audio
+    // as the MP3/WAV outputs so any of them would give the same answer; using
+    // the local sourcePath avoids an extra network call to R2.
+    const duration = probeDuration(sourcePath);
+    console.log(`[Processor] Duration: ${duration || '(unknown)'}`);
+
     return {
       trackNumber,
       title: trackTitle,
       mp3Url,
       wavUrl,
       previewUrl: mp3Url,
+      duration,
       mp3Size,
       wavSize
     };

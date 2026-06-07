@@ -141,9 +141,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             const mp3Url = result.mp3Url;
             const wavUrl = result.wavUrl;
             const previewUrl = result.previewUrl || result.mp3Url;
+            // Optional — falsy if ffprobe failed; fix-track-urls ignores empty.
+            const duration = result.duration || '';
             if (!mp3Url) { log(`Track ${t.trackNumber}: processor returned no mp3Url`); continue; }
-            log(`Track ${t.trackNumber} OK -> MP3 ${mp3Url}`);
-            fixes.push({ trackIndex: t.trackIndex, mp3Url, wavUrl, previewUrl });
+            log(`Track ${t.trackNumber} OK -> MP3 ${mp3Url}${duration ? ' (' + duration + ')' : ''}`);
+            fixes.push({ trackIndex: t.trackIndex, mp3Url, wavUrl, previewUrl, duration });
           } catch (err) {
             log(`Track ${t.trackNumber} error: ${err instanceof Error ? err.message : String(err)}`);
           }
