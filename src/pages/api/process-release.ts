@@ -232,31 +232,64 @@ export const POST: APIRoute = async ({ request, locals }) => {
     originalArtworkUrl = artworkResult.originalArtworkUrl;
     copiedFiles.push(...artworkResult.copiedFiles);
 
-    // Copy audio files in parallel and build new URLs
+    // Copy audio files with retry + bounded concurrency. Previously this used
+    // unbounded Promise.allSettled + log-and-continue, which silently lost any
+    // file that hit a transient R2 hiccup; the release would then publish with
+    // missing tracks AND off-by-one title↔audio pairings (see Hangry Vols.1
+    // and 2 incidents). Now: 3 attempts per file with exponential backoff,
+    // max 4 in flight at once, and if anything still fails the whole process
+    // aborts before creating the release so the admin sees a clear error and
+    // can re-run from the submission folder.
     let newAudioFiles: { oldKey: string; newKey: string; url: string }[] = [];
-    const copyResults = await Promise.allSettled(
-      audioFiles.map(async (audioFile) => {
-        const audioFilename = audioFile.split('/').pop() || 'track.wav';
-        const newAudioKey = `${releaseFolder}/${audioFilename}`;
-        const copied = await copyObject(audioFile, newAudioKey);
-        return { audioFile, audioFilename, newAudioKey, copied };
-      })
-    );
-    for (const result of copyResults) {
-      if (result.status === 'fulfilled' && result.value.copied) {
-        const { audioFile, audioFilename, newAudioKey } = result.value;
-        copiedFiles.push({ oldKey: audioFile, newKey: newAudioKey });
-        newAudioFiles.push({
-          oldKey: audioFile,
-          newKey: newAudioKey,
-          url: `${publicDomain}/${newAudioKey}`
-        });
-        log.debug(`Copied audio: ${audioFilename}`);
-      } else if (result.status === 'fulfilled') {
-        log.warn(`Failed to copy audio: ${result.value.audioFile}`);
-      } else {
-        log.warn(`Audio copy error: ${result.reason}`);
+    const failedAudio: { audioFile: string; reason: string }[] = [];
+
+    async function copyOneWithRetry(audioFile: string): Promise<void> {
+      const audioFilename = audioFile.split('/').pop() || 'track.wav';
+      const newAudioKey = `${releaseFolder}/${audioFilename}`;
+      let lastError = '';
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const copied = await copyObject(audioFile, newAudioKey);
+          if (copied) {
+            copiedFiles.push({ oldKey: audioFile, newKey: newAudioKey });
+            newAudioFiles.push({ oldKey: audioFile, newKey: newAudioKey, url: `${publicDomain}/${newAudioKey}` });
+            log.debug(`Copied audio (attempt ${attempt}): ${audioFilename}`);
+            return;
+          }
+          lastError = 'copyObject returned false';
+        } catch (e: unknown) {
+          lastError = e instanceof Error ? e.message : String(e);
+        }
+        if (attempt < 3) {
+          const wait = attempt === 1 ? 200 : 500;
+          log.warn(`Retry ${attempt + 1}/3 for ${audioFilename} in ${wait}ms — ${lastError}`);
+          await new Promise(r => setTimeout(r, wait));
+        }
       }
+      log.error(`All retries failed for ${audioFilename}: ${lastError}`);
+      failedAudio.push({ audioFile, reason: lastError });
+    }
+
+    // Bounded concurrency: process audioFiles in slices of 4 to keep parallel
+    // R2 PUTs manageable. Each slice waits for completion before the next.
+    const CONCURRENCY = 4;
+    for (let i = 0; i < audioFiles.length; i += CONCURRENCY) {
+      const slice = audioFiles.slice(i, i + CONCURRENCY);
+      await Promise.all(slice.map(copyOneWithRetry));
+    }
+
+    // Hard abort if any audio file is still missing after retries. The
+    // submission folder is left intact (the delete step further down only
+    // runs once everything's been built into Firestore), so the admin can
+    // re-trigger Process from the same submission ID.
+    if (failedAudio.length > 0) {
+      const failedNames = failedAudio.map(f => f.audioFile.split('/').pop() || f.audioFile);
+      log.error(`Process aborted — ${failedAudio.length}/${audioFiles.length} audio file(s) failed to copy after retries:`, failedNames);
+      return ApiErrors.serverError(
+        `Audio copy failed for ${failedAudio.length}/${audioFiles.length} track(s) after 3 retries each. ` +
+        `No release was created. Files staying in submissions/${submissionId}/ — click Process again to retry. ` +
+        `Failed: ${failedNames.join(', ')}`
+      );
     }
 
     log.info(`Copied ${copiedFiles.length} files to ${releaseFolder}`);
