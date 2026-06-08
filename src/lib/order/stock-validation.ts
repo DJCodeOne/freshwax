@@ -382,11 +382,33 @@ export async function processItemsWithDownloads(items: CartItem[]): Promise<Cart
           // Prefer original quality artwork for downloads (jpg/png), fall back to processed WebP
           const downloadArtworkUrl = releaseData?.originalArtworkUrl || artworkUrl;
 
+          const allTracks = (releaseData?.tracks || []) as Record<string, unknown>[];
+
+          // Multi-part vinyl: buying Part 1 only grants the digital download
+          // for the four tracks pressed on Part 1, not the full eight-track
+          // release. Filter the tracks array to those whose trackNumber lives
+          // in the part's trackNumbers list. Falls through to the full-release
+          // download for single-vinyl releases (no vinylParts) and for
+          // non-vinyl line items (digital release, etc).
+          let downloadTracks = allTracks;
+          if (item.type === 'vinyl' && item.vinylPartId) {
+            const parts = Array.isArray(releaseData?.vinylParts) ? releaseData.vinylParts as Record<string, unknown>[] : [];
+            const part = parts.find((_p, idx) => `part-${idx + 1}` === item.vinylPartId);
+            const trackNumbers = part && Array.isArray(part.trackNumbers) ? part.trackNumbers as number[] : null;
+            if (trackNumbers && trackNumbers.length > 0) {
+              const nums = new Set(trackNumbers.map(n => Number(n)));
+              downloadTracks = allTracks.filter((t, idx) => {
+                const num = Number(t.displayTrackNumber ?? t.trackNumber ?? (idx + 1));
+                return nums.has(num);
+              });
+            }
+          }
+
           const downloads = {
             artistName,
             releaseName,
             artworkUrl: downloadArtworkUrl,
-            tracks: (releaseData?.tracks || []).map((track: Record<string, unknown>) => ({
+            tracks: downloadTracks.map((track: Record<string, unknown>) => ({
               name: track.trackName || track.name,
               mp3Url: track.mp3Url || null,
               wavUrl: track.wavUrl || null

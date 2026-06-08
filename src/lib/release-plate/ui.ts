@@ -236,13 +236,20 @@ export function initCartListeners() {
     const cart = window.FreshWaxCart.get();
     let items = cart.items || [];
 
-    if (productType === 'vinyl') {
+    // Mutex: adding a SINGLE-vinyl release wipes the digital + per-track lines
+    // for that release because the vinyl already bundles all of them — keeping
+    // both would double-charge. Multi-part vinyl is different: Part 1 only
+    // includes Part 1's four digital tracks, so the buyer might legitimately
+    // want vinyl Part 1 PLUS the full digital bundle (£8.50 for all eight) or
+    // PLUS individual tracks from Part 2. Don't touch existing lines when
+    // adding a multi-part vinyl — let the buyer manage their own cart.
+    if (productType === 'vinyl' && !vinylPartId) {
       items = items.filter(function(item: CartItem) {
         return !(item.id === releaseId && item.type === 'digital');
       });
     }
 
-    if (productType === 'digital' || productType === 'vinyl') {
+    if (productType === 'digital' || (productType === 'vinyl' && !vinylPartId)) {
       const removedTracks = items.filter(function(item: CartItem) {
         return item.id === releaseId && item.type === 'track';
       });
