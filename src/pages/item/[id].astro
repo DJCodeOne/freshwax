@@ -620,12 +620,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   })}
                 </div>
 
-                {tracklistGroups.length > 0 && vinylRelease && (
-                  <div class="mt-3 p-3 bg-amber-950/40 border border-amber-700/50 rounded text-xs text-amber-100 leading-relaxed">
-                    Each vinyl part includes the digital download for the tracks pressed on that record only. For all {tracksWithIds.length} tracks digital, buy both parts or grab the full digital bundle separately.
-                  </div>
-                )}
-
                 {vinylRelease && vinylAvailable && (
                   <div class="mt-3 p-3 bg-gray-800/50 border border-gray-700 rounded text-xs text-gray-300">
                     <div class="flex items-center gap-1.5 mb-1.5">
