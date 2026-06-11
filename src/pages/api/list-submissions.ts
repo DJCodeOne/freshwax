@@ -4,9 +4,27 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../lib/admin';
 import { ApiErrors, createLogger, jsonResponse } from '../../lib/api-utils';
+import { queryCollection } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const log = createLogger('list-submissions');
+
+// True when a release was already created from this submission. Processing
+// normally deletes the submission folder, but keeps it on a track-count
+// mismatch — without this check those folders sit in "Pending" forever.
+async function isAlreadyProcessed(submissionId: string): Promise<boolean> {
+  try {
+    const matches = await queryCollection('releases', {
+      filters: [{ field: 'submissionId', op: 'EQUAL', value: submissionId }],
+      limit: 1,
+      skipCache: true,
+    });
+    return matches.length > 0;
+  } catch (e: unknown) {
+    log.warn(`Could not check release for submission ${submissionId}:`, e);
+    return false; // on lookup failure, keep showing the submission
+  }
+}
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -53,7 +71,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return jsonResponse({ submissions });
+    // Hide submissions that already became a release (leftover folders)
+    const checks = await Promise.all(
+      submissions.map(async (s) => ({
+        s,
+        processed: await isAlreadyProcessed(s.replace(/^root:/, '')),
+      }))
+    );
+    const pending = checks.filter((c) => !c.processed).map((c) => c.s);
+    const skipped = checks.length - pending.length;
+    if (skipped > 0) log.info(`Hiding ${skipped} already-processed submission folder(s)`);
+
+    return jsonResponse({ submissions: pending });
 
   } catch (error: unknown) {
     log.error('[list-submissions] Error:', error);
