@@ -72,6 +72,7 @@ interface Props {
     recordCount?: number | string;
     available?: boolean;
   };
+  vinylParts?: Record<string, unknown>[];
   ratings?: {
     average?: number;
     count?: number;
@@ -131,6 +132,7 @@ const {
   releaseDescription = '',
   pricing = {},
   vinyl = {},
+  vinylParts = [],
   ratings = {},
   overallRating = { average: 0, count: 0, total: 0 },
   comments = [],
@@ -247,7 +249,21 @@ const now = new Date();
 const isPreOrder = releaseDateTime > now;
 const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
-const vinylAvailable = finalVinylAvailable && parseInt(finalVinylRecordCount) > 0;
+// Multi-part vinyl (e.g. a release split across two records): the customer
+// must pick which record on the item page, so the quick-buy button becomes a
+// link instead of a direct add-to-cart. Mirrors item/[id].astro detection.
+const hasVinylParts = Array.isArray(vinylParts) && vinylParts.length > 0;
+const availableParts = hasVinylParts
+  ? vinylParts.filter((p) => p.pressed !== false && (typeof p.stock === 'number' ? p.stock : 0) > 0)
+  : [];
+const partPrices = availableParts
+  .map((p) => (typeof p.price === 'number' ? p.price : 0))
+  .filter((p) => p > 0);
+const minPartPrice = partPrices.length > 0 ? Math.min(...partPrices) : finalVinylPrice;
+
+const vinylAvailable = hasVinylParts
+  ? finalVinylAvailable && availableParts.length > 0
+  : finalVinylAvailable && parseInt(finalVinylRecordCount) > 0;
 
 // Sale calculations
 const hasSale = saleDiscount > 0;
@@ -378,6 +394,19 @@ const totalDurationFormatted = totalDurationSeconds > 0
             </span>
           </button>
 
+        {hasVinylParts && vinylAvailable ? (
+          <a
+            href={`/item/${id}/`}
+            aria-label={`Choose which vinyl record of ${releaseName} to buy`}
+            class={`vinyl-btn px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-bold text-sm flex-1 shadow-sm font-body text-white ${isPreOrder ? 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700' : 'bg-red-600 hover:bg-red-700'}`}
+          >
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="12" r="3" fill="currentColor"/>
+            </svg>
+            <span>{isPreOrder ? 'Pre-order' : 'Vinyl'} from £{minPartPrice?.toFixed(2)}</span>
+          </a>
+        ) : (
         <button
           data-release-id={id}
           data-product-type="vinyl"
@@ -416,12 +445,26 @@ const totalDurationFormatted = totalDurationSeconds > 0
             ) : 'Vinyl Sold Out'}
           </span>
         </button>
+        )}
         </div>
       )}
 
       {/* Vinyl button for NYOP mode - shown separately below the NYOP box */}
       {nyopEnabled && vinylAvailable && (
         <div class="w-64 mt-2">
+          {hasVinylParts ? (
+            <a
+              href={`/item/${id}/`}
+              aria-label={`Choose which vinyl record of ${releaseName} to buy`}
+              class="w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-bold text-sm shadow-sm font-body bg-red-600 hover:bg-red-700 text-white"
+            >
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              </svg>
+              <span>Vinyl + Digital from £{minPartPrice?.toFixed(2)}</span>
+            </a>
+          ) : (
           <button
             data-release-id={id}
             data-product-type="vinyl"
@@ -441,6 +484,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             </svg>
             <span>Vinyl + Digital £{finalVinylPrice?.toFixed(2)}</span>
           </button>
+          )}
         </div>
       )}
       </div>
