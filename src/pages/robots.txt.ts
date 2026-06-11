@@ -184,17 +184,6 @@ Disallow: /
 # SITEMAPS
 # ===========================================
 Sitemap: ${SITE_URL}/sitemap.xml
-
-# ===========================================
-# CRAWL SETTINGS
-# ===========================================
-# Request 1 second delay between requests for politeness
-Crawl-delay: 1
-
-# ===========================================
-# HOST (for search engines that support it)
-# ===========================================
-Host: ${SITE_URL}
 `;
 
   return new Response(robotsTxt, {

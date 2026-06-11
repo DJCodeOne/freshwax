@@ -399,7 +399,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     price: structuredPrice,
     currency: 'GBP',
     availability: productAvailability,
-    brand: artistName,
+    brand: labelName || artistName,
     category: 'Music > Digital Downloads',
     priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     ...(overallRating.count > 0 ? { reviews: { rating: overallRating.average, count: overallRating.count } } : {})

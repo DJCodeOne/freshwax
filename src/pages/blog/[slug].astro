@@ -24,6 +24,15 @@ function generateExcerpt(content: string, maxLength: number = 160): string {
   return text.substring(0, maxLength).trim() + '...';
 }
 
+// Meta descriptions over ~160 chars get truncated mid-sentence in SERPs —
+// cap at a word boundary so authored excerpts can run longer on the page.
+function capDescription(text: string, maxLength: number = 160): string {
+  if (!text || text.length <= maxLength) return text;
+  const cut = text.substring(0, maxLength - 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 100 ? cut.substring(0, lastSpace) : cut).replace(/[,;:.\s]+$/, '') + '…';
+}
+
 // Apply Fresh Wax branding to text (white Fresh, red Wax)
 function brandFreshWax(text: string): string {
   if (!text) return '';
@@ -49,7 +58,7 @@ const seoTitle = post?.title || 'Post Not Found';
   // headlines stay on one line. og:site_name already shows 'Fresh Wax'
   // above the title in the card so the suffix is redundant there anyway.
   const seoOgTitle = seoTitle;
-const seoDescription = post?.excerpt || (post?.content ? generateExcerpt(post.content) : 'Read this article on Fresh Wax blog.');
+const seoDescription = capDescription(post?.excerpt || (post?.content ? generateExcerpt(post.content) : 'Read this article on Fresh Wax blog.'));
 const seoImage = post?.featuredImage || '/og-image.webp';
 const publishedTime = post?.publishedAt || new Date().toISOString();
 const modifiedTime = publishedTime;
