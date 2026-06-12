@@ -9,6 +9,7 @@ import { createOrder, convertReservation } from '../../../lib/order-utils';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 import { enrichItemsWithSellerInfo } from '../../../lib/stripe-webhook/seller-enrichment';
 import { processArtistPayments, fetchActualStripeFee } from '../../../lib/stripe-webhook/payments';
+import { processVinylCrateSellerPayments } from '../../../lib/stripe-webhook/vinyl-crate-payments';
 import { createLogger, fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
 import { FIREBASE_API_KEY } from '../../../lib/constants';
 import { TIMEOUTS } from '../../../lib/timeouts';
@@ -298,6 +299,17 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
           totalItemCount: items.length,
           orderSubtotal,
           artistShippingBreakdown,
+          actualStripeFee,
+          stripeSecretKey: stripeSecretKeyForPayments,
+          env: env as CloudflareEnv
+        });
+        // Crates marketplace items pay out to the listing seller, not an artist
+        await processVinylCrateSellerPayments({
+          orderId: result.orderId!,
+          orderNumber: result.orderNumber || '',
+          items,
+          totalItemCount: items.length,
+          orderSubtotal,
           actualStripeFee,
           stripeSecretKey: stripeSecretKeyForPayments,
           env: env as CloudflareEnv

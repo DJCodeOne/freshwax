@@ -150,7 +150,7 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
       items: state.cart.map((item: CartItem) => ({
         id: item.id || item.productId,
         productId: item.productId || item.id,
-        releaseId: item.releaseId || item.productId || item.id,
+        releaseId: item.releaseId || (item.sellerId ? null : (item.productId || item.id)),
         trackId: item.trackId || null,
         name: item.name,
         type: item.type || item.productType,
@@ -160,7 +160,9 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
         size: item.size || null,
         color: (item.color && typeof item.color === 'object') ? item.color.name : (item.color || null),
         vinylPartId: item.vinylPartId || null,
-        vinylPartName: item.vinylPartName || null
+        vinylPartName: item.vinylPartName || null,
+        sellerId: item.sellerId || null,
+        sellerName: item.sellerName || null
       })),
       totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
       hasPhysicalItems,
@@ -282,7 +284,7 @@ export function renderPayPalButtons(state: CheckoutState) {
         items: state.cart.map((item: CartItem) => ({
           id: item.id || item.productId,
           productId: item.productId || item.id,
-          releaseId: item.releaseId || item.productId || item.id,
+          releaseId: item.releaseId || (item.sellerId ? null : (item.productId || item.id)),
           trackId: item.trackId || null,
           name: item.name,
           type: item.type || item.productType,
@@ -292,7 +294,9 @@ export function renderPayPalButtons(state: CheckoutState) {
           size: item.size || null,
           color: (item.color && typeof item.color === 'object') ? item.color.name : (item.color || null),
           vinylPartId: item.vinylPartId || null,
-          vinylPartName: item.vinylPartName || null
+          vinylPartName: item.vinylPartName || null,
+          sellerId: item.sellerId || null,
+          sellerName: item.sellerName || null
         })),
         totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
         hasPhysicalItems

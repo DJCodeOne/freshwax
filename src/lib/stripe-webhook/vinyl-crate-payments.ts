@@ -15,10 +15,12 @@ export async function processVinylCrateSellerPayments(params: {
   items: Record<string, unknown>[];
   totalItemCount: number;
   orderSubtotal: number;
+  /** Actual Stripe fee from the balance transaction — sellers bear the real fee */
+  actualStripeFee?: number | null;
   stripeSecretKey: string;
   env: CloudflareEnv;
 }) {
-  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, actualStripeFee, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
@@ -93,10 +95,16 @@ export async function processVinylCrateSellerPayments(params: {
       const itemPrice = item.price || 0;
       const itemTotal = itemPrice * (item.quantity || 1);
       const freshWaxFee = itemTotal * 0.01;
-      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
-      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
+      // Processing fee: actual Stripe fee when known, else 1.4% + £0.20
+      // estimate. Split equally among all sellers.
+      const totalProcessingFee = (typeof actualStripeFee === 'number' && actualStripeFee > 0)
+        ? actualStripeFee
+        : (orderSubtotal * 0.014) + 0.20;
       const processingFeePerSeller = totalProcessingFee / totalItemCount;
-      const sellerShare = itemTotal - freshWaxFee - processingFeePerSeller;
+      // Seller ships the record themselves — they receive 100% of the
+      // shipping the buyer paid for this listing, on top of the item share
+      const crateShipping = (((item.cratesShippingCost as number) || 0)) * ((item.quantity as number) || 1);
+      const sellerShare = itemTotal + crateShipping - freshWaxFee - processingFeePerSeller;
 
       // Group by seller
       if (!sellerPayments[sellerId]) {

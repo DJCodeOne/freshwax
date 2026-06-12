@@ -35,6 +35,20 @@ export async function enrichItemsWithSellerInfo(
       }
     }
 
+    // Crates marketplace items (sellerId, no releaseId): the seller IS the
+    // listing owner — without this the ledger entry has no seller and the
+    // sale is misattributed to platform revenue
+    if (!submitterId && item.sellerId && !item.releaseId) {
+      submitterId = item.sellerId as string;
+      artistName = (item.sellerName as string) || artistName;
+      try {
+        const seller = await getDocument('users', item.sellerId as string);
+        submitterEmail = seller?.email || null;
+      } catch (lookupErr: unknown) {
+        // Non-fatal: ledger entry still gets the sellerId
+      }
+    }
+
     // For merch items, look up the merch document for seller info
     if (item.type === 'merch' && item.productId) {
       try {

@@ -465,6 +465,7 @@ export async function handleProductOrder(
       items,
       totalItemCount,
       orderSubtotal,
+      actualStripeFee,
       stripeSecretKey,
       env
     });

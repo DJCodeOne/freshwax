@@ -11,10 +11,13 @@ const log = createLogger('[seller-payments]');
 
 // Process vinyl crate seller payments via Stripe Connect or PayPal
 export async function processVinylCrateSellerPayments(params: SellerPaymentParams) {
-  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env, paymentMethod } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env, paymentMethod, actualProcessingFee } = params;
   const prefix = params.logPrefix || '[PayPal]';
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
-  const totalProcessingFeeForOrder = getProcessingFee(orderSubtotal, paymentMethod);
+  // Sellers bear the REAL processor fee when the caller provides it
+  const totalProcessingFeeForOrder = (typeof actualProcessingFee === 'number' && actualProcessingFee > 0)
+    ? actualProcessingFee
+    : getProcessingFee(orderSubtotal, paymentMethod);
 
   const { createPayout, getPayPalConfig } = await import('../../paypal-payouts');
   const paypalConfig = getPayPalConfig(env);
@@ -111,7 +114,10 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
       // Processing fee: payment-method-aware (Stripe 1.4%+20p / PayPal 2.9%+30p),
       // computed once for the order then split equally per item.
       const processingFeePerSeller = totalProcessingFeeForOrder / totalItemCount;
-      const sellerShare = itemTotal - freshWaxFee - processingFeePerSeller;
+      // Seller ships the record themselves — they receive 100% of the
+      // shipping the buyer paid for this listing, on top of the item share
+      const crateShipping = ((item.cratesShippingCost as number) || 0) * (item.quantity || 1);
+      const sellerShare = itemTotal + crateShipping - freshWaxFee - processingFeePerSeller;
 
       // Group by seller
       if (!sellerPayments[sellerId]) {

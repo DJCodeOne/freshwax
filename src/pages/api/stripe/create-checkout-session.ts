@@ -36,6 +36,10 @@ const CheckoutItemSchema = z.object({
   isPreOrder: z.boolean().nullish(),
   releaseDate: z.string().nullish(),
   sellerId: z.string().nullish(),
+  sellerName: z.string().nullish(),
+  // Multi-part vinyl: which record was bought (part-1/part-2)
+  vinylPartId: z.string().nullish(),
+  vinylPartName: z.string().nullish(),
 }).strip();
 
 const CheckoutCustomerSchema = z.object({
@@ -272,7 +276,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Multi-part vinyl: without these the order loses which record was
       // bought — stock decrement and per-part downloads both depend on them
       vinylPartId: item.vinylPartId ?? null,
-      vinylPartName: item.vinylPartName ?? null
+      vinylPartName: item.vinylPartName ?? null,
+      // Crates marketplace: sellerId && !releaseId is the discriminator for
+      // marking the listing sold, notifying the seller, and routing payouts
+      sellerId: item.sellerId ?? null,
+      sellerName: item.sellerName ?? null,
+      isCratesItem: item.isCratesItem ?? null,
+      cratesShippingCost: item.cratesShippingCost ?? null
     }));
     const itemsJson = JSON.stringify(compressedItems);
 
