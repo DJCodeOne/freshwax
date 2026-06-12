@@ -5,6 +5,7 @@ import { buildRtmpUrl } from '../red5';
 import { broadcastLiveStatus } from '../pusher';
 import { APPROVED_RELAY_STATIONS } from '../relay-stations';
 import { isAdmin } from '../admin';
+import { acquireCronLock, releaseCronLock } from '../cron-lock';
 import { ApiErrors, successResponse } from '../api-utils';
 import {
   syncSlotToD1,
@@ -31,6 +32,19 @@ export async function handleStartRelay(
     return ApiErrors.badRequest('DJ ID, name, and relay URL required');
   }
 
+  // Serialize the "anyone live?" check and the slot create against the other
+  // go-live paths (TOCTOU). Shares the same lock name as handleGoLive so a
+  // relay start and a go-live can't both pass the check and create two live
+  // slots.
+  let relayLocked = false;
+  if (db) {
+    relayLocked = await acquireCronLock(db, 'slot_go_live').catch(() => false);
+    if (!relayLocked) {
+      return ApiErrors.badRequest('Another go-live is in progress — please try again in a moment');
+    }
+  }
+
+  try {
   // Check if anyone is currently live (including this DJ - prevent duplicate sessions)
   const relayLiveSlots = await queryCollection('livestreamSlots', {
     filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
@@ -143,4 +157,7 @@ export async function handleStartRelay(
     streamKey: relayStreamKey,
     hlsUrl: newSlot.hlsUrl,
     message: `Relay started from ${stationName || 'external station'}!` });
+  } finally {
+    if (relayLocked && db) await releaseCronLock(db, 'slot_go_live').catch(() => { /* lock release non-critical */ });
+  }
 }

@@ -4,6 +4,7 @@ import { queryCollection, setDocument, updateDocument } from '../firebase-rest';
 import { buildRtmpUrl, buildHlsUrl, findActiveRtmpStreamForDj } from '../red5';
 import { broadcastLiveStatus } from '../pusher';
 import { isAdmin } from '../admin';
+import { acquireCronLock, releaseCronLock } from '../cron-lock';
 import { logActivity } from '../activity-feed';
 import { createLogger, ApiErrors, fetchWithTimeout, successResponse } from '../api-utils';
 import { TIMEOUTS } from '../timeouts';
@@ -66,6 +67,19 @@ export async function handleGoLive(
     return ApiErrors.forbidden(eligibility.reason || 'Not eligible to stream');
   }
 
+  // Serialize the "anyone live?" check and the slot create against other
+  // go-live / go-live-now / relay starts. Without this, two concurrent
+  // go-lives both pass the check below and create two live slots (TOCTOU).
+  // Shares one lock name with the other go-live paths. Mirrors handleBook.
+  let goLiveLocked = false;
+  if (db) {
+    goLiveLocked = await acquireCronLock(db, 'slot_go_live').catch(() => false);
+    if (!goLiveLocked) {
+      return ApiErrors.badRequest('Another go-live is in progress — please try again in a moment');
+    }
+  }
+
+  try {
   // Check if anyone is currently live (including this DJ - prevent duplicate sessions)
   const liveSlots = await queryCollection('livestreamSlots', {
     filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
@@ -208,6 +222,9 @@ export async function handleGoLive(
     log.error('Failed to create slot:', createError);
     return ApiErrors.serverError('Failed to create live slot');
   }
+  } finally {
+    if (goLiveLocked && db) await releaseCronLock(db, 'slot_go_live').catch(() => { /* lock release non-critical */ });
+  }
 }
 
 export async function handleGoLiveNow(
@@ -245,6 +262,18 @@ export async function handleGoLiveNow(
     return ApiErrors.forbidden(goLiveNowEligibility.reason || 'Not eligible to stream');
   }
 
+  // Serialize the "anyone live?" check and the slot create (TOCTOU) — see
+  // handleGoLive. Shares the same lock so go_live / go_live_now / start_relay
+  // can't interleave and produce two live slots.
+  let goLiveNowLocked = false;
+  if (db) {
+    goLiveNowLocked = await acquireCronLock(db, 'slot_go_live').catch(() => false);
+    if (!goLiveNowLocked) {
+      return ApiErrors.badRequest('Another go-live is in progress — please try again in a moment');
+    }
+  }
+
+  try {
   // Check if anyone is live
   const liveSlots = await queryCollection('livestreamSlots', {
     filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
@@ -319,6 +348,9 @@ export async function handleGoLiveNow(
     streamKey,
     rtmpUrl: newSlot.rtmpUrl,
     hlsUrl: newSlot.hlsUrl });
+  } finally {
+    if (goLiveNowLocked && db) await releaseCronLock(db, 'slot_go_live').catch(() => { /* lock release non-critical */ });
+  }
 }
 
 export async function handleEarlyStart(
