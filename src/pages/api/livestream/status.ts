@@ -226,7 +226,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
         limit: 5,
         cacheTime: 30000 // 30 second cache
       });
-      liveStreams = legacyStreams;
+      // Strip publish credentials — legacy livestreams docs store streamKey/
+      // rtmpUrl (manage.ts), and this is the UNAUTHENTICATED status GET. The
+      // slots-derived map above already omits them; this fallback path assigned
+      // raw docs, leaking the RTMP key to anyone who could hijack the publish.
+      liveStreams = legacyStreams.map((s) => {
+        const { streamKey, twitchStreamKey, rtmpUrl, ...safe } = s;
+        return safe;
+      });
     }
 
     if (liveStreams.length === 0) {
