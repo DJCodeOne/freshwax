@@ -3477,29 +3477,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (!response.ok) throw new Error('End stream failed: ' + response.status);
         const result = await response.json();
         if (result.success) {
-          // Show countdown while stream terminates
-          let countdown = 10;
-          btn.innerHTML = '<span class="end-icon">🔴</span><span class="end-text">Stopping...</span><span class="end-countdown">' + countdown + 's</span>';
-          status.innerHTML = '⚡ Stream ending in <strong>' + countdown + '</strong> seconds...';
-
-          const countdownInterval = setInterval(() => {
-            countdown--;
-            if (countdown > 0) {
-              btn.innerHTML = '<span class="end-icon">🔴</span><span class="end-text">Stopping...</span><span class="end-countdown">' + countdown + 's</span>';
-              status.innerHTML = '⚡ Stream ending in <strong>' + countdown + '</strong> seconds...';
-            } else {
-              clearInterval(countdownInterval);
-              status.textContent = 'Stream ended - refreshing...';
-
-              // Record stream end before refresh
-              recordStreamEnd();
-
-              // Refresh the page to ensure clean state
-              setTimeout(() => {
-                window.location.reload();
-              }, 500);
-            }
-          }, 1000);
+          // End is instant — no countdown needed.
+          btn.innerHTML = '<span class="end-icon">⏹</span><span class="end-text">Stream ended</span>';
+          status.textContent = 'Stream ended';
+          recordStreamEnd();
+          setTimeout(() => { window.location.reload(); }, 400);
         } else {
           alert('Failed to end stream: ' + (result.error || 'Unknown error'));
           btn.innerHTML = '<span class="end-icon">⏹</span><span class="end-text">End Stream</span>';
