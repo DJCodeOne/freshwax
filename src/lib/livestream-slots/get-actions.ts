@@ -1,6 +1,6 @@
 // src/lib/livestream-slots/get-actions.ts
 // GET handler logic for livestream slots
-import { queryCollection, getDocument, updateDocument, clearCache } from '../firebase-rest';
+import { queryCollection, getDocument, updateDocument, updateDocumentConditional, clearCache } from '../firebase-rest';
 import { broadcastLiveStatus } from '../pusher';
 import { kvDelete } from '../kv-cache';
 import { d1GetLiveSlots, d1GetScheduledSlots } from '../d1-catalog';
@@ -240,6 +240,37 @@ export async function handleSchedule(
     } }, 200, { headers: { 'Cache-Control': 'no-store' } });
 }
 
+// Extend a slot's endTime, but ONLY if it hasn't changed since the caller's
+// snapshot (keyed on the Firestore updateTime carried on the snapshot doc).
+// autoEndExpiredSlots reads a `live` snapshot once at the top and then does a
+// lot of awaited work per slot; in that window the stream can be ended
+// (endStream, or a concurrent auto-end). Returns true if the extend applied
+// (slot provably unchanged → safe to mark 'live' in D1), false if the slot was
+// modified concurrently (do NOT resurrect it). Falls back to an unconditional
+// write only when the snapshot lacks _updateTime.
+async function extendIfStillLive(
+  snapshotSlot: Record<string, unknown>,
+  data: Record<string, unknown>
+): Promise<boolean> {
+  const id = snapshotSlot.id as string;
+  const expectedUpdateTime = snapshotSlot._updateTime as string | undefined;
+  if (expectedUpdateTime) {
+    try {
+      await updateDocumentConditional('livestreamSlots', id, data, expectedUpdateTime);
+      return true;
+    } catch (condErr: unknown) {
+      const msg = condErr instanceof Error ? condErr.message : String(condErr);
+      if (msg.includes('CONFLICT')) {
+        // Slot was modified since the snapshot (most likely ended) — skip.
+        return false;
+      }
+      throw condErr; // genuine failure — surface to caller's catch
+    }
+  }
+  await updateDocument('livestreamSlots', id, data);
+  return true;
+}
+
 // Auto-end expired live slots — extracted from GET handler
 async function autoEndExpiredSlots(
   db: unknown,
@@ -281,11 +312,15 @@ async function autoEndExpiredSlots(
         // Extend the relay endTime by another 24 hours so it doesn't keep triggering
         const newEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
         try {
-          await updateDocument('livestreamSlots', liveSlot.id, {
+          // Conditional on the snapshot's updateTime: if the relay was ended
+          // since the snapshot, skip — don't write 'live' back to D1.
+          const applied = await extendIfStillLive(liveSlot, {
             endTime: newEnd.toISOString(),
             updatedAt: now.toISOString()
           });
-          await syncSlotStatusToD1(db, liveSlot.id, 'live', { endTime: newEnd.toISOString() });
+          if (applied) {
+            await syncSlotStatusToD1(db, liveSlot.id, 'live', { endTime: newEnd.toISOString() });
+          }
         } catch (extErr: unknown) {
           log.warn('Failed to extend relay endTime:', extErr);
         }
@@ -399,17 +434,25 @@ async function autoEndExpiredSlots(
         if (newEnd.getTime() > slotEnd.getTime()) {
           log.info(`Extending slot ${liveSlot.id} for ${liveSlot.djName}: endTime ${slotEnd.toISOString()} → ${newEnd.toISOString()} (no DJ queued)`);
           try {
-            await updateDocument('livestreamSlots', liveSlot.id, {
+            // Conditional on the snapshot's updateTime: if the stream was ended
+            // (endStream / concurrent auto-end) since the snapshot at the top of
+            // this function, skip the extend and do NOT write 'live' back to D1 —
+            // that would resurrect an ended slot on the public pages.
+            const applied = await extendIfStillLive(liveSlot, {
               endTime: newEnd.toISOString(),
               updatedAt: now.toISOString(),
               extended: true,
               lastExtendedAt: now.toISOString(),
             });
-            await syncSlotStatusToD1(db, liveSlot.id, 'live', { endTime: newEnd.toISOString() });
-            invalidateCache();
-            clearCache('livestreamSlots');
-            await kvDelete('general', { prefix: 'status' });
-            await invalidateStatusCacheFn();
+            if (applied) {
+              await syncSlotStatusToD1(db, liveSlot.id, 'live', { endTime: newEnd.toISOString() });
+              invalidateCache();
+              clearCache('livestreamSlots');
+              await kvDelete('general', { prefix: 'status' });
+              await invalidateStatusCacheFn();
+            } else {
+              log.info(`Skipped extend for ${liveSlot.id} — slot changed since snapshot (likely ended); not resurrecting to live`);
+            }
           } catch (extendErr: unknown) {
             log.warn('Failed to extend slot endTime:', extendErr);
           }
