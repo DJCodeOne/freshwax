@@ -525,18 +525,9 @@ try {
           <!-- Sound Wave Animation (for playlist) -->
           <div class="sound-wave-wrapper paused" id="soundWaveWrapper">
             <div class="sound-wave">
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
-              <span class="wave-bar"></span>
+              {Array.from({ length: 40 }).map((_, i) => (
+                <span class="wave-bar" style={`--i:${i}`}></span>
+              ))}
             </div>
           </div>
           
