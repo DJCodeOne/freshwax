@@ -13,8 +13,11 @@ const log = createLogger('[seller-payments]');
 // Based on capture-redirect.ts version (superset with Stripe Connect transfers)
 // Pass skipStripeTransfers: true to skip actual Stripe/PayPal transfers (royalty-only mode)
 export async function processMerchSupplierPayments(params: SellerPaymentParams & { skipStripeTransfers?: boolean }) {
-  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env, skipStripeTransfers, paymentMethod } = params;
-  const totalProcessingFeeForOrder = getProcessingFee(orderSubtotal, paymentMethod);
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env, skipStripeTransfers, paymentMethod, actualProcessingFee } = params;
+  // Sellers bear the REAL processor fee when the caller provides it
+  const totalProcessingFeeForOrder = (typeof actualProcessingFee === 'number' && actualProcessingFee >= 0)
+    ? actualProcessingFee
+    : getProcessingFee(orderSubtotal, paymentMethod);
   const prefix = params.logPrefix || '[PayPal]';
 
   const stripe = skipStripeTransfers ? null : new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });

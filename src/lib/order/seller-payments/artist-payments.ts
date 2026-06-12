@@ -16,7 +16,7 @@ export async function processArtistPayments(params: SellerPaymentParams) {
   // Sellers bear the REAL processor fee when the caller provides it (from
   // the capture/balance-transaction response); fall back to the
   // payment-method-aware estimate otherwise.
-  const totalProcessingFeeForOrder = (typeof actualProcessingFee === 'number' && actualProcessingFee > 0)
+  const totalProcessingFeeForOrder = (typeof actualProcessingFee === 'number' && actualProcessingFee >= 0)
     ? actualProcessingFee
     : getProcessingFee(orderSubtotal, paymentMethod);
 

@@ -15,7 +15,7 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
   const prefix = params.logPrefix || '[PayPal]';
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
   // Sellers bear the REAL processor fee when the caller provides it
-  const totalProcessingFeeForOrder = (typeof actualProcessingFee === 'number' && actualProcessingFee > 0)
+  const totalProcessingFeeForOrder = (typeof actualProcessingFee === 'number' && actualProcessingFee >= 0)
     ? actualProcessingFee
     : getProcessingFee(orderSubtotal, paymentMethod);
 

@@ -739,12 +739,30 @@ describe('updateMerchStock', () => {
     );
   });
 
-  it('skips items without matching variant key', async () => {
+  it('falls back to the only variant when the key does not match (cascade)', async () => {
+    // Mirrors reserveStock/validateStock: exact -> single variant -> size
+    // prefix -> color suffix -> first key. A single-variant product absorbs
+    // any size/colour the cart sends.
     mockGetDocument.mockResolvedValue({
       variantStock: {
         'l_black': { stock: 10, sold: 0, reserved: 0 },
       },
     });
+
+    const items = [
+      { type: 'merch', productId: 'shirt1', name: 'T-Shirt', size: 'XXL', color: 'Pink', quantity: 1 },
+    ];
+
+    await updateMerchStock(items, 'FW-240101-ABC', 'order1');
+    expect(mockUpdateDocument).toHaveBeenCalledWith('merch', 'shirt1', expect.objectContaining({
+      variantStock: expect.objectContaining({
+        'l_black': expect.objectContaining({ stock: 9, sold: 1 }),
+      }),
+    }));
+  });
+
+  it('skips items when the product has no variants at all', async () => {
+    mockGetDocument.mockResolvedValue({ variantStock: {} });
 
     const items = [
       { type: 'merch', productId: 'shirt1', name: 'T-Shirt', size: 'XXL', color: 'Pink', quantity: 1 },

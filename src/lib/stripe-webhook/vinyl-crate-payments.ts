@@ -97,7 +97,7 @@ export async function processVinylCrateSellerPayments(params: {
       const freshWaxFee = itemTotal * 0.01;
       // Processing fee: actual Stripe fee when known, else 1.4% + £0.20
       // estimate. Split equally among all sellers.
-      const totalProcessingFee = (typeof actualStripeFee === 'number' && actualStripeFee > 0)
+      const totalProcessingFee = (typeof actualStripeFee === 'number' && actualStripeFee >= 0)
         ? actualStripeFee
         : (orderSubtotal * 0.014) + 0.20;
       const processingFeePerSeller = totalProcessingFee / totalItemCount;

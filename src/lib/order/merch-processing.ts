@@ -18,6 +18,7 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
   for (const item of items) {
     if (item.type === 'merch' && item.productId) {
       let stockUpdated = false;
+      let resolvedVariantKey: string | null = null;
 
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
@@ -33,13 +34,27 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
           // Build variant key from size and color
           const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
           const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
-          const variantKey = size + '_' + color;
+          let variantKey = size + '_' + color;
 
-          // Exact match only - no heuristic guessing to avoid updating wrong variant
+          // Fallback cascade on exact-match miss — MUST mirror reserveStock /
+          // validateStock (exact -> single variant -> size prefix -> color
+          // suffix -> first key). Validation passes via this cascade, so an
+          // exact-only check here silently skips the decrement.
+          if (!variantStock[variantKey]) {
+            const keys = Object.keys(variantStock);
+            if (keys.length === 1) {
+              variantKey = keys[0];
+            } else if (keys.length > 1) {
+              const sizeMatch = keys.find(k => k.startsWith(size + '_'));
+              const colorMatch = keys.find(k => k.endsWith('_' + color));
+              variantKey = sizeMatch || colorMatch || keys[0];
+            }
+          }
           if (!variantStock[variantKey]) {
             log.error('[order-utils] Variant key not found:', variantKey, 'for item:', item.name, 'available keys:', Object.keys(variantStock));
             break;
           }
+          resolvedVariantKey = variantKey;
 
           const variant = variantStock[variantKey];
           if (!variant) break;
@@ -111,7 +126,7 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
         try {
           const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
           const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
-          const variantKey = size + '_' + color;
+          const variantKey = resolvedVariantKey || (size + '_' + color);
           const variant = updatedProduct?.variantStock?.[variantKey];
 
           await addDocument('merch-stock-movements', {
@@ -159,6 +174,32 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
         } catch (supplierErr: unknown) {
           log.info('[order-utils] Could not update supplier stats');
         }
+      }
+
+      // Attach supplierId + sellerEmail so sendMerchSaleEmails has a
+      // recipient (it groups by item.stockistEmail || artistEmail ||
+      // sellerEmail). Runs regardless of stock-update success — the supplier
+      // must hear about the order either way.
+      try {
+        const productForEmail = merchMap.get(item.productId) || null;
+        const supplierId = productForEmail?.supplierId as string | undefined;
+        if (supplierId && !item.sellerEmail) {
+          item.supplierId = supplierId;
+          const supplierData = await getDocument('merch-suppliers', supplierId).catch(() => null);
+          if (supplierData?.email) {
+            item.sellerEmail = supplierData.email;
+          } else {
+            const userData = await getDocument('users', supplierId).catch(() => null);
+            if (userData?.email) {
+              item.sellerEmail = userData.email;
+            } else {
+              const artistData = await getDocument('artists', supplierId).catch(() => null);
+              if (artistData?.email) item.sellerEmail = artistData.email;
+            }
+          }
+        }
+      } catch (emailErr: unknown) {
+        log.info('[order-utils] Could not resolve supplier email for merch item');
       }
     }
   }

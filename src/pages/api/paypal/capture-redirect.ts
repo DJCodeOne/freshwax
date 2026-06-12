@@ -11,7 +11,7 @@ import { SITE_URL } from '../../../lib/constants';
 import { createLogger } from '../../../lib/api-utils';
 import { processArtistPayments, processMerchSupplierPayments, processVinylCrateSellerPayments } from '../../../lib/order/seller-payments';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
-import { enrichItemsForLedger } from '../../../lib/order/paypal-capture-helpers';
+import { enrichItemsForLedger, processMerchRoyalties } from '../../../lib/order/paypal-capture-helpers';
 import { getProcessingFee } from '../../../lib/order/seller-payments/types';
 
 const log = createLogger('[paypal-redirect]');
@@ -231,10 +231,11 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
       };
       const paymentResults = await Promise.allSettled([
         processArtistPayments(paymentParams),
-        processMerchSupplierPayments(paymentParams),
+        processMerchRoyalties(paymentParams), // 10% brand royalty (brandAccountId)
+        processMerchSupplierPayments(paymentParams), // supplier share (merch.supplierId)
         processVinylCrateSellerPayments(paymentParams)
       ]);
-      const paymentLabels = ['Artist', 'Supplier', 'Crate seller'];
+      const paymentLabels = ['Artist', 'Brand royalty', 'Merch supplier', 'Crate seller'];
       for (let i = 0; i < paymentResults.length; i++) {
         if (paymentResults[i].status === 'rejected') {
           log.error(`[PayPal Redirect] ${paymentLabels[i]} payment processing error:`, (paymentResults[i] as PromiseRejectedResult).reason);

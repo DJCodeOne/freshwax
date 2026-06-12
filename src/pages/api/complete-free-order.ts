@@ -171,7 +171,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { validatedItems, validatedSubtotal } = await validateAndGetPrices(orderData.items);
     const hasPhysicalItems = validatedItems.some((item: Record<string, unknown>) =>
       item.type === 'vinyl' || item.type === 'merch');
-    const shipping = hasPhysicalItems ? (validatedSubtotal >= 50 ? 0 : 4.99) : 0;
+    // Free-over-£50 applies to the MERCH subtotal only (matches Stripe/PayPal
+    // checkout) — using the whole-order subtotal let vinyl spend waive it
+    const merchOnlySubtotal = validatedItems
+      .filter((item: Record<string, unknown>) => item.type === 'merch')
+      .reduce((sum: number, item: Record<string, unknown>) => sum + (((item.price as number) || 0) * ((item.quantity as number) || 1)), 0);
+    const shipping = hasPhysicalItems ? (merchOnlySubtotal >= 50 ? 0 : 4.99) : 0;
     const validatedTotal = validatedSubtotal + shipping;
 
     const appliedCredit = orderData.appliedCredit || 0;
@@ -370,6 +375,39 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       } catch (ledgerErr: unknown) {
         log.error('[FreeOrder] Failed to record to ledger:', ledgerErr);
+      }
+
+      // Seller payouts — credit/gift-card orders are real revenue for sellers.
+      // No processor charge on a free order, so actualProcessingFee is 0.
+      try {
+        const { processArtistPayments, processMerchSupplierPayments, processVinylCrateSellerPayments } = await import('../../lib/order/seller-payments');
+        const { processMerchRoyalties } = await import('../../lib/order/paypal-capture-helpers');
+        const payoutParams = {
+          orderId: result.orderId!,
+          orderNumber: result.orderNumber || '',
+          items: validatedItems as Record<string, unknown>[],
+          totalItemCount: validatedItems.length,
+          orderSubtotal: validatedSubtotal,
+          actualProcessingFee: 0,
+          paymentMethod: 'free',
+          logPrefix: '[FreeOrder]',
+          stripeSecretKey: (env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY || '') as string,
+          env
+        };
+        const payoutResults = await Promise.allSettled([
+          processArtistPayments(payoutParams),
+          processMerchRoyalties(payoutParams), // 10% brand royalty (brandAccountId)
+          processMerchSupplierPayments(payoutParams), // supplier share (merch.supplierId)
+          processVinylCrateSellerPayments(payoutParams)
+        ]);
+        const payoutLabels = ['Artist', 'Brand royalty', 'Merch supplier', 'Crate seller'];
+        for (let i = 0; i < payoutResults.length; i++) {
+          if (payoutResults[i].status === 'rejected') {
+            log.error(`[FreeOrder] ${payoutLabels[i]} payout error:`, (payoutResults[i] as PromiseRejectedResult).reason);
+          }
+        }
+      } catch (payoutErr: unknown) {
+        log.error('[FreeOrder] Seller payout processing failed:', payoutErr);
       }
 
       // If credit was applied (already deducted before order creation), record the transaction

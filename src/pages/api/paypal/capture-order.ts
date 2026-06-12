@@ -12,7 +12,7 @@ import { getDocument, deleteDocument, addDocument, queryCollection, invalidateRe
 import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 import { createLogger, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
-import { processArtistPayments, processVinylCrateSellerPayments } from '../../../lib/order/seller-payments';
+import { processArtistPayments, processVinylCrateSellerPayments, processMerchSupplierPayments } from '../../../lib/order/seller-payments';
 import { processMerchRoyalties, enrichItemsForLedger, deductAppliedCredit } from '../../../lib/order/paypal-capture-helpers';
 
 const log = createLogger('[paypal-capture]');
@@ -465,10 +465,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
       const paymentResults = await Promise.allSettled([
         processArtistPayments(paymentParams),
-        processMerchRoyalties(paymentParams),
+        processMerchRoyalties(paymentParams), // 10% brand royalty (brandAccountId)
+        processMerchSupplierPayments(paymentParams), // supplier share (merch.supplierId)
         processVinylCrateSellerPayments(paymentParams)
       ]);
-      const paymentLabels = ['Artist', 'Supplier', 'Crate seller'];
+      const paymentLabels = ['Artist', 'Brand royalty', 'Merch supplier', 'Crate seller'];
       for (let i = 0; i < paymentResults.length; i++) {
         if (paymentResults[i].status === 'rejected') {
           log.error(`[PayPal] ${paymentLabels[i]} payment processing error:`, (paymentResults[i] as PromiseRejectedResult).reason);

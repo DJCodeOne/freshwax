@@ -10,6 +10,7 @@ import { createGiftCardAfterPayment } from '../giftcard';
 import { recordMultiSellerSale } from '../sales-ledger';
 import { fetchWithTimeout, createLogger, errorResponse } from '../api-utils';
 import { processArtistPayments, processSupplierPayments, getCountryName, fetchActualStripeFee } from './payments';
+import { processMerchSupplierPayments } from '../order/seller-payments';
 import { processVinylCrateSellerPayments } from './vinyl-crate-payments';
 import { enrichItemsWithSellerInfo } from './seller-enrichment';
 import { deductAppliedCredit } from './credit-deduction';
@@ -445,8 +446,9 @@ export async function handleProductOrder(
       env
     });
 
-    // Process supplier payments for merch items
-    // Process supplier payments
+    // Merch pays out two ways depending on product setup:
+    // - brandAccountId on the item  -> 10% brand royalty (D1 royalties)
+    // - supplierId on the merch doc -> supplier share (item - 5% - fees)
     await processSupplierPayments({
       orderId: result.orderId,
       orderNumber: result.orderNumber || '',
@@ -456,6 +458,23 @@ export async function handleProductOrder(
       stripeSecretKey,
       env
     });
+
+    try {
+      await processMerchSupplierPayments({
+        orderId: result.orderId,
+        orderNumber: result.orderNumber || '',
+        items,
+        totalItemCount,
+        orderSubtotal,
+        actualProcessingFee: actualStripeFee,
+        paymentMethod: 'stripe',
+        logPrefix: '[Stripe Webhook]',
+        stripeSecretKey,
+        env
+      });
+    } catch (merchPayErr: unknown) {
+      log.error('[Stripe Webhook] Merch supplier payment error:', merchPayErr);
+    }
 
     // Process vinyl crate seller payments
     // Process vinyl crate seller payments
