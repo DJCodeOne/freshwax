@@ -276,7 +276,8 @@ export async function handleTrackEnded(
       ctx.playlist = result.playlist;
 
       if (ctx.playlist.queue.length > 0 && ctx.playlist.isPlaying) {
-        await playCurrent();
+        // Respect a local pause — a synced track-end must not resume playback.
+        if (!ctx.isPausedLocally) await playCurrent();
       } else {
         // Queue empty — server couldn't find a track. Retry after 10s.
         // Don't destroy player permanently — autoplay should recover.

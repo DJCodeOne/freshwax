@@ -356,6 +356,13 @@ export async function handleRemoteUpdate(
     return;
   }
 
+  // If the listener paused locally, a synced remote update (e.g. the live track
+  // advanced on the server) must NOT force playback back on. ctx.playlist is
+  // already updated above, and resume() re-syncs to the live position on play.
+  // Without this the playlist un-paused itself every time the live track
+  // changed (~every few minutes).
+  if (ctx.isPausedLocally) return;
+
   const shouldStartPlaying = !wasPlaying && ctx.playlist.isPlaying && hasItems;
   const currentItemChanged = oldCurrentItem?.id !== newCurrentItem?.id && newCurrentItem != null;
 
