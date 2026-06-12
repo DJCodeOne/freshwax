@@ -17,7 +17,7 @@ import {
 
 import {
   getPusherConfig, loadPusherScript, setupLiveStatusPusher
-} from '/live/pusher-events.js';
+} from '/live/pusher-events.js?v=20260612b';
 
 import {
   initChatHandler, setChatCurrentUser, setChatCurrentStream,
@@ -281,7 +281,7 @@ function setupPlaylistPlayButton() {
     var playlistPlayer = document.getElementById('playlistPlayer');
     if (playlistPlayer && !playlistPlayer.classList.contains('hidden') && window.playlistManager && !window.isLiveStreamActive) {
       var pm = window.playlistManager; var isActPlaying = pm.isActuallyPlaying || false;
-      try { if (isActPlaying) { await pm.pause(); window.isPlaylistPlaying = false; if (playIcon) playIcon.classList.remove('hidden'); if (pauseIcon) pauseIcon.classList.add('hidden'); playBtn.classList.remove('playing'); pausePlaylistWave(); } else { await pm.resume(); window.isPlaylistPlaying = true; if (playIcon) playIcon.classList.add('hidden'); if (pauseIcon) pauseIcon.classList.remove('hidden'); playBtn.classList.add('playing'); showPlaylistWave(); } } catch (e) { console.error('[PlayBtn] Playlist error:', e); }
+      try { if (isActPlaying) { await pm.pause(); pm.userPaused = true; window.isPlaylistPlaying = false; if (playIcon) playIcon.classList.remove('hidden'); if (pauseIcon) pauseIcon.classList.add('hidden'); playBtn.classList.remove('playing'); pausePlaylistWave(); } else { await pm.resume(); pm.userPaused = false; window.isPlaylistPlaying = true; if (playIcon) playIcon.classList.add('hidden'); if (pauseIcon) pauseIcon.classList.remove('hidden'); playBtn.classList.add('playing'); showPlaylistWave(); } } catch (e) { console.error('[PlayBtn] Playlist error:', e); }
       return;
     }
     var videoVisible = document.getElementById('videoPlayer') && !document.getElementById('videoPlayer').classList.contains('hidden');
@@ -294,7 +294,7 @@ function setupPlaylistPlayButton() {
       else { audioEl.pause(); setLiveStreamPlaying(false); if (playIcon) playIcon.classList.remove('hidden'); if (pauseIcon) pauseIcon.classList.add('hidden'); playBtn.classList.remove('playing'); stopGlobalMeters(); }
     } else if (window.playlistManager && !window.isLiveStreamActive) {
       var pm2 = window.playlistManager; var isActPlaying2 = pm2.isActuallyPlaying || false;
-      try { if (isActPlaying2) { await pm2.pause(); window.isPlaylistPlaying = false; if (playIcon) playIcon.classList.remove('hidden'); if (pauseIcon) pauseIcon.classList.add('hidden'); playBtn.classList.remove('playing'); pausePlaylistWave(); } else { if (pm2.queue && pm2.queue.length > 0) await pm2.resume(); else if (pm2.startAutoPlay) await pm2.startAutoPlay(); window.isPlaylistPlaying = true; if (playIcon) playIcon.classList.add('hidden'); if (pauseIcon) pauseIcon.classList.remove('hidden'); playBtn.classList.add('playing'); showPlaylistWave(); if (playlistPlayer) playlistPlayer.classList.remove('hidden'); } } catch (e) { console.error('[PlayBtn] Fallback playlist error:', e); }
+      try { if (isActPlaying2) { await pm2.pause(); pm2.userPaused = true; window.isPlaylistPlaying = false; if (playIcon) playIcon.classList.remove('hidden'); if (pauseIcon) pauseIcon.classList.add('hidden'); playBtn.classList.remove('playing'); pausePlaylistWave(); } else { pm2.userPaused = false; if (pm2.queue && pm2.queue.length > 0) await pm2.resume(); else if (pm2.startAutoPlay) await pm2.startAutoPlay(); window.isPlaylistPlaying = true; if (playIcon) playIcon.classList.add('hidden'); if (pauseIcon) pauseIcon.classList.remove('hidden'); playBtn.classList.add('playing'); showPlaylistWave(); if (playlistPlayer) playlistPlayer.classList.remove('hidden'); } } catch (e) { console.error('[PlayBtn] Fallback playlist error:', e); }
     }
   };
 }
@@ -411,6 +411,10 @@ function stopLiveStream() {
 // --- Offline state ---
 function showOfflineState(scheduled) {
   if (window.currentStreamData && (streamDetectedThisSession || window.isLiveStreamActive)) return;
+  // A stream-started event just fired and we're still confirming it through the
+  // status-cache propagation lag — don't flash the offline placeholder while a
+  // stream we KNOW just started is on its way in. See pusher-events.js.
+  if (window._awaitingLiveStart && (Date.now() - window._awaitingLiveStart) < 25000) return;
   window.isLiveStreamActive = false; setLiveStreamPlaying(false);
   var initOverlay = document.getElementById('initializingOverlay'); if (initOverlay) initOverlay.classList.add('hidden');
   var badge = document.getElementById('liveBadge'); var statusText = document.getElementById('liveStatusText');
@@ -509,7 +513,10 @@ async function checkLiveStatus(forceRefresh) {
       if (canResumePlaylist) { wasLiveStreamActive = false; streamEndedAt = null;
         if (!playlistManager && typeof window.loadPlaylistModule === 'function') { await window.loadPlaylistModule({ silent: true }); await new Promise(function(r) { setTimeout(r, 500); }); playlistManager = window.playlistManager; }
         if (playlistManager && playlistManager.wasPausedForStream && playlistManager.queue.length > 0) { await playlistManager.resume(); playlistManager.wasPausedForStream = false; }
-        else if (playlistManager && (!playlistManager.isPlaying || playlistManager.queue.length === 0)) { await playlistManager.startAutoPlay(); }
+        // Don't auto-(re)start the playlist if the listener deliberately paused it.
+        // The 60s/120s status poll lands here and previously called startAutoPlay
+        // whenever !isPlaying, which un-paused a manual pause after ~1-2 minutes.
+        else if (playlistManager && !playlistManager.userPaused && (!playlistManager.isPlaying || playlistManager.queue.length === 0)) { await playlistManager.startAutoPlay(); }
       }
       var vp = document.getElementById('videoPlayer'); var hlsVid = document.getElementById('hlsVideoElement'); var pp = document.getElementById('playlistPlayer');
       if (canResumePlaylist && playlistManager && playlistManager.queue && playlistManager.queue.length > 0) { if (hlsVid) hlsVid.classList.add('hidden'); if (pp) pp.classList.remove('hidden'); if (vp) { vp.classList.remove('hidden'); vp.style.opacity = '1'; } }

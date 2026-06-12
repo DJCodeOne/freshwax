@@ -58,7 +58,22 @@ export async function setupLiveStatusPusher(deps) {
     liveStatusChannel = window.statusPusher.subscribe('live-status');
 
     liveStatusChannel.bind('stream-started', function(data) {
-      if (onCheckLiveStatus) onCheckLiveStatus(true);
+      // A stream just started. Confirm it's actually live, RETRYING through the
+      // status-cache propagation lag — otherwise a single stale "not live"
+      // response strands listeners on the offline placeholder until the slow
+      // 60s poll. window._awaitingLiveStart also suppresses the offline overlay
+      // during this window (see showOfflineState in live-stream.js).
+      window._awaitingLiveStart = Date.now();
+      var attempts = 0;
+      (function confirmLive() {
+        attempts++;
+        if (onCheckLiveStatus) onCheckLiveStatus(true);
+        if (attempts >= 8) { window._awaitingLiveStart = 0; return; }
+        setTimeout(function() {
+          if (window.isLiveStreamActive) { window._awaitingLiveStart = 0; return; }
+          confirmLive();
+        }, Math.min(1500 * attempts, 4000));
+      })();
       if (typeof window.refreshSchedule === 'function') window.refreshSchedule();
     });
 
