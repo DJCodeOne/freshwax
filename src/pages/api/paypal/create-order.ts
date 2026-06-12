@@ -32,6 +32,10 @@ const PayPalItemSchema = z.object({
   artist: z.string().nullish(),
   artistId: z.string().nullish(),
   sellerId: z.string().nullish(),
+  // Multi-part vinyl: which record was bought (part-1/part-2). Without these
+  // the order loses part-scoped stock decrement and downloads.
+  vinylPartId: z.string().nullish(),
+  vinylPartName: z.string().nullish(),
 }).strip();
 
 const PayPalCreateOrderSchema = z.object({
@@ -325,7 +329,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           image: item.image,
           artwork: item.artwork,
           artist: item.artist,
-          artistId: item.artistId // For Stripe Connect payouts
+          artistId: item.artistId, // For Stripe Connect payouts
+          vinylPartId: item.vinylPartId ?? null,
+          vinylPartName: item.vinylPartName ?? null
         })),
         // Use VALIDATED totals
         totals: {

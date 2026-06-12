@@ -8,7 +8,8 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createOrder, validateStock } from '../../../lib/order-utils';
-import { getDocument, deleteDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, deleteDocument, addDocument, queryCollection, invalidateReleasesCache, clearAllMerchCache } from '../../../lib/firebase-rest';
+import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 import { createLogger, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
 import { processArtistPayments, processVinylCrateSellerPayments } from '../../../lib/order/seller-payments';
@@ -125,7 +126,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         items: pendingOrder.items,
         totals: pendingOrder.totals,
         hasPhysicalItems: pendingOrder.hasPhysicalItems,
-        appliedCredit: pendingOrder.appliedCredit || 0
+        appliedCredit: pendingOrder.appliedCredit || 0,
+        artistShippingBreakdown: pendingOrder.artistShippingBreakdown || null
       };
       usedServerData = true;
 
@@ -191,6 +193,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const capture = captureResult.purchase_units?.[0]?.payments?.captures?.[0];
     const captureId = capture?.id;
     const capturedAmount = parseFloat(capture?.amount?.value || '0');
+    // ACTUAL PayPal fee from the capture response — sellers bear the real
+    // fee (item price - actual fee - 1% FW), not the 2.9%+30p estimate
+    const actualPayPalFee = parseFloat(capture?.seller_receivable_breakdown?.paypal_fee?.value || '') || null;
 
     // Payment captured successfully
 
@@ -400,8 +405,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Look up seller info for ALL items so multi-seller orders are handled correctly
     try {
       const freshWaxFee = orderData.totals?.freshWaxFee || 0;
-      // PayPal fee: approximately 2.9% + £0.30
-      const paypalFee = (capturedAmount * 0.029) + 0.30;
+      // Actual PayPal fee from capture response; estimate only as fallback
+      const paypalFee = actualPayPalFee ?? ((capturedAmount * 0.029) + 0.30);
 
       const itemsList = (orderData.items as Record<string, unknown>[]) || [];
       const enrichedItems = await enrichItemsForLedger(itemsList);
@@ -453,7 +458,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         stripeSecretKey,
         env,
         logPrefix: '[PayPal]',
-        paymentMethod: 'paypal' as const
+        paymentMethod: 'paypal' as const,
+        actualProcessingFee: actualPayPalFee,
+        // Artists receive 100% of their vinyl shipping (stored at create time)
+        artistShippingBreakdown: (orderData.artistShippingBreakdown as Record<string, { artistId: string; artistName: string; amount: number }> | null) || null
       };
       const paymentResults = await Promise.allSettled([
         processArtistPayments(paymentParams),
@@ -477,6 +485,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
         orderId: result.orderId!,
         orderNumber: result.orderNumber
       });
+    }
+
+    // Invalidate caches so stock changes appear immediately (mirrors Stripe webhook)
+    try {
+      const soldItems = (orderData.items as Record<string, unknown>[]) || [];
+      const hasReleaseItems = soldItems.some((i) => i.type === 'digital' || i.type === 'release' || i.type === 'track' || i.type === 'vinyl');
+      const hasMerchItems = soldItems.some((i) => i.type === 'merch');
+      if (hasReleaseItems) {
+        invalidateReleasesCache();
+        await invalidateReleasesKVCache();
+      }
+      if (hasMerchItems) {
+        clearAllMerchCache();
+      }
+    } catch (cacheErr: unknown) {
+      log.warn('[PayPal] Cache invalidation failed (non-blocking):', cacheErr);
     }
 
     return successResponse({ orderId: result.orderId,

@@ -19,6 +19,19 @@ export interface SellerPaymentParams {
    * wrong rate causes Fresh Wax to over-pay sellers and absorb the gap.
    */
   paymentMethod?: 'stripe' | 'paypal' | string;
+  /**
+   * ACTUAL processor fee for this payment (e.g. PayPal capture
+   * seller_receivable_breakdown.paypal_fee, Stripe balance transaction fee).
+   * Sellers bear the real fee — when provided this replaces the
+   * getProcessingFee() estimate.
+   */
+  actualProcessingFee?: number | null;
+  /**
+   * Per-artist vinyl shipping (artists receive 100% of their shipping fee
+   * on top of the item share). Keyed by artistId. Stored on the pending
+   * checkout/order at create time.
+   */
+  artistShippingBreakdown?: Record<string, { artistId: string; artistName: string; amount: number }> | null;
 }
 
 /**

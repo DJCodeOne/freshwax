@@ -158,7 +158,9 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
         quantity: item.quantity,
         image: item.image || item.artwork,
         size: item.size || null,
-        color: (item.color && typeof item.color === 'object') ? item.color.name : (item.color || null)
+        color: (item.color && typeof item.color === 'object') ? item.color.name : (item.color || null),
+        vinylPartId: item.vinylPartId || null,
+        vinylPartName: item.vinylPartName || null
       })),
       totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
       hasPhysicalItems,
@@ -288,7 +290,9 @@ export function renderPayPalButtons(state: CheckoutState) {
           quantity: item.quantity,
           image: item.image || item.artwork,
           size: item.size || null,
-          color: (item.color && typeof item.color === 'object') ? item.color.name : (item.color || null)
+          color: (item.color && typeof item.color === 'object') ? item.color.name : (item.color || null),
+          vinylPartId: item.vinylPartId || null,
+          vinylPartName: item.vinylPartName || null
         })),
         totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
         hasPhysicalItems

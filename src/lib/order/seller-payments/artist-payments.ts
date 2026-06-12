@@ -11,11 +11,14 @@ const log = createLogger('[seller-payments]');
 // Process artist payments - creates pending payouts for manual review
 // NOTE: Automatic payouts disabled - all payouts are manual for now
 export async function processArtistPayments(params: SellerPaymentParams) {
-  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, paymentMethod } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, paymentMethod, actualProcessingFee, artistShippingBreakdown } = params;
   const prefix = params.logPrefix || '[PayPal]';
-  // Payment-method-aware processing fee. Default = stripe rates for safety
-  // if a caller forgets to pass paymentMethod.
-  const totalProcessingFeeForOrder = getProcessingFee(orderSubtotal, paymentMethod);
+  // Sellers bear the REAL processor fee when the caller provides it (from
+  // the capture/balance-transaction response); fall back to the
+  // payment-method-aware estimate otherwise.
+  const totalProcessingFeeForOrder = (typeof actualProcessingFee === 'number' && actualProcessingFee > 0)
+    ? actualProcessingFee
+    : getProcessingFee(orderSubtotal, paymentMethod);
 
   try {
     // Group items by artist. When a release defines `payoutSplits` (array of
@@ -28,6 +31,7 @@ export async function processArtistPayments(params: SellerPaymentParams) {
       artistName: string;
       artistEmail: string;
       amount: number;
+      shippingAmount?: number;
       items: string[];
     }> = {};
 
@@ -143,6 +147,17 @@ export async function processArtistPayments(params: SellerPaymentParams) {
       }
     }
 
+    // Artists receive 100% of their vinyl shipping fee on top of item shares
+    if (artistShippingBreakdown) {
+      for (const artistId of Object.keys(artistShippingBreakdown)) {
+        const shippingInfo = artistShippingBreakdown[artistId];
+        if (artistPayments[artistId] && shippingInfo.amount > 0) {
+          artistPayments[artistId].amount += shippingInfo.amount;
+          artistPayments[artistId].shippingAmount = shippingInfo.amount;
+        }
+      }
+    }
+
     // Processing artist payouts
 
     for (const artistId of Object.keys(artistPayments)) {
@@ -159,9 +174,11 @@ export async function processArtistPayments(params: SellerPaymentParams) {
         orderId,
         orderNumber,
         amount: payment.amount,
+        itemAmount: payment.amount - (payment.shippingAmount || 0),
+        shippingAmount: payment.shippingAmount || 0,
         currency: 'gbp',
         status: 'pending',
-        customerPaymentMethod: 'paypal',
+        customerPaymentMethod: paymentMethod || 'paypal',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });

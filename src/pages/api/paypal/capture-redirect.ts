@@ -5,7 +5,8 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { createOrder } from '../../../lib/order-utils';
-import { getDocument, deleteDocument, atomicIncrement, arrayUnion, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, deleteDocument, atomicIncrement, arrayUnion, queryCollection, invalidateReleasesCache, clearAllMerchCache } from '../../../lib/firebase-rest';
+import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { SITE_URL } from '../../../lib/constants';
 import { createLogger } from '../../../lib/api-utils';
 import { processArtistPayments, processMerchSupplierPayments, processVinylCrateSellerPayments } from '../../../lib/order/seller-payments';
@@ -123,6 +124,9 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     // Get capture details
     const capture = captureResult.purchase_units?.[0]?.payments?.captures?.[0];
     const captureId = capture?.id;
+    // ACTUAL PayPal fee from the capture response — sellers bear the real
+    // fee, not the 2.9%+30p estimate
+    const actualPayPalFee = parseFloat(capture?.seller_receivable_breakdown?.paypal_fee?.value || '') || null;
 
     // Payment captured successfully
 
@@ -177,7 +181,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     // previously didn't write here, leaving recent PayPal sales out of dashboard totals.
     try {
       const grossTotal = pendingOrder.totals?.total ?? orderSubtotal;
-      const paypalFee = getProcessingFee(grossTotal, 'paypal');
+      const paypalFee = actualPayPalFee ?? getProcessingFee(grossTotal, 'paypal');
       const freshWaxFee = pendingOrder.totals?.freshWaxFee || 0;
       const itemsList = (pendingOrder.items as Record<string, unknown>[]) || [];
       const enrichedItems = await enrichItemsForLedger(itemsList);
@@ -220,7 +224,10 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
         stripeSecretKey,
         env,
         logPrefix: '[PayPal Redirect]',
-        paymentMethod: 'paypal' as const
+        paymentMethod: 'paypal' as const,
+        actualProcessingFee: actualPayPalFee,
+        // Artists receive 100% of their vinyl shipping (stored at create time)
+        artistShippingBreakdown: (pendingOrder.artistShippingBreakdown as Record<string, { artistId: string; artistName: string; amount: number }> | null) || null
       };
       const paymentResults = await Promise.allSettled([
         processArtistPayments(paymentParams),
@@ -275,6 +282,22 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
       } catch (creditErr: unknown) {
         log.error('[PayPal Redirect] Failed to deduct credit:', creditErr);
       }
+    }
+
+    // Invalidate caches so stock changes appear immediately (mirrors Stripe webhook)
+    try {
+      const soldItems = (pendingOrder.items as Record<string, unknown>[]) || [];
+      const hasReleaseItems = soldItems.some((i) => i.type === 'digital' || i.type === 'release' || i.type === 'track' || i.type === 'vinyl');
+      const hasMerchItems = soldItems.some((i) => i.type === 'merch');
+      if (hasReleaseItems) {
+        invalidateReleasesCache();
+        await invalidateReleasesKVCache();
+      }
+      if (hasMerchItems) {
+        clearAllMerchCache();
+      }
+    } catch (cacheErr: unknown) {
+      log.warn('[PayPal Redirect] Cache invalidation failed (non-blocking):', cacheErr);
     }
 
     // Redirect to order confirmation
