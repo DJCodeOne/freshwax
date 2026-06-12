@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { addDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
+import { applyCrateFreeShipping, computeMerchShipping } from '../../../lib/order/shipping-rules';
 import { createLogger, fetchWithTimeout, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
 
 const log = createLogger('[stripe-checkout]');
@@ -153,12 +154,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let vinylShippingTotal = 0;
     const artistShippingBreakdown: Record<string, { artistId: string; artistName: string; amount: number }> = {};
 
-    // Merch shipping (platform default £4.99, free over £50 merch subtotal)
+    // Crate sellers can waive their shipping over their own threshold —
+    // zeroes cratesShippingCost in place before the vinyl loop sums it
+    await applyCrateFreeShipping(validatedItems, locals.runtime?.env?.DB);
+
+    // Merch shipping: flat £4.99 unless every supplier in the basket offers
+    // free shipping and their threshold is met (seller-configurable)
     if (hasMerchItems) {
-      const merchSubtotal = validatedItems
-        .filter((item: Record<string, unknown>) => item.type === 'merch')
-        .reduce((sum: number, item: Record<string, unknown>) => sum + ((item.price as number) * ((item.quantity as number) || 1)), 0);
-      merchShipping = merchSubtotal >= 50 ? 0 : 4.99;
+      merchShipping = await computeMerchShipping(validatedItems);
     }
 
     // Vinyl shipping (per-artist, based on release or artist defaults)

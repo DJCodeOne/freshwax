@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
+import { applyCrateFreeShipping, computeMerchShipping } from '../../../lib/order/shipping-rules';
 import { SITE_URL } from '../../../lib/constants';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
@@ -148,27 +149,36 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let vinylShippingTotal = 0;
     const artistShippingBreakdown: Record<string, { artistId: string; artistName: string; amount: number }> = {};
 
-    // Merch shipping: only count merch items toward free shipping threshold
+    // Crate sellers can waive their shipping over their own threshold —
+    // zeroes cratesShippingCost in place before the vinyl loop sums it
+    await applyCrateFreeShipping(validatedItems, locals.runtime?.env?.DB);
+
+    // Merch shipping: flat £4.99 unless every supplier in the basket offers
+    // free shipping and their threshold is met (seller-configurable)
     if (hasMerchItems) {
-      const merchSubtotal = validatedItems
-        .filter((item: Record<string, unknown>) => item.type === 'merch')
-        .reduce((sum: number, item: Record<string, unknown>) => sum + ((item.price as number) * ((item.quantity as number) || 1)), 0);
-      merchShipping = merchSubtotal >= 50 ? 0 : 4.99;
+      merchShipping = await computeMerchShipping(validatedItems);
     }
 
     // Vinyl shipping: per-artist rates based on customer region
     if (hasVinylItems) {
       for (const item of validatedItems) {
         if (item.type !== 'vinyl') continue;
+
+        // Crates marketplace items: seller-set shipping per listing. Must be
+        // handled BEFORE the artistId guard — crate items have no artistId,
+        // so the old isCratesItem branch below it never ran and crate
+        // shipping was silently never charged on PayPal.
+        if (item.sellerId && !item.releaseId) {
+          vinylShippingTotal += ((item.cratesShippingCost as number) ?? 4.99) * ((item.quantity as number) || 1);
+          continue;
+        }
+
         const artistId = item.artistId;
         if (!artistId) continue;
 
         // Determine rate based on customer region (using item data from price validation)
         let shippingRate = 0;
-        if (item.isCratesItem) {
-          // Vinyl crates: use seller's shipping cost
-          shippingRate = item.cratesShippingCost || 4.99;
-        } else if (isUK) {
+        if (isUK) {
           shippingRate = item.vinylShippingUK ?? item.artistVinylShippingUK ?? 4.99;
         } else if (isEU) {
           shippingRate = item.vinylShippingEU ?? item.artistVinylShippingEU ?? 9.99;

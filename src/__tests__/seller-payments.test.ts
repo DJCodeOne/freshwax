@@ -336,7 +336,7 @@ describe('processMerchSupplierPayments', () => {
     expect(mockAddDocument).not.toHaveBeenCalled();
   });
 
-  it('calculates merch supplier share: 5% Fresh Wax fee + processing fee deducted', async () => {
+  it('calculates merch supplier share: 1% Fresh Wax fee + processing fee deducted', async () => {
     const items = [
       { id: 'merch_1', name: 'Hoodie', type: 'merch', price: 40, quantity: 1, productId: 'prod_1' },
     ];
@@ -366,14 +366,14 @@ describe('processMerchSupplierPayments', () => {
 
     // Verify calculation:
     // itemTotal = 40 * 1 = 40
-    // freshWaxFee = 40 * 0.05 = 2.00 (5% for merch, not 1%)
+    // freshWaxFee = 40 * 0.01 = 0.40 (1% — same rate as artists/crate sellers)
     // totalProcessingFee = (40 * 0.014) + 0.20 = 0.56 + 0.20 = 0.76
     // processingFeePerSeller = 0.76 / 1 = 0.76
-    // supplierShare = 40 - 2.00 - 0.76 = 37.24
+    // supplierShare = 40 - 0.40 - 0.76 = 38.84
 
     expect(mockTransfersCreate).toHaveBeenCalledTimes(1);
     const transferArgs = mockTransfersCreate.mock.calls[0][0];
-    expect(transferArgs.amount).toBe(Math.round(37.24 * 100)); // 3724 pence
+    expect(transferArgs.amount).toBe(Math.round(38.84 * 100)); // 3884 pence
     expect(transferArgs.currency).toBe('gbp');
     expect(transferArgs.destination).toBe('acct_test_123');
   });
@@ -492,13 +492,13 @@ describe('processMerchSupplierPayments', () => {
       orderSubtotal: 20,
     }));
 
-    // supplierShare = 20 - (20*0.05) - ((20*0.014+0.20)/1) = 20 - 1.0 - 0.48 = 18.52
-    // paypalPayoutFee = 18.52 * 0.02 = 0.3704
-    // paypalAmount = 18.52 - 0.3704 = 18.1496
+    // supplierShare = 20 - (20*0.01) - ((20*0.014+0.20)/1) = 20 - 0.2 - 0.48 = 19.32
+    // paypalPayoutFee = 19.32 * 0.02 = 0.3864
+    // paypalAmount = 19.32 - 0.3864 = 18.9336
     expect(mockCreatePayout).toHaveBeenCalledTimes(1);
     const payoutArgs = mockCreatePayout.mock.calls[0][1];
     expect(payoutArgs.email).toBe('ppsupplier@paypal.com');
-    expect(payoutArgs.amount).toBeCloseTo(18.1496, 2);
+    expect(payoutArgs.amount).toBeCloseTo(18.9336, 2);
     expect(payoutArgs.currency).toBe('GBP');
 
     // Successful payout should record supplierPayouts doc

@@ -7,6 +7,7 @@ import { createOrder, validateStock } from '../../lib/order-utils';
 import { getDocument, queryCollection, updateDocument, atomicIncrement, arrayUnion, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
+import { applyCrateFreeShipping, computeMerchShipping } from '../../lib/order/shipping-rules';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 const log = createLogger('complete-free-order');
 
@@ -171,12 +172,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { validatedItems, validatedSubtotal } = await validateAndGetPrices(orderData.items);
     const hasPhysicalItems = validatedItems.some((item: Record<string, unknown>) =>
       item.type === 'vinyl' || item.type === 'merch');
-    // Free-over-£50 applies to the MERCH subtotal only (matches Stripe/PayPal
-    // checkout) — using the whole-order subtotal let vinyl spend waive it
-    const merchOnlySubtotal = validatedItems
-      .filter((item: Record<string, unknown>) => item.type === 'merch')
-      .reduce((sum: number, item: Record<string, unknown>) => sum + (((item.price as number) || 0) * ((item.quantity as number) || 1)), 0);
-    const shipping = hasPhysicalItems ? (merchOnlySubtotal >= 50 ? 0 : 4.99) : 0;
+    // Shipping mirrors the paid checkouts: merch flat £4.99 unless the
+    // supplier's free-shipping threshold is met; crates use seller-set
+    // shipping (with the seller's free-shipping rule applied); other vinyl
+    // charges the flat default.
+    await applyCrateFreeShipping(validatedItems, env?.DB);
+    const merchShipping = await computeMerchShipping(validatedItems);
+    const crateShipping = validatedItems
+      .filter((item: Record<string, unknown>) => item.type === 'vinyl' && item.sellerId && !item.releaseId)
+      .reduce((sum: number, item: Record<string, unknown>) => sum + (((item.cratesShippingCost as number) ?? 4.99) * ((item.quantity as number) || 1)), 0);
+    const hasNonCrateVinyl = validatedItems.some((item: Record<string, unknown>) =>
+      item.type === 'vinyl' && !(item.sellerId && !item.releaseId));
+    const shipping = merchShipping + crateShipping + (hasNonCrateVinyl ? 4.99 : 0);
     const validatedTotal = validatedSubtotal + shipping;
 
     const appliedCredit = orderData.appliedCredit || 0;

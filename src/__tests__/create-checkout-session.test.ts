@@ -706,9 +706,10 @@ describe('Stripe Create Checkout Session', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 18. Free shipping for merch orders over £50
+  // 18. Merch shipping: flat charge — the global free-over-£50 rule was
+  // removed in favour of per-supplier free-shipping settings
   // -----------------------------------------------------------------------
-  it('applies free shipping for merch orders over £50', async () => {
+  it('charges flat merch shipping regardless of subtotal (no global £50 rule)', async () => {
     const expensiveItems = [
       {
         productId: 'merch_1',
@@ -728,7 +729,7 @@ describe('Stripe Create Checkout Session', () => {
 
     const payload = makeMerchCheckoutPayload({
       items: expensiveItems,
-      totals: { subtotal: 55.00, shipping: 0, total: 55.00 },
+      totals: { subtotal: 55.00, shipping: 4.99, total: 59.99 },
     });
 
     const request = makeRequest(payload);
@@ -740,12 +741,11 @@ describe('Stripe Create Checkout Session', () => {
 
     expect(response.status).toBe(200);
 
-    // Check the Stripe request body contains free shipping
+    // House merch (no supplierId) always charges the flat £4.99
     const stripeCall = mockFetchWithTimeout.mock.calls[0];
     const requestBody = stripeCall[1].body as string;
-    // Shipping amount should be 0 (free) for merch over £50
     expect(requestBody).toContain('shipping_options');
-    expect(requestBody).toContain('Free+Shipping');
+    expect(requestBody).toContain('Standard+Shipping');
   });
 
   // -----------------------------------------------------------------------

@@ -682,7 +682,7 @@ describe('Create Order', () => {
   // -----------------------------------------------------------------------
   // 18. Free merch shipping for orders over £50
   // -----------------------------------------------------------------------
-  it('applies free merch shipping for orders totalling £50+', async () => {
+  it('charges flat merch shipping regardless of subtotal (no global £50 rule)', async () => {
     mockGetDocument.mockImplementation(async (collection: string, id: string) => {
       if (collection === 'merch' && id === 'merch_expensive') {
         return {
@@ -723,8 +723,8 @@ describe('Create Order', () => {
       },
       totals: {
         subtotal: 55.00,
-        shipping: 0,
-        total: 55.00,
+        shipping: 4.99,
+        total: 59.99,
       },
       hasPhysicalItems: true,
     };
@@ -738,14 +738,15 @@ describe('Create Order', () => {
 
     expect(response.status).toBe(200);
 
-    // Check the order saved to Firebase has free shipping
+    // House merch (no supplier free-shipping settings) charges flat £4.99 —
+    // the global free-over-£50 rule was replaced by per-supplier settings
     const orderCall = mockAddDocument.mock.calls.find(
       (call: unknown[]) => call[0] === 'orders'
     );
     expect(orderCall).toBeDefined();
     const savedOrder = orderCall![1] as Record<string, unknown>;
     const totals = savedOrder.totals as Record<string, unknown>;
-    expect(totals.merchShipping).toBe(0);
+    expect(totals.merchShipping).toBe(4.99);
   });
 
   // -----------------------------------------------------------------------
@@ -1148,7 +1149,8 @@ describe('Create Order', () => {
   it('decrements stock by correct quantity for multi-quantity merch order', async () => {
     const multiQtyPayload = makeMerchOrderPayload();
     (multiQtyPayload.items[0] as Record<string, unknown>).quantity = 3;
-    multiQtyPayload.totals = { subtotal: 74.97, shipping: 0, total: 74.97 };
+    // Flat £4.99 merch shipping (no global free-over-£50 rule any more)
+    multiQtyPayload.totals = { subtotal: 74.97, shipping: 4.99, total: 79.96 };
 
     // Update mock to return price consistent with 3x
     mockGetDocument.mockImplementation(async (collection: string, id: string) => {

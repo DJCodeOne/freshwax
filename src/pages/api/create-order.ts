@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { getDocument, addDocument, atomicIncrement, updateDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
+import { applyCrateFreeShipping, computeMerchShipping } from '../../lib/order/shipping-rules';
 import { successResponse, ApiErrors, createLogger, maskEmail } from '../../lib/api-utils';
 import { validateOrderPrices } from '../../lib/order/price-validation';
 import { updateMerchStockAfterOrder } from '../../lib/order/merch-stock-update';
@@ -169,11 +170,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let vinylShippingTotal = 0;
     const artistShippingBreakdown: Record<string, { artistId: string; artistName: string; amount: number }> = {};
 
+    // Seller-configurable free-shipping rules (crates seller settings +
+    // merch supplier settings); no global free-over-£50 rule any more
+    await applyCrateFreeShipping(pricedItems as Record<string, unknown>[], locals.runtime?.env?.DB);
+
     if (hasMerchItems) {
-      const merchSubtotal = pricedItems
-        .filter((item: OrderItem) => item.type === 'merch')
-        .reduce((sum: number, item: OrderItem) => sum + (item.price * (item.quantity || 1)), 0);
-      merchShipping = merchSubtotal >= 50 ? 0 : 4.99;
+      merchShipping = await computeMerchShipping(pricedItems as Record<string, unknown>[]);
     }
 
     if (hasVinylItems) {

@@ -186,6 +186,10 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
       shippingEuropeAdditional: Math.min(Math.max(parseFloat(body.shippingEuropeAdditional) || 0, 0), MAX_SHIPPING),
       shippingWorldwide: Math.min(Math.max(parseFloat(body.shippingWorldwide) || 0, 0), MAX_SHIPPING),
       shippingWorldwideAdditional: Math.min(Math.max(parseFloat(body.shippingWorldwideAdditional) || 0, 0), MAX_SHIPPING),
+      // Free shipping over a seller-set threshold (applies to their crates
+      // items at checkout — zeroes the buyer charge and the payout shipping)
+      freeShippingEnabled: !!body.freeShippingEnabled,
+      freeShippingThreshold: Math.min(Math.max(parseFloat(body.freeShippingThreshold) || 0, 0), 1000),
       // Delivery options
       deliveryMethod: body.deliveryMethod || 'royal_mail_signed',
       estimatedDelivery: body.estimatedDelivery || '2-3',

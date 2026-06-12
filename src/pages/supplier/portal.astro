@@ -84,6 +84,22 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </div>
         </section>
 
+        <!-- Shipping Settings -->
+        <section class="connect-section">
+          <h2>Shipping</h2>
+          <p style="color:#9ca3af;font-size:0.9rem;margin:0 0 12px;">Merch orders charge the buyer £4.99 shipping. You can waive it when an order of your products reaches a spend threshold.</p>
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin-bottom:12px;">
+            <input type="checkbox" id="free-shipping-enabled" style="width:auto;">
+            Offer free shipping over a threshold
+          </label>
+          <div id="free-shipping-threshold-row" style="display:none;margin-bottom:12px;">
+            <label for="free-shipping-threshold" style="display:block;margin-bottom:4px;">Free shipping threshold (£)</label>
+            <input type="number" id="free-shipping-threshold" min="1" max="1000" step="0.01" placeholder="50.00" style="max-width:160px;">
+          </div>
+          <button class="btn" id="save-shipping-btn">Save Shipping Settings</button>
+          <span id="shipping-save-status" style="margin-left:10px;color:#16a34a;display:none;">Saved ✓</span>
+        </section>
+
         <!-- Earnings Summary -->
         <section class="earnings-section">
           <h2>Earnings</h2>
@@ -177,6 +193,20 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (paypalData.paypalLinked) {
         document.getElementById('paypal-check').style.display = 'inline';
       }
+
+      // Load shipping settings (non-blocking)
+      try {
+        const shipRes = await fetch(`/api/supplier/shipping-settings/?code=${accessCode}`);
+        if (shipRes.ok) {
+          const shipData = await shipRes.json();
+          var enabledBox = document.getElementById('free-shipping-enabled');
+          var thresholdRow = document.getElementById('free-shipping-threshold-row');
+          var thresholdInput = document.getElementById('free-shipping-threshold');
+          enabledBox.checked = shipData.freeShippingEnabled === true;
+          if (shipData.freeShippingThreshold) thresholdInput.value = shipData.freeShippingThreshold;
+          thresholdRow.style.display = enabledBox.checked ? 'block' : 'none';
+        }
+      } catch (shipErr) { /* non-critical */ }
 
       // Update earnings
       if (payoutsData.success) {
@@ -499,6 +529,40 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       year: 'numeric'
     });
   }
+
+  // Shipping settings: toggle + save
+  document.getElementById('free-shipping-enabled').addEventListener('change', function(e) {
+    document.getElementById('free-shipping-threshold-row').style.display = e.target.checked ? 'block' : 'none';
+  });
+
+  document.getElementById('save-shipping-btn').addEventListener('click', async function() {
+    var btn = document.getElementById('save-shipping-btn');
+    var status = document.getElementById('shipping-save-status');
+    var enabled = document.getElementById('free-shipping-enabled').checked;
+    var threshold = parseFloat(document.getElementById('free-shipping-threshold').value) || 0;
+    if (enabled && threshold <= 0) {
+      alert('Please enter a threshold amount for free shipping');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    status.style.display = 'none';
+    try {
+      var res = await fetch('/api/supplier/shipping-settings/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessCode: accessCode, freeShippingEnabled: enabled, freeShippingThreshold: threshold })
+      });
+      if (!res.ok) throw new Error('Save failed: ' + res.status);
+      status.style.display = 'inline';
+      setTimeout(function() { status.style.display = 'none'; }, 3000);
+    } catch (err) {
+      alert('Could not save shipping settings. Please try again.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save Shipping Settings';
+    }
+  });
 
   init();
 </script>

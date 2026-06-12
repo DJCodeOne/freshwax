@@ -207,6 +207,8 @@ export async function validateAndGetPrices(
           // Carry brand data for royalty tracking
           item.brandAccountId = product.brandAccountId || '';
           item.brandName = product.categoryName || 'Fresh Wax';
+          // Carry supplier for payouts + per-supplier free-shipping rules
+          item.supplierId = product.supplierId || null;
         }
       } else if (itemType === 'vinyl' || itemType === 'digital' || itemType === 'track' || itemType === 'release') {
         if (itemType === 'vinyl' && item.sellerId && !item.releaseId) {

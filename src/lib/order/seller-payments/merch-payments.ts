@@ -96,7 +96,8 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
 
       const itemPrice = item.price || 0;
       const itemTotal = itemPrice * (item.quantity || 1);
-      const freshWaxFee = itemTotal * 0.05;
+      // 1% Fresh Wax platform fee — same rate as artists and crate sellers
+      const freshWaxFee = itemTotal * 0.01;
       // Processing fee: payment-method-aware (Stripe 1.4%+20p / PayPal 2.9%+30p),
       // computed once for the order then split equally per item.
       const processingFeePerSeller = totalProcessingFeeForOrder / totalItemCount;
