@@ -227,6 +227,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </div>
           <span id="headerName" class="header-name">Loading...</span>
         </div>
+        <div id="headerClock" class="header-clock" title="Current time">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span id="headerClockTime">--:--:--</span>
+        </div>
       </div>
       <div class="header-center">
         <h1>DJ <span class="red">LOBBY</span></h1>
@@ -234,7 +238,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       </div>
       <div class="header-right">
         <div id="headerTimeRemaining" class="header-time-remaining hidden">
-          <span id="headerTimeLeft" class="header-time-value">--:--</span>
+          <span id="headerTimeLeft" class="header-time-value">--:--:--</span>
           <span class="header-time-label">remaining</span>
         </div>
         <a href="/live/" class="back-link" id="headerBackToLive">
@@ -247,6 +251,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <button id="signOutBtn" class="sign-out-btn">Sign Out</button>
       </div>
     </header>
+    <script is:inline>
+      (function(){
+        var t=document.getElementById('headerClockTime');
+        if(!t)return;
+        function pad(n){return n<10?'0'+n:''+n;}
+        function tick(){var d=new Date();t.textContent=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
+        tick();
+        setInterval(tick,1000);
+      })();
+    </script>
 
     <!-- Broadcast Method Chooser -->
     <div id="broadcastChooser" class="broadcast-chooser hidden">
@@ -1369,7 +1383,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as lobbyDm from '/dj-lobby/dm.js?v=20260612a';
   import * as scheduling from '/dj-lobby/scheduling.js?v=20260612a';
   import * as shareModule from '/dj-lobby/share.js?v=20260612a';
-  import * as videoPlayer from '/dj-lobby/video-player.js?v=20260612a';
+  import * as videoPlayer from '/dj-lobby/video-player.js?v=20260613a';
   import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260612d';
   import * as relayModule from '/dj-lobby/relay.js?v=20260612a';
   import * as initModalModule from '/dj-lobby/init-modal.js?v=20260612a';
