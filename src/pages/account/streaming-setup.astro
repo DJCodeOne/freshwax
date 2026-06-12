@@ -172,12 +172,17 @@ const firebaseConfig = {
             <div class="step-number">3</div>
             <div class="step-content">
               <h3>Output Settings</h3>
-              <p>Go to <strong>Settings → Output</strong>:</p>
+              <p>Go to <strong>Settings → Output</strong> (set <strong>Output Mode → Advanced</strong> to reach B-frames):</p>
               <div class="settings-box">
                 <div class="setting-row">
                   <span class="setting-label">Video Bitrate:</span>
                   <span class="setting-value highlight">2500-4000 kbps</span>
                   <span class="setting-note">~2000 on mobile/tethered</span>
+                </div>
+                <div class="setting-row">
+                  <span class="setting-label">B-frames:</span>
+                  <span class="setting-value highlight">0</span>
+                  <span class="setting-note">smooth playback on mobile viewers</span>
                 </div>
                 <div class="setting-row">
                   <span class="setting-label">Audio Bitrate:</span>
@@ -188,7 +193,11 @@ const firebaseConfig = {
                   <span class="setting-value">x264 or NVENC</span>
                 </div>
               </div>
-              <p>OBS's default encoder settings work fine — the one thing that matters is matching <strong>bitrate to your connection</strong>. Too high for the uplink (common on mobile or tethered) causes dropped frames, and a badly dropping stream can connect but show a <strong>black screen</strong>. If that happens, drop the video bitrate to <strong>~2000 kbps</strong>.</p>
+              <p>Two settings keep the stream smooth for everyone:</p>
+              <ul class="setup-notes">
+                <li><strong>Bitrate</strong> — match it to your uplink. Too high (common on mobile/tethered) drops frames and can show a <strong>black screen</strong>; if that happens, lower it to <strong>~2000 kbps</strong>.</li>
+                <li><strong>B-frames = 0</strong> — gives glitch-free playback for <strong>mobile / iOS viewers</strong> (x264: B-frames 0 or Tune <code>zerolatency</code>; NVENC: Max B-frames 0). With the default B-frames, phone viewers can get a stuttery feed.</li>
+              </ul>
             </div>
           </div>
           
