@@ -240,6 +240,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       subtotal: String(validatedSubtotal),
       shipping: String(validatedShipping),
       serviceFees: String(validatedServiceFees),
+      // Webhook ledger recording reads freshWaxFee from metadata — without it
+      // the ledger entry logs freshWaxFee=0 and misattributes it to stripeFee
+      freshWaxFee: String(freshWaxFee),
       total: String(validatedTotal),
       appliedCredit: String(appliedCredit),
       // Items will be stored as compressed JSON
@@ -265,7 +268,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artistId: item.artistId, // For Stripe Connect payouts
       title: item.title,
       brandAccountId: item.brandAccountId,
-      brandName: item.brandName
+      brandName: item.brandName,
+      // Multi-part vinyl: without these the order loses which record was
+      // bought — stock decrement and per-part downloads both depend on them
+      vinylPartId: item.vinylPartId ?? null,
+      vinylPartName: item.vinylPartName ?? null
     }));
     const itemsJson = JSON.stringify(compressedItems);
 

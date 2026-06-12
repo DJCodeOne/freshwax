@@ -220,10 +220,15 @@ export async function handleProductOrder(
     }
   }
 
-  // Build shipping info from Stripe shipping details
+  // Build shipping info from Stripe shipping details.
+  // Stripe API 2025+ moved checkout session shipping to
+  // collected_information.shipping_details — check both locations.
+  type ShippingDetailsShape = { address?: { line1?: string | null; line2?: string | null; city?: string | null; state?: string | null; postal_code?: string | null; country?: string | null } };
+  const sessionShipping = (session.shipping_details as ShippingDetailsShape | null | undefined)
+    || (session as unknown as { collected_information?: { shipping_details?: ShippingDetailsShape } }).collected_information?.shipping_details;
   let shipping = null;
-  if (session.shipping_details) {
-    const addr = session.shipping_details.address;
+  if (sessionShipping) {
+    const addr = sessionShipping.address;
     shipping = {
       address1: addr?.line1 || '',
       address2: addr?.line2 || '',
