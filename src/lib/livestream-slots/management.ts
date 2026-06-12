@@ -182,6 +182,7 @@ export async function handleHeartbeat(
 
 export async function handleGetStreamKey(
   data: Record<string, unknown>,
+  authUserId: string,
   now: Date
 ): Promise<Response> {
   const { slotId, djId } = data as { slotId?: string; djId?: string };
@@ -191,13 +192,21 @@ export async function handleGetStreamKey(
     return ApiErrors.badRequest('Slot ID and DJ ID required');
   }
 
+  // Authorize against the verified token, not the body djId. A caller may only
+  // read their own slot's key (admins may read any). Without this an
+  // authenticated user could pass a victim's djId and harvest their key.
+  const getKeyIsAdmin = await isAdmin(authUserId);
+  if (authUserId !== djId && !getKeyIsAdmin) {
+    return ApiErrors.forbidden('Not authorized');
+  }
+
   const slot = await getDocument('livestreamSlots', slotId);
 
   if (!slot) {
     return ApiErrors.notFound('Slot not found');
   }
 
-  if (slot.djId !== djId) {
+  if (slot.djId !== djId && !getKeyIsAdmin) {
     return ApiErrors.forbidden('Not authorized');
   }
 
@@ -228,12 +237,20 @@ export async function handleGetStreamKey(
 
 export async function handleGenerateKey(
   data: Record<string, unknown>,
+  authUserId: string,
   now: Date
 ): Promise<Response> {
   const { djId, djName, slotId } = data as { djId?: string; djName?: string; slotId?: string };
 
   if (!djId || !djName) {
     return ApiErrors.badRequest('DJ ID and name required');
+  }
+
+  // Authorize against the verified token, not the body djId — a caller may only
+  // generate/read a key for their own DJ identity (admins may act for anyone).
+  const genKeyIsAdmin = await isAdmin(authUserId);
+  if (authUserId !== djId && !genKeyIsAdmin) {
+    return ApiErrors.forbidden('Not authorized');
   }
 
   // If slotId is provided, verify the slot belongs to this DJ and generate key for it
@@ -243,7 +260,7 @@ export async function handleGenerateKey(
       return ApiErrors.notFound('Slot not found');
     }
 
-    if (slot.djId !== djId) {
+    if (slot.djId !== djId && !genKeyIsAdmin) {
       return ApiErrors.forbidden('This slot belongs to another DJ');
     }
 

@@ -182,11 +182,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (action === 'getStreamKey') {
-      return handleGetStreamKey(data, now);
+      return handleGetStreamKey(data, authUserId, now);
     }
 
     if (action === 'generate_key') {
-      return handleGenerateKey(data, now);
+      return handleGenerateKey(data, authUserId, now);
     }
 
     if (action === 'go_live') {

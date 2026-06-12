@@ -33,7 +33,6 @@ export async function handleCheckStreamKey(
   let keyAvailable = false;
   let slotInfo = null;
   let timeUntilKey = null;
-  let streamKey = null;
 
   for (const slot of activeSlots) {
     const slotStart = new Date(slot.startTime);
@@ -42,7 +41,6 @@ export async function handleCheckStreamKey(
 
     if (now >= keyRevealStart && now <= graceEnd) {
       keyAvailable = true;
-      streamKey = slot.streamKey;
       slotInfo = { id: slot.id, startTime: slot.startTime, endTime: slot.endTime, title: slot.title, status: slot.status };
       break;
     } else if (slotStart > now) {
@@ -52,8 +50,11 @@ export async function handleCheckStreamKey(
     }
   }
 
+  // NOTE: this is an UNAUTHENTICATED GET endpoint — it reports key *availability*
+  // only and must never return the actual stream key. The key is retrieved via
+  // the authenticated POST `getStreamKey` action (owner/admin only).
   return successResponse({ keyAvailable,
-    streamKey: keyAvailable ? streamKey : null,
+    streamKey: null,
     slotInfo,
     timeUntilKey,
     settings: {

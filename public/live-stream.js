@@ -23,7 +23,7 @@ import {
   initChatHandler, setChatCurrentUser, setChatCurrentStream,
   getChatChannel, getChatMessages, resetChatMessages,
   setupChat, sendGiphyMessage, setChatEnabled, setReactionButtonsEnabled
-} from '/live/chat-handler.js?v=20260408';
+} from '/live/chat-handler.js?v=20260612a';
 
 import {
   initUiControls, detectMobileDevice, setupVolumeSlider,
@@ -76,9 +76,16 @@ function wasLiveStreamPlaying() { return sessionStorage.getItem(LIVE_PLAYING_KEY
 // --- Utility ---
 function escapeHtml(str) {
   if (!str) return '';
-  var div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  // Must escape quotes too — this value is also interpolated into HTML
+  // attribute contexts (e.g. <img src="..."> in chat). The old textContent
+  // round-trip only escaped & < > and left " ' intact, allowing attribute
+  // breakout XSS via chat GIF URLs / usernames.
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 function escapeJsString(str) {
   if (!str) return '';

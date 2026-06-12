@@ -22,7 +22,13 @@ const LivestreamChatSchema = z.object({
   badge: z.string().max(50).nullish(),
   message: z.string().min(1).max(2000),
   type: z.string().max(50).nullish(),
-  giphyUrl: z.string().max(2000).nullish(),
+  // Must be a GIPHY-hosted https URL. GIF messages bypass text moderation, so
+  // without this an attacker could store an arbitrary "URL" (e.g. one with an
+  // embedded quote + onerror handler) that renders into an <img src> in every
+  // viewer's chat. Restrict to giphy.com over https.
+  giphyUrl: z.string().max(2000)
+    .regex(/^https:\/\/([a-z0-9-]+\.)*giphy\.com\//i, 'Invalid GIF URL')
+    .nullish(),
   giphyId: z.string().max(500).nullish(),
   replyTo: z.string().max(500).nullish(),
   replyToUserName: z.string().max(200).nullish(),

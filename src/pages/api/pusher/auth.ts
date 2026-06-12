@@ -78,8 +78,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Falls back to anon for unauthenticated viewers (livestream is public)
     const oderId = socketId.split('.').join('_');
     let userId: string;
-    let userName = request.headers.get('x-user-name') || 'Viewer';
-    const userAvatar = request.headers.get('x-user-avatar') || '';
+    // Sanitize client-supplied presence fields — they are broadcast to every
+    // subscriber's member.info and rendered into the online-users list.
+    // Strip characters that could break out of an HTML/attribute context and
+    // cap length; avatar must be a plain http(s) or root-relative URL.
+    const rawName = request.headers.get('x-user-name') || 'Viewer';
+    let userName = rawName.replace(/[<>"'`]/g, '').slice(0, 80).trim() || 'Viewer';
+    const rawAvatar = request.headers.get('x-user-avatar') || '';
+    const userAvatar = /^(https?:\/\/|\/)[^"'<>\s]*$/.test(rawAvatar) ? rawAvatar.slice(0, 2000) : '';
 
     const { userId: verifiedUserId } = await verifyRequestUser(request).catch(() => ({ userId: null }));
     if (verifiedUserId) {

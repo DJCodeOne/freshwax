@@ -216,6 +216,12 @@ function renderChatMessages(messages, isInitialLoad) {
     var preview = msg.message ? msg.message.substring(0, 50) : '';
     var esc = _escapeHtml || function(s) { return s || ''; };
     var escJs = _escapeJsString || function(s) { return s || ''; };
+    // For values placed inside an inline on* handler attribute: JS-string-escape
+    // first (for the JS parser), then HTML-escape (for the attribute parser).
+    // Without the outer esc, a " in the value closes the onclick attribute and
+    // injects a new event handler. The browser HTML-decodes the attribute before
+    // the JS engine sees it, so the order is JS-escape then HTML-escape.
+    var escAttr = function(s) { return esc(escJs(s)); };
 
     var replyHtml = '';
     if (msg.replyTo && msg.replyToUserName) {
@@ -256,7 +262,7 @@ function renderChatMessages(messages, isInitialLoad) {
         '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">' +
         '<span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem; display: inline-flex; align-items: center;">' + esc(msg.userName) + badgeHtml + '</span>' +
         '<div style="display: flex; align-items: center; gap: 0.5rem;">' +
-        '<button class="reply-btn" onclick="window.replyToMessage(\'' + escJs(msg.id) + '\', \'' + escJs(msg.userName) + '\', \'GIF\')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">\u21A9 Reply</button>' +
+        '<button class="reply-btn" onclick="window.replyToMessage(\'' + escAttr(msg.id) + '\', \'' + escAttr(msg.userName) + '\', \'GIF\')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">\u21A9 Reply</button>' +
         '<span style="font-size: 0.6875rem; color: #666;">' + timeStr + '</span></div></div>' +
         gifImg + '</div>';
     }
@@ -267,7 +273,7 @@ function renderChatMessages(messages, isInitialLoad) {
       '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.125rem;">' +
       '<span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem; display: inline-flex; align-items: center;">' + esc(msg.userName) + badgeHtml + '</span>' +
       '<div style="display: flex; align-items: center; gap: 0.5rem;">' +
-      '<button class="reply-btn" onclick="window.replyToMessage(\'' + escJs(msg.id) + '\', \'' + escJs(msg.userName) + '\', \'' + escJs(preview) + '\')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">\u21A9 Reply</button>' +
+      '<button class="reply-btn" onclick="window.replyToMessage(\'' + escAttr(msg.id) + '\', \'' + escAttr(msg.userName) + '\', \'' + escAttr(preview) + '\')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">\u21A9 Reply</button>' +
       '<span style="font-size: 0.6875rem; color: #666;">' + timeStr + '</span></div></div>' +
       '<div style="color: #fff; font-size: 1rem; word-break: break-word; line-height: 1.5;">' + esc(msg.message) + '</div></div>';
   }).join('');

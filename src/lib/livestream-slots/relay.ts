@@ -56,6 +56,13 @@ export async function handleStartRelay(
 
   // Verify the DJ has a booked slot covering the current time (admins bypass)
   const relayIsAdmin = await isAdmin(authUserId);
+
+  // Authorize against the verified token — non-admins may only start a relay
+  // under their own DJ identity, not impersonate another DJ who has a slot.
+  if (authUserId !== djId && !relayIsAdmin) {
+    return ApiErrors.forbidden('Not authorized to start a relay as this DJ');
+  }
+
   let bookedSlot: Record<string, unknown> | null = null;
 
   if (!relayIsAdmin) {

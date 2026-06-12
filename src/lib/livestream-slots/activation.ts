@@ -3,6 +3,7 @@
 import { queryCollection, setDocument, updateDocument } from '../firebase-rest';
 import { buildRtmpUrl, buildHlsUrl, findActiveRtmpStreamForDj } from '../red5';
 import { broadcastLiveStatus } from '../pusher';
+import { isAdmin } from '../admin';
 import { logActivity } from '../activity-feed';
 import { createLogger, ApiErrors, fetchWithTimeout, successResponse } from '../api-utils';
 import { TIMEOUTS } from '../timeouts';
@@ -332,6 +333,14 @@ export async function handleEarlyStart(
 
   if (!djId) {
     return ApiErrors.badRequest('DJ ID required');
+  }
+
+  // Authorize against the verified token — early_start mutates a slot's start
+  // time and mints a stream key, so only the slot's own DJ (or an admin) may
+  // call it. Without this any authenticated user could start another DJ early
+  // and obtain their key.
+  if (authUserId !== djId && !(await isAdmin(authUserId))) {
+    return ApiErrors.forbidden('Not authorized to start this DJ early');
   }
 
   // Check if anyone is currently live (skip stale slots with expired endTime)
