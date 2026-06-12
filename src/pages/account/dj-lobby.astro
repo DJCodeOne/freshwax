@@ -1369,7 +1369,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as scheduling from '/dj-lobby/scheduling.js?v=20260612a';
   import * as shareModule from '/dj-lobby/share.js?v=20260612a';
   import * as videoPlayer from '/dj-lobby/video-player.js?v=20260612a';
-  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260612a';
+  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260612b';
   import * as relayModule from '/dj-lobby/relay.js?v=20260612a';
   import * as initModalModule from '/dj-lobby/init-modal.js?v=20260612a';
   import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260612a';
@@ -1378,6 +1378,59 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // Silence the per-second [LiveMeter]/[OutputGain]/[setupAudioMeter] diagnostic
   // logs in stereo-meters.js (they gate on this flag and nothing else sets it).
   if (typeof window !== 'undefined') window.__hideLiveMeterDebug = true;
+
+  // Branded confirmation toast — replaces native confirm(). Returns a Promise
+  // resolving true (confirm) / false (cancel/Escape/backdrop). Used by every
+  // "end stream" button (OBS / BUTT / relay all share the same end action).
+  window.showConfirmToast = function(message, opts) {
+    opts = opts || {};
+    return new Promise(function(resolve) {
+      var existing = document.getElementById('fw-confirm-toast');
+      if (existing) existing.remove();
+      var wrap = document.createElement('div');
+      wrap.id = 'fw-confirm-toast';
+      wrap.setAttribute('role', 'alertdialog');
+      wrap.setAttribute('aria-label', message);
+      wrap.style.cssText = 'position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:16px 18px;border-radius:12px;font-size:14px;z-index:10010;box-shadow:0 8px 28px rgba(0,0,0,.5);border:1px solid #333;display:flex;flex-direction:column;gap:14px;min-width:260px;max-width:calc(100vw - 32px);animation:fwConfirmIn .18s ease-out;';
+      var msg = document.createElement('div');
+      msg.textContent = message;
+      msg.style.cssText = 'font-weight:600;text-align:center;line-height:1.35;';
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:10px;';
+      var cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = opts.cancelText || 'Cancel';
+      cancelBtn.style.cssText = 'flex:1;padding:10px 14px;border-radius:8px;border:1px solid #444;background:#333;color:#fff;font-weight:600;font-size:14px;cursor:pointer;';
+      var okBtn = document.createElement('button');
+      okBtn.type = 'button';
+      okBtn.textContent = opts.confirmText || 'Confirm';
+      okBtn.style.cssText = 'flex:1;padding:10px 14px;border-radius:8px;border:0;background:' + (opts.danger === false ? '#16a34a' : '#dc2626') + ';color:#fff;font-weight:600;font-size:14px;cursor:pointer;';
+      var done = false;
+      function finish(val) {
+        if (done) return;
+        done = true;
+        document.removeEventListener('keydown', onKey);
+        wrap.remove();
+        resolve(val);
+      }
+      function onKey(e) { if (e.key === 'Escape') finish(false); }
+      cancelBtn.addEventListener('click', function() { finish(false); });
+      okBtn.addEventListener('click', function() { finish(true); });
+      document.addEventListener('keydown', onKey);
+      row.appendChild(cancelBtn);
+      row.appendChild(okBtn);
+      wrap.appendChild(msg);
+      wrap.appendChild(row);
+      if (!document.getElementById('fw-confirm-toast-style')) {
+        var st = document.createElement('style');
+        st.id = 'fw-confirm-toast-style';
+        st.textContent = '@keyframes fwConfirmIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}';
+        document.head.appendChild(st);
+      }
+      document.body.appendChild(wrap);
+      okBtn.focus();
+    });
+  };
 
   // ============================================
   // MODULE FUNCTION ALIASES
@@ -3385,7 +3438,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const status = document.getElementById('endStreamStatus');
       if (!btn || btn.classList.contains('disabled')) return;
 
-      if (!confirm('Are you sure you want to end your stream?')) return;
+      if (!(await window.showConfirmToast('End your stream?', { confirmText: 'End Stream' }))) return;
 
       try {
         btn.disabled = true;
@@ -4007,7 +4060,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     
     // End stream
     document.getElementById('endStreamBtn')?.addEventListener('click', async () => {
-      if (!confirm('End your stream?')) return;
+      if (!(await window.showConfirmToast('End your stream?', { confirmText: 'End Stream' }))) return;
       
       try {
         const token = await currentUser.getIdToken();
@@ -4424,7 +4477,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // Header End Stream button (replaces Back to Live when live)
   document.getElementById('headerEndStreamBtn')?.addEventListener('click', async () => {
     if (!currentUser) return;
-    if (!confirm('End your livestream?')) return;
+    if (!(await window.showConfirmToast('End your livestream?', { confirmText: 'End Stream' }))) return;
 
     var btn = document.getElementById('headerEndStreamBtn');
     if (btn) { btn.textContent = 'Ending...'; btn.disabled = true; }

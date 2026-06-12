@@ -487,8 +487,10 @@ function handleConnectionLost(token, whipUrl, timerEl, onStats) {
         },
         onError: function() {}
       });
-    }).catch(function() {
-      var endNow = confirm('Reconnection failed. End stream?');
+    }).catch(async function() {
+      var endNow = window.showConfirmToast
+        ? await window.showConfirmToast('Reconnection failed. End stream?', { confirmText: 'End Stream' })
+        : confirm('Reconnection failed. End stream?');
       if (endNow) {
         endStream(token, true);
       }
