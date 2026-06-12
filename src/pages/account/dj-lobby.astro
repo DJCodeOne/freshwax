@@ -307,21 +307,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M9 12c0 1.66 1.34 3 3 3s3-1.34 3-3-1.34-3-3-3-3 1.34-3 3zm13-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-3l-2-2zm-2 6H4V7h16v9z"/></svg>
             </button>
           </div>
-          <div id="mobileAudioMeter" class="mobile-audio-meter" aria-hidden="true">
-            <div class="mobile-meter-bar" style="--i:0"></div>
-            <div class="mobile-meter-bar" style="--i:1"></div>
-            <div class="mobile-meter-bar" style="--i:2"></div>
-            <div class="mobile-meter-bar" style="--i:3"></div>
-            <div class="mobile-meter-bar" style="--i:4"></div>
-            <div class="mobile-meter-bar" style="--i:5"></div>
-            <div class="mobile-meter-bar" style="--i:6"></div>
-            <div class="mobile-meter-bar" style="--i:7"></div>
-            <div class="mobile-meter-bar" style="--i:8"></div>
-            <div class="mobile-meter-bar" style="--i:9"></div>
-            <div class="mobile-meter-bar" style="--i:10"></div>
-            <div class="mobile-meter-bar" style="--i:11"></div>
-            <div class="mobile-meter-bar" style="--i:12"></div>
-            <div class="mobile-meter-bar" style="--i:13"></div>
+          <div id="mobileAudioMeter" class="mobile-audio-meter">
+            <div class="mobile-meter-bar"></div>
+            <div class="mobile-meter-bar"></div>
+            <div class="mobile-meter-bar"></div>
+            <div class="mobile-meter-bar"></div>
+            <div class="mobile-meter-bar"></div>
           </div>
         </div>
       </div>
@@ -1378,7 +1369,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as scheduling from '/dj-lobby/scheduling.js?v=20260612a';
   import * as shareModule from '/dj-lobby/share.js?v=20260612a';
   import * as videoPlayer from '/dj-lobby/video-player.js?v=20260612a';
-  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260612c';
+  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260612d';
   import * as relayModule from '/dj-lobby/relay.js?v=20260612a';
   import * as initModalModule from '/dj-lobby/init-modal.js?v=20260612a';
   import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260612a';

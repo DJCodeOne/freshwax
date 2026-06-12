@@ -542,9 +542,34 @@ function formatDuration(ms) {
 }
 
 function startAudioMeter() {
-  // The mic-level meter is now a CSS-only autonomous animation
-  // (.mobile-meter-bar — neon, 3D-tilted, flowing wave). No audio analyser /
-  // requestAnimationFrame needed, so this is intentionally a no-op.
+  if (!mediaStream) return;
+  try {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    var source = audioContext.createMediaStreamSource(mediaStream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 64;
+    source.connect(analyser);
+
+    var meterEl = document.getElementById('mobileAudioMeter');
+    if (!meterEl) return;
+    var bars = meterEl.querySelectorAll('.mobile-meter-bar');
+    if (!bars.length) return;
+    var dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    function updateMeter() {
+      if (!analyser) return;
+      analyser.getByteFrequencyData(dataArray);
+      for (var i = 0; i < bars.length; i++) {
+        var value = dataArray[i * 2] || 0;
+        var height = Math.max(3, (value / 255) * 20);
+        bars[i].style.height = height + 'px';
+      }
+      animFrameId = requestAnimationFrame(updateMeter);
+    }
+    updateMeter();
+  } catch (e) {
+    // Audio meter not critical
+  }
 }
 
 function stopAudioMeter() {

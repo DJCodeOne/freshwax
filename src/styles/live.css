@@ -434,8 +434,8 @@ html, body{ overflow:auto; }
 @keyframes clip-flash{0%, 100% { opacity:1; }
 50% { opacity:.7; } }
 .sound-wave-wrapper{ display:flex; align-items:center; justify-content:center; min-width:180px; max-width:280px; height:32px; flex:1 1 auto; }
-.sound-wave{ display:flex; align-items:center; justify-content:center; gap:3px; height:100%; }
-.sound-wave .wave-bar{ width:4px; height:8px; background:linear-gradient(to top, #22c55e, #16a34a); border-radius:2px; animation:wave-pulse 1.2s ease-in-out infinite; }
+.sound-wave{ display:flex; align-items:center; justify-content:center; gap:3px; height:100%; perspective:320px; }
+.sound-wave .wave-bar{ width:4px; height:8px; border-radius:3px; transform-origin:center bottom; background:linear-gradient(to top, #064e3b, #16a34a 28%, #34d399 68%, #eafff1); box-shadow:0 0 9px rgba(34,197,94,.7), 0 0 2px rgba(167,243,208,.9), inset 0 0 2px rgba(255,255,255,.45); animation:wave-pulse 1s ease-in-out infinite; }
 .sound-wave .wave-bar:nth-child(1){ animation-delay:0; }
 .sound-wave .wave-bar:nth-child(2){ animation-delay:.1s; }
 .sound-wave .wave-bar:nth-child(3){ animation-delay:.2s; }
@@ -448,9 +448,10 @@ html, body{ overflow:auto; }
 .sound-wave .wave-bar:nth-child(10){ animation-delay:.1s; }
 .sound-wave .wave-bar:nth-child(11){ animation-delay:0; }
 .sound-wave .wave-bar:nth-child(12){ animation-delay:.1s; }
-@keyframes wave-pulse{0%, 100%{ height:8px; opacity:.6; }
-50%{ height:24px; opacity:1; } }
-.sound-wave-wrapper.paused .wave-bar{ animation-play-state:paused; height:4px; opacity:.3; }
+@keyframes wave-pulse{0%, 100%{ height:6px; filter:brightness(.6); transform:rotateX(22deg); }
+50%{ height:28px; filter:brightness(1.5); transform:rotateX(0deg); } }
+.sound-wave-wrapper.paused .wave-bar{ animation-play-state:paused; height:5px; opacity:.35; filter:brightness(.5); box-shadow:none; }
+@media (prefers-reduced-motion:reduce){ .sound-wave .wave-bar{ animation:none; height:14px; } }
 .dj-info-bar{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:.5rem; padding:.75rem 1rem; background:#111; border:2px solid #333; border-radius:10px; flex-shrink:0; text-align:center; }
 .dj-info-center{ display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:.125rem; text-align:center; }
 .dj-info-right{ display:flex; align-items:center; gap:.75rem; min-width:0; }

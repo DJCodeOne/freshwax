@@ -845,10 +845,8 @@ button{ -webkit-user-select:none; user-select:none } }
 .mobile-control-btn{ width:48px; height:48px; border-radius:50%; border:0; background:rgba(0,0,0,.5); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; backdrop-filter:blur(4px) }
 .mobile-control-btn:active{ background:rgba(0,0,0,.7) }
 .mobile-control-btn.muted{ background:rgba(220,38,38,.8) }
-.mobile-audio-meter{ display:flex; align-items:flex-end; gap:2px; justify-content:center; height:28px; align-self:flex-end; margin-bottom:8px; margin-right:8px; padding:3px 6px; border-radius:8px; background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.55)); box-shadow:inset 0 0 0 1px rgba(34,197,94,.15); perspective:240px }
-.mobile-meter-bar{ width:4px; height:100%; border-radius:3px; transform-origin:bottom; transform:scaleY(.18) rotateX(14deg); background:linear-gradient(180deg,#eafff1,#34d399 38%,#16a34a 72%,#064e3b); box-shadow:0 0 8px rgba(34,197,94,.75),0 0 2px rgba(167,243,208,.9),inset 0 0 2px rgba(255,255,255,.45); animation:fwMeterWave 1.05s ease-in-out infinite; animation-delay:calc(var(--i,0) * -.085s) }
-@keyframes fwMeterWave{ 0%,100%{ transform:scaleY(.16) rotateX(14deg); filter:brightness(.7) } 20%{ transform:scaleY(.92) rotateX(14deg); filter:brightness(1.15) } 42%{ transform:scaleY(.38) rotateX(14deg); filter:brightness(.85) } 64%{ transform:scaleY(1) rotateX(14deg); filter:brightness(1.3) } 84%{ transform:scaleY(.5) rotateX(14deg); filter:brightness(.95) } }
-@media (prefers-reduced-motion:reduce){ .mobile-meter-bar{ animation:none; transform:scaleY(.5) rotateX(14deg) } }
+.mobile-audio-meter{ display:flex; align-items:flex-end; gap:3px; justify-content:center; height:20px; align-self:flex-end; margin-bottom:8px; margin-right:8px }
+.mobile-meter-bar{ width:4px; height:3px; background:#22c55e; border-radius:2px; transition:height .05s ease-out }
 .mobile-actions{ display:flex; flex-direction:column; gap:8px; flex-shrink:0 }
 .mobile-ready-btn{font-size:1rem; background:var(--g6); box-shadow:0 0 20px rgba(34,197,94,.3); -webkit-tap-highlight-color:transparent }
 .mobile-ready-btn:disabled{ opacity:.6; cursor:not-allowed }
