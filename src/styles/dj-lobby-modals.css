@@ -71,6 +71,8 @@
 .init-check-item.error{ border-color:#ef4444; background:rgba(239,68,68,.05) }
 .init-check-icon{ width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:#222; border-radius:10px; flex-shrink:0 }
 .init-spinner{ width:20px; height:20px; border:var(--b6); border-top-color:#dc2626; border-radius:50%; animation:spin .8s linear infinite }
+.init-check-item.connected .init-spinner,
+.init-check-item.disconnected .init-spinner,
 .init-check-item.error .init-spinner{ display:none }
 .init-check-item.connected .init-check-icon::after{ content:'✓'; font-size:1.25rem; color:#22c55e }
 .init-check-item.disconnected .init-check-icon::after{ content:'—'; font-size:1.25rem; color:#aaa }
@@ -86,9 +88,11 @@
 .init-check-item.error .init-check-indicator{ background:#ef4444; box-shadow:0 0 10px rgba(239,68,68,.5) }
 .init-tip{ display:flex; align-items:center; gap:.75rem; padding:.75rem 1rem; background:rgba(249,115,22,.1); border:1px solid rgba(249,115,22,.3); border-radius:10px; font-size:.8rem }
 .init-modal-footer{ display:flex; justify-content:center; gap:1rem }
-.init-go-live-btn{ padding:.875rem 2rem; border:0; border-radius:12px; color:#fff; font-size:.9rem; font-weight:600; cursor:pointer; transition:background-color .3s,transform .3s,box-shadow .3s,color .3s,border-color .3s; position:relative }
+.init-back-btn,
+.init-go-live-btn{ min-width:130px; padding:.875rem 2rem; border:0; border-radius:12px; color:#fff; font-size:.9rem; font-weight:600; line-height:1; text-align:center; cursor:pointer; transition:background-color .3s,transform .3s,box-shadow .3s,color .3s,border-color .3s; position:relative }
 .init-back-btn{ background:#333; border:1px solid #444 }
 .init-go-live-btn{ background:var(--g2) }
+.init-back-btn:disabled{ opacity:.55; cursor:not-allowed }
 .init-go-live-btn:disabled{ background:#333; color:#aaa; cursor:not-allowed; border-color:#333 }
 .init-back-btn:not(:disabled):hover{ background:#444; transform:translateY(-2px) }
 .init-go-live-btn:not(:disabled):hover{ transform:translateY(-2px); box-shadow:0 10px 30px var(--ab) }
