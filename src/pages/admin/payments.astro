@@ -69,9 +69,10 @@ const [disputes, refunds, pendingPayouts, manualPendingPayoutsResult, pendingSup
         limit: 100
       }).catch(() => [] as Record<string, unknown>[])
     : Promise.resolve([] as Record<string, unknown>[]),
-  // Pending seller payouts (vinyl crate)
+  // Pending seller payouts (vinyl crate) — written by
+  // processVinylCrateSellerPayments as 'pendingCrateSellerPayouts'
   serviceAccountKey
-    ? saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSellerPayouts', {
+    ? saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingCrateSellerPayouts', {
         limit: 100
       }).catch(() => [] as Record<string, unknown>[])
     : Promise.resolve([] as Record<string, unknown>[]),

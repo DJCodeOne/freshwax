@@ -106,7 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // Update pending payout status based on type
           const pendingCollection = payeeType === 'artist' ? 'pendingPayouts' :
                                     payeeType === 'supplier' ? 'pendingSupplierPayouts' :
-                                    'pendingSellerPayouts';
+                                    'pendingCrateSellerPayouts';
 
           // Try to find and update the pending payout record
           try {

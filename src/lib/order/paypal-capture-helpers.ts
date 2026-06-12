@@ -152,6 +152,10 @@ export async function enrichItemsForLedger(
         if (!hasEmail && sid) submitterLookupIds.add(sid as string);
       }
     }
+    // Crates marketplace items: seller email comes from the users doc
+    if (item.sellerId && !item.releaseId) {
+      submitterLookupIds.add(item.sellerId as string);
+    }
   }
 
   // Batch-fetch users and artists for submitter email resolution
@@ -192,6 +196,16 @@ export async function enrichItemsForLedger(
         submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
         artistName = release.artistName || release.artist || artistName;
       }
+    }
+
+    // Crates marketplace items (sellerId, no releaseId): the seller IS the
+    // listing owner — without this the ledger entry has no seller and the
+    // sale is misattributed to platform revenue
+    if (!submitterId && item.sellerId && !item.releaseId) {
+      submitterId = item.sellerId;
+      artistName = (item.sellerName as string) || artistName;
+      const sellerData = submitterUserMap.get(item.sellerId as string);
+      if (sellerData?.email) submitterEmail = sellerData.email;
     }
 
     // For merch items, look up the merch document for seller info
