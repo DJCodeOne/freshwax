@@ -9,7 +9,7 @@ import { logStripeEvent } from '../webhook-logger';
 import { createGiftCardAfterPayment } from '../giftcard';
 import { recordMultiSellerSale } from '../sales-ledger';
 import { fetchWithTimeout, createLogger, errorResponse } from '../api-utils';
-import { processArtistPayments, processSupplierPayments, getCountryName } from './payments';
+import { processArtistPayments, processSupplierPayments, getCountryName, fetchActualStripeFee } from './payments';
 import { processVinylCrateSellerPayments } from './vinyl-crate-payments';
 import { enrichItemsWithSellerInfo } from './seller-enrichment';
 import { deductAppliedCredit } from './credit-deduction';
@@ -377,14 +377,22 @@ export async function handleProductOrder(
     }
   }
 
+  // The artist bears the REAL Stripe fee (item price - actual fee - 1%);
+  // fetch it from the balance transaction once for ledger + payouts.
+  let actualStripeFee: number | null = null;
+  if (session.payment_intent && stripeSecretKey) {
+    actualStripeFee = await fetchActualStripeFee(session.payment_intent as string, stripeSecretKey);
+  }
+
   // Record to sales ledger (source of truth for analytics)
   // Look up seller info for ALL items so multi-seller orders are handled correctly
   try {
     const shippingAmount = parseFloat(metadata.shipping) || 0;
     const serviceFees = parseFloat(metadata.serviceFees) || 0;
     const freshWaxFee = parseFloat(metadata.freshWaxFee) || 0;
-    // Estimate Stripe fee: 1.5% + £0.20 for UK cards (average)
-    const stripeFee = serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total! / 100) * 0.015 + 0.20);
+    // Actual Stripe fee when available, else estimate from service fees
+    const stripeFee = actualStripeFee
+      ?? (serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total! / 100) * 0.015 + 0.20));
 
     // Enrich items with seller info from release/product lookup
     const enrichedItems = await enrichItemsWithSellerInfo(items);
@@ -432,6 +440,7 @@ export async function handleProductOrder(
       totalItemCount,
       orderSubtotal,
       artistShippingBreakdown, // Include shipping fees for artists who ship vinyl
+      actualStripeFee, // Real fee from balance transaction (null -> estimate)
       stripeSecretKey,
       env
     });

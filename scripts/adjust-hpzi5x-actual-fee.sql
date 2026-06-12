@@ -1,0 +1,1 @@
+UPDATE sales_ledger SET stripe_fee = 0.58, total_fees = 0.73, net_revenue = 14.27, artist_payout = 14.27, corrected_at = '2026-06-12T00:35:28.728Z', data = json_set(data, '$.stripeFee', 0.58, '$.totalFees', 0.73, '$.netRevenue', 14.27, '$.artistPayout', 14.27) WHERE id = 'IUwTAkoon4vWzfxLV3Gy';

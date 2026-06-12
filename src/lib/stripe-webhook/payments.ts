@@ -3,9 +3,32 @@
 
 import { getDocument, queryCollection, addDocument, updateDocument, atomicIncrement } from '../firebase-rest';
 import { formatPrice } from '../format-utils';
-import { createLogger } from '../api-utils';
+import { createLogger, fetchWithTimeout } from '../api-utils';
 
 const log = createLogger('stripe-webhook-payments');
+
+// Fetch the ACTUAL Stripe fee for a captured payment from its balance
+// transaction. Artists receive their item price minus the real fee (plus
+// 100% of their shipping), so payouts must not rely on the 1.4%+20p
+// estimate — Stripe charges on the full amount including shipping and the
+// rate varies by card type. Returns null if unavailable (caller falls back
+// to the estimate).
+export async function fetchActualStripeFee(paymentIntentId: string, stripeSecretKey: string): Promise<number | null> {
+  try {
+    const r = await fetchWithTimeout(
+      `https://api.stripe.com/v1/payment_intents/${paymentIntentId}?expand[]=latest_charge.balance_transaction`,
+      { headers: { Authorization: `Bearer ${stripeSecretKey}` } },
+      10000
+    );
+    if (!r.ok) return null;
+    const pi = await r.json() as { latest_charge?: { balance_transaction?: { fee?: number } } };
+    const fee = pi?.latest_charge?.balance_transaction?.fee;
+    return typeof fee === 'number' ? fee / 100 : null;
+  } catch (e: unknown) {
+    log.warn('Could not fetch actual Stripe fee:', e instanceof Error ? e.message : e);
+    return null;
+  }
+}
 
 export function getCountryName(code: string): string {
   const countryMap: { [key: string]: string } = {
@@ -31,10 +54,14 @@ export async function processArtistPayments(params: {
   totalItemCount: number;
   orderSubtotal: number;
   artistShippingBreakdown?: Record<string, { artistId: string; artistName: string; amount: number }> | null;
+  // Real Stripe fee from the balance transaction (fetchActualStripeFee).
+  // When provided it replaces the 1.4%+20p estimate so the artist bears the
+  // exact fee, not an approximation.
+  actualStripeFee?: number | null;
   stripeSecretKey: string;
   env: CloudflareEnv;
 }) {
-  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, artistShippingBreakdown, env } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, artistShippingBreakdown, actualStripeFee, env } = params;
 
   try {
     // Group items by artist (using releaseId to look up artist)
@@ -84,8 +111,11 @@ export async function processArtistPayments(params: {
 
       // 1% Fresh Wax platform fee
       const freshWaxFee = itemTotal * 0.01;
-      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
-      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
+      // Processing fee: actual Stripe fee when known, else the 1.4% + £0.20
+      // estimate. Split equally among all sellers.
+      const totalProcessingFee = (typeof actualStripeFee === 'number' && actualStripeFee > 0)
+        ? actualStripeFee
+        : (orderSubtotal * 0.014) + 0.20;
       const processingFeePerSeller = totalProcessingFee / totalItemCount;
       const artistShare = itemTotal - freshWaxFee - processingFeePerSeller;
 

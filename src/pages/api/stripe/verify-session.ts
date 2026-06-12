@@ -8,7 +8,7 @@ import { verifyRequestUser, getDocument, deleteDocument } from '../../../lib/fir
 import { createOrder, convertReservation } from '../../../lib/order-utils';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 import { enrichItemsWithSellerInfo } from '../../../lib/stripe-webhook/seller-enrichment';
-import { processArtistPayments } from '../../../lib/stripe-webhook/payments';
+import { processArtistPayments, fetchActualStripeFee } from '../../../lib/stripe-webhook/payments';
 import { createLogger, fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
 import { FIREBASE_API_KEY } from '../../../lib/constants';
 import { TIMEOUTS } from '../../../lib/timeouts';
@@ -254,10 +254,17 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         log.error('Reservation conversion failed:', resErr);
       }
 
+      // Artists bear the REAL Stripe fee — fetch from the balance transaction
+      let actualStripeFee: number | null = null;
+      if (session.payment_intent) {
+        actualStripeFee = await fetchActualStripeFee(session.payment_intent, stripeSecretKey);
+      }
+
       try {
         const serviceFees = parseFloat(session.metadata?.serviceFees) || (pendingTotals?.serviceFees ?? 0);
         const freshWaxFee = parseFloat(session.metadata?.freshWaxFee) || (pendingTotals?.freshWaxFee ?? 0);
-        const stripeFee = serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total / 100) * 0.015 + 0.20);
+        const stripeFee = actualStripeFee
+          ?? (serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total / 100) * 0.015 + 0.20));
         const enrichedItems = await enrichItemsWithSellerInfo(items);
         await recordMultiSellerSale({
           orderId: result.orderId!,
@@ -291,6 +298,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
           totalItemCount: items.length,
           orderSubtotal,
           artistShippingBreakdown,
+          actualStripeFee,
           stripeSecretKey: stripeSecretKeyForPayments,
           env: env as CloudflareEnv
         });
