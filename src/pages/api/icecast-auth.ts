@@ -13,6 +13,34 @@ const log = createLogger('icecast-auth');
 
 export const prerender = false;
 
+// All BUTT DJs share one static Icecast source password (kept stable for
+// convenience — DJs reuse the same BUTT settings every time). Since a shared
+// password can't identify which DJ is connecting, broadcasting is gated on
+// "someone has a booked slot covering now". The one-source-at-a-time guarantee
+// comes from Icecast's single /live mount; the site's live state from the slot
+// system (go-live, which is itself mutually exclusive via the slot lock).
+const SHARED_SOURCE_PASSWORD_FALLBACK = 'freshwax-source-2024';
+
+async function hasBookedSlotCoveringNow(now: Date): Promise<boolean> {
+  const earlyWindow = 10 * 60 * 1000; // 10 min early
+  const graceWindow = 5 * 60 * 1000;  // 5 min grace after end
+  const covers = (s: Record<string, unknown>): boolean => {
+    const start = new Date(s.startTime as string).getTime();
+    const end = new Date(s.endTime as string).getTime();
+    return now.getTime() >= start - earlyWindow && now.getTime() <= end + graceWindow;
+  };
+  // Check live first (mid-stream reconnect), then upcoming/lobby bookings.
+  for (const status of ['live', 'scheduled', 'in_lobby']) {
+    const slots = await queryCollection('livestreamSlots', {
+      filters: [{ field: 'status', op: 'EQUAL', value: status }],
+      limit: 20,
+      skipCache: true
+    });
+    if (slots.some(covers)) return true;
+  }
+  return false;
+}
+
 // Icecast sends POST with form data for source authentication
 export async function POST({ request, locals }: APIContext) {
   try {
@@ -36,7 +64,33 @@ export async function POST({ request, locals }: APIContext) {
       });
     }
 
-    // The password should be the DJ's stream key
+    // Shared BUTT password path: all BUTT DJs use one static source password.
+    // Allow the source iff a DJ currently has a booked slot covering now —
+    // broadcasting still requires a reservation, and Icecast's single /live
+    // mount means only one source can hold it at a time.
+    const env = locals?.runtime?.env as Record<string, string> | undefined;
+    const sharedPassword = env?.ICECAST_SOURCE_PASSWORD || SHARED_SOURCE_PASSWORD_FALLBACK;
+    if (pass && pass === sharedPassword) {
+      const now = new Date();
+      if (await hasBookedSlotCoveringNow(now)) {
+        log.info('[Icecast Auth] SUCCESS via shared BUTT password (active booked slot)');
+        return new Response('icecast-auth-user=1', {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/plain',
+            'icecast-auth-user': '1',
+            'icecast-auth-message': 'Welcome!'
+          }
+        });
+      }
+      log.info('[Icecast Auth] Shared password but no booked slot covering now — rejected');
+      return new Response('No active booked slot for this time', {
+        status: 403,
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+
+    // Legacy path: the password is a per-slot DJ stream key (fwx_...).
     const streamKey = pass;
 
     if (!streamKey || !streamKey.startsWith('fwx_')) {

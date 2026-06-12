@@ -3690,7 +3690,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       const btn = document.getElementById('spawnKeyBtn');
       const streamKeyEl = document.getElementById('myStreamKey');
-      const icecastPasswordEl = document.getElementById('icecastPassword');
+      // NOTE: the BUTT (#icecastPassword) field is intentionally left static —
+      // all BUTT DJs share one fixed source password. Only the OBS key spawns.
 
       // If already have a key displayed, don't spawn again
       if (currentStreamKey) {
@@ -3703,10 +3704,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       btn.textContent = '...';
       if (buttBtn) { buttBtn.disabled = true; buttBtn.textContent = '...'; }
       streamKeyEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
-      if (icecastPasswordEl) {
-        icecastPasswordEl.classList.remove('stream-key-placeholder');
-        icecastPasswordEl.innerHTML = '<span class="key-generating"><span class="spawn-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span> Spawning</span>';
-      }
 
       // Wait 3 seconds for animation effect
       await new Promise(resolve => setTimeout(resolve, 3000));
@@ -3806,17 +3803,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         keySpan.textContent = currentStreamKey;
         streamKeyEl.appendChild(keySpan);
 
-        if (icecastPasswordEl) {
-          icecastPasswordEl.classList.remove('stream-key-placeholder', 'key-loading', 'key-unavailable');
-          icecastPasswordEl.classList.add('key-reveal');
-          icecastPasswordEl.textContent = '';
-          const buttKeySpan = document.createElement('span');
-          buttKeySpan.className = 'key-text';
-          buttKeySpan.textContent = currentStreamKey;
-          icecastPasswordEl.appendChild(buttKeySpan);
-        }
-
-        updateButtPassword(currentStreamKey);
+        // BUTT password (#icecastPassword) is left as its static shared value.
         btn.textContent = 'Done';
         if (buttBtn) buttBtn.textContent = 'Done';
 
@@ -3837,7 +3824,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } catch (error) {
         console.error('[DJ Lobby] Spawn key error:', error);
         streamKeyEl.innerHTML = '<span class="key-error">Failed - try again</span>';
-        if (icecastPasswordEl) icecastPasswordEl.innerHTML = '<span class="key-error">Failed</span>';
         btn.textContent = 'Spawn';
         btn.disabled = false;
         if (buttBtn) { buttBtn.textContent = 'Spawn'; buttBtn.disabled = false; }
