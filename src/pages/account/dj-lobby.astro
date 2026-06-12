@@ -4255,8 +4255,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     btnText.textContent = 'Booking slot...';
 
     try {
-      // Auto-book slot if none booked and no one is live
-      if (!mySlot && !currentStream) {
+      // Ensure a slot is booked. This previously also required !currentStream,
+      // which skipped booking whenever a (sometimes stale/orphaned) live stream
+      // was showing — leaving mySlot null so the GO LIVE button appeared but did
+      // nothing when pressed. handleBook rejects with a clear conflict message if
+      // someone is genuinely live, so booking unconditionally here is safe.
+      if (!mySlot) {
         var token = await currentUser.getIdToken();
         var now = new Date();
         now.setSeconds(0, 0);
@@ -4343,7 +4347,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   // Mobile Go Live button — camera already running from Ready step
   document.getElementById('mobileGoLiveBtn')?.addEventListener('click', async () => {
-    if (!currentUser || !mySlot) return;
+    if (!currentUser) return;
+    // Don't silently do nothing if there's no slot (e.g. the Ready step skipped
+    // booking) — tell the DJ so the button never feels dead.
+    if (!mySlot) {
+      var noSlotEl = document.getElementById('mobileStatusText');
+      if (noSlotEl) noSlotEl.textContent = 'No slot booked yet — tap "I\'m Ready" again.';
+      return;
+    }
 
     var btn = document.getElementById('mobileGoLiveBtn');
     var btnText = document.getElementById('mobileGoLiveBtnText');
