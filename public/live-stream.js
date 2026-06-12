@@ -13,7 +13,7 @@ import {
   setupHlsPlayer, setupTwitchPlayer, setupAudioPlayer, setupRecording,
   destroyHlsPlayer, cleanupHlsAbort, getGlobalAudioContext,
   getIsRecording, stopRecording
-} from '/live/hls-player.js?v=20260410b';
+} from '/live/hls-player.js?v=20260612c';
 
 import {
   getPusherConfig, loadPusherScript, setupLiveStatusPusher
@@ -401,6 +401,7 @@ async function loadUserReactions(streamId) {
 // --- Stop live stream ---
 function stopLiveStream() {
   releaseWakeLock(); destroyHlsPlayer();
+  ['fsVideoLoading', 'videoLoadingNotice'].forEach(function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); });
   var videoEl = document.getElementById('hlsVideoElement'); if (videoEl) { try { videoEl.pause(); videoEl.removeAttribute('src'); videoEl.load(); } catch (e) {} }
   var audioEl = document.getElementById('audioElement'); if (audioEl) { try { audioEl.pause(); audioEl.removeAttribute('src'); audioEl.load(); } catch (e) {} }
   stopGlobalMeters(); currentStream = null; window.currentStreamData = null; window.isLiveStreamActive = false; window.streamDetectedThisSession = false; setLiveStreamPlaying(false); setChatCurrentStream(null);

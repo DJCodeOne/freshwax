@@ -166,6 +166,10 @@ try {
             <track kind="captions" label="Captions unavailable for live content" default />
           </video>
         </div>
+        <div id="fsVideoLoading" class="fs-video-loading hidden" role="status">
+          <div class="fs-video-loading-spinner"></div>
+          <span>Video loading…</span>
+        </div>
         <!-- Fullscreen Audio Placeholder (BUTT mode) -->
         <div id="fsAudioPlaceholder" class="fs-audio-placeholder hidden">
           <!-- Background video loop (fullscreen) -->
@@ -434,6 +438,10 @@ try {
             <video id="hlsVideoElement" class="hls-video" playsinline preload="auto" autoplay muted aria-label="Live stream player" style="background:#000;">
               <track kind="captions" label="Captions unavailable for live content" default />
             </video>
+            <div id="videoLoadingNotice" class="video-loading-notice hidden" role="status">
+              <div class="video-loading-spinner"></div>
+              <span>Video loading…</span>
+            </div>
             <!-- Playlist embeds will be injected here when active -->
             <div id="playlistPlayer" class="playlist-player hidden"></div>
             <!-- Playlist loading overlay - hides glitchy embed loading -->
@@ -3010,7 +3018,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260612b"></script>
+<script type="module" src="/live-stream.js?v=20260612c"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page

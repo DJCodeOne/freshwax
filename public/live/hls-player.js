@@ -295,6 +295,30 @@ export async function setupHlsPlayer(streamData, deps) {
   if (playlistPlayer) { playlistPlayer.classList.add('hidden'); playlistPlayer.style.display = 'none'; }
   if (playlistOverlay) playlistOverlay.classList.add('hidden');
 
+  // Show a "Video loading…" notice until the first video frame actually renders.
+  // For browser/WHIP (phone) streams the audio is live almost immediately but
+  // the HLS video can take ~30-40s to appear (MediaMTX has to package the WebRTC
+  // stream and wait for a keyframe), so without this the player just sits on a
+  // blank gradient with no explanation.
+  (function() {
+    function setVideoLoading(show) {
+      var ids = ['fsVideoLoading', 'videoLoadingNotice'];
+      for (var i = 0; i < ids.length; i++) { var el = document.getElementById(ids[i]); if (el) el.classList.toggle('hidden', !show); }
+    }
+    if (!video) return;
+    setVideoLoading(true);
+    var cleared = false;
+    function clearLoading() { if (cleared) return; cleared = true; setVideoLoading(false); }
+    if (typeof video.requestVideoFrameCallback === 'function') {
+      video.requestVideoFrameCallback(function() { clearLoading(); });
+    } else {
+      var chk = setInterval(function() { if (video.videoWidth > 0) { clearLoading(); clearInterval(chk); } }, 500);
+      setTimeout(function() { clearInterval(chk); }, 90000);
+    }
+    // Safety net — never leave the notice up indefinitely.
+    setTimeout(clearLoading, 90000);
+  })();
+
   // Hide playlist timer and show branding for live streams
   var durationBox = document.getElementById('bottomDurationBox');
   if (durationBox) durationBox.style.display = 'none';
@@ -550,6 +574,9 @@ export function setupTwitchPlayer(streamData) {
 }
 
 export async function setupAudioPlayer(streamData, deps) {
+  // Audio-only / placeholder / relay streams have no video feed, so make sure
+  // the "Video loading…" notice is never showing here.
+  ['fsVideoLoading', 'videoLoadingNotice'].forEach(function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); });
   var shouldAutoplay = deps.shouldAutoplay;
   var wasLiveStreamPlaying = deps.wasLiveStreamPlaying;
   var setLiveStreamPlaying = deps.setLiveStreamPlaying;
