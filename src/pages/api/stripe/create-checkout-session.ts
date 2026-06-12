@@ -166,6 +166,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       for (const item of validatedItems) {
         if (item.type !== 'vinyl') continue;
 
+        // Crates marketplace items: charge the seller-set shipping from the
+        // listing (validated server-side). Not part of artistShippingBreakdown
+        // — the crate seller receives it via processVinylCrateSellerPayments.
+        if (item.sellerId && !item.releaseId) {
+          vinylShippingTotal += ((item.cratesShippingCost as number) ?? 4.99) * ((item.quantity as number) || 1);
+          continue;
+        }
+
         const releaseId = item.releaseId || item.productId || item.id;
         const artistId = item.artistId;
 

@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
-import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse, escapeHtml } from '../../../lib/api-utils';
+import { brandedEmail } from '../../../lib/email-templates/branded';
+import { sendResendEmail } from '../../../lib/email';
 
 const log = createLogger('[vinyl-orders]');
 
@@ -149,6 +151,40 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
         await saUpdateDocument(serviceAccountKey, projectId, 'vinylOrders', orderId, updateData);
 
         log.info('Marked order as shipped:', orderId);
+
+        // Notify the buyer their record is on the way (non-blocking)
+        try {
+          const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
+          const buyerEmail = order.buyer?.email;
+          if (RESEND_API_KEY && buyerEmail) {
+            const itemName = `${order.artist || ''} - ${order.title || 'your record'}`.replace(/^ - /, '');
+            const trackingHtml = trackingNumber
+              ? `<p style="color:#d1d5db;font-size:14px;line-height:1.6;margin:0 0 8px;">Tracking${carrier ? ` (${escapeHtml(carrier)})` : ''}: <strong style="color:#fff;">${escapeHtml(trackingNumber)}</strong></p>`
+              : '';
+            const html = brandedEmail({
+              stripHeadline: '📦 Your vinyl has shipped!',
+              stripSubtitle: `Order ${order.orderNumber || ''}`,
+              body:
+                `<p style="color:#d1d5db;font-size:15px;line-height:1.6;margin:0 0 16px;">Hi ${escapeHtml(order.buyer?.firstName || 'there')},</p>` +
+                `<p style="color:#d1d5db;font-size:15px;line-height:1.6;margin:0 0 16px;"><strong style="color:#fff;">${escapeHtml(itemName)}</strong> has been dispatched by ${escapeHtml(order.sellerName || 'the seller')} and is on its way to you.</p>` +
+                trackingHtml +
+                `<p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:16px 0 0;">Any questions about delivery? Reply to this email and we'll help out.</p>`
+            });
+            await sendResendEmail({
+              apiKey: RESEND_API_KEY,
+              from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
+              to: [buyerEmail],
+              bcc: ['freshwaxonline@gmail.com'],
+              subject: `Your vinyl has shipped! ${order.orderNumber ? '- ' + order.orderNumber : ''}`.trim(),
+              html,
+              template: 'crate-order-shipped',
+              db: env?.DB,
+            });
+            log.info('Buyer shipped-notification sent to:', buyerEmail);
+          }
+        } catch (emailErr: unknown) {
+          log.error('Buyer shipped-notification failed (non-blocking):', emailErr);
+        }
 
         return successResponse({ message: 'Order marked as shipped' });
       }

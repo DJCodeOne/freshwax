@@ -5,10 +5,41 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, verifyRequestUser, queryCollection } from '../../../lib/firebase-rest';
+import { d1GetVinylSeller } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('vinyl/listing');
+
+// The listing form intentionally has no shipping field — "Shipping costs are
+// set in your seller settings". Resolve the per-listing shippingCost from the
+// seller's settings (D1 primary, Firebase backup) when the client doesn't
+// send one. Returns null when the seller has no settings yet, so callers can
+// point them at /artist/vinyl/settings/ instead of silently listing with £0.
+async function resolveShippingCost(
+  provided: unknown,
+  sellerId: string,
+  db: D1Database | undefined
+): Promise<number | null> {
+  if (typeof provided === 'number' && provided >= 0) return provided;
+  try {
+    if (db) {
+      const seller = await d1GetVinylSeller(db, sellerId);
+      const single = seller?.shippingSingle;
+      if (single !== undefined && single !== null) return parseFloat(String(single)) || 0;
+    }
+  } catch (e: unknown) {
+    log.warn('[vinyl/listing] D1 seller settings lookup failed:', e);
+  }
+  try {
+    const fbSeller = await getDocument('vinyl-sellers', sellerId);
+    const single = fbSeller?.shippingSingle;
+    if (single !== undefined && single !== null) return parseFloat(String(single)) || 0;
+  } catch (e: unknown) {
+    log.warn('[vinyl/listing] Firebase seller settings lookup failed:', e);
+  }
+  return null;
+}
 
 const vinylListingPostSchema = z.object({
   action: z.enum(['create', 'update', 'publish', 'unpublish', 'delete']),
@@ -150,7 +181,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Invalid request');
     }
 
-    const { action, sellerId, sellerName, listingId, ...data } = parsed.data;
+    const { action, sellerId, sellerName, listingId } = parsed.data;
+    // Listing fields come from the raw body — the Zod schema above only
+    // validates the control fields and .strip() discards everything else,
+    // so destructuring ...data from parsed.data yields an EMPTY object and
+    // every create/update fails validation. Each listing field is
+    // individually sanitised below (trim/slice/whitelist/clamp).
+    const { action: _a, sellerId: _s, sellerName: _n, listingId: _l, ...data } =
+      body as Record<string, any>;
 
     // Verify the authenticated user matches the sellerId
     if (verifiedUserId !== sellerId) {
@@ -159,6 +197,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     switch (action) {
       case 'create': {
+        // Shipping comes from seller settings (the form has no shipping field)
+        const resolvedShipping = await resolveShippingCost(data.shippingCost, sellerId, locals.runtime?.env?.DB);
+        if (resolvedShipping === null) {
+          return ApiErrors.badRequest('Please set your shipping costs in Seller Settings before creating a listing');
+        }
+        data.shippingCost = resolvedShipping;
+
         // Validate data
         const validation = validateListing(data);
         if (!validation.valid) {
@@ -337,12 +382,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return ApiErrors.badRequest('At least one image required to publish');
         }
 
-        // Go live immediately - no approval needed
-        await updateDocument('vinylListings', listingId, {
+        // Backfill shipping from seller settings for drafts that predate it —
+        // a published listing must have a shippingCost for checkout to charge
+        const publishUpdate: Record<string, unknown> = {
           status: 'published',
           publishedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
-        });
+        };
+        if (existing.shippingCost === undefined || existing.shippingCost === null) {
+          const backfilled = await resolveShippingCost(undefined, sellerId, locals.runtime?.env?.DB);
+          if (backfilled === null) {
+            return ApiErrors.badRequest('Please set your shipping costs in Seller Settings before publishing');
+          }
+          publishUpdate.shippingCost = backfilled;
+        }
+
+        // Go live immediately - no approval needed
+        await updateDocument('vinylListings', listingId, publishUpdate);
 
         return successResponse({ message: 'Listing is now live!' });
       }

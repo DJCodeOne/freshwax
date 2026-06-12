@@ -272,7 +272,7 @@ export async function processVinylCratesOrders(
         price: item.price,
         originalPrice: item.originalPrice || item.price,
         discountPercent: item.discountPercent || 0,
-        shippingCost: item.shippingCost || 0,
+        shippingCost: item.cratesShippingCost ?? item.shippingCost ?? 0,
         format: item.format,
         condition: item.condition,
         image: item.image,

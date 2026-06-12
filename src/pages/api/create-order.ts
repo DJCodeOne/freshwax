@@ -182,8 +182,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const artistId = item.artistId;
 
         if (item.sellerId && !item.releaseId) {
-          // Vinyl crates — seller shipping cost
-          vinylShippingTotal += item.shippingCost ?? 4.99;
+          // Vinyl crates — seller shipping cost (validated server-side as
+          // cratesShippingCost; legacy items may carry shippingCost)
+          vinylShippingTotal += item.cratesShippingCost ?? item.shippingCost ?? 4.99;
         } else if (artistId) {
           // Per-artist vinyl shipping (one charge per artist)
           if (!artistShippingBreakdown[artistId]) {
