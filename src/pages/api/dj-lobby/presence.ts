@@ -267,13 +267,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       case 'heartbeat': {
-        // Update last seen timestamp
-        await updateDocument('djLobbyPresence', userId, {
-          lastSeen: now,
-          isReady: isReady ?? false
-        }, idToken);
+        // Update last seen timestamp. Only touch isReady when the caller
+        // explicitly provides a boolean — the periodic heartbeat must NOT
+        // reset a DJ's ready state (which is owned by the 'update' action).
+        // Previously `isReady ?? false` flipped ready DJs back to not-ready
+        // every 30s.
+        const heartbeatUpdate: Record<string, unknown> = { lastSeen: now };
+        if (typeof isReady === 'boolean') heartbeatUpdate.isReady = isReady;
+        await updateDocument('djLobbyPresence', userId, heartbeatUpdate, idToken);
 
-        // Broadcast status update if ready state changed
+        // Broadcast status update only if ready state was explicitly included
         if (typeof isReady === 'boolean') {
           await triggerPusher('dj-lobby', 'dj-status', {
             id: userId,

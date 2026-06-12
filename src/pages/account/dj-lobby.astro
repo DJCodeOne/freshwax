@@ -1355,20 +1355,29 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     sendDm,
     cleanup as cleanupPusher,
     getOnlineDjs
-  } from '/dj-lobby-pusher.js?v=3.7';
+  } from '/dj-lobby-pusher.js?v=20260612a';
 
   // Extracted modules (DJ lobby code split)
-  import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260430c';
-  import * as lobbyChat from '/dj-lobby/chat.js?v=20260410';
-  import * as lobbyDm from '/dj-lobby/dm.js?v=20260410';
-  import * as scheduling from '/dj-lobby/scheduling.js?v=20260410b';
-  import * as shareModule from '/dj-lobby/share.js?v=20260410';
-  import * as videoPlayer from '/dj-lobby/video-player.js?v=20260430a';
-  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260410';
-  import * as relayModule from '/dj-lobby/relay.js?v=20260410';
-  import * as initModalModule from '/dj-lobby/init-modal.js?v=20260410';
-  import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260410';
-  import * as stereoMetersModule from '/dj-lobby/stereo-meters.js?v=20260430e';
+  // NOTE: ?v= bumped 2026-06-12 — several modules were edited on May 2 without a
+  // cache-bust, so CDN/browser caches could still hold pre-May-2 copies. The
+  // inline sharedCtx below calls exports (setCurrentPreviewSourceDirect,
+  // animateBroadcastMeters) that only exist in the current module files, so all
+  // tags are refreshed together to keep the page and its modules in lockstep.
+  import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260612a';
+  import * as lobbyChat from '/dj-lobby/chat.js?v=20260612a';
+  import * as lobbyDm from '/dj-lobby/dm.js?v=20260612a';
+  import * as scheduling from '/dj-lobby/scheduling.js?v=20260612a';
+  import * as shareModule from '/dj-lobby/share.js?v=20260612a';
+  import * as videoPlayer from '/dj-lobby/video-player.js?v=20260612a';
+  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260612a';
+  import * as relayModule from '/dj-lobby/relay.js?v=20260612a';
+  import * as initModalModule from '/dj-lobby/init-modal.js?v=20260612a';
+  import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260612a';
+  import * as stereoMetersModule from '/dj-lobby/stereo-meters.js?v=20260612a';
+
+  // Silence the per-second [LiveMeter]/[OutputGain]/[setupAudioMeter] diagnostic
+  // logs in stereo-meters.js (they gate on this flag and nothing else sets it).
+  if (typeof window !== 'undefined') window.__hideLiveMeterDebug = true;
 
   // ============================================
   // MODULE FUNCTION ALIASES
@@ -2032,6 +2041,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       loadStreamStatus: loadStreamStatus,
       updateEndStreamButton: updateEndStreamButton,
       initBroadcastMeters: function() { return audioMeters.initBroadcastMeters(); },
+      animateBroadcastMeters: function() { return audioMeters.animateBroadcastMeters(); },
       animateLiveMeters: function() { if (_animateLiveMetersRef) _animateLiveMetersRef(); },
       getBroadcastMeterAnimationId: function() { return audioMeters.getBroadcastMeterAnimationId(); },
       getLiveMeterAnimationId: function() { return liveMeterAnimationId; },
@@ -2090,7 +2100,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       isInEventMode: function() { return scheduling.isInEventMode(); },
       // --- Properties added for relay, init-modal, eligibility, stereo-meters modules ---
       getIcecastConnected: function() { return videoPlayer.getIcecastConnected(); },
-      getIcecastStreamConnected: function() { return videoPlayer.getIcecastStreamConnected ? videoPlayer.getIcecastStreamConnected() : false; },
+      getIcecastStreamConnected: function() { return videoPlayer.getIcecastConnected ? videoPlayer.getIcecastConnected() : false; },
       getObsAnalyserL: function() { return obsAnalyserL; },
       getObsAnalyserR: function() { return obsAnalyserR; },
       setLiveMeterAnimationId: function(id) { liveMeterAnimationId = id; },
@@ -2104,8 +2114,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       setLiveKWeightedAnalysers: function(l, r) { liveKWeightedAnalyserL = l; liveKWeightedAnalyserR = r; },
       setBroadcastAudioSource: function(s) { broadcastAudioSource = s; },
       getBroadcastAudioSource: function() { return broadcastAudioSource; },
+      syncAudioSource: function(s) { broadcastAudioSource = s; },
       setupIcecastAnalysers: function(el) { return setupIcecastAnalysers(el); },
-      setCurrentPreviewSource: function(s) { videoPlayer.setCurrentPreviewSource ? videoPlayer.setCurrentPreviewSource(s) : null; currentPreviewSource = s; },
+      setCurrentPreviewSource: function(s) { if (videoPlayer.setCurrentPreviewSourceDirect) videoPlayer.setCurrentPreviewSourceDirect(s); currentPreviewSource = s; },
       checkIcecastStatus: function() { return videoPlayer.checkIcecastStatus(); }
     };
 
@@ -4118,6 +4129,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       alert(e instanceof Error ? e.message : 'Failed to go live.');
       if (initGoLiveBtnText) initGoLiveBtnText.textContent = 'GO LIVE';
       if (initGoLiveBtn) initGoLiveBtn.disabled = false;
+      // Also restore the main Go Live button — it was disabled and relabelled
+      // "Going Live..." above, and the init modal is now hidden, so without this
+      // it stays stuck and the DJ cannot retry. (var-hoisted from the try.)
+      if (goLiveBtnEl) { goLiveBtnEl.disabled = false; if (goLiveBtnTextEl) goLiveBtnTextEl.textContent = 'GO LIVE!'; }
     }
   });
 
