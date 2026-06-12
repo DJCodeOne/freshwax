@@ -177,6 +177,7 @@ const firebaseConfig = {
                 <div class="setting-row">
                   <span class="setting-label">Video Bitrate:</span>
                   <span class="setting-value highlight">2500-4000 kbps</span>
+                  <span class="setting-note">~2000 on mobile/tethered</span>
                 </div>
                 <div class="setting-row">
                   <span class="setting-label">Audio Bitrate:</span>
@@ -187,6 +188,7 @@ const firebaseConfig = {
                   <span class="setting-value">x264 or NVENC</span>
                 </div>
               </div>
+              <p>OBS's default encoder settings work fine — the one thing that matters is matching <strong>bitrate to your connection</strong>. Too high for the uplink (common on mobile or tethered) causes dropped frames, and a badly dropping stream can connect but show a <strong>black screen</strong>. If that happens, drop the video bitrate to <strong>~2000 kbps</strong>.</p>
             </div>
           </div>
           
@@ -265,7 +267,7 @@ const firebaseConfig = {
                 </div>
                 <div class="setting-row">
                   <span class="setting-label">Port:</span>
-                  <span class="setting-value">8000</span>
+                  <span class="setting-value">8020</span>
                 </div>
                 <div class="setting-row">
                   <span class="setting-label">User:</span>
