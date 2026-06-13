@@ -103,7 +103,7 @@ to{ opacity:1; transform:scale(1) } }
 .header-avatar{ width:36px; height:36px; border-radius:50%; border:var(--b5); background:#fff; object-fit:cover }
 .header-avatar-letter{ position:absolute; inset:0; width:36px; height:36px; font-size:1rem; text-transform:uppercase }
 .header-name{ color:#fff; font-weight:500; font-size:.9rem }
-.header-clock{ display:flex; align-items:center; justify-content:center; margin-top:.2rem; color:#60a5fa; font-family:'JetBrains Mono','SF Mono','Fira Code',Consolas,monospace; font-weight:700; font-size:1.4rem; letter-spacing:.02em; line-height:1; font-variant-numeric:tabular-nums }
+.header-clock{ display:flex; align-items:center; justify-content:center; margin-top:.2rem; color:#22c55e; font-family:'JetBrains Mono','SF Mono','Fira Code',Consolas,monospace; font-weight:700; font-size:1.4rem; letter-spacing:.02em; line-height:1; font-variant-numeric:tabular-nums }
 .sign-out-btn{ padding:.5rem 1rem; background:transparent; border:1px solid #666; border-radius:6px; color:#d1d5db; font-size:.8rem; cursor:pointer }
 .sign-out-btn:hover{ background:#333; border-color:#bbb; color:#fff }
 .stream-control-card{text-align:center }
