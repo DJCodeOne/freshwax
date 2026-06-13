@@ -18,7 +18,7 @@ export const blogPosts: BlogPost[] = [
     slug: 'remote-livestream-tethered-mobile',
     title: 'Stream From Anywhere — DJ-Quality Live Sets Over Mobile Data',
     excerpt: 'You can now run a full DJ-quality livestream from a remote venue with nothing but a mobile signal. BUTT and OBS hold a stable connection over a tethered phone or mobile hotspot — no fixed broadband required.',
-    featuredImage: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=800&q=80',
+    featuredImage: '/blog-stream-from-anywhere.webp',
     category: 'Live',
     publishedAt: '2026-06-13',
     author: 'Fresh Wax',
