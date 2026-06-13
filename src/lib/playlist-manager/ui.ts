@@ -39,10 +39,14 @@ export function enableEmojis(): void {
     btn.classList.remove('disabled', 'reactions-disabled');
   });
 
-  // Hide "Sign in to chat" prompt and show chat input
+  // Only hide the "sign in to comment" prompt for logged-in users. Logged-out
+  // viewers must keep seeing it when the playlist runs (hiding it for everyone
+  // left an empty input bar). Reset to visible ('') for logged-out so a prior
+  // display:none doesn't stick.
   const loginPrompt = document.getElementById('loginPrompt');
+  const loggedIn = !!((window as any).liveStreamState && (window as any).liveStreamState.currentUser);
   if (loginPrompt) {
-    loginPrompt.style.display = 'none';
+    loginPrompt.style.display = loggedIn ? 'none' : '';
   }
 
   // Enable chat for playlist mode
