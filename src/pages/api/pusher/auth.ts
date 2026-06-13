@@ -82,8 +82,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // subscriber's member.info and rendered into the online-users list.
     // Strip characters that could break out of an HTML/attribute context and
     // cap length; avatar must be a plain http(s) or root-relative URL.
-    const rawName = request.headers.get('x-user-name') || 'Viewer';
-    let userName = rawName.replace(/[<>"'`]/g, '').slice(0, 80).trim() || 'Viewer';
+    const rawName = request.headers.get('x-user-name') || 'Junglist';
+    let userName = rawName.replace(/[<>"'`]/g, '').slice(0, 80).trim() || 'Junglist';
     const rawAvatar = request.headers.get('x-user-avatar') || '';
     const userAvatar = /^(https?:\/\/|\/)[^"'<>\s]*$/.test(rawAvatar) ? rawAvatar.slice(0, 2000) : '';
 
@@ -92,7 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       userId = verifiedUserId;
     } else {
       userId = 'anon_' + oderId;
-      // Keep userName from x-user-name header (don't override to 'Viewer')
+      // Keep userName from x-user-name header (don't override to 'Junglist')
     }
 
     // Build presence data

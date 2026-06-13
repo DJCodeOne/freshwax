@@ -50,7 +50,7 @@ async function getListenerCount(streamId: string): Promise<{ count: number; list
       if (data.lastSeen > twoMinutesAgo) {
         activeListeners.push({
           id: userId,
-          name: data.name || 'Viewer',
+          name: data.name || 'Junglist',
           avatarUrl: data.avatar || null
         });
       }
@@ -87,7 +87,7 @@ async function upsertListener(
 
     // Add/update this listener
     listenerMap[userId] = {
-      name: userName || 'Viewer',
+      name: userName || 'Junglist',
       avatar: avatarUrl,
       lastSeen: now
     };

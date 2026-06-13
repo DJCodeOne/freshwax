@@ -239,7 +239,7 @@ async function triggerReaction(e) {
           action: 'emoji',
           streamId: 'playlist-global',
           userId: user.uid,
-          userName: (window.currentUserInfo && window.currentUserInfo.name) || user.displayName || (user.email && user.email.split('@')[0]) || 'Viewer',
+          userName: (window.currentUserInfo && window.currentUserInfo.name) || user.displayName || (user.email && user.email.split('@')[0]) || 'Junglist',
           emoji: emojiList.join(','),
           emojiType: emojiType,
           sessionId: reactionSessionId
@@ -269,7 +269,7 @@ async function triggerReaction(e) {
           action: 'emoji',
           streamId: streamId,
           userId: user.uid,
-          userName: (window.currentUserInfo && window.currentUserInfo.name) || user.displayName || (user.email && user.email.split('@')[0]) || 'Viewer',
+          userName: (window.currentUserInfo && window.currentUserInfo.name) || user.displayName || (user.email && user.email.split('@')[0]) || 'Junglist',
           emoji: emojiList.join(','),
           emojiType: emojiType,
           sessionId: reactionSessionId
@@ -350,7 +350,7 @@ function setupReactionButtons() {
               action: 'emoji',
               streamId: sid,
               userId: user.uid,
-              userName: (window.currentUserInfo && window.currentUserInfo.name) || user.displayName || 'Viewer',
+              userName: (window.currentUserInfo && window.currentUserInfo.name) || user.displayName || 'Junglist',
               emoji: '\u2764\uFE0F,\uD83D\uDC96,\uD83D\uDC97,\uD83D\uDC93,\uD83D\uDC95',
               emojiType: 'like'
             })

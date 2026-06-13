@@ -330,7 +330,7 @@ function syncPlayButtonWithPlaylist(retries) {
 async function registerStreamView(streamId) {
   if (!streamId) return;
   var user = auth && auth.currentUser; var userId = (user && user.uid) || viewerSessionId || ('anon-' + Math.random().toString(36).substr(2, 9));
-  var userName = (window.currentUserInfo && window.currentUserInfo.name) || (user && user.displayName) || 'Viewer';
+  var userName = (window.currentUserInfo && window.currentUserInfo.name) || (user && user.displayName) || 'Junglist';
   try { var ctrl = new AbortController(); var timer = setTimeout(function() { ctrl.abort(); }, 15000);
     var resp = await fetch('/api/livestream/listeners/', { signal: ctrl.signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'join', streamId: streamId, userId: userId, userName: userName, avatarUrl: (user && user.photoURL) || null }) });
     clearTimeout(timer); if (!resp.ok) return; var data = await resp.json(); var viewerEl = document.getElementById('viewerCount');
@@ -351,7 +351,7 @@ async function joinStream(streamId) {
 async function sendHeartbeat(streamId) {
   try { var user = window.liveStreamState && window.liveStreamState.currentUser;
     var body = { action: 'heartbeat', streamId: streamId, userId: viewerSessionId };
-    if (user) { body.userId = user.uid; body.userName = user.displayName || (user.email && user.email.split('@')[0]) || 'User'; body.avatarUrl = user.photoURL || null; } else { body.userName = 'Viewer'; }
+    if (user) { body.userId = user.uid; body.userName = user.displayName || (user.email && user.email.split('@')[0]) || 'Junglist'; body.avatarUrl = user.photoURL || null; } else { body.userName = 'Junglist'; }
     var ctrl = new AbortController(); var timer = setTimeout(function() { ctrl.abort(); }, 15000);
     var resp = await fetch('/api/livestream/listeners/', { signal: ctrl.signal, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     clearTimeout(timer); if (!resp.ok) { return; } var data = await resp.json(); var count = data.activeViewers || 0; var chatViewers = document.getElementById('chatViewers');
