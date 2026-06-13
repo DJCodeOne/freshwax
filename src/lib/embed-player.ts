@@ -6,7 +6,7 @@ import { escapeHtml } from './escape-html';
 import { TIMEOUTS } from './timeouts';
 import { createClientLogger } from './client-logger';
 import { loadYouTubeSDK, loadVimeoSDK, loadSoundCloudSDK } from './embed-player-sdk';
-import { setupDirectMedia } from './embed-player-direct';
+import { setupDirectMedia, buildTrackCardOverlay } from './embed-player-direct';
 import type {
   PlayerCallbacks,
   YouTubePlayerInstance,
@@ -96,7 +96,13 @@ export class EmbedPlayerManager {
     const container = document.getElementById(this.containerId);
     if (!container) throw new Error('Container not found');
 
-    container.innerHTML = '<div id="youtube-player"></div>';
+    // Play the video for audio, but cover it with the same "now playing" card
+    // the synced radio uses (blurred bg + centered cover + title) so the playlist
+    // looks consistent and isn't a clickable raw video. The iframe sits behind
+    // (pointer-events:none); the card overlay is on top (also non-interactive).
+    container.innerHTML =
+      '<div style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:1;"><div id="youtube-player"></div></div>' +
+      buildTrackCardOverlay(item.thumbnail || '/place-holder.webp', item.title || 'Track');
     this.youtubePlayerReady = false;
 
     this.youtubePlayer = new YT.Player('youtube-player', {
@@ -151,6 +157,9 @@ export class EmbedPlayerManager {
               const videoData = this.youtubePlayer?.getVideoData?.();
               if (videoData?.title) {
                 this.callbacks.onTitleUpdate?.(videoData.title);
+                // Keep the card overlay title in sync with the real video title.
+                const cardTitle = document.querySelector('#' + this.containerId + ' .pl-track-title');
+                if (cardTitle) cardTitle.textContent = videoData.title;
               }
             } catch (e: unknown) {
               // Ignore errors getting video data

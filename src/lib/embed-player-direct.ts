@@ -37,6 +37,27 @@ export function buildAudioPlayerHTML(thumbnail: string, title: string): string {
   `;
 }
 
+/**
+ * Build a non-interactive "now playing" card overlay (blurred background +
+ * centered cover + white title) to sit ON TOP of a video player (e.g. YouTube),
+ * so the playlist always shows the same audio-card visual as the synced radio
+ * instead of a clickable raw video. pointer-events:none so the player behind it
+ * isn't interactive; the gradient + blurred cover are opaque enough to hide the
+ * video underneath.
+ */
+export function buildTrackCardOverlay(thumbnail: string, title: string): string {
+  const thumb = thumbnail || '/place-holder.webp';
+  return `
+    <div class="pl-track-card" style="position:absolute; inset:0; z-index:2; pointer-events:none; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); overflow:hidden;">
+      <img src="${escapeHtml(thumb)}" alt="" role="presentation" loading="eager" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.7; filter:blur(3px) brightness(0.6);" onerror="this.style.display='none'" />
+      <div style="position:relative; z-index:1; text-align:center; padding:1rem; max-height:100%; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <img src="${escapeHtml(thumb)}" alt="" role="presentation" loading="eager" style="display:block; width:min(150px,40%); height:auto; aspect-ratio:1; border-radius:8px; object-fit:cover; box-shadow:0 8px 32px rgba(0,0,0,0.4); margin-bottom:.75rem;" onerror="this.outerHTML='<div style=&quot;font-size:4rem;&quot;>🎵</div>'" />
+        <div class="pl-track-title" style="color:#fff; font-size:1rem; font-weight:600; text-shadow:0 2px 8px rgba(0,0,0,0.8); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(title)}</div>
+      </div>
+    </div>
+  `;
+}
+
 export interface DirectMediaResult {
   mediaElement: HTMLMediaElement | null;
   error?: string;
