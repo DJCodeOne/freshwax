@@ -38,7 +38,7 @@ export async function setupLiveStatusListener(deps) {
     var currentUser = deps.getCurrentUser();
     var userInfo = deps.getUserInfo();
     var userId = (currentUser && currentUser.uid) || (cachedAuth && cachedAuth.id) || getOrCreateSessionId();
-    var userName = (userInfo && userInfo.name) || (cachedAuth && cachedAuth.name) || (currentUser && currentUser.displayName) || 'Viewer';
+    var userName = (userInfo && userInfo.name) || (cachedAuth && cachedAuth.name) || (currentUser && currentUser.displayName) || 'Junglist';
     var userAvatar = (userInfo && userInfo.avatar) || (cachedAuth && cachedAuth.avatarUrl) || (currentUser && currentUser.photoURL) || '';
 
     // Create Pusher instance with presence auth
@@ -80,7 +80,7 @@ export async function setupLiveStatusListener(deps) {
         } else {
           channel.members.each(function(member) {
             var avatar = member.info ? member.info.avatar : null;
-            var name = (member.info ? member.info.name : null) || 'Viewer';
+            var name = (member.info ? member.info.name : null) || 'Junglist';
             var avatarHtml = avatar
               ? '<div class="online-user-avatar"><img src="' + escapeHtml(avatar) + '" alt="' + escapeHtml(name) + '" width="32" height="32" loading="lazy" decoding="async" /></div>'
               : '<div class="online-user-avatar">' + escapeHtml(name.charAt(0).toUpperCase()) + '</div>';
@@ -168,7 +168,7 @@ export async function registerStreamView(deps) {
         action: 'join',
         streamId: streamId,
         userId: (currentUser && currentUser.uid) || getOrCreateSessionId(),
-        userName: (userInfo && userInfo.name) || 'Viewer'
+        userName: (userInfo && userInfo.name) || 'Junglist'
       })
     });
     if (!resp.ok) return;
@@ -205,7 +205,7 @@ export function startListenerHeartbeat(deps) {
           action: 'heartbeat',
           streamId: streamId,
           userId: (currentUser && currentUser.uid) || getOrCreateSessionId(),
-          userName: (userInfo && userInfo.name) || 'Viewer'
+          userName: (userInfo && userInfo.name) || 'Junglist'
         })
       });
     } catch (e) { /* silent */ }
