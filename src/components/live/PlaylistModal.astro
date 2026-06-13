@@ -41,7 +41,7 @@
     z-index: 1;
     display: flex;
     flex-direction: column;
-    background: linear-gradient(180deg, #331515 0%, #221010 50%, #180a0a 100%);
+    background: linear-gradient(180deg, #1c0b0b 0%, #130808 50%, #0a0505 100%);
     color: #fff;
     width: 100%;
     height: 100%;
@@ -53,7 +53,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(ellipse at 50% 0%, rgba(220, 38, 38, 0.12) 0%, transparent 60%);
+    background: radial-gradient(ellipse at 50% 0%, rgba(220, 38, 38, 0.08) 0%, transparent 60%);
     z-index: 0;
   }
   .playlist-modal-content > * { position: relative; z-index: 1; }
@@ -202,6 +202,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
   }
 
   .queue-column {
@@ -219,8 +220,9 @@
     gap: 1rem;
     flex: 1;
     min-height: 0;
-    max-height: 65vh;
+    max-height: 100%;
     overflow: hidden;
+    padding-bottom: 0.5rem;
   }
 
   .queue-list-side {
@@ -680,6 +682,7 @@
     flex-direction: column;
     padding: 1.5rem 2rem;
     overflow: hidden;
+    min-height: 0;
   }
 
   /* Freshwax branded footer */
@@ -1142,7 +1145,9 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
+    min-height: 0;
     text-align: left;
+    padding-bottom: 0.5rem;
   }
 
   .my-playlist-header {
