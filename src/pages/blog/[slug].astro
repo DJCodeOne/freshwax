@@ -59,7 +59,9 @@ const seoTitle = post?.title || 'Post Not Found';
   // above the title in the card so the suffix is redundant there anyway.
   const seoOgTitle = seoTitle;
 const seoDescription = capDescription(post?.excerpt || (post?.content ? generateExcerpt(post.content) : 'Read this article on Fresh Wax blog.'));
-const seoImage = post?.featuredImage || '/og-image.webp';
+const seoImage = post?.ogImage || post?.featuredImage || '/og-image.webp';
+const seoImageWidth = post?.ogImageWidth;
+const seoImageHeight = post?.ogImageHeight;
 const publishedTime = post?.publishedAt || new Date().toISOString();
 const modifiedTime = publishedTime;
 const nonce = Astro.locals.nonce || '';
@@ -71,6 +73,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
   ogTitle={seoOgTitle}
   description={seoDescription}
   image={seoImage}
+  imageWidth={seoImageWidth}
+  imageHeight={seoImageHeight}
   type="article"
   article={{
     publishedTime: publishedTime,

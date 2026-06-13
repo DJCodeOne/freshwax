@@ -6,6 +6,14 @@ export interface BlogPost {
   title: string;
   excerpt: string;
   featuredImage: string;
+  /** Optional dedicated social-share image (Facebook/Twitter card). Should be
+   *  1200x630 (1.91:1) so the platforms don't crop it. Falls back to
+   *  featuredImage. Set ogImageWidth/ogImageHeight to the real dimensions so the
+   *  og:image:width/height tags are correct (otherwise SEO.astro assumes 800x800
+   *  square and Facebook crops landscape images on all sides). */
+  ogImage?: string;
+  ogImageWidth?: number;
+  ogImageHeight?: number;
   category: string;
   publishedAt: string;
   author: string;
@@ -19,6 +27,9 @@ export const blogPosts: BlogPost[] = [
     title: 'Stream From Anywhere — DJ-Quality Live Sets Over Mobile Data',
     excerpt: 'You can now run a full DJ-quality livestream from a remote venue with nothing but a mobile signal. BUTT and OBS hold a stable connection over a tethered phone or mobile hotspot — no fixed broadband required.',
     featuredImage: '/blog-stream-from-anywhere.webp',
+    ogImage: '/blog-stream-from-anywhere-og.jpg',
+    ogImageWidth: 1200,
+    ogImageHeight: 630,
     category: 'Live',
     publishedAt: '2026-06-13',
     author: 'Fresh Wax',
