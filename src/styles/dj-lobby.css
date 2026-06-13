@@ -50,6 +50,7 @@ body.dj-lobby-page{ --g1:linear-gradient(#222,#1a1a1a);--g2:linear-gradient(135d
 .red{ color:#dc2626 }
 .auth-gate,
 .auth-content{ text-align:center; color:#d1d5db; display:flex; flex-direction:column; align-items:center; gap:1.5rem }
+.auth-gate{ justify-content:center; min-height:100vh; min-height:100dvh }
 .auth-content .loading-dots .dot{ width:14px; height:14px }
 .access-denied{background:linear-gradient(#000,#111827); z-index:100 }
 .denied-content{ text-align:center; padding:2rem; background:rgba(31,41,55,.8); border:var(--b3); border-radius:16px }
