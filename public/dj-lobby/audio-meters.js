@@ -341,6 +341,20 @@ export function animateBroadcastMeters() {
       kWeightedL = state.liveKWeightedAnalyserL;
       kWeightedR = state.liveKWeightedAnalyserR;
     } else if (currentPreviewSource === 'obs') {
+      // Self-heal the OBS preview analyser. It is otherwise only wired in the
+      // one-shot obsVideo 'play' handler; if that was missed (autoplay/muted
+      // timing, or the element started before listeners attached) the panel
+      // stays dead with no recovery. Re-wire from the playing element here.
+      // setupAudioMeter is cached/idempotent so this is a no-op once wired, and
+      // wiring routes mute through the graph gain instead of element.volume
+      // (which would otherwise kill the analyser tap).
+      if (broadcastAudioSource === 'preview' && !state.obsAnalyserL && ctx && ctx.setupObsAudioMeter) {
+        var obsVidEl = document.getElementById('obsVideo');
+        if (obsVidEl && obsVidEl.readyState > 0 && !obsVidEl.paused) {
+          ctx.setupObsAudioMeter(obsVidEl);
+          state = ctx.getAnalyserState();
+        }
+      }
       analyserL = broadcastAudioSource === 'preview' ? state.obsAnalyserL : (state.liveAnalyserL || state.obsAnalyserL);
       analyserR = broadcastAudioSource === 'preview' ? state.obsAnalyserR : (state.liveAnalyserR || state.obsAnalyserR);
       kWeightedL = broadcastAudioSource === 'preview' ? state.obsKWeightedAnalyserL : (state.liveKWeightedAnalyserL || state.obsKWeightedAnalyserL);

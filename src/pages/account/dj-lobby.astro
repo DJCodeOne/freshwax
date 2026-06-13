@@ -1378,7 +1378,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // inline sharedCtx below calls exports (setCurrentPreviewSourceDirect,
   // animateBroadcastMeters) that only exist in the current module files, so all
   // tags are refreshed together to keep the page and its modules in lockstep.
-  import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260612a';
+  import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260613a';
   import * as lobbyChat from '/dj-lobby/chat.js?v=20260612a';
   import * as lobbyDm from '/dj-lobby/dm.js?v=20260612a';
   import * as scheduling from '/dj-lobby/scheduling.js?v=20260612a';
@@ -2163,6 +2163,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             liveAnalyserR = result.analyserR;
             liveKWeightedAnalyserL = result.kWeightedAnalyserL;
             liveKWeightedAnalyserR = result.kWeightedAnalyserR;
+          }
+        }
+      },
+      setupObsAudioMeter: function(el) {
+        if (_setupAudioMeterRef) {
+          var result = _setupAudioMeterRef(el, 'OBS');
+          if (result) {
+            obsAnalyserL = result.analyserL;
+            obsAnalyserR = result.analyserR;
+            obsKWeightedAnalyserL = result.kWeightedAnalyserL;
+            obsKWeightedAnalyserR = result.kWeightedAnalyserR;
           }
         }
       },
