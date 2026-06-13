@@ -137,14 +137,14 @@ html, body{ overflow:auto; }
 .online-user-avatar img{ width:100%; height:100%; border-radius:50%; object-fit:cover; }
 .online-user-name{ font-size:.75rem; color:#ccc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .online-users-mobile{ display:flex; flex-direction:column; height:100%; max-height:100%; overflow:hidden; }
-.online-users-toggle{ display:flex; align-items:center; gap:.5rem; width:100%; padding:.625rem .75rem; background:#111; border:2px solid #222; border-radius:10px; color:#bbb; font-size:.75rem; font-weight:600; text-transform:uppercase; cursor:pointer; flex-shrink:0; }
+.online-users-toggle{ display:flex; align-items:center; gap:.5rem; width:100%; padding:.625rem .75rem; background:#111; border:2px solid #dc2626; border-radius:10px; color:#bbb; font-size:.75rem; font-weight:600; text-transform:uppercase; cursor:pointer; flex-shrink:0; box-shadow:0 0 5px rgba(220,38,38,.18); }
 .online-users-toggle:hover,
-.online-users-toggle:focus-visible{ background:#1a1a1a; border-color:#333; }
+.online-users-toggle:focus-visible{ background:#1a1a1a; border-color:#ef4444; }
 .online-users-toggle .online-count{ margin-left:auto; margin-right:0; }
 .online-chevron{ transition:transform .2s; flex-shrink:0; }
 .online-users-toggle[aria-expanded="true"] .online-chevron{ transform:rotate(180deg); }
 .online-users-mobile-list{ max-height:0; overflow:hidden; transition:max-height .3s; background:#0a0a0a; border-radius:0 0 10px 10px; margin-top:-2px; border:2px solid transparent; }
-.online-users-mobile-list.expanded{ max-height:none; flex:1; min-height:0; border-color:#222; border-top:none; overflow:hidden; }
+.online-users-mobile-list.expanded{ max-height:none; flex:1; min-height:0; border-color:#dc2626; border-top:none; overflow:hidden; }
 @media (min-width:768px){ .online-users-mobile-list{ max-height:none; flex:1; min-height:0; border-color:#222; border-top:none; } }
 .online-users-mobile-scroll{ padding:.5rem; max-height:100%; overflow-y:auto; flex:1; min-height:0; }
 .online-users-mobile-scroll .online-user-item{ display:flex; align-items:center; gap:.5rem; padding:.5rem; border-radius:8px; transition:background .15s; }
@@ -153,7 +153,7 @@ html, body{ overflow:auto; }
 .online-users-mobile-scroll .online-user-avatar img{ width:100%; height:100%; border-radius:50%; object-fit:cover; }
 .online-users-mobile-scroll .online-user-name{ font-size:.8rem; color:#ccc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .schedule-column{ display:flex; flex-direction:column; gap:.875rem; overflow:hidden; max-height:100%; height:100%; }
-.schedule-header{ background:linear-gradient( #2a1212, #0f0606); padding:1.25rem; border-radius:12px; border:1px solid #5a2222; }
+.schedule-header{ background:linear-gradient( #2a1212, #0f0606); padding:1.25rem; border-radius:12px; border:1px solid #dc2626; box-shadow:0 0 5px rgba(220,38,38,.18); }
 .schedule-header h1,
 .schedule-header h2{ font-family:'Bebas Neue','Bebas Fallback',sans-serif; font-size:2.5rem; color:#fff; margin:0; letter-spacing:.5px; line-height:1; }
 .schedule-header h1 .red,
@@ -173,7 +173,7 @@ html, body{ overflow:auto; }
 .btn-icon svg{ width:18px; height:18px; }
 .btn-content{ display:flex; flex-direction:column; align-items:flex-start; gap:0; min-width:0; }
 .btn-label{ font-size:.8rem; font-weight:700; letter-spacing:.01em; }
-.sidebar-card{ background:linear-gradient( #2a1212, #0f0606); border-radius:12px; border:1px solid #5a2222; padding:1.25rem; }
+.sidebar-card{ background:linear-gradient( #2a1212, #0f0606); border-radius:12px; border:1px solid #dc2626; padding:1.25rem; box-shadow:0 0 5px rgba(220,38,38,.18); }
 .sidebar-card h2,
 .sidebar-card h3{ margin:0 0 1rem 0; font-family:'Bebas Neue','Bebas Fallback',sans-serif; font-size:1.5rem; font-weight:400; color:#fff; display:flex; align-items:center; gap:.5rem; }
 .sidebar-card h2 .red,
@@ -204,9 +204,9 @@ html, body{ overflow:auto; }
 .cal-slot.my-slot .cal-dj,
 .cal-slot.live .cal-time,
 .cal-slot.live .cal-dj{ color:#fff; }
-.schedule-card{ display:flex; flex-direction:column; flex:1; min-height:0; padding:1rem !important; background:linear-gradient( #2a1212, #0f0606) !important; border:1px solid #5a2222 !important; }
+.schedule-card{ display:flex; flex-direction:column; flex:1; min-height:0; padding:1rem !important; background:linear-gradient( #2a1212, #0f0606) !important; border:1px solid #dc2626 !important; box-shadow:0 0 5px rgba(220,38,38,.18); }
 .schedule-card h3{ color:#fff !important; }
-.schedule-card>.schedule-header{ display:flex; flex-direction:column; align-items:center; gap:.75rem; margin-bottom:.75rem; }
+.schedule-card>.schedule-header{ display:flex; flex-direction:column; align-items:center; gap:.75rem; margin-bottom:.75rem; border:none; box-shadow:none; }
 .schedule-card .schedule-header h3,
 .schedule-card h3{ margin:0 !important; font-family:'Bebas Neue','Bebas Fallback',sans-serif !important; font-size:1.25rem !important; font-weight:400 !important; letter-spacing:.5px; }
 .schedule-card .empty-message{ color:#d1d5db !important; }
@@ -321,7 +321,7 @@ html, body{ overflow:auto; }
 .stat{ display:flex; align-items:center; gap:.35rem; color:#fff; font-weight:600; font-size:.8125rem; }
 .stat-icon{ font-size:.6875rem; color:#bbb; text-transform:uppercase; letter-spacing:.02em; }
 .chat-column{ display:flex; flex-direction:column; overflow:hidden; max-height:100%; height:100%; }
-.chat-column .chat-section{ flex:1; display:flex; flex-direction:column; min-height:0; background:#140707; border:2px solid #2a1212; border-radius:12px; overflow:hidden; }
+.chat-column .chat-section{ flex:1; display:flex; flex-direction:column; min-height:0; background:#140707; border:2px solid #dc2626; border-radius:12px; overflow:hidden; box-shadow:0 0 5px rgba(220,38,38,.18); }
 .chat-column .chat-header{ padding:.625rem .75rem; border-bottom:1px solid #333; flex-shrink:0; }
 .chat-column .chat-header h2{ margin:0; font-size:.875rem; color:#fff; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
 .chat-column .chat-viewers{ font-size:.75rem; color:#9ca3af; }
