@@ -2197,9 +2197,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       setLiveAnalysers: function(l, r) { liveAnalyserL = l; liveAnalyserR = r; },
       setObsKWeightedAnalysers: function(l, r) { obsKWeightedAnalyserL = l; obsKWeightedAnalyserR = r; },
       setLiveKWeightedAnalysers: function(l, r) { liveKWeightedAnalyserL = l; liveKWeightedAnalyserR = r; },
-      setBroadcastAudioSource: function(s) { broadcastAudioSource = s; },
+      setBroadcastAudioSource: function(s) { broadcastAudioSource = s; if (audioMeters && audioMeters.setBroadcastAudioSource) audioMeters.setBroadcastAudioSource(s); },
       getBroadcastAudioSource: function() { return broadcastAudioSource; },
-      syncAudioSource: function(s) { broadcastAudioSource = s; },
+      syncAudioSource: function(s) { broadcastAudioSource = s; if (audioMeters && audioMeters.setBroadcastAudioSource) audioMeters.setBroadcastAudioSource(s); },
       setupIcecastAnalysers: function(el) { return setupIcecastAnalysers(el); },
       setCurrentPreviewSource: function(s) { if (videoPlayer.setCurrentPreviewSourceDirect) videoPlayer.setCurrentPreviewSourceDirect(s); currentPreviewSource = s; },
       checkIcecastStatus: function() { return videoPlayer.checkIcecastStatus(); }
