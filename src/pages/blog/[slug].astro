@@ -59,9 +59,14 @@ const seoTitle = post?.title || 'Post Not Found';
   // above the title in the card so the suffix is redundant there anyway.
   const seoOgTitle = seoTitle;
 const seoDescription = capDescription(post?.excerpt || (post?.content ? generateExcerpt(post.content) : 'Read this article on Fresh Wax blog.'));
-const seoImage = post?.ogImage || post?.featuredImage || '/og-image.webp';
-const seoImageWidth = post?.ogImageWidth;
-const seoImageHeight = post?.ogImageHeight;
+// Social-share image: a dedicated 1200x630 (1.91:1) card per post lives at
+// /og-<slug>.jpg so Facebook/Twitter never crop it (the on-page featuredImage
+// ratios vary, and reporting them as 800x800 made FB square-crop). Posts may
+// override with an explicit ogImage. Keep an og-<slug>.jpg in public/ for every
+// post (photos cover-cropped, square art letterboxed on black).
+const seoImage = post?.ogImage || `/og-${slug}.jpg`;
+const seoImageWidth = post?.ogImageWidth || 1200;
+const seoImageHeight = post?.ogImageHeight || 630;
 const publishedTime = post?.publishedAt || new Date().toISOString();
 const modifiedTime = publishedTime;
 const nonce = Astro.locals.nonce || '';
