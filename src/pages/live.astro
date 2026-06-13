@@ -1383,7 +1383,7 @@ try {
 <script type="module" define:vars={{ firebaseConfig }} nonce={nonce}>
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { initPresence, waitForPusherAndSetup, startListenerHeartbeat, stopListenerHeartbeat, getOrCreateSessionId, resubscribePresence, getHeartbeatInterval } from '/live/presence.js?v=20260613a';
+  import { initPresence, waitForPusherAndSetup, startListenerHeartbeat, stopListenerHeartbeat, getOrCreateSessionId, resubscribePresence, getHeartbeatInterval } from '/live/presence.js?v=20260613b';
   import { initMobile } from '/live/mobile.js?v=20260408';
 
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}

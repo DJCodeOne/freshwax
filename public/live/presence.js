@@ -243,7 +243,7 @@ export function resubscribePresence(deps) {
 
   window.presencePusher.unsubscribe(channelName);
 
-  var displayName = (userInfo && userInfo.name) || currentUser.displayName || 'User';
+  var displayName = (userInfo && userInfo.name) || currentUser.displayName || 'Junglist';
   var avatarUrl = (userInfo && userInfo.avatar) || currentUser.photoURL || '';
 
   var resubHeaders = {
