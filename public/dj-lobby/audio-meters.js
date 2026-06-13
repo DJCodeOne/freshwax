@@ -84,11 +84,11 @@ export function initBroadcastMeters() {
 
     if (currentPreviewSource === 'butt' || currentPreviewSource === 'relay') {
       var hasLiveAnalysers = state.liveAnalyserL && state.liveAnalyserR;
-      var hasIcecastAnalysers = state.icecastAnalyserL && state.icecastAnalyserR;
 
-      if (!hasIcecastAnalysers && !hasLiveAnalysers) {
-        return;
-      }
+      // Don't bail when analysers aren't wired yet — the toggle must still
+      // respond (flip the label + swap gains); animateBroadcastMeters self-heals
+      // the chosen source on the next frame. Returning here made the button feel
+      // dead in states where neither analyser was ready.
 
       if (broadcastAudioSource === 'preview' && !hasLiveAnalysers) {
         var liveAudio = document.getElementById('audioElement');
@@ -144,6 +144,13 @@ export function initBroadcastMeters() {
     var isLobbyMuted2 = lobbyMuted;
     var setGainFor = function(el, value) {
       if (!el) return;
+      // icecastAudio is wired via setupIcecastAnalysers (its own gain node), not
+      // setupAudioMeter — so setElementOutputGain won't handle it and the
+      // element.volume fallback would kill its analyser tap. That matters in
+      // LIVE mode: if the live analyser is unavailable the panel falls back to
+      // the icecast analyser, and a volume-muted element reads silence (dead
+      // panel). Silence it on its dedicated gain node, which leaves the tap live.
+      if (el.id === 'icecastAudio' && state.icecastGainNode) { state.icecastGainNode.gain.value = value; return; }
       var handled = ctx && ctx.setElementOutputGain ? ctx.setElementOutputGain(el, value) : false;
       if (!handled) { el.volume = value; }
     };
@@ -185,6 +192,12 @@ export function initBroadcastMeters() {
       var apply = function(id, value) {
         var el = document.getElementById(id);
         if (!el) return;
+        // icecastAudio: mute on its dedicated gain node, not element.volume, so
+        // the analyser tap (LEDs/LUFS) stays alive while speakers go silent.
+        if (id === 'icecastAudio') {
+          var ign = ctx && ctx.getAnalyserState ? ctx.getAnalyserState().icecastGainNode : null;
+          if (ign) { ign.gain.value = value; return; }
+        }
         var handled = ctx && ctx.setElementOutputGain ? ctx.setElementOutputGain(el, value) : false;
         if (!handled) { el.volume = value; }
       };
@@ -329,6 +342,23 @@ export function animateBroadcastMeters() {
 
     var analyserL, analyserR;
     var kWeightedL = null, kWeightedR = null;
+
+    // Self-heal the LIVE-output analyser (any mode). It is otherwise only wired
+    // on the live element's 'play' event; if the panel is switched to LIVE
+    // before that fired — or the element reloaded — liveAnalyserL/R stay null,
+    // the butt/relay branch falls through to the icecast analyser (which the
+    // source-swap just muted), and the panel goes dead. Re-wire from whichever
+    // live element is actually playing. setupAudioMeter is cached/idempotent.
+    if (broadcastAudioSource === 'live' && !state.liveAnalyserL && ctx && ctx.setupLiveAudioMeter) {
+      var healVid = document.getElementById('hlsVideo');
+      var healAud = document.getElementById('audioElement');
+      var healEl = (healVid && healVid.readyState > 0 && !healVid.paused) ? healVid
+                 : ((healAud && healAud.readyState > 0 && !healAud.paused) ? healAud : null);
+      if (healEl) {
+        ctx.setupLiveAudioMeter(healEl);
+        state = ctx.getAnalyserState();
+      }
+    }
 
     if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && broadcastAudioSource === 'preview' && state.icecastAnalyserL && state.icecastAnalyserR) {
       analyserL = state.icecastAnalyserL;
