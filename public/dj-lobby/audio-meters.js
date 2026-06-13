@@ -39,6 +39,71 @@ try {
 
 export function init(context) {
   ctx = context;
+  // Attach the lobby-mute handler at module init so it works regardless of
+  // whether/when initBroadcastMeters runs. The meter loop can be started by the
+  // source toggle or the centered #audioToggleBtn without initBroadcastMeters
+  // ever firing, which previously left the mute button with no click handler.
+  initLobbyMute();
+}
+
+// Document-delegated lobby-mute click. Idempotent via window._lobbyMuteInit.
+function initLobbyMute() {
+  if (window._lobbyMuteInit) return;
+  window._lobbyMuteInit = true;
+  var muteEnforcerInterval = null;
+
+  function applyMuteState() {
+    // Use the audio-graph gain node when available (silences speakers without
+    // killing the analyser). createMediaElementSource taps after element.volume
+    // and element.muted, so those would mute the analyser too — using gain
+    // keeps LEDs/LUFS alive while the speakers stay silent.
+    var previewIds = ['obsVideo', 'icecastAudio'];
+    var outputIds = ['hlsVideo', 'audioElement'];
+    var src = broadcastAudioSource;
+    var apply = function(id, value) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      // icecastAudio: mute on its dedicated gain node, not element.volume, so
+      // the analyser tap (LEDs/LUFS) stays alive while speakers go silent.
+      if (id === 'icecastAudio') {
+        var ign = ctx && ctx.getAnalyserState ? ctx.getAnalyserState().icecastGainNode : null;
+        if (ign) { ign.gain.value = value; return; }
+      }
+      var handled = ctx && ctx.setElementOutputGain ? ctx.setElementOutputGain(el, value) : false;
+      if (!handled) { el.volume = value; }
+    };
+    for (var i = 0; i < previewIds.length; i++) {
+      apply(previewIds[i], (lobbyMuted || src === 'live') ? 0 : 1);
+    }
+    for (var j = 0; j < outputIds.length; j++) {
+      apply(outputIds[j], (lobbyMuted || src === 'preview') ? 0 : 1);
+    }
+  }
+
+  function updateMuteButton() {
+    var btn = document.getElementById('lobbyMuteBtn');
+    if (!btn) return;
+    var mi = btn.querySelector('.muted-icon');
+    var ui = btn.querySelector('.unmuted-icon');
+    if (mi) mi.classList.toggle('hidden', !lobbyMuted);
+    if (ui) ui.classList.toggle('hidden', lobbyMuted);
+    btn.classList.toggle('lobby-mute-active', !lobbyMuted);
+    btn.classList.toggle('lobby-mute-muted', lobbyMuted);
+  }
+
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('#lobbyMuteBtn');
+    if (!btn) return;
+    lobbyMuted = !lobbyMuted;
+    applyMuteState();
+    updateMuteButton();
+    if (lobbyMuted && !muteEnforcerInterval) {
+      muteEnforcerInterval = setInterval(applyMuteState, 300);
+    } else if (!lobbyMuted && muteEnforcerInterval) {
+      clearInterval(muteEnforcerInterval);
+      muteEnforcerInterval = null;
+    }
+  });
 }
 
 export function isLobbyMuted() {
@@ -176,64 +241,8 @@ export function initBroadcastMeters() {
     animateBroadcastMeters();
   });
 
-  // Lobby mute — uses document delegation so it works regardless of DOM timing
-  if (!window._lobbyMuteInit) {
-    window._lobbyMuteInit = true;
-    var muteEnforcerInterval = null;
-
-    function applyMuteState() {
-      // Use the audio-graph gain node when available (silences speakers without
-      // killing the analyser). createMediaElementSource taps after element.volume
-      // and element.muted, so those would mute the analyser too — using gain
-      // keeps LEDs/LUFS alive while the speakers stay silent.
-      var previewIds = ['obsVideo', 'icecastAudio'];
-      var outputIds = ['hlsVideo', 'audioElement'];
-      var src = broadcastAudioSource;
-      var apply = function(id, value) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        // icecastAudio: mute on its dedicated gain node, not element.volume, so
-        // the analyser tap (LEDs/LUFS) stays alive while speakers go silent.
-        if (id === 'icecastAudio') {
-          var ign = ctx && ctx.getAnalyserState ? ctx.getAnalyserState().icecastGainNode : null;
-          if (ign) { ign.gain.value = value; return; }
-        }
-        var handled = ctx && ctx.setElementOutputGain ? ctx.setElementOutputGain(el, value) : false;
-        if (!handled) { el.volume = value; }
-      };
-      for (var i = 0; i < previewIds.length; i++) {
-        apply(previewIds[i], (lobbyMuted || src === 'live') ? 0 : 1);
-      }
-      for (var j = 0; j < outputIds.length; j++) {
-        apply(outputIds[j], (lobbyMuted || src === 'preview') ? 0 : 1);
-      }
-    }
-
-    function updateMuteButton() {
-      var btn = document.getElementById('lobbyMuteBtn');
-      if (!btn) return;
-      var mi = btn.querySelector('.muted-icon');
-      var ui = btn.querySelector('.unmuted-icon');
-      if (mi) mi.classList.toggle('hidden', !lobbyMuted);
-      if (ui) ui.classList.toggle('hidden', lobbyMuted);
-      btn.classList.toggle('lobby-mute-active', !lobbyMuted);
-      btn.classList.toggle('lobby-mute-muted', lobbyMuted);
-    }
-
-    document.addEventListener('click', function(e) {
-      var btn = e.target.closest('#lobbyMuteBtn');
-      if (!btn) return;
-      lobbyMuted = !lobbyMuted;
-      applyMuteState();
-      updateMuteButton();
-      if (lobbyMuted && !muteEnforcerInterval) {
-        muteEnforcerInterval = setInterval(applyMuteState, 300);
-      } else if (!lobbyMuted && muteEnforcerInterval) {
-        clearInterval(muteEnforcerInterval);
-        muteEnforcerInterval = null;
-      }
-    });
-  }
+  // Lobby-mute click is attached in init() (initLobbyMute) so it works even
+  // when the meter loop was started without initBroadcastMeters.
 
   document.getElementById('calibrateBtn')?.addEventListener('click', function() {
     var calPanel = document.getElementById('calibrationPanel');
