@@ -342,7 +342,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
   .featured-image {
     position: relative;
     margin: 0 -1.5rem 2rem;
-    aspect-ratio: 16/9;
     overflow: hidden;
     background: #1a1a1a;
   }
@@ -355,9 +354,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
   }
 
   .featured-image img {
+    display: block;
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
+    /* Show the full hero at its natural ratio — never crop the featured image.
+       (Forcing 16:9 + object-fit:cover chopped the top/bottom off designed
+       graphics.) aspect-ratio:auto overrides the generic 800x450 attrs. */
+    aspect-ratio: auto;
   }
 
   /* Article Header */
