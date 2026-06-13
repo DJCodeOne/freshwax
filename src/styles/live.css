@@ -790,7 +790,7 @@ body.header-hidden .live-layout{ overflow:visible !important; height:auto !impor
 .playlist-btn{ order:5; }
 .live-badge{ order:6; margin-left:auto; }
 .chat-column.mobile-active{ flex-direction:column; height:auto; max-height:none; padding:.75rem; }
-.chat-column.mobile-active .chat-section{ flex:1; display:flex; flex-direction:column; background:#111; border:1px solid #222; border-radius:12px; overflow:hidden; min-height:60vh; }
+.chat-column.mobile-active .chat-section{ flex:1; display:flex; flex-direction:column; background:#111; border:1px solid #dc2626; border-radius:12px; overflow:hidden; min-height:60vh; }
 .chat-column.mobile-active .chat-header{ padding:.5rem .75rem; border-bottom:1px solid #dc2626; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; }
 .chat-column.mobile-active .chat-header h2{ margin:0; font-size:.875rem; color:#fff; font-weight:700; text-transform:uppercase; }
 .chat-column.mobile-active .chat-messages{ flex:1; overflow-y:auto; padding:.5rem; min-height:0; }
