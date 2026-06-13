@@ -788,6 +788,11 @@ button{ -webkit-user-select:none; user-select:none } }
 .share-platform-btn.copy-link:hover{ background:#252525; color:#fff; border-color:#444 }
 .share-platform-btn.copy-link.copied{ background:#064e3b; color:#10b981; border-color:#10b981 }
 .butt-audio-preview{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#000; border-radius:8px; overflow:hidden }
+/* Lobby preview/output is a monitor — show the WHOLE frame, never crop. The
+   branded stream-bg uses object-fit:cover (live.css) which chops the logo
+   edges when the lobby panel isn't 16:9. contain keeps every edge visible. */
+.butt-audio-preview .stream-bg-video,
+.video-preview .stream-bg-video{ object-fit:contain }
 .butt-audio-preview .audio-only-placeholder,
 .butt-audio-preview .audio-only-placeholder>*:not(.stream-bg-video):not(.audio-placeholder-branding),
 .butt-audio-preview .audio-placeholder-branding,
