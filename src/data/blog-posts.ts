@@ -15,6 +15,72 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'remote-livestream-tethered-mobile',
+    title: 'Stream From Anywhere — DJ-Quality Live Sets Over Mobile Data',
+    excerpt: 'You can now run a full DJ-quality livestream from a remote venue with nothing but a mobile signal. BUTT and OBS hold a stable connection over a tethered phone or mobile hotspot — no fixed broadband required.',
+    featuredImage: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=800&q=80',
+    category: 'Live',
+    publishedAt: '2026-06-13',
+    author: 'Fresh Wax',
+    tags: ['live streaming', 'remote streaming', 'mobile data', 'tethering', 'mobile hotspot', 'BUTT', 'OBS', 'dj sets', 'remote venue', 'jungle', 'drum and bass'],
+    content: `
+      <p>Earlier this year we made it possible to <a href="/blog/go-live-from-your-phone/">go live straight from your phone</a> — mic pointed at the speakers, tap and broadcast. That's the zero-gear option, and it's still there. This update is the other end of the scale: <strong>a full, DJ-quality livestream from a remote venue with nothing but a mobile signal to get online</strong>.</p>
+      <p>Tether a laptop to your phone, plug into a mobile hotspot, run off a pocket 4G/5G router — whatever gets you a connection — and you can now push a proper line-in feed (or full video) to Fresh Wax that <strong>holds</strong>, for the length of a set, without dropping every couple of minutes.</p>
+
+      <h2>The Problem We Just Solved</h2>
+      <p>Proper streaming software like <strong>BUTT</strong> and <strong>OBS</strong> always sounded better than a phone mic — but if you tried to run them over a mobile connection (tethering, a hotspot, a portable router), the stream would die roughly every two minutes and reconnect, leaving listeners with a stuttering, on-off mess.</p>
+      <p>That wasn't your settings or your software. Mobile networks quietly tear down the kind of long-lived connection a stream needs, and a normal phone-camera stream survives that because of how it talks to the network — a studio audio stream didn't. We've now bridged that gap on our side. The result: <strong>BUTT and OBS stay connected over a tethered mobile link</strong>, the same way they do on home broadband.</p>
+
+      <h2>What This Unlocks</h2>
+      <p>If your only blocker to streaming a proper set was "there's no decent internet at the venue," that blocker is gone:</p>
+      <ul>
+        <li><strong>Remote venues and pop-ups</strong> with no fixed broadband</li>
+        <li><strong>Outdoor sessions, raves, and festival sets</strong> running off a mobile router</li>
+        <li><strong>Mate's house, a warehouse, a car park</strong> — anywhere you can get a signal</li>
+        <li>Any spot where you've got the decks and the gear, just not a wired connection</li>
+      </ul>
+      <p>Bring your laptop, your soundcard, and a way online — that's the whole list now.</p>
+
+      <h2>BUTT — Best Audio, Now Over Mobile</h2>
+      <p><strong>BUTT (Broadcast Using This Tool)</strong> takes a clean line straight from your mixer or soundcard, so it's the best-sounding option for an audio set — no room noise, no phone-mic compression, just the mix. It's our recommended choice for most DJs, and it now survives a tethered mobile connection.</p>
+      <p>Set it up once using the exact server details on your <a href="/account/streaming-setup/">Streaming Setup</a> page (they're also shown in the <a href="/account/dj-lobby/">DJ Lobby</a> when you go to stream). Use the details exactly as listed — that's what routes you through the connection that stays alive over mobile.</p>
+
+      <h2>OBS — Video Over Mobile Too</h2>
+      <p>Want a camera feed as well? <strong>OBS</strong> works over a tethered connection too, with two settings worth getting right when you're on mobile data:</p>
+      <ul>
+        <li><strong>Drop the video bitrate to around 2000 kbps.</strong> A mobile uplink doesn't have the headroom of home broadband. Push too high and frames drop — which can leave the stream connected but showing a black screen. ~2000 kbps keeps it smooth.</li>
+        <li><strong>Set B-frames to 0</strong> in your encoder settings. This is what gives clean, glitch-free playback for viewers watching on phones — the bulk of your audience.</li>
+      </ul>
+      <p>Full step-by-step settings for both BUTT and OBS are on the <a href="/account/streaming-setup/">Streaming Setup</a> page.</p>
+
+      <h2>Let's Be Honest About The Connection</h2>
+      <p>This isn't magic — it's still a mobile connection, and physics applies. A few realities worth knowing:</p>
+      <ul>
+        <li><strong>Signal strength matters.</strong> One or two bars in a basement will struggle. A solid signal makes all the difference — check it before you start.</li>
+        <li><strong>Keep the bitrate sensible.</strong> Mobile uplinks are narrower than your download speed suggests. Don't try to push a 6 Mbps stream up a flaky connection.</li>
+        <li><strong>Audio-only (BUTT) is far lighter than video (OBS)</strong> — if the signal's marginal, run audio. It needs a fraction of the bandwidth and holds up better.</li>
+        <li><strong>Keep the laptop and phone charged</strong> — tethering and encoding both eat battery fast.</li>
+      </ul>
+      <p>Within those limits, it's solid. We tested it streaming over a phone-tethered laptop on mobile data and held a clean connection for the length of a set with no drops.</p>
+
+      <h2>Which Option Should I Use?</h2>
+      <ul>
+        <li><strong>Phone mic</strong> (<a href="/blog/go-live-from-your-phone/">go live from your phone</a>) — no gear, no laptop, raw and ready. The field recording.</li>
+        <li><strong>BUTT</strong> — clean line-in audio from your mixer. The best-sounding option, now portable. The studio session, taken on the road.</li>
+        <li><strong>OBS</strong> — audio plus a camera feed, if you want the visuals and have the bandwidth for it.</li>
+      </ul>
+
+      <h2>Get Started</h2>
+      <p>To stream, you need:</p>
+      <ul>
+        <li>An approved DJ account and a booked slot on the <a href="/schedule/">schedule</a></li>
+        <li>BUTT or OBS set up with the details from your <a href="/account/streaming-setup/">Streaming Setup</a> page</li>
+        <li>A way online — tethered phone, mobile hotspot, or portable router</li>
+      </ul>
+      <p>Book your slot, get a signal, and go live from wherever the party is. See what's on now over on the <a href="/live/">Live</a> page.</p>
+    `
+  },
+  {
     slug: 'welcome-hangry-records-jungle-dnb-vol-1',
     // Non-breaking spaces inside "Jungle & DnB Volume.1" keep that phrase
     // together as one unbreakable block, so the natural wrap lands at the
