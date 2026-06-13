@@ -241,7 +241,7 @@ html, body{ overflow:auto; }
 .speed-result.slow .speed-down,
 .stream-info-bar{ display:flex; align-items:center; justify-content:space-between; padding:.625rem 1rem; background:linear-gradient(90deg, #1e1010, #140707); border:2px solid #2e1414; border-radius:10px; flex-wrap:nowrap; gap:.75rem; }
 .stream-info-bar.is-live{ border-color:#dc2626; }
-.shoutout-bar{ display:flex; align-items:center; justify-content:space-between; padding:.5rem 1rem; background:#140707; border:2px solid #2e1414; border-radius:10px; gap:.75rem; overflow:hidden; }
+.shoutout-bar{ display:flex; align-items:center; justify-content:space-between; padding:.5rem 1rem; background:#140707; border:2px solid #ef4444; border-radius:10px; gap:.75rem; overflow:hidden; box-shadow:0 0 8px rgba(239,68,68,.25); }
 .shoutout-left{ display:flex; align-items:center; gap:1.5rem; flex-shrink:0; }
 .shoutout-label{ font-size:10px; font-weight:700; color:#aaa; text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
 .shoutout-btn{ display:flex; align-items:center; justify-content:center; width:24px; height:24px; background:linear-gradient(145deg,rgba(245,158,11,.95),rgba(180,83,9,.95))!important; border:1px solid rgba(255,255,255,.3); border-radius:50%; color:#fff; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.45); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); transition:background .2s, transform .15s, box-shadow .2s; }
@@ -406,7 +406,7 @@ html, body{ overflow:auto; }
 .video-player-branding .brand-fresh{ color:#fff; }
 .video-player-branding .brand-wax{ color:#dc2626; }
 .hls-video{ width:100%; height:100%; object-fit:contain; background:#000; }
-.player-controls{ display:flex; align-items:center; gap:.625rem; padding:.75rem 1rem; background:#140707; border:2px solid #2e1414; border-radius:10px; flex-shrink:0; }
+.player-controls{ display:flex; align-items:center; gap:.625rem; padding:.75rem 1rem; background:#140707; border:2px solid #ef4444; border-radius:10px; flex-shrink:0; box-shadow:0 0 8px rgba(239,68,68,.25); }
 .player-controls>.play-btn{ order:-1; position:relative; overflow:hidden; width:48px; height:48px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg, rgba(239,68,68,.95), rgba(185,28,28,.92) 55%, rgba(127,29,29,.95)); border:1px solid rgba(255,255,255,.25); border-radius:50%; cursor:pointer; color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.45), 0 0 18px rgba(220,38,38,.4), inset 0 1px 0 rgba(255,255,255,.4), inset 0 -4px 8px rgba(0,0,0,.3); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); transition:background .15s, transform .1s, box-shadow .15s; }
 .player-controls>.play-btn::before{ content:''; position:absolute; top:3px; left:7px; right:7px; height:42%; border-radius:50%; background:linear-gradient(rgba(255,255,255,.45), transparent); pointer-events:none; }
 .player-controls>.play-btn:hover{ transform:scale(1.07); box-shadow:0 6px 20px rgba(0,0,0,.5), 0 0 26px rgba(220,38,38,.55), inset 0 1px 0 rgba(255,255,255,.5), inset 0 -4px 8px rgba(0,0,0,.3); }
@@ -460,7 +460,7 @@ html, body{ overflow:auto; }
 70%{ height:8px; filter:brightness(.65); transform:rotateX(18deg); } }
 .sound-wave-wrapper.paused .wave-bar{ animation-play-state:paused; height:5px; opacity:.35; filter:brightness(.5); box-shadow:none; }
 @media (prefers-reduced-motion:reduce){ .sound-wave .wave-bar{ animation:none; height:14px; } }
-.dj-info-bar{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:.5rem; padding:.75rem 1rem; background:#140707; border:2px solid #2e1414; border-radius:10px; flex-shrink:0; text-align:center; }
+.dj-info-bar{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:.5rem; padding:.75rem 1rem; background:#140707; border:2px solid #ef4444; border-radius:10px; flex-shrink:0; text-align:center; box-shadow:0 0 8px rgba(239,68,68,.25); }
 .dj-info-center{ display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; gap:.125rem; text-align:center; }
 .dj-info-right{ display:flex; align-items:center; gap:.75rem; min-width:0; }
 .dj-info-label{ font-size:10px; font-weight:700; color:#aaa; text-transform:uppercase; letter-spacing:1px; flex-shrink:0; }
