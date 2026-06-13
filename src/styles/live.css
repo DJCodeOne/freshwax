@@ -143,7 +143,11 @@ html, body{ overflow:auto; }
 .online-users-toggle .online-count{ margin-left:auto; margin-right:0; }
 .online-chevron{ transition:transform .2s; flex-shrink:0; }
 .online-users-toggle[aria-expanded="true"] .online-chevron{ transform:rotate(180deg); }
-.online-users-mobile-list{ max-height:0; overflow:hidden; transition:max-height .3s; background:#0a0a0a; border-radius:0 0 10px 10px; margin-top:-1px; border:1px solid transparent; }
+/* When expanded, the toggle drops its bottom border + rounds only the top so it
+   joins the list as one box (mobile too). margin-top:0 keeps the list's bottom
+   border inside the overflow:hidden parent (a negative margin clipped it). */
+.online-users-toggle[aria-expanded="true"]{ border-bottom:none; border-radius:10px 10px 0 0; }
+.online-users-mobile-list{ max-height:0; overflow:hidden; transition:max-height .3s; background:#0a0a0a; border-radius:0 0 10px 10px; margin-top:0; border:1px solid transparent; }
 .online-users-mobile-list.expanded{ max-height:none; flex:1; min-height:0; border-color:#dc2626; border-top:none; overflow:hidden; }
 @media (min-width:768px){ .online-users-mobile-list{ max-height:none; flex:1; min-height:0; border-color:#dc2626; border-top:none; }
 .online-users-toggle{ border-bottom:none; border-radius:10px 10px 0 0; } }
