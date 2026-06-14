@@ -2323,7 +2323,7 @@ try {
       if (onAirText) onAirText.classList.remove('hidden');
       if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
       // Session-title ticker in the top info bar (schedule-detected path)
-      if (window.setStreamTicker) window.setStreamTicker(currentLive.isRelay ? (currentLive.relayNowPlaying || currentLive.title || '') : (currentLive.title || ''));
+      if (window.setStreamTicker) window.setStreamTicker(currentLive.isRelay ? (currentLive.relayNowPlaying || currentLive.title || '') : ((currentLive.title && currentLive.title !== 'Live Session') ? currentLive.title : 'Live and Direct on FreshWax'));
       if (djAvatar) djAvatar.src = avatarToUse;
 
       // Update controls DJ info bar
@@ -3015,7 +3015,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260614c"></script>
+<script type="module" src="/live-stream.js?v=20260614d"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page

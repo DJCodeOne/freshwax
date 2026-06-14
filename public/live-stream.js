@@ -212,7 +212,7 @@ function handlePlaylistUpdate(e) {
       controlsDjName.textContent = title.length > 50 ? title.substring(0, 50) + '...' : title;
     }
     if (npTrackTitle) npTrackTitle.textContent = '';
-    if (bottomDurationBox) bottomDurationBox.style.display = 'flex';
+    if (bottomDurationBox) bottomDurationBox.style.display = (window.isLiveStreamActive || window.streamDetectedThisSession || window.currentStreamData) ? 'none' : 'flex';
     if (bottomDurationLabel) bottomDurationLabel.textContent = 'LEFT';
     if (streamGenre) streamGenre.style.display = 'none';
     window.emojiAnimationsEnabled = true; setReactionButtonsEnabled(true); setChatEnabled(true);
@@ -489,7 +489,7 @@ function showLiveStream(streamData) {
     Object.keys(uiFields).forEach(function(key) { var el = document.getElementById(key); if (!el) return; var isNameField = (key === 'controlsDjName' || key === 'djName' || key === 'audioDjName' || key === 'fsDjName' || key === 'fsAudioDjName'); if (streamData.isRelay && isNameField) el.innerHTML = '<span style="color: #ef4444;">' + escapeHtml(uiFields[key]) + '</span>'; else el.textContent = uiFields[key]; });
     var streamTitle = document.getElementById('streamTitle');
     if (streamTitle) { if (streamData.isRelay && streamData.relaySource && streamData.relaySource.stationName) streamTitle.innerHTML = '<span class="title-live">RELAYED FROM</span> <span class="title-relay-from">' + escapeHtml(streamData.relaySource.stationName).toUpperCase() + '</span>'; else streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>'; }
-    setStreamTicker(streamData.isRelay ? (streamData.relayNowPlaying || streamData.title || '') : (streamData.title || ''));
+    setStreamTicker(streamData.isRelay ? (streamData.relayNowPlaying || streamData.title || '') : ((streamData.title && streamData.title !== 'Live Session') ? streamData.title : 'Live and Direct on FreshWax'));
     var audioBadge = document.getElementById('audioBadgeText'); var fsAudioBadge = document.getElementById('fsAudioBadgeText');
     if (streamData.isRelay) { if (audioBadge) audioBadge.textContent = 'RELAY'; if (fsAudioBadge) fsAudioBadge.textContent = 'RELAY'; } else { if (audioBadge) audioBadge.textContent = 'AUDIO ONLY'; if (fsAudioBadge) fsAudioBadge.textContent = 'AUDIO ONLY'; }
     var avatarSrc = streamData.isRelay ? '/place-holder.webp' : streamData.djAvatar; var djAvatar = document.getElementById('djAvatar'); var streamCover = document.getElementById('streamCover'); var vinyl1 = document.getElementById('vinylDjAvatar'); var vinyl2 = document.getElementById('vinylDjAvatar2');
