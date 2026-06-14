@@ -48,6 +48,17 @@ const sortedLabels = Object.keys(releasesByLabel).sort((a, b) => {
 
 const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => sum + releases.length, 0);
 
+// Library stats for the overview bar
+const totalLabels = sortedLabels.length;
+const uniqueArtists = new Set(
+  allReleases.map((r) => ((r.artistName as string) || '').trim()).filter(Boolean)
+).size;
+const totalTracks = allReleases.reduce((sum, r) => {
+  const t = (r as Record<string, unknown>).tracks;
+  if (Array.isArray(t)) return sum + t.length;
+  return sum + (Number((r as Record<string, unknown>).trackCount) || 0);
+}, 0);
+
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 
 // Preload the first visible release cover image for faster LCP
@@ -153,6 +164,31 @@ const releaseItemList = {
             </div>
           </div>
         </header>
+
+        {totalReleases > 0 && (
+          <div class="releases-stats">
+            <div class="release-stat">
+              <span class="release-stat-num">{totalReleases}</span>
+              <span class="release-stat-label">Releases</span>
+            </div>
+            <div class="release-stat">
+              <span class="release-stat-num">{totalLabels}</span>
+              <span class="release-stat-label">{totalLabels === 1 ? 'Label' : 'Labels'}</span>
+            </div>
+            {uniqueArtists > 0 && (
+              <div class="release-stat">
+                <span class="release-stat-num">{uniqueArtists}</span>
+                <span class="release-stat-label">{uniqueArtists === 1 ? 'Artist' : 'Artists'}</span>
+              </div>
+            )}
+            {totalTracks > 0 && (
+              <div class="release-stat">
+                <span class="release-stat-num">{totalTracks}</span>
+                <span class="release-stat-label">Tracks</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {totalReleases === 0 ? (
           <div class="text-center py-20 bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-lg border-2 border-white">
@@ -496,6 +532,51 @@ const releaseItemList = {
       width: 100%;
       background: linear-gradient(90deg, transparent, #dc2626, transparent);
       margin-top: 0.75rem;
+    }
+
+    /* Library stats overview bar */
+    .releases-stats {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+      max-width: 760px;
+      margin: 0 auto 3.5rem;
+    }
+    .release-stat {
+      flex: 1 1 130px;
+      min-width: 120px;
+      max-width: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+      padding: 1.25rem 1rem;
+      background: linear-gradient(180deg, rgba(42, 18, 18, 0.72) 0%, rgba(24, 10, 10, 0.72) 100%);
+      border: 1px solid rgba(220, 38, 38, 0.4);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+    .release-stat-num {
+      font-family: 'Bebas Neue', 'Bebas Fallback', sans-serif;
+      font-size: 2.4rem;
+      line-height: 1;
+      color: #fff;
+      letter-spacing: 0.02em;
+    }
+    .release-stat-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #f87171;
+    }
+    @media (max-width: 480px) {
+      .releases-stats { gap: 0.5rem; margin-bottom: 2.5rem; }
+      .release-stat { flex-basis: 44%; min-width: 0; padding: 0.9rem 0.5rem; }
+      .release-stat-num { font-size: 1.9rem; }
     }
 
     @media (min-width: 640px) {
