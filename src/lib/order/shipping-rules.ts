@@ -65,6 +65,51 @@ export async function applyCrateFreeShipping(items: CartItem[], db?: D1Db): Prom
 }
 
 /**
+ * Per-artist release-vinyl shipping: the first record (per artist) charges the
+ * single region rate (release → artist-account → floor), and each ADDITIONAL
+ * record charges the additional-record rate (release → artist → 50p default).
+ * Crate items (sellerId, no releaseId) are skipped — they're charged separately.
+ * Reads both the `vinyl*`/`artistVinyl*` (Stripe/PayPal) and `serverVinyl*`/
+ * `serverArtist*` (create-order) field variants so it works for all endpoints.
+ * Returns the total AND the artistShippingBreakdown that feeds the artist payout.
+ */
+export function computeReleaseVinylShipping(
+  items: CartItem[],
+  region: 'UK' | 'EU' | 'INTL'
+): { total: number; breakdown: Record<string, { artistId: string; artistName: string; amount: number }> } {
+  const breakdown: Record<string, { artistId: string; artistName: string; amount: number }> = {};
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  let total = 0;
+
+  for (const item of items) {
+    if (item.type !== 'vinyl') continue;
+    if (item.sellerId && !item.releaseId) continue; // crate — charged separately
+    const artistId = item.artistId as string | undefined;
+    if (!artistId) continue;
+
+    let single: number;
+    if (region === 'UK') single = (item.vinylShippingUK ?? item.serverVinylShippingUK ?? item.artistVinylShippingUK ?? item.serverArtistShippingUK ?? 4.99) as number;
+    else if (region === 'EU') single = (item.vinylShippingEU ?? item.serverVinylShippingEU ?? item.artistVinylShippingEU ?? item.serverArtistShippingEU ?? 9.99) as number;
+    else single = (item.vinylShippingIntl ?? item.serverVinylShippingIntl ?? item.artistVinylShippingIntl ?? item.serverArtistShippingIntl ?? 14.99) as number;
+
+    const additional = (item.vinylShippingAdditional ?? item.serverVinylShippingAdditional ?? item.artistVinylShippingAdditional ?? item.serverArtistShippingAdditional ?? 0.5) as number;
+    const qty = (item.quantity as number) || 1;
+
+    let lineShip: number;
+    if (!breakdown[artistId]) {
+      lineShip = round2(single + additional * Math.max(0, qty - 1));
+      breakdown[artistId] = { artistId, artistName: (item.artist || item.artistName || 'Artist') as string, amount: lineShip };
+    } else {
+      lineShip = round2(additional * qty);
+      breakdown[artistId].amount = round2(breakdown[artistId].amount + lineShip);
+    }
+    total = round2(total + lineShip);
+  }
+
+  return { total, breakdown };
+}
+
+/**
  * Compute the order's merch shipping charge. Flat £4.99 unless every
  * supplier-attributed merch group qualifies for that supplier's free
  * shipping threshold. Items without a supplier (house merch) always charge.

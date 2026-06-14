@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { getDocument, addDocument, atomicIncrement, updateDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
-import { applyCrateFreeShipping, computeMerchShipping } from '../../lib/order/shipping-rules';
+import { applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping } from '../../lib/order/shipping-rules';
 import { successResponse, ApiErrors, createLogger, maskEmail } from '../../lib/api-utils';
 import { validateOrderPrices } from '../../lib/order/price-validation';
 import { updateMerchStockAfterOrder } from '../../lib/order/merch-stock-update';
@@ -181,36 +181,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (hasVinylItems) {
       for (const item of pricedItems) {
         if (item.type !== 'vinyl') continue;
-        const artistId = item.artistId;
 
         if (item.sellerId && !item.releaseId) {
           // Vinyl crates — seller shipping cost (validated server-side as
           // cratesShippingCost; legacy items may carry shippingCost)
           vinylShippingTotal += item.cratesShippingCost ?? item.shippingCost ?? 4.99;
-        } else if (artistId) {
-          // Per-artist vinyl shipping: first record at the single (region) rate,
-          // each additional record at the seller's additional rate (50p default).
-          let single = 0;
-          if (isUK) single = item.serverVinylShippingUK ?? item.serverArtistShippingUK ?? 4.99;
-          else if (isEU) single = item.serverVinylShippingEU ?? item.serverArtistShippingEU ?? 9.99;
-          else single = item.serverVinylShippingIntl ?? item.serverArtistShippingIntl ?? 14.99;
-          const additional = item.serverVinylShippingAdditional ?? item.serverArtistShippingAdditional ?? 0.5;
-          const qty = (item.quantity as number) || 1;
-          let lineShip = 0;
-          if (!artistShippingBreakdown[artistId]) {
-            lineShip = Math.round((single + additional * Math.max(0, qty - 1)) * 100) / 100;
-            artistShippingBreakdown[artistId] = {
-              artistId,
-              artistName: item.artist || item.artistName || 'Artist',
-              amount: lineShip
-            };
-          } else {
-            lineShip = Math.round(additional * qty * 100) / 100;
-            artistShippingBreakdown[artistId].amount += lineShip;
-          }
-          vinylShippingTotal += lineShip;
         }
+        // Per-artist release-vinyl shipping (first record single rate, each
+        // additional record at 50p default) is computed below via the shared
+        // computeReleaseVinylShipping helper.
       }
+
+      const vinylRegion = isUK ? 'UK' : isEU ? 'EU' : 'INTL';
+      const relVinyl = computeReleaseVinylShipping(pricedItems as unknown as Parameters<typeof computeReleaseVinylShipping>[0], vinylRegion);
+      vinylShippingTotal += relVinyl.total;
+      Object.assign(artistShippingBreakdown, relVinyl.breakdown);
     }
 
     const serverShipping = Math.round((merchShipping + vinylShippingTotal) * 100) / 100;

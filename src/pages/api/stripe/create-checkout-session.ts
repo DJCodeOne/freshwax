@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { addDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
-import { applyCrateFreeShipping, computeMerchShipping } from '../../../lib/order/shipping-rules';
+import { applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping } from '../../../lib/order/shipping-rules';
 import { createLogger, fetchWithTimeout, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
 
 const log = createLogger('[stripe-checkout]');
@@ -164,47 +164,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       merchShipping = await computeMerchShipping(validatedItems);
     }
 
-    // Vinyl shipping (per-artist, based on release or artist defaults)
+    // Vinyl shipping: crates charge the seller-set shipping × qty; release vinyl
+    // is per-artist (first record single rate + each additional at 50p default)
+    // via the shared computeReleaseVinylShipping helper.
     if (hasVinylItems) {
       for (const item of validatedItems) {
-        if (item.type !== 'vinyl') continue;
-
-        // Crates marketplace items: charge the seller-set shipping from the
-        // listing (validated server-side). Not part of artistShippingBreakdown
-        // — the crate seller receives it via processVinylCrateSellerPayments.
-        if (item.sellerId && !item.releaseId) {
+        if (item.type === 'vinyl' && item.sellerId && !item.releaseId) {
+          // Crates: not part of artistShippingBreakdown — crate sellers are paid
+          // via processVinylCrateSellerPayments.
           vinylShippingTotal += ((item.cratesShippingCost as number) ?? 4.99) * ((item.quantity as number) || 1);
-          continue;
         }
-
-        const releaseId = item.releaseId || item.productId || item.id;
-        const artistId = item.artistId;
-
-        if (!artistId || !releaseId) continue;
-
-        // First record per artist charges the single (region) rate; each
-        // additional record (extra parts / other releases by the same artist)
-        // charges the seller's additional-record rate (default 50p).
-        let single = 0;
-        if (isUK) single = item.vinylShippingUK ?? item.artistVinylShippingUK ?? 4.99;
-        else if (isEU) single = item.vinylShippingEU ?? item.artistVinylShippingEU ?? 9.99;
-        else single = item.vinylShippingIntl ?? item.artistVinylShippingIntl ?? 14.99;
-        const additional = item.vinylShippingAdditional ?? item.artistVinylShippingAdditional ?? 0.5;
-        const qty = (item.quantity as number) || 1;
-        let lineShip = 0;
-        if (!artistShippingBreakdown[artistId]) {
-          lineShip = Math.round((single + additional * Math.max(0, qty - 1)) * 100) / 100;
-          artistShippingBreakdown[artistId] = {
-            artistId,
-            artistName: item.artist || item.artistName || 'Artist',
-            amount: lineShip
-          };
-        } else {
-          lineShip = Math.round(additional * qty * 100) / 100;
-          artistShippingBreakdown[artistId].amount += lineShip;
-        }
-        vinylShippingTotal += lineShip;
       }
+      const region = isUK ? 'UK' : isEU ? 'EU' : 'INTL';
+      const relVinyl = computeReleaseVinylShipping(validatedItems as unknown as Parameters<typeof computeReleaseVinylShipping>[0], region);
+      vinylShippingTotal += relVinyl.total;
+      Object.assign(artistShippingBreakdown, relVinyl.breakdown);
     }
 
     const validatedShipping = merchShipping + vinylShippingTotal;
