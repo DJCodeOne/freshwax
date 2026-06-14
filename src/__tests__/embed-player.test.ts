@@ -28,6 +28,10 @@ vi.mock('../lib/client-logger', () => ({
 
 vi.mock('../lib/embed-player-direct', () => ({
   setupDirectMedia: mockSetupDirectMedia,
+  // Pure string builder for the now-playing card overlay; a lightweight stub is
+  // enough here (these tests only assert the youtube-player element).
+  buildTrackCardOverlay: (_thumb: string, title: string) =>
+    `<div class="pl-track-card"><div class="pl-track-title">${title || ''}</div></div>`,
 }));
 
 vi.mock('../lib/embed-player-sdk', () => ({
