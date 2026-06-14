@@ -343,7 +343,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                       <tr>
                         <td>{formatDate(payout.createdAt)}</td>
                         <td class="order-num">#{(payout.orderNumber || payout.orderId || '').slice(-8).toUpperCase()}</td>
-                        <td class="amount">{formatPrice(payout.amount)}</td>
+                        <td class="amount">
+                          {formatPrice(payout.amount)}
+                          {Number(payout.shippingAmount) > 0 && (
+                            <span class="amount-shipping">incl. {formatPrice(Number(payout.shippingAmount))} postage</span>
+                          )}
+                        </td>
                         <td>
                           <span class={`status-pill ${getStatusClass(payout.status)}`}>
                             {getStatusLabel(payout.status)}
@@ -716,6 +721,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   .amount {
     font-weight: 700;
     color: #22c55e;
+  }
+
+  .amount-shipping {
+    display: block;
+    font-weight: 400;
+    font-size: 0.72rem;
+    color: #9ca3af;
+    white-space: nowrap;
   }
 
   .gross {
