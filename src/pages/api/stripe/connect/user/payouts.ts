@@ -87,6 +87,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         orderId: p.orderId,
         orderNumber: p.orderNumber,
         amount: p.amount,
+        shippingAmount: p.shippingAmount ?? 0,
+        itemAmount: p.itemAmount ?? null,
         status: p.status,
         items: p.items,
         createdAt: p.createdAt,
@@ -97,6 +99,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         orderId: p.orderId,
         orderNumber: p.orderNumber,
         amount: p.amount,
+        shippingAmount: p.shippingAmount ?? 0,
+        itemAmount: p.itemAmount ?? null,
         items: p.items,
         createdAt: p.createdAt
       })),

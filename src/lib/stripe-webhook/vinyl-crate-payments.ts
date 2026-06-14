@@ -45,6 +45,7 @@ export async function processVinylCrateSellerPayments(params: {
       paypalEmail: string | null;
       payoutMethod: string | null;
       amount: number;
+      shippingAmount: number;
       items: string[];
     }> = {};
 
@@ -116,11 +117,13 @@ export async function processVinylCrateSellerPayments(params: {
           paypalEmail: seller.paypalEmail || null,
           payoutMethod: seller.payoutMethod || null,
           amount: 0,
+          shippingAmount: 0,
           items: []
         };
       }
 
       sellerPayments[sellerId].amount += sellerShare;
+      sellerPayments[sellerId].shippingAmount += crateShipping;
       sellerPayments[sellerId].items.push(item.name || item.title || 'Vinyl');
     }
 
@@ -150,6 +153,8 @@ export async function processVinylCrateSellerPayments(params: {
         orderId,
         orderNumber,
         amount: payment.amount,
+        shippingAmount: payment.shippingAmount,
+        itemAmount: Math.round((payment.amount - payment.shippingAmount) * 100) / 100,
         currency: 'gbp',
         status: 'pending',
         items: payment.items,

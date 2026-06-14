@@ -564,7 +564,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <span class="payout-date">${formatDate(p.createdAt)}</span>
               <span class="payout-status pending">Pending</span>
             </div>
-            <span class="payout-amount">£${p.amount.toFixed(2)}</span>
+            <div class="payout-amounts">
+              <span class="payout-amount">£${p.amount.toFixed(2)}</span>
+              ${p.shippingAmount > 0 ? `<span class="payout-shipping">incl. £${p.shippingAmount.toFixed(2)} postage</span>` : ''}
+            </div>
           </div>
         `;
       }
@@ -580,7 +583,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <span class="payout-date">${formatDate(p.completedAt || p.createdAt)}</span>
               <span class="payout-status ${p.status}">${p.status === 'completed' ? 'Paid' : p.status}</span>
             </div>
-            <span class="payout-amount">£${p.amount.toFixed(2)}</span>
+            <div class="payout-amounts">
+              <span class="payout-amount">£${p.amount.toFixed(2)}</span>
+              ${p.shippingAmount > 0 ? `<span class="payout-shipping">incl. £${p.shippingAmount.toFixed(2)} postage</span>` : ''}
+            </div>
           </div>
         `;
       }
@@ -1071,9 +1077,22 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     color: #f59e0b;
   }
 
+  .payout-amounts {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
   .payout-amount {
     font-weight: 600;
     font-size: 1.1rem;
+  }
+
+  .payout-shipping {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    white-space: nowrap;
   }
 
   .payout-item.completed .payout-amount {
