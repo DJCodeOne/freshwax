@@ -145,67 +145,85 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Fetch digest data
-  const [topReleases, topMixes, djSupportHighlights] = await Promise.all([
-    getTopReleases(db, since),
-    getTopMixes(db, since),
-    getDjSupportHighlights(db, since),
-  ]);
+  const isProd = !preview && !sendTo;
 
-  // Skip if nothing happened this week
-  if (topReleases.length === 0 && topMixes.length === 0 && djSupportHighlights.length === 0) {
-    return successResponse({ message: 'No activity this week — skipping digest', sent: 0 });
-  }
-
-  const digestData: WeeklyDigestData = {
-    topReleases,
-    topMixes,
-    djSupportHighlights,
-    weekStart,
-    weekEnd,
-  };
-
-  const html = buildWeeklyDigestHtml(digestData);
-
-  // Preview mode — return HTML for browser rendering
-  if (preview) {
-    return new Response(html, {
-      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
-    });
-  }
-
-  // Test send — send to a single address
-  if (sendTo) {
-    const result = await sendResendEmail({
-      apiKey: env.RESEND_API_KEY || '',
-      from: 'Fresh Wax <noreply@freshwax.co.uk>',
-      to: sendTo,
-      subject: `This Week on FreshWax (${weekStart} – ${weekEnd})`,
-      html,
-      template: 'weekly-digest',
-      db,
-    });
-
-    return successResponse({
-      testSend: true,
-      to: sendTo,
-      success: result.success,
-      error: result.error || null,
-    });
-  }
-
-  // Production send — acquire lock and send to all subscribers
-  const locked = await acquireCronLock(db, 'weekly-digest');
-  if (!locked) {
-    return ApiErrors.conflict('Digest already sending');
+  // Acquire the cron lock BEFORE the heavy ranking queries so two overlapping
+  // production invocations don't both run them (only the prod path sends). The
+  // single try/finally below releases the lock on every prod exit path.
+  let locked = false;
+  if (isProd) {
+    locked = await acquireCronLock(db, 'weekly-digest');
+    if (!locked) {
+      return ApiErrors.conflict('Digest already sending');
+    }
   }
 
   const start = Date.now();
 
   try {
-    const subscribers = await getDigestSubscribers();
-    if (subscribers.length === 0) {
+    // Fetch digest data
+    const [topReleases, topMixes, djSupportHighlights] = await Promise.all([
+      getTopReleases(db, since),
+      getTopMixes(db, since),
+      getDjSupportHighlights(db, since),
+    ]);
+
+    // Skip if nothing happened this week
+    if (topReleases.length === 0 && topMixes.length === 0 && djSupportHighlights.length === 0) {
+      return successResponse({ message: 'No activity this week — skipping digest', sent: 0 });
+    }
+
+    const digestData: WeeklyDigestData = {
+      topReleases,
+      topMixes,
+      djSupportHighlights,
+      weekStart,
+      weekEnd,
+    };
+
+    const html = buildWeeklyDigestHtml(digestData);
+
+    // Preview mode — return HTML for browser rendering
+    if (preview) {
+      return new Response(html, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      });
+    }
+
+    // Test send — send to a single address
+    if (sendTo) {
+      const result = await sendResendEmail({
+        apiKey: env.RESEND_API_KEY || '',
+        from: 'Fresh Wax <noreply@freshwax.co.uk>',
+        to: sendTo,
+        subject: `This Week on FreshWax (${weekStart} – ${weekEnd})`,
+        html,
+        template: 'weekly-digest',
+        db,
+      });
+
+      return successResponse({
+        testSend: true,
+        to: sendTo,
+        success: result.success,
+        error: result.error || null,
+      });
+    }
+
+    // Production send. Cap recipients per run: each email is a Resend
+    // subrequest, and a Worker invocation is capped at 1000 subrequests — going
+    // over would kill the run mid-send, and since the send isn't idempotent a
+    // cron retry would re-email everyone in the first batches. Degrade by
+    // capping + logging the remainder rather than crashing.
+    const allSubscribers = await getDigestSubscribers();
+    if (allSubscribers.length === 0) {
       return successResponse({ message: 'No subscribers found', sent: 0 });
+    }
+    const MAX_RECIPIENTS_PER_RUN = 800;
+    const subscribers = allSubscribers.slice(0, MAX_RECIPIENTS_PER_RUN);
+    const skipped = allSubscribers.length - subscribers.length;
+    if (skipped > 0) {
+      log.warn(`Weekly digest: ${skipped} subscribers beyond the ${MAX_RECIPIENTS_PER_RUN}/run cap were not emailed`);
     }
 
     let sent = 0;
@@ -239,19 +257,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const duration = Date.now() - start;
-    log.info(`Weekly digest sent: ${sent} success, ${failed} failed, ${duration}ms`);
+    log.info(`Weekly digest sent: ${sent} success, ${failed} failed, ${skipped} skipped, ${duration}ms`);
 
     return successResponse({
       sent,
       failed,
-      totalSubscribers: subscribers.length,
+      skipped,
+      totalSubscribers: allSubscribers.length,
       duration: `${duration}ms`,
     });
   } catch (error: unknown) {
     log.error('Digest error:', error instanceof Error ? error.message : error);
     return ApiErrors.serverError('Failed to send digest');
   } finally {
-    await releaseCronLock(db, 'weekly-digest');
+    if (locked) await releaseCronLock(db, 'weekly-digest');
   }
 };
 

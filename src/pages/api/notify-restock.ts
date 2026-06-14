@@ -81,6 +81,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE - Unsubscribe from notifications
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  // Rate limit — the POST handler has one; the DELETE (which loops Firestore
+  // deletes by attacker-supplied email/productId) must be throttled too.
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`notify-restock-delete:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const url = new URL(request.url);
   const parsed = RestockDeleteSchema.safeParse({
     email: url.searchParams.get('email') ?? '',

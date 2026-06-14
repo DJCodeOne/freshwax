@@ -110,11 +110,13 @@ export async function GET({ request, locals }: APIContext) {
   try {
     initEnv(locals);
 
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
-
-    if (!userId) {
-      return ApiErrors.badRequest('Missing userId');
+    // SECURITY: Derive userId from the verified token, not the query string —
+    // otherwise anyone could enumerate UIDs to read each user's Plus status and
+    // daily skip usage. Mirrors the POST handler.
+    const { verifyRequestUser } = await import('../../../lib/firebase-rest');
+    const { userId, error: authError } = await verifyRequestUser(request);
+    if (authError || !userId) {
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     // Admins have unlimited skips

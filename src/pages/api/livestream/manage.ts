@@ -196,6 +196,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return ApiErrors.notFound('Stream not found');
         }
 
+        // Verify ownership — auth only confirms the caller owns the claimed djId,
+        // not that this streamId belongs to them. Without this any approved DJ
+        // could rewrite another DJ's stream metadata (the 'stop' case guards it
+        // the same way).
+        if (stream.djId !== djId) {
+          return ApiErrors.forbidden('You can only update your own stream');
+        }
+
         // Update allowed fields
         const updates: Record<string, unknown> = { updatedAt: nowISO };
 

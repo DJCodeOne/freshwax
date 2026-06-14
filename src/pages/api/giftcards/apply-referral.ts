@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { getDocument, updateDocument, setDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, verifyRequestUser, updateDocumentConditional } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, REFERRAL_DISCOUNT_AMOUNT } from '../../../lib/giftcard';
 import { formatPrice } from '../../../lib/format-utils';
 import { SUBSCRIPTION_TIERS, PRO_ANNUAL_PRICE } from '../../../lib/subscription';
@@ -189,13 +189,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const expiresAt = new Date(now);
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
-    // Mark the referral code as redeemed
-    await updateDocument('giftCards', giftCardId, {
-      redeemedBy: authenticatedUserId,
-      redeemedAt: nowISO,
-      currentBalance: 0,
-      isActive: false
-    });
+    // Mark the referral code as redeemed with an OPTIMISTIC LOCK on _updateTime
+    // so two concurrent redemptions of the same code can't both pass the
+    // `redeemedBy` check above and both activate Pro / mint a referral card.
+    // Must happen BEFORE any side effects so a CONFLICT aborts cleanly.
+    try {
+      let updateTime = giftCard._updateTime;
+      if (!updateTime) {
+        const refetched = await getDocument('giftCards', giftCardId);
+        if (!refetched || refetched.redeemedBy) {
+          return ApiErrors.badRequest('This referral code has already been used');
+        }
+        updateTime = refetched._updateTime;
+      }
+      await updateDocumentConditional('giftCards', giftCardId, {
+        redeemedBy: authenticatedUserId,
+        redeemedAt: nowISO,
+        currentBalance: 0,
+        isActive: false
+      }, updateTime);
+    } catch (redeemErr: unknown) {
+      if (redeemErr instanceof Error && redeemErr.message.includes('CONFLICT')) {
+        return ApiErrors.conflict('This referral code was just used. Please try again.');
+      }
+      throw redeemErr;
+    }
 
     // Import the createReferralGiftCard to give the new Pro user their own referral code
     const { createReferralGiftCard } = await import('../../../lib/giftcard');

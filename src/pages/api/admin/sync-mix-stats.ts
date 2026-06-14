@@ -22,9 +22,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!db) return ApiErrors.serverError('D1 not available');
 
   try {
-    // Fetch all mixes from Firestore (source of truth)
+    // Fetch mixes from Firestore (source of truth). Bounded so the per-mix D1
+    // upsert loop below can't exceed the Worker subrequest cap as the catalogue
+    // grows; the newest 1000 covers the active set.
     const mixes = await queryCollection('dj-mixes', {
       orderBy: { field: 'uploadedAt', direction: 'DESCENDING' },
+      limit: 1000,
       skipCache: true
     });
 

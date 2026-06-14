@@ -23,6 +23,7 @@ export const prerender = false;
 // Safety limits
 const MAX_RETRIES_PER_RUN = 20; // Increased for multiple entity types
 const MAX_RETRY_AGE_DAYS = 30; // Don't retry payouts older than 30 days
+const MAX_ATTEMPTS = 8; // Dead-letter a payout after this many failed retries
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
@@ -330,14 +331,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const transferErrMsg = transferError instanceof Error ? transferError.message : String(transferError);
         log.error('Failed:', pending.id, transferErrMsg);
 
-        // Update with failure reason
+        // Update with failure reason. Dead-letter after MAX_ATTEMPTS so a
+        // permanently-failing payout (closed Connect account, bad PayPal email)
+        // stops consuming the per-run retry budget every 6h and is surfaced for
+        // manual handling instead of retrying silently until the 30-day age cap.
+        const nextRetryCount = (pending.retryCount || 0) + 1;
         await updateDocument('pendingPayouts', pending.id, {
-          status: 'retry_pending',
+          status: nextRetryCount >= MAX_ATTEMPTS ? 'failed_permanent' : 'retry_pending',
           failureReason: transferErrMsg,
           lastRetryFailedAt: new Date().toISOString(),
-          retryCount: (pending.retryCount || 0) + 1,
+          retryCount: nextRetryCount,
+          ...(nextRetryCount >= MAX_ATTEMPTS ? { deadLetteredAt: new Date().toISOString() } : {}),
           updatedAt: new Date().toISOString()
         });
+        if (nextRetryCount >= MAX_ATTEMPTS) {
+          log.error(`Dead-lettered payout ${pending.id} after ${nextRetryCount} failed attempts:`, transferErrMsg);
+        }
 
         results.failed++;
         results.details.push({

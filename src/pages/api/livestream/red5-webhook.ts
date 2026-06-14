@@ -14,12 +14,14 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, addDocument, queryCollection, atomicIncrement } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, verifyWebhookSignature, initRed5Env, type Red5WebhookEvent } from '../../../lib/red5';
 import { errorResponse, successResponse, jsonResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { initKVCache, kvGet, kvSet } from '../../../lib/kv-cache';
 
 const log = createLogger('[red5-webhook]');
 
 // Helper to initialize Firebase and Red5
 function initServices(locals: App.Locals) {
   const env = locals?.runtime?.env;
+  initKVCache(env);
   initRed5Env({
     RED5_RTMP_URL: env?.RED5_RTMP_URL || import.meta.env.RED5_RTMP_URL,
     RED5_HLS_URL: env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL,
@@ -95,7 +97,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const slotData = slots[0];
     const slotId = slotData.id;
-    
+
+    // Idempotency: Red5 retries deliveries, and each mutating event below
+    // (publish creates a livestreams doc; viewer_join/leave atomicIncrement the
+    // counters) would double-apply on a redelivery. The signature is a stable
+    // per-payload HMAC (required in production), so dedupe exact replays on it.
+    // Falls back to event identity when no signature (dev only).
+    const dedupeKey = signature || `${event.event}:${event.streamKey}:${event.timestamp || ''}:${event.clientIp || ''}`;
+    if (await kvGet(`red5evt:${dedupeKey}`)) {
+      log.info('[red5-webhook] Duplicate event ignored:', event.event, slotId);
+      return successResponse({ message: 'Acknowledged (duplicate)' });
+    }
+    await kvSet(`red5evt:${dedupeKey}`, true, { ttl: 600 });
+
     // Handle different event types
     switch (event.event) {
       case 'publish': {

@@ -280,7 +280,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     // Broadcast deletion via Pusher
     await triggerPusher('dj-lobby', 'chat-deleted', {
       id: messageId,
-      deletedBy: userId,
+      deletedBy: authUserId,
       timestamp: new Date().toISOString()
     }, env);
 

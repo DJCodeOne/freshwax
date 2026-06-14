@@ -11,6 +11,12 @@ const log = createLogger('upload-r2-batch');
 
 export const prerender = false;
 
+// The whole file is read into a Buffer in-memory for the R2 PutObject, so the
+// cap also protects the Worker's 128MB memory ceiling. Mirrors upload-mix
+// (release-track audio is the largest payload here).
+const MAX_R2_BATCH_REQUEST_SIZE = 120 * 1024 * 1024; // 120MB
+const MAX_R2_BATCH_FILE_SIZE = 100 * 1024 * 1024;    // 100MB
+
 
 function getContentType(filename: string): string {
   const ext = filename.toLowerCase().split('.').pop();
@@ -38,6 +44,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return rateLimitResponse(rateLimit.retryAfter!);
     }
 
+    // SECURITY: Reject oversized requests before reading the body into memory.
+    const contentLength = parseInt(request.headers.get('Content-Length') || '0');
+    if (contentLength > MAX_R2_BATCH_REQUEST_SIZE) {
+      return ApiErrors.badRequest('File too large');
+    }
+
     // SECURITY: Require authentication
 
     const { userId, error: authError } = await verifyRequestUser(request);
@@ -60,6 +72,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!file || !rawReleaseId) {
       return ApiErrors.badRequest('Missing file or releaseId');
+    }
+
+    // SECURITY: Per-file size cap (Content-Length can be spoofed / absent on
+    // chunked uploads) — guards the in-memory arrayBuffer below.
+    if (file.size > MAX_R2_BATCH_FILE_SIZE) {
+      return ApiErrors.badRequest('File too large');
     }
 
     // SECURITY: Validate fileType against allowed values

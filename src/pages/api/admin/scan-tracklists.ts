@@ -35,10 +35,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const start = Date.now();
 
   try {
-    // Fetch all mixes from D1 — tracklist is inside the `data` JSON column as tracklistArray
+    // Fetch mixes from D1 — tracklist is inside the `data` JSON column as
+    // tracklistArray. LIMIT bounds the per-mix scan loop (and satisfies the
+    // ORDER-BY-needs-LIMIT rule); newest 1000 covers the active catalogue.
     const { results: mixes } = await db.prepare(
       `SELECT id, user_id, dj_name, data FROM dj_mixes
-       ORDER BY created_at DESC`
+       ORDER BY created_at DESC LIMIT 1000`
     ).all();
 
     if (!mixes || mixes.length === 0) {

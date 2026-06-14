@@ -4,6 +4,7 @@
 // For detailed service checks with latency data, see /api/health/ (admin-only)
 import type { APIRoute } from 'astro';
 import { jsonResponse } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -12,7 +13,12 @@ interface ServiceCheck {
   error?: string;
 }
 
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Unauthenticated probe that touches D1+KV+R2 on every hit — rate limit so a
+  // flood of the public uptime URL can't amplify into backend load/cost.
+  const rl = checkRateLimit(`health-public:${getClientId(request)}`, RateLimiters.standard);
+  if (!rl.allowed) return rateLimitResponse(rl.retryAfter!);
+
   const env = locals.runtime?.env;
   const checks: Record<string, ServiceCheck> = {};
 
