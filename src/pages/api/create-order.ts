@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { getDocument, addDocument, atomicIncrement, updateDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
-import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping } from '../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry } from '../../lib/order/shipping-rules';
 import { successResponse, ApiErrors, createLogger, maskEmail } from '../../lib/api-utils';
 import { validateOrderPrices } from '../../lib/order/price-validation';
 import { updateMerchStockAfterOrder } from '../../lib/order/merch-stock-update';
@@ -162,9 +162,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const hasMerchItems = pricedItems.some((item: OrderItem) => item.type === 'merch');
     const hasVinylItems = pricedItems.some((item: OrderItem) => item.type === 'vinyl');
     const customerCountry = orderData.shipping?.country || 'GB';
-    const isUK = customerCountry === 'GB' || customerCountry === 'United Kingdom' || customerCountry === 'UK';
-    const euCountries = ['DE', 'FR', 'NL', 'BE', 'IE', 'ES', 'IT', 'AT', 'PL', 'PT', 'DK', 'SE', 'FI', 'CZ', 'GR', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'CY', 'MT', 'LU'];
-    const isEU = euCountries.includes(customerCountry);
 
     let merchShipping = 0;
     let vinylShippingTotal = 0;
@@ -185,15 +182,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         if (item.sellerId && !item.releaseId) {
           // Vinyl crates — seller shipping cost (validated server-side as
-          // cratesShippingCost; legacy items may carry shippingCost)
-          vinylShippingTotal += item.cratesShippingCost ?? item.shippingCost ?? 4.99;
+          // cratesShippingCost; legacy items may carry shippingCost) × quantity
+          vinylShippingTotal += (item.cratesShippingCost ?? item.shippingCost ?? 4.99) * ((item.quantity as number) || 1);
         }
         // Per-artist release-vinyl shipping (first record single rate, each
         // additional record at 50p default) is computed below via the shared
         // computeReleaseVinylShipping helper.
       }
 
-      const vinylRegion = isUK ? 'UK' : isEU ? 'EU' : 'INTL';
+      const vinylRegion = regionForCountry(customerCountry);
       const relVinyl = computeReleaseVinylShipping(pricedItems as unknown as Parameters<typeof computeReleaseVinylShipping>[0], vinylRegion);
       vinylShippingTotal += relVinyl.total;
       Object.assign(artistShippingBreakdown, relVinyl.breakdown);

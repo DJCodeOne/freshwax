@@ -12,25 +12,13 @@ import {
   applyCrateFreeShipping,
   computeMerchShipping,
   computeReleaseVinylShipping,
+  regionForCountry,
 } from '../../lib/order/shipping-rules';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const log = createLogger('shipping-quote');
 export const prerender = false;
-
-const EU_COUNTRIES = new Set([
-  'DE', 'FR', 'NL', 'BE', 'IE', 'ES', 'IT', 'AT', 'PL', 'PT', 'DK', 'SE', 'FI', 'CZ',
-  'GR', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'CY', 'MT', 'LU',
-  'Ireland', 'Germany', 'France', 'Netherlands', 'Belgium', 'Spain', 'Italy',
-]);
-
-function regionFor(country: string): 'UK' | 'EU' | 'INTL' {
-  const c = (country || 'GB').trim();
-  if (c === 'GB' || c === 'UK' || c === 'United Kingdom') return 'UK';
-  if (EU_COUNTRIES.has(c)) return 'EU';
-  return 'INTL';
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -46,7 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const items = Array.isArray(body.items) ? body.items : [];
   if (items.length > 100) return ApiErrors.badRequest('Too many items');
-  const region = regionFor(body.country || 'GB');
+  const region = regionForCountry(body.country || 'GB');
   const db = locals.runtime?.env?.DB;
 
   try {
@@ -57,7 +45,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (isCrate) {
         const listingId = (item.crateListingId || item.listingId || item.id) as string | undefined;
         if (item.cratesShippingCost == null && listingId) {
-          const listing = await getDocument('crateListings', listingId).catch(() => null);
+          const listing = await getDocument('vinylListings', listingId).catch(() => null);
           if (listing) {
             item.cratesShippingCost = listing.shippingCost || 0;
             if (!item.sellerId) item.sellerId = (listing.sellerId || listing.userId) as string;

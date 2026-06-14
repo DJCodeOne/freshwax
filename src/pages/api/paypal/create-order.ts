@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
-import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping } from '../../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry } from '../../../lib/order/shipping-rules';
 import { SITE_URL } from '../../../lib/constants';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
@@ -141,8 +141,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Determine customer's shipping region
     const customerCountry = orderData.shipping?.country || 'GB';
-    const isUK = customerCountry === 'GB' || customerCountry === 'United Kingdom' || customerCountry === 'UK';
-    const isEU = ['DE', 'FR', 'NL', 'BE', 'IE', 'ES', 'IT', 'AT', 'PL', 'PT', 'DK', 'SE', 'FI', 'CZ', 'GR', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'CY', 'MT', 'LU'].includes(customerCountry);
 
     // Calculate shipping - merch and vinyl separately (matching Stripe flow)
     let merchShipping = 0;
@@ -170,7 +168,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           vinylShippingTotal += ((item.cratesShippingCost as number) ?? 4.99) * ((item.quantity as number) || 1);
         }
       }
-      const region = isUK ? 'UK' : isEU ? 'EU' : 'INTL';
+      const region = regionForCountry(customerCountry);
       const relVinyl = computeReleaseVinylShipping(validatedItems as unknown as Parameters<typeof computeReleaseVinylShipping>[0], region);
       vinylShippingTotal += relVinyl.total;
       Object.assign(artistShippingBreakdown, relVinyl.breakdown);

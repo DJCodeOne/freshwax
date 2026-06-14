@@ -23,6 +23,25 @@ export const MERCH_SHIPPING_FLAT = 4.99;
 const DEFAULT_FREE_SHIPPING_THRESHOLD = 50;
 const DEFAULT_CRATE_ADDITIONAL = 0.5; // 50p per additional record, seller-overridable
 
+// Canonical country → shipping region. Accepts BOTH ISO codes and the full
+// country names the checkout form submits (e.g. "Ireland", "Germany") so the
+// quote and every checkout endpoint agree on the region (EU customers were
+// being charged INTL because the endpoints only matched ISO codes).
+const EU_REGION_SET = new Set([
+  'DE', 'FR', 'NL', 'BE', 'IE', 'ES', 'IT', 'AT', 'PL', 'PT', 'DK', 'SE', 'FI', 'CZ',
+  'GR', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'CY', 'MT', 'LU',
+  'Ireland', 'Germany', 'France', 'Netherlands', 'Belgium', 'Spain', 'Italy', 'Austria',
+  'Poland', 'Portugal', 'Denmark', 'Sweden', 'Finland', 'Czech Republic', 'Greece',
+  'Hungary', 'Romania', 'Bulgaria', 'Croatia', 'Slovakia', 'Slovenia', 'Lithuania',
+  'Latvia', 'Estonia', 'Cyprus', 'Malta', 'Luxembourg',
+]);
+
+export function regionForCountry(country: string | undefined | null): 'UK' | 'EU' | 'INTL' {
+  const c = (country || 'GB').trim();
+  if (c === 'GB' || c === 'UK' || c === 'United Kingdom') return 'UK';
+  return EU_REGION_SET.has(c) ? 'EU' : 'INTL';
+}
+
 /**
  * Combined crate shipping for ONE seller's crate items (mutates in place):
  * the first record keeps its listing's single rate; every additional record

@@ -7,7 +7,7 @@ import { createOrder, validateStock } from '../../lib/order-utils';
 import { getDocument, queryCollection, updateDocument, atomicIncrement, arrayUnion, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
-import { applyCrateFreeShipping, computeMerchShipping } from '../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry } from '../../lib/order/shipping-rules';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 const log = createLogger('complete-free-order');
 
@@ -113,6 +113,14 @@ async function validateAndGetPrices(items: Record<string, unknown>[]): Promise<{
             if (release) {
               if (itemType === 'vinyl') {
                 serverPrice = release.vinylPrice || release.price || item.price;
+                // Enrich server-side vinyl shipping rates + artist so
+                // computeReleaseVinylShipping honours the seller's set rates
+                // and the artist's postage flows into their payout.
+                item.vinylShippingUK = release.vinylShippingUK;
+                item.vinylShippingEU = release.vinylShippingEU;
+                item.vinylShippingIntl = release.vinylShippingIntl;
+                item.vinylShippingAdditional = release.vinylShippingAdditional;
+                if (!item.artistId) item.artistId = release.artistId || release.userId;
               } else if (itemType === 'track' && item.trackId) {
                 const track = (release.tracks || []).find((t: Record<string, unknown>) =>
                   t.id === item.trackId || t.trackId === item.trackId
@@ -172,18 +180,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { validatedItems, validatedSubtotal } = await validateAndGetPrices(orderData.items);
     const hasPhysicalItems = validatedItems.some((item: Record<string, unknown>) =>
       item.type === 'vinyl' || item.type === 'merch');
-    // Shipping mirrors the paid checkouts: merch flat £4.99 unless the
-    // supplier's free-shipping threshold is met; crates use seller-set
-    // shipping (with the seller's free-shipping rule applied); other vinyl
-    // charges the flat default.
+    // Shipping mirrors the paid checkouts EXACTLY: combine crate shipping per
+    // seller (50p/additional, cross-system with a same-seller release base),
+    // waive where a free-shipping threshold is met, merch flat £4.99 unless the
+    // supplier threshold is met, and per-artist release vinyl (region rate +
+    // 50p/additional). The release-vinyl breakdown feeds the artist payout.
+    const vinylRegion = regionForCountry(orderData.shipping?.country || 'GB');
+    await applyCrateCombinedShipping(validatedItems, env?.DB);
     await applyCrateFreeShipping(validatedItems, env?.DB);
     const merchShipping = await computeMerchShipping(validatedItems);
     const crateShipping = validatedItems
       .filter((item: Record<string, unknown>) => item.type === 'vinyl' && item.sellerId && !item.releaseId)
       .reduce((sum: number, item: Record<string, unknown>) => sum + (((item.cratesShippingCost as number) ?? 4.99) * ((item.quantity as number) || 1)), 0);
-    const hasNonCrateVinyl = validatedItems.some((item: Record<string, unknown>) =>
-      item.type === 'vinyl' && !(item.sellerId && !item.releaseId));
-    const shipping = merchShipping + crateShipping + (hasNonCrateVinyl ? 4.99 : 0);
+    const releaseVinyl = computeReleaseVinylShipping(validatedItems as never, vinylRegion);
+    const artistShippingBreakdown = Object.keys(releaseVinyl.breakdown).length > 0 ? releaseVinyl.breakdown : null;
+    const shipping = Math.round((merchShipping + crateShipping + releaseVinyl.total) * 100) / 100;
     const validatedTotal = validatedSubtotal + shipping;
 
     const appliedCredit = orderData.appliedCredit || 0;
@@ -396,6 +407,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           totalItemCount: validatedItems.length,
           orderSubtotal: validatedSubtotal,
           actualProcessingFee: 0,
+          artistShippingBreakdown,
           paymentMethod: 'free',
           logPrefix: '[FreeOrder]',
           stripeSecretKey: (env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY || '') as string,

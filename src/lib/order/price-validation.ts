@@ -105,8 +105,11 @@ export async function validateOrderPrices(items: Record<string, unknown>[]): Pro
               return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
             }
             serverPrice = listing.price || item.price;
-            // Pull shipping cost from listing for vinyl crates
+            // Pull shipping cost from listing for vinyl crates. Set
+            // cratesShippingCost (the field applyCrateCombinedShipping + the
+            // crate sum/payout read) as well as the legacy shippingCost.
             extraFields.shippingCost = listing.shippingCost ?? null;
+            extraFields.cratesShippingCost = listing.shippingCost ?? 0;
           }
         } else {
           const releaseId = item.releaseId || item.productId || item.id;

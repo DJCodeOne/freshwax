@@ -79,9 +79,26 @@ export async function processArtistPayments(params: {
     // Cache for artist lookups
     const artistCache: Record<string, Record<string, unknown>> = {};
 
+    // payoutSplits: when a release defines [{artistId, percentage}] summing to
+    // 100, the artist share is fanned across recipients (split-ownership EPs).
+    const getSplits = (release: Record<string, unknown> | undefined): Array<{ artistId: string; percentage: number }> | null => {
+      const raw = (release as { payoutSplits?: unknown } | undefined)?.payoutSplits;
+      if (!Array.isArray(raw) || raw.length === 0) return null;
+      const cleaned = raw
+        .map((s) => s as { artistId?: unknown; percentage?: unknown })
+        .filter((s) => typeof s.artistId === 'string' && typeof s.percentage === 'number' && s.percentage > 0)
+        .map((s) => ({ artistId: s.artistId as string, percentage: s.percentage as number }));
+      if (cleaned.length === 0) return null;
+      const total = cleaned.reduce((sum, s) => sum + s.percentage, 0);
+      if (Math.abs(total - 100) > 0.01) return null; // malformed → single-artist fallback
+      return cleaned;
+    };
+
     for (const item of items) {
       // Skip merch items - they go to suppliers, not artists
       if (item.type === 'merch') continue;
+      // Skip crate items (sellerId, no releaseId) — paid by the crate flow.
+      if (item.sellerId && !item.releaseId) continue;
 
       const releaseId = item.releaseId || item.id;
       if (!releaseId) continue;
@@ -93,19 +110,6 @@ export async function processArtistPayments(params: {
       }
 
       if (!release) continue;
-
-      const artistId = item.artistId || release.artistId || release.userId;
-      if (!artistId) continue;
-
-      let artist = artistCache[artistId] || null;
-      if (!artist) {
-        try {
-          artist = await getDocument('artists', artistId);
-          if (artist) artistCache[artistId] = artist;
-        } catch (e: unknown) {
-          // Artist not found
-        }
-      }
 
       const itemTotal = (item.price || 0) * (item.quantity || 1);
 
@@ -119,18 +123,37 @@ export async function processArtistPayments(params: {
       const processingFeePerSeller = totalProcessingFee / totalItemCount;
       const artistShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
-      if (!artistPayments[artistId]) {
-        artistPayments[artistId] = {
-          artistId,
-          artistName: artist?.artistName || release.artistName || release.artist || 'Unknown Artist',
-          artistEmail: artist?.email || release.artistEmail || '',
-          amount: 0,
-          items: []
-        };
-      }
+      // Fan the share across payoutSplits recipients, else the primary artist.
+      const splits = getSplits(release);
+      const recipients = splits
+        ? splits.map((s) => ({ artistId: s.artistId, share: artistShare * (s.percentage / 100) }))
+        : (() => {
+            const aid = (item.artistId || release.artistId || release.userId) as string | undefined;
+            return aid ? [{ artistId: aid, share: artistShare }] : [];
+          })();
+      if (recipients.length === 0) continue;
+      const itemLabel = item.name || item.title || 'Item';
 
-      artistPayments[artistId].amount += artistShare;
-      artistPayments[artistId].items.push(item.name || item.title || 'Item');
+      for (const recipient of recipients) {
+        let artist = artistCache[recipient.artistId] || null;
+        if (!artist) {
+          try {
+            artist = await getDocument('artists', recipient.artistId);
+            if (artist) artistCache[recipient.artistId] = artist;
+          } catch (e: unknown) { /* artist not found */ }
+        }
+        if (!artistPayments[recipient.artistId]) {
+          artistPayments[recipient.artistId] = {
+            artistId: recipient.artistId,
+            artistName: artist?.artistName || release.artistName || release.artist || 'Unknown Artist',
+            artistEmail: artist?.email || release.artistEmail || '',
+            amount: 0,
+            items: []
+          };
+        }
+        artistPayments[recipient.artistId].amount += recipient.share;
+        artistPayments[recipient.artistId].items.push(itemLabel);
+      }
     }
 
     // Add shipping fees to artist payments (artists receive 100% of their vinyl shipping)
