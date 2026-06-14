@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { computeReleaseVinylShipping } from '../lib/order/shipping-rules';
+import { computeReleaseVinylShipping, combineCrateShippingGroup } from '../lib/order/shipping-rules';
 import type { CartItem } from '../lib/order/types';
+
+function crate(shippingCost: number, qty = 1): CartItem {
+  return { type: 'vinyl', sellerId: 'seller_1', cratesShippingCost: shippingCost, quantity: qty } as CartItem;
+}
 
 // Helper to build a minimal release-vinyl cart item.
 function vinyl(overrides: Partial<CartItem> = {}): CartItem {
@@ -123,5 +127,47 @@ describe('computeReleaseVinylShipping — per-additional-record rule', () => {
     ];
     const { total } = computeReleaseVinylShipping(items, 'UK');
     expect(total).toBe(0.5); // 0 + 0.50
+  });
+});
+
+describe('combineCrateShippingGroup — per-seller combined crate shipping', () => {
+  const sum = (items: CartItem[]) => items.reduce((s, i) => s + (Number(i.cratesShippingCost) || 0) * (Number(i.quantity) || 1), 0);
+
+  it('leaves a single record unchanged', () => {
+    const items = [crate(3.5)];
+    combineCrateShippingGroup(items, 0.5);
+    expect(items[0].cratesShippingCost).toBe(3.5);
+  });
+
+  it('charges first record single + 50p per extra (two listings)', () => {
+    const items = [crate(3.5), crate(4.0)];
+    combineCrateShippingGroup(items, 0.5);
+    expect(items[0].cratesShippingCost).toBe(3.5); // first = its single
+    expect(items[1].cratesShippingCost).toBe(0.5); // second = additional
+    expect(sum(items)).toBe(4.0);
+  });
+
+  it('charges 50p per extra across four listings', () => {
+    const items = [crate(3.5), crate(4.0), crate(4.0), crate(4.0)];
+    combineCrateShippingGroup(items, 0.5);
+    expect(sum(items)).toBe(5.0); // 3.50 + 0.50*3
+  });
+
+  it('uses the seller-set additional rate', () => {
+    const items = [crate(3.5), crate(3.5), crate(3.5)];
+    combineCrateShippingGroup(items, 1.0);
+    expect(sum(items)).toBe(5.5); // 3.50 + 1.00*2
+  });
+
+  it('handles quantity > 1 on one listing (blended per-unit, correct sum)', () => {
+    const items = [crate(3.5, 3)]; // 3 records of one listing
+    combineCrateShippingGroup(items, 0.5);
+    expect(sum(items)).toBe(4.5); // 3.50 + 0.50*2
+  });
+
+  it('combines quantity across mixed listings', () => {
+    const items = [crate(3.5, 2), crate(4.0, 1)]; // 3 records total
+    combineCrateShippingGroup(items, 0.5);
+    expect(sum(items)).toBe(4.5); // 3.50 + 0.50 + 0.50
   });
 });

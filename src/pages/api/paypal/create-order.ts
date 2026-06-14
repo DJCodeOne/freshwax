@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
-import { applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping } from '../../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping } from '../../../lib/order/shipping-rules';
 import { SITE_URL } from '../../../lib/constants';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
@@ -151,6 +151,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Crate sellers can waive their shipping over their own threshold —
     // zeroes cratesShippingCost in place before the vinyl loop sums it
+    await applyCrateCombinedShipping(validatedItems as unknown as Parameters<typeof applyCrateCombinedShipping>[0], locals.runtime?.env?.DB);
     await applyCrateFreeShipping(validatedItems, locals.runtime?.env?.DB);
 
     // Merch shipping: flat £4.99 unless every supplier in the basket offers

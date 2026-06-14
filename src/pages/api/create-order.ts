@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { getDocument, addDocument, atomicIncrement, updateDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
-import { applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping } from '../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping } from '../../lib/order/shipping-rules';
 import { successResponse, ApiErrors, createLogger, maskEmail } from '../../lib/api-utils';
 import { validateOrderPrices } from '../../lib/order/price-validation';
 import { updateMerchStockAfterOrder } from '../../lib/order/merch-stock-update';
@@ -172,6 +172,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Seller-configurable free-shipping rules (crates seller settings +
     // merch supplier settings); no global free-over-£50 rule any more
+    await applyCrateCombinedShipping(pricedItems as unknown as Parameters<typeof applyCrateCombinedShipping>[0], locals.runtime?.env?.DB);
     await applyCrateFreeShipping(pricedItems as Record<string, unknown>[], locals.runtime?.env?.DB);
 
     if (hasMerchItems) {

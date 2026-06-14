@@ -13,6 +13,7 @@
 // which flows through to both the buyer charge and the seller payout.
 
 import { getDocument } from '../firebase-rest';
+import { d1GetVinylSeller } from '../d1-catalog';
 import { log } from './types';
 import type { CartItem } from './types';
 
@@ -20,6 +21,66 @@ type D1Db = import('@cloudflare/workers-types').D1Database;
 
 export const MERCH_SHIPPING_FLAT = 4.99;
 const DEFAULT_FREE_SHIPPING_THRESHOLD = 50;
+const DEFAULT_CRATE_ADDITIONAL = 0.5; // 50p per additional record, seller-overridable
+
+/**
+ * Combined crate shipping for ONE seller's crate items (mutates in place):
+ * the first record keeps its listing's single rate; every additional record
+ * (extra listings + extra quantity from that seller) is charged `additional`.
+ * Rewrites each item's cratesShippingCost so the existing `cratesShippingCost ×
+ * qty` sum (used by both the buyer charge and the seller payout) reproduces the
+ * combined total. Pure + synchronous so it's unit-testable.
+ */
+export function combineCrateShippingGroup(group: CartItem[], additional: number): void {
+  const totalRecords = group.reduce((s, i) => s + ((i.quantity as number) || 1), 0);
+  if (totalRecords <= 1) return;
+  let recordsSoFar = 0;
+  for (const item of group) {
+    const qty = (item.quantity as number) || 1;
+    const single = (item.cratesShippingCost as number) || 0;
+    let itemTotal = 0;
+    for (let u = 0; u < qty; u++) {
+      itemTotal += recordsSoFar === 0 ? single : additional;
+      recordsSoFar++;
+    }
+    item.cratesShippingCost = qty === 1 ? itemTotal : Math.round((itemTotal / qty) * 100) / 100;
+  }
+}
+
+/**
+ * Apply combined crate shipping across the basket: group crate items by seller
+ * and, for sellers with >1 record, charge first-record-single + additional per
+ * extra (seller's `shippingAdditional`, default 50p). Run BEFORE
+ * applyCrateFreeShipping (which may then zero everything if a threshold is met).
+ */
+export async function applyCrateCombinedShipping(items: CartItem[], db?: D1Db): Promise<void> {
+  const crateItems = items.filter(i => i.type === 'vinyl' && i.sellerId && !i.releaseId);
+  if (crateItems.length === 0) return;
+
+  const bySeller = new Map<string, CartItem[]>();
+  for (const item of crateItems) {
+    const sid = item.sellerId as string;
+    if (!bySeller.has(sid)) bySeller.set(sid, []);
+    bySeller.get(sid)!.push(item);
+  }
+
+  for (const [sellerId, group] of bySeller) {
+    if (group.reduce((s, i) => s + ((i.quantity as number) || 1), 0) <= 1) continue;
+    let additional = DEFAULT_CRATE_ADDITIONAL;
+    try {
+      let settings: Record<string, unknown> | null = db ? await d1GetVinylSeller(db, sellerId) : null;
+      if (!settings || settings.shippingAdditional == null) {
+        settings = await getDocument('vinyl-sellers', sellerId).catch(() => null);
+      }
+      const raw = settings?.shippingAdditional;
+      const n = typeof raw === 'number' ? raw : parseFloat(String(raw ?? ''));
+      if (Number.isFinite(n) && n >= 0) additional = n;
+    } catch (e: unknown) {
+      log.warn('[shipping-rules] Crate additional-rate lookup failed for', sellerId, e);
+    }
+    combineCrateShippingGroup(group, additional);
+  }
+}
 
 function groupSubtotal(group: CartItem[]): number {
   return group.reduce((sum, i) => sum + ((i.price as number) || 0) * ((i.quantity as number) || 1), 0);
