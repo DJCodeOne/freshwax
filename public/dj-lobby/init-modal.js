@@ -170,7 +170,8 @@ export async function startRelayChecks() {
   }
 
   if (backBtn) backBtn.disabled = false;
-  if (goLiveBtn) goLiveBtn.disabled = false;
+  // No green (relay not live) → keep GO LIVE greyed out so the DJ checks settings.
+  if (goLiveBtn) goLiveBtn.disabled = !isRelayLive;
 }
 
 export function hideInitModal() {
@@ -251,11 +252,13 @@ export function startConnectionChecks() {
           if (s6) s6.textContent = 'No audio signal yet';
         }
 
-        if (progressText) progressText.textContent = 'Ready to go!';
+        // Gate GO LIVE on an actual connected source — no green, no go.
+        var isReady = isObsConnected || isButtConnected;
+        if (progressText) progressText.textContent = isReady ? 'Ready to go!' : 'Not connected — check your settings';
         var backBtn = document.getElementById('initBackBtn');
         var goLiveBtn = document.getElementById('initGoLiveBtn');
         if (backBtn) backBtn.disabled = false;
-        if (goLiveBtn) goLiveBtn.disabled = false;
+        if (goLiveBtn) goLiveBtn.disabled = !isReady;
 
         updateInitTip(isObsConnected, isButtConnected);
         startLiveStatusUpdates();
@@ -318,6 +321,11 @@ export function startLiveStatusUpdates() {
       var s6 = document.getElementById('initLevelsStatus');
       if (s6) s6.textContent = 'No audio signal yet';
     }
+
+    // Live-gate GO LIVE: enable only while a source is connected, so if the
+    // connection drops the button greys out again.
+    var goLiveBtnLive = document.getElementById('initGoLiveBtn');
+    if (goLiveBtnLive) goLiveBtnLive.disabled = !(isObsConnected || isButtConnected);
 
     updateInitTip(isObsConnected, isButtConnected);
 
