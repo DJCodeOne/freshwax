@@ -305,6 +305,9 @@ try {
               <span>Playlist</span>
             </button>
           </div>
+          <div class="stream-ticker hidden" id="streamTicker" aria-hidden="true">
+            <span class="stream-ticker-text" id="streamTickerText"></span>
+          </div>
           <div class="stream-info-right">
             <div class="stream-stats">
               <div class="stat"><span class="stat-icon">Views</span><span id="viewerCount">0</span></div>
@@ -3009,7 +3012,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260614b"></script>
+<script type="module" src="/live-stream.js?v=20260614c"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page

@@ -399,7 +399,26 @@ async function loadUserReactions(streamId) {
 }
 
 // --- Stop live stream ---
+// Live session-title ticker in the top info bar. Pass falsy to hide.
+function setStreamTicker(text) {
+  var ticker = document.getElementById('streamTicker');
+  var el = document.getElementById('streamTickerText');
+  if (!ticker || !el) return;
+  var t = (text == null ? '' : String(text)).trim();
+  if (!t) { ticker.classList.add('hidden'); el.textContent = ''; el.style.animation = 'none'; return; }
+  if (el.textContent === t && !ticker.classList.contains('hidden')) return; // no-op if unchanged
+  el.textContent = t;
+  ticker.classList.remove('hidden');
+  // Keep scroll speed roughly constant regardless of title length.
+  var dur = Math.max(10, Math.round(t.length * 0.4));
+  el.style.animation = 'none';
+  void el.offsetWidth; // force reflow so the animation restarts cleanly
+  el.style.animation = 'streamTickerScroll ' + dur + 's linear infinite';
+}
+window.setStreamTicker = setStreamTicker;
+
 function stopLiveStream() {
+  setStreamTicker('');
   releaseWakeLock(); destroyHlsPlayer();
   ['fsVideoLoading', 'videoLoadingNotice'].forEach(function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); });
   var videoEl = document.getElementById('hlsVideoElement'); if (videoEl) { try { videoEl.pause(); videoEl.removeAttribute('src'); videoEl.load(); } catch (e) {} }
@@ -417,6 +436,7 @@ function showOfflineState(scheduled) {
   // stream we KNOW just started is on its way in. See pusher-events.js.
   if (window._awaitingLiveStart && (Date.now() - window._awaitingLiveStart) < 25000) return;
   window.isLiveStreamActive = false; setLiveStreamPlaying(false);
+  setStreamTicker('');
   var initOverlay = document.getElementById('initializingOverlay'); if (initOverlay) initOverlay.classList.add('hidden');
   var badge = document.getElementById('liveBadge'); var statusText = document.getElementById('liveStatusText');
   var offOverlay = document.getElementById('offlineOverlay'); var offIcon = document.getElementById('offlineIconText');
@@ -469,6 +489,7 @@ function showLiveStream(streamData) {
     Object.keys(uiFields).forEach(function(key) { var el = document.getElementById(key); if (!el) return; var isNameField = (key === 'controlsDjName' || key === 'djName' || key === 'audioDjName' || key === 'fsDjName' || key === 'fsAudioDjName'); if (streamData.isRelay && isNameField) el.innerHTML = '<span style="color: #ef4444;">' + escapeHtml(uiFields[key]) + '</span>'; else el.textContent = uiFields[key]; });
     var streamTitle = document.getElementById('streamTitle');
     if (streamTitle) { if (streamData.isRelay && streamData.relaySource && streamData.relaySource.stationName) streamTitle.innerHTML = '<span class="title-live">RELAYED FROM</span> <span class="title-relay-from">' + escapeHtml(streamData.relaySource.stationName).toUpperCase() + '</span>'; else streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>'; }
+    setStreamTicker(streamData.isRelay ? (streamData.relayNowPlaying || streamData.title || '') : (streamData.title || ''));
     var audioBadge = document.getElementById('audioBadgeText'); var fsAudioBadge = document.getElementById('fsAudioBadgeText');
     if (streamData.isRelay) { if (audioBadge) audioBadge.textContent = 'RELAY'; if (fsAudioBadge) fsAudioBadge.textContent = 'RELAY'; } else { if (audioBadge) audioBadge.textContent = 'AUDIO ONLY'; if (fsAudioBadge) fsAudioBadge.textContent = 'AUDIO ONLY'; }
     var avatarSrc = streamData.isRelay ? '/place-holder.webp' : streamData.djAvatar; var djAvatar = document.getElementById('djAvatar'); var streamCover = document.getElementById('streamCover'); var vinyl1 = document.getElementById('vinylDjAvatar'); var vinyl2 = document.getElementById('vinylDjAvatar2');
