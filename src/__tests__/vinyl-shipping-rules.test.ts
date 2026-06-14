@@ -170,4 +170,24 @@ describe('combineCrateShippingGroup — per-seller combined crate shipping', () 
     combineCrateShippingGroup(items, 0.5);
     expect(sum(items)).toBe(4.5); // 3.50 + 0.50 + 0.50
   });
+
+  it('charges crate records at additional when the same seller has a release (combined)', () => {
+    const items = [crate(3.5), crate(4.0)]; // base is covered by the release
+    combineCrateShippingGroup(items, 0.5, true);
+    expect(sum(items)).toBe(1.0); // 0.50 + 0.50, no crate single base
+  });
+
+  it('charges a single crate record at additional when the seller also has a release', () => {
+    const items = [crate(3.5)];
+    combineCrateShippingGroup(items, 0.5, true);
+    expect(items[0].cratesShippingCost).toBe(0.5);
+  });
+
+  it('combined order: one base across the seller release + crates', () => {
+    // Same seller is the label (1 release record) AND a crate seller (2 records)
+    const relTotal = computeReleaseVinylShipping([vinyl({ vinylShippingUK: 4.99 })], 'UK').total;
+    const crates = [crate(3.5), crate(4.0)];
+    combineCrateShippingGroup(crates, 0.5, true);
+    expect(relTotal + sum(crates)).toBe(5.99); // 4.99 + 0.50 + 0.50 — ONE base
+  });
 });

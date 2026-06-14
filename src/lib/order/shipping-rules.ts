@@ -31,10 +31,13 @@ const DEFAULT_CRATE_ADDITIONAL = 0.5; // 50p per additional record, seller-overr
  * qty` sum (used by both the buyer charge and the seller payout) reproduces the
  * combined total. Pure + synchronous so it's unit-testable.
  */
-export function combineCrateShippingGroup(group: CartItem[], additional: number): void {
+export function combineCrateShippingGroup(group: CartItem[], additional: number, hasReleaseBase = false): void {
   const totalRecords = group.reduce((s, i) => s + ((i.quantity as number) || 1), 0);
-  if (totalRecords <= 1) return;
-  let recordsSoFar = 0;
+  // Single crate record with no same-seller release elsewhere → keep its single.
+  if (!hasReleaseBase && totalRecords <= 1) return;
+  // When the same seller also has a release in the basket, the release provides
+  // the single base, so EVERY crate record (incl. the first) is an additional.
+  let recordsSoFar = hasReleaseBase ? 1 : 0;
   for (const item of group) {
     const qty = (item.quantity as number) || 1;
     const single = (item.cratesShippingCost as number) || 0;
@@ -65,7 +68,12 @@ export async function applyCrateCombinedShipping(items: CartItem[], db?: D1Db): 
   }
 
   for (const [sellerId, group] of bySeller) {
-    if (group.reduce((s, i) => s + ((i.quantity as number) || 1), 0) <= 1) continue;
+    // If the SAME seller (by uid) also has a release vinyl item in this basket
+    // (they're both the label and a crate seller), the release single covers the
+    // base postage and this seller's crate records are charged at the additional
+    // rate — one combined postage for the whole order, not two.
+    const hasReleaseBase = items.some(i => i.type === 'vinyl' && i.releaseId && i.artistId === sellerId);
+    if (!hasReleaseBase && group.reduce((s, i) => s + ((i.quantity as number) || 1), 0) <= 1) continue;
     let additional = DEFAULT_CRATE_ADDITIONAL;
     try {
       let settings: Record<string, unknown> | null = db ? await d1GetVinylSeller(db, sellerId) : null;
@@ -78,7 +86,7 @@ export async function applyCrateCombinedShipping(items: CartItem[], db?: D1Db): 
     } catch (e: unknown) {
       log.warn('[shipping-rules] Crate additional-rate lookup failed for', sellerId, e);
     }
-    combineCrateShippingGroup(group, additional);
+    combineCrateShippingGroup(group, additional, hasReleaseBase);
   }
 }
 
