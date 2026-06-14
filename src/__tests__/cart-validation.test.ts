@@ -227,23 +227,33 @@ describe('calculateTotals', () => {
     expect(totals.total).toBeCloseTo(24.99, 2);
   });
 
-  it('gives free shipping for physical items at exactly 50', () => {
+  it('uses a flat £4.99 estimate at exactly 50 (no global free-over-£50)', () => {
     const state = makeState({
       cart: [makeItem({ type: 'vinyl', price: 50, quantity: 1 })],
     });
     const totals = calculateTotals(state);
-    expect(totals.shipping).toBe(0);
-    expect(totals.total).toBe(50);
+    expect(totals.shipping).toBe(4.99);
+    expect(totals.total).toBeCloseTo(54.99, 2);
   });
 
-  it('gives free shipping for physical items over 50', () => {
+  it('uses a flat £4.99 estimate over 50 (no global free-over-£50)', () => {
     const state = makeState({
       cart: [makeItem({ type: 'merch', price: 25, quantity: 3 })],
     });
     const totals = calculateTotals(state);
     expect(totals.subtotal).toBe(75);
-    expect(totals.shipping).toBe(0);
-    expect(totals.total).toBe(75);
+    expect(totals.shipping).toBe(4.99);
+    expect(totals.total).toBeCloseTo(79.99, 2);
+  });
+
+  it('uses the server quote (state.quotedShipping) when present', () => {
+    const state = makeState({
+      cart: [makeItem({ type: 'vinyl', price: 15, quantity: 1 })],
+    });
+    (state as { quotedShipping?: number }).quotedShipping = 5.49;
+    const totals = calculateTotals(state);
+    expect(totals.shipping).toBe(5.49);
+    expect(totals.total).toBeCloseTo(20.49, 2);
   });
 
   it('detects physical items via productType field', () => {

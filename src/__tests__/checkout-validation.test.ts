@@ -147,9 +147,9 @@ describe('calculateTotals (extended)', () => {
     // subtotal = 9.90 + 25 + 30 = 64.90
     expect(totals.subtotal).toBeCloseTo(64.9, 2);
     expect(totals.hasPhysicalItems).toBe(true);
-    // Over 50, so free shipping
-    expect(totals.shipping).toBe(0);
-    expect(totals.total).toBeCloseTo(64.9, 2);
+    // Flat £4.99 estimate (no global free-over-£50; server quote overrides)
+    expect(totals.shipping).toBe(4.99);
+    expect(totals.total).toBeCloseTo(69.89, 2);
   });
 
   it('handles single penny item', () => {
@@ -173,13 +173,13 @@ describe('calculateTotals (extended)', () => {
     expect(totals.total).toBe(150);
   });
 
-  it('shipping threshold is exactly at 50 (no shipping)', () => {
+  it('charges the flat estimate at exactly 50 (no global free-over-£50)', () => {
     const state = makeState({
       cart: [makeCartItem({ type: 'vinyl', price: 25, quantity: 2 })],
     });
     const totals = calculateTotals(state);
     expect(totals.subtotal).toBe(50);
-    expect(totals.shipping).toBe(0);
+    expect(totals.shipping).toBe(4.99);
   });
 
   it('shipping charged at 49.99', () => {

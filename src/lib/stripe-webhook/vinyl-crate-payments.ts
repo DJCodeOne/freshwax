@@ -24,12 +24,15 @@ export async function processVinylCrateSellerPayments(params: {
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
-    // Filter to only vinyl crate items (type: 'crate' or 'vinyl-crate' or has crateListingId)
+    // Filter to only vinyl crate items. A crate has NO releaseId — guard against
+    // an item with both releaseId + sellerId being double-paid (artist + crate).
     const crateItems = items.filter(item =>
-      item.type === 'crate' ||
-      item.type === 'vinyl-crate' ||
-      item.crateListingId ||
-      item.sellerId // Items with a seller are from crates
+      !item.releaseId && (
+        item.type === 'crate' ||
+        item.type === 'vinyl-crate' ||
+        item.crateListingId ||
+        item.sellerId // Items with a seller are from crates
+      )
     );
 
     if (crateItems.length === 0) {

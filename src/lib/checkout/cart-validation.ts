@@ -49,7 +49,14 @@ export function calculateTotals(state: CheckoutState) {
     return { subtotal: 0, shipping: 0, hasPhysicalItems, freshWaxFee: 0, stripeFee: 0, serviceFees: 0, total: 0 };
   }
 
-  const shipping = hasPhysicalItems ? (subtotal >= 50 ? 0 : 4.99) : 0;
+  // Prefer the authoritative server quote (set by fetchShippingQuote) so the
+  // displayed total matches what Stripe/PayPal actually charge. Before the quote
+  // returns, fall back to a flat £4.99 estimate (the server has no global
+  // free-over-£50 rule any more, so don't show free).
+  const estimate = hasPhysicalItems ? 4.99 : 0;
+  const shipping = (typeof (state as { quotedShipping?: number }).quotedShipping === 'number')
+    ? (state as { quotedShipping: number }).quotedShipping
+    : estimate;
 
   // Bandcamp-style pricing: fees come OUT of the sale, not added on top
   // Customer pays exactly what's displayed (subtotal + shipping)
@@ -62,6 +69,37 @@ export function calculateTotals(state: CheckoutState) {
   const serviceFees = freshWaxFee + stripeFee;
 
   return { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total };
+}
+
+// Fetch the authoritative shipping total from the server so the displayed total
+// matches what will be charged. Sets state.quotedShipping; on failure leaves it
+// unset so calculateTotals falls back to the flat estimate.
+export async function fetchShippingQuote(state: CheckoutState, country?: string): Promise<void> {
+  try {
+    const physical = state.cart.some((i: CartItem) =>
+      i.type === 'vinyl' || i.type === 'merch' || i.productType === 'vinyl' || i.productType === 'merch'
+    );
+    const s = state as { quotedShipping?: number | null };
+    if (!physical) { s.quotedShipping = 0; return; }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.API);
+    const response = await fetch('/api/shipping-quote/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: state.cart, country: country || 'GB' }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && typeof data.shipping === 'number') {
+        s.quotedShipping = data.shipping;
+      }
+    }
+  } catch (e: unknown) {
+    state.logger.error('Shipping quote failed:', e);
+  }
 }
 
 export function getBadgeStyle(type: string): string {

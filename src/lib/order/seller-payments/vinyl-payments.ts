@@ -23,12 +23,16 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
   const paypalConfig = getPayPalConfig(env);
 
   try {
-    // Filter to only vinyl crate items
+    // Filter to only vinyl crate items. A crate is defined by the ABSENCE of a
+    // releaseId — guard against an item that carries both releaseId and sellerId
+    // being paid as BOTH a label release (artist-payments) and a crate seller.
     const crateItems = items.filter(item =>
-      item.type === 'crate' ||
-      item.type === 'vinyl-crate' ||
-      item.crateListingId ||
-      item.sellerId
+      !item.releaseId && (
+        item.type === 'crate' ||
+        item.type === 'vinyl-crate' ||
+        item.crateListingId ||
+        item.sellerId
+      )
     );
 
     if (crateItems.length === 0) {

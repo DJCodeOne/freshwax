@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { createOrder } from '../../../lib/order-utils';
-import { getDocument, deleteDocument, atomicIncrement, arrayUnion, queryCollection, invalidateReleasesCache, clearAllMerchCache } from '../../../lib/firebase-rest';
+import { getDocument, deleteDocument, addDocument, atomicIncrement, arrayUnion, queryCollection, invalidateReleasesCache, clearAllMerchCache } from '../../../lib/firebase-rest';
 import { invalidateReleasesKVCache } from '../../../lib/kv-cache';
 import { SITE_URL } from '../../../lib/constants';
 import { createLogger } from '../../../lib/api-utils';
@@ -127,6 +127,31 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     // ACTUAL PayPal fee from the capture response — sellers bear the real
     // fee, not the 2.9%+30p estimate
     const actualPayPalFee = parseFloat(capture?.seller_receivable_breakdown?.paypal_fee?.value || '') || null;
+
+    // Amount verification: compare captured amount against the SERVER-stored
+    // expected total. Don't block (customer already paid) — flag for admin
+    // review. Mirrors capture-order.ts so the mobile/redirect path isn't weaker.
+    const capturedAmount = parseFloat(capture?.amount?.value || '0');
+    const expectedTotal = parseFloat(Number(pendingOrder.totals?.total ?? 0).toFixed(2));
+    if (Math.abs(capturedAmount - expectedTotal) > 0.01) {
+      log.error('[PayPal Redirect] AMOUNT MISMATCH! Captured:', capturedAmount, 'Expected:', expectedTotal, 'PayPal Order:', paypalOrderId);
+      try {
+        await addDocument('flaggedOrders', {
+          paypalOrderId,
+          captureId,
+          capturedAmount,
+          expectedTotal,
+          difference: Math.round((capturedAmount - expectedTotal) * 100) / 100,
+          customerEmail: pendingOrder.customer?.email || '',
+          reason: 'amount_mismatch',
+          status: 'needs_review',
+          source: 'capture-redirect',
+          createdAt: new Date().toISOString()
+        });
+      } catch (flagErr: unknown) {
+        log.error('[PayPal Redirect] Failed to create flaggedOrders doc:', flagErr);
+      }
+    }
 
     // Payment captured successfully
 

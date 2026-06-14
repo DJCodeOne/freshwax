@@ -4,7 +4,7 @@
 import { escapeHtml } from '../escape-html';
 import { TIMEOUTS } from '../timeouts';
 import type { CheckoutState, DuplicateResult } from './types';
-import { calculateTotals, getBadgeStyle, getCustomerIdFromCookie, removeDuplicatesFromCart } from './cart-validation';
+import { calculateTotals, fetchShippingQuote, getBadgeStyle, getCustomerIdFromCookie, removeDuplicatesFromCart } from './cart-validation';
 
 // Helper function to show user-friendly error messages
 export function showError(message: string) {
@@ -280,6 +280,20 @@ export function renderCheckout(
   const postcode = cd.postcode || '';
   const country = cd.country || 'United Kingdom';
 
+  // Fetch the authoritative shipping quote once per cart+country so the displayed
+  // total matches what Stripe/PayPal will charge (per-artist release vinyl,
+  // per-seller combined crates, flat/free merch). Re-render when it returns;
+  // guarded by a key so it doesn't loop.
+  if (hasPhysicalItems) {
+    const quoteKey = cart.map((i: CartItem) =>
+      [i.id, i.releaseId, i.sellerId, i.vinylPartId, i.quantity].join(':')
+    ).join('|') + '@' + country;
+    const qs = state as { _quoteKey?: string };
+    if (qs._quoteKey !== quoteKey) {
+      qs._quoteKey = quoteKey;
+      fetchShippingQuote(state, country).then(() => callbacks.renderCheckout()).catch(() => {});
+    }
+  }
 
   // Check if we have saved address data
   const hasSavedAddress = address1 && city && postcode;

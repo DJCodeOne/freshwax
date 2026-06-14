@@ -100,6 +100,9 @@ export async function processArtistPayments(params: SellerPaymentParams) {
     for (const item of items) {
       // Skip merch items - they go to suppliers
       if (item.type === 'merch') continue;
+      // Skip crate items (sellerId, no releaseId) — they're paid by
+      // processVinylCrateSellerPayments. Prevents double-pay.
+      if (item.sellerId && !item.releaseId) continue;
 
       const releaseId = item.releaseId || item.id;
       if (!releaseId) continue;
