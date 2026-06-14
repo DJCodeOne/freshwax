@@ -337,6 +337,11 @@ export async function setupHlsPlayer(streamData, deps) {
 
   function onPause() { stopGlobalMeters(); }
 
+  // Fresh stream setup clears any prior "user paused" intent. Reconnects reuse
+  // the existing hlsPlayer (loadSource/startLoad) WITHOUT re-running this setup,
+  // so a deliberate pause survives a reconnect and isn't auto-resumed.
+  window.liveUserPaused = false;
+
   if (video) {
     if (hlsAbortController) hlsAbortController.abort();
     hlsAbortController = new AbortController();
@@ -373,6 +378,7 @@ export async function setupHlsPlayer(streamData, deps) {
       video.addEventListener('loadedmetadata', function() {
         (async function() {
           try {
+            if (window.liveUserPaused) return; // respect a deliberate pause across reloads
             if (shouldAutoplay()) {
               await video.play();
               isPlaying = true;
@@ -434,6 +440,20 @@ export async function setupHlsPlayer(streamData, deps) {
 
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
         (async function() {
+          // If the listener deliberately paused, a (re)connect must NOT resume
+          // playback. Without this, pausing a live stream auto-unpauses after
+          // ~20-30s when the paused position falls out of the live window, the
+          // stream reconnects, and MANIFEST_PARSED re-fires.
+          if (window.liveUserPaused) {
+            var ppi = document.getElementById('playIcon');
+            var ppa = document.getElementById('pauseIcon');
+            var ppb = document.getElementById('playBtn');
+            if (ppi) ppi.classList.remove('hidden');
+            if (ppa) ppa.classList.add('hidden');
+            if (ppb) ppb.classList.remove('playing');
+            isPlaying = false;
+            return;
+          }
           var wasPlaying = wasLiveStreamPlaying();
           try {
             if (wasPlaying && shouldAutoplay()) {
@@ -602,6 +622,16 @@ export async function setupAudioPlayer(streamData, deps) {
     var isHlsStream = streamUrl.includes('.m3u8');
 
     var tryAutoplay = async function() {
+      // Respect a deliberate pause: don't auto-resume on a (re)connect.
+      if (window.liveUserPaused) {
+        var dpi = document.getElementById('playIcon');
+        var dpa = document.getElementById('pauseIcon');
+        if (dpi) dpi.classList.remove('hidden');
+        if (dpa) dpa.classList.add('hidden');
+        if (playBtn) playBtn.classList.remove('playing');
+        isPlaying = false;
+        return;
+      }
       var wasPlaying = wasLiveStreamPlaying();
       try {
         if (wasPlaying && shouldAutoplay()) {

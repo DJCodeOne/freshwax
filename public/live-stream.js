@@ -13,7 +13,7 @@ import {
   setupHlsPlayer, setupTwitchPlayer, setupAudioPlayer, setupRecording,
   destroyHlsPlayer, cleanupHlsAbort, getGlobalAudioContext,
   getIsRecording, stopRecording
-} from '/live/hls-player.js?v=20260612c';
+} from '/live/hls-player.js?v=20260614a';
 
 import {
   getPusherConfig, loadPusherScript, setupLiveStatusPusher
@@ -287,11 +287,11 @@ function setupPlaylistPlayButton() {
     var videoVisible = document.getElementById('videoPlayer') && !document.getElementById('videoPlayer').classList.contains('hidden');
     var audioVisible = document.getElementById('audioPlayer') && !document.getElementById('audioPlayer').classList.contains('hidden');
     if (hlsVideo && videoVisible && !audioVisible && window.isLiveStreamActive) {
-      if (hlsVideo.paused) { rememberAutoplay(); setLiveStreamPlaying(true); initGlobalAudioAnalyzer(hlsVideo); var ctx = getGlobalAudioContext(); if (ctx && ctx.state === 'suspended') ctx.resume(); hlsVideo.muted = false; try { await hlsVideo.play(); } catch (e) { console.error('[PlayBtn] HLS play error:', e); } }
-      else { hlsVideo.pause(); setLiveStreamPlaying(false); }
+      if (hlsVideo.paused) { window.liveUserPaused = false; rememberAutoplay(); setLiveStreamPlaying(true); initGlobalAudioAnalyzer(hlsVideo); var ctx = getGlobalAudioContext(); if (ctx && ctx.state === 'suspended') ctx.resume(); hlsVideo.muted = false; try { await hlsVideo.play(); } catch (e) { console.error('[PlayBtn] HLS play error:', e); } }
+      else { window.liveUserPaused = true; hlsVideo.pause(); setLiveStreamPlaying(false); }
     } else if (audioEl && window.isLiveStreamActive) {
-      if (audioEl.paused) { rememberAutoplay(); setLiveStreamPlaying(true); initGlobalAudioAnalyzer(audioEl); var ctx2 = getGlobalAudioContext(); if (ctx2 && ctx2.state === 'suspended') ctx2.resume(); audioEl.muted = false; try { await audioEl.play(); if (playIcon) playIcon.classList.add('hidden'); if (pauseIcon) pauseIcon.classList.remove('hidden'); playBtn.classList.add('playing'); startGlobalMeters(); } catch (e) { console.error('[PlayBtn] Audio play error:', e); } }
-      else { audioEl.pause(); setLiveStreamPlaying(false); if (playIcon) playIcon.classList.remove('hidden'); if (pauseIcon) pauseIcon.classList.add('hidden'); playBtn.classList.remove('playing'); stopGlobalMeters(); }
+      if (audioEl.paused) { window.liveUserPaused = false; rememberAutoplay(); setLiveStreamPlaying(true); initGlobalAudioAnalyzer(audioEl); var ctx2 = getGlobalAudioContext(); if (ctx2 && ctx2.state === 'suspended') ctx2.resume(); audioEl.muted = false; try { await audioEl.play(); if (playIcon) playIcon.classList.add('hidden'); if (pauseIcon) pauseIcon.classList.remove('hidden'); playBtn.classList.add('playing'); startGlobalMeters(); } catch (e) { console.error('[PlayBtn] Audio play error:', e); } }
+      else { window.liveUserPaused = true; audioEl.pause(); setLiveStreamPlaying(false); if (playIcon) playIcon.classList.remove('hidden'); if (pauseIcon) pauseIcon.classList.add('hidden'); playBtn.classList.remove('playing'); stopGlobalMeters(); }
     } else if (window.playlistManager && !window.isLiveStreamActive) {
       var pm2 = window.playlistManager; var isActPlaying2 = pm2.isActuallyPlaying || false;
       try { if (isActPlaying2) { await pm2.pause(); pm2.userPaused = true; window.isPlaylistPlaying = false; if (playIcon) playIcon.classList.remove('hidden'); if (pauseIcon) pauseIcon.classList.add('hidden'); playBtn.classList.remove('playing'); pausePlaylistWave(); } else { pm2.userPaused = false; if (pm2.queue && pm2.queue.length > 0) await pm2.resume(); else if (pm2.startAutoPlay) await pm2.startAutoPlay(); window.isPlaylistPlaying = true; if (playIcon) playIcon.classList.add('hidden'); if (pauseIcon) pauseIcon.classList.remove('hidden'); playBtn.classList.add('playing'); showPlaylistWave(); if (playlistPlayer) playlistPlayer.classList.remove('hidden'); } } catch (e) { console.error('[PlayBtn] Fallback playlist error:', e); }
