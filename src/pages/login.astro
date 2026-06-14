@@ -1128,6 +1128,30 @@ const csrfToken = Astro.locals.csrfToken || '';
       outline: 2px solid #ef4444;
       outline-offset: 2px;
     }
+
+    /* ---- Darkside theme (matches /live & DJ lobby) ---- */
+    body { background: #160a0a; }
+    .branding-side { background: linear-gradient(135deg, #2a1010 0%, #160a0a 100%); border-right-color: #dc2626; }
+    .tagline { color: #c9a9a9; }
+    .form-side { background: linear-gradient(180deg, #241010 0%, #180a0a 50%, #100606 100%); color: #fff; }
+    .form-header p { color: #c9a9a9; }
+    .form-group label { color: #fff; }
+    .form-group input[type="email"],
+    .form-group input[type="password"],
+    .form-group input[type="text"] { background: #1a0d0d; border-color: #3a1f1f; color: #fff; }
+    .form-group input::placeholder { color: #8a6a6a; }
+    .form-group input:focus { border-color: #dc2626; }
+    .toggle-password { color: #b08a8a; }
+    .toggle-password:hover { color: #fff; }
+    .checkbox-custom { border-color: #6b4a4a; }
+    .checkbox-label input:checked + .checkbox-custom { background: #dc2626; border-color: #dc2626; }
+    .submit-btn { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); }
+    .submit-btn:hover { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+    .form-divider { color: #b08a8a; }
+    .form-divider::before, .form-divider::after { background: #3a1f1f; }
+    .form-footer { border-top-color: #3a1f1f; color: #c9a9a9; }
+    .error-message { background: rgba(220, 38, 38, 0.12); border-color: #dc2626; color: #fecaca; }
+    .success-message { background: rgba(34, 197, 94, 0.12); border-color: #16a34a; color: #bbf7d0; }
   </style>
   </main>
 </body>

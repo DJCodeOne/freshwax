@@ -866,6 +866,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       outline: 2px solid #ef4444;
       outline-offset: 2px;
     }
+
+    /* ---- Darkside theme (matches /live & DJ lobby) ---- */
+    .auth-container { background: linear-gradient(180deg, #241010 0%, #180a0a 50%, #100606 100%); }
+    .auth-card { background: linear-gradient(180deg, #1f0f0f 0%, #190b0b 100%); border-color: rgba(220, 38, 38, 0.35); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+    .form-group input, .form-group textarea { background: #1a0d0d; border-color: #3a1f1f; }
+    .form-group input::placeholder, .form-group textarea::placeholder { color: #8a6a6a; }
+    .form-group input:focus, .form-group textarea:focus { border-color: #dc2626; }
+    .form-divider::before, .form-divider::after { background: #3a1f1f; }
+    .role-option { background: rgba(40, 18, 18, 0.5); border-color: #3a1f1f; }
+    .conditional-fields, .terms-container { background: rgba(40, 18, 18, 0.5); border-color: #3a1f1f; }
   </style>
 
   <script>
