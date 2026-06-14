@@ -539,14 +539,16 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
 
       userCount.textContent = users.length.toString();
       usersList.innerHTML = users.map(user => {
-        const initial = (user.name || 'U').charAt(0).toUpperCase();
+        // 'Viewer' is the legacy default from pre-fix sessions — show 'Junglist'
+        const name = (user.name === 'Viewer' || !user.name) ? 'Junglist' : user.name;
+        const initial = name.charAt(0).toUpperCase();
         const avatarContent = user.avatar
-          ? `<img src="${escapeHtml(user.avatar)}" alt="${escapeHtml(user.name)}" width="32" height="32" loading="lazy" />`
+          ? `<img src="${escapeHtml(user.avatar)}" alt="${escapeHtml(name)}" width="32" height="32" loading="lazy" />`
           : escapeHtml(initial);
         return `
-          <div class="online-user-item" data-action="openDm" data-user-id="${escapeHtml(user.id)}" data-user-name="${escapeHtml(user.name)}">
+          <div class="online-user-item" data-action="openDm" data-user-id="${escapeHtml(user.id)}" data-user-name="${escapeHtml(name)}">
             <div class="online-user-avatar">${avatarContent}</div>
-            <span class="online-user-name">${escapeHtml(user.name)}</span>
+            <span class="online-user-name">${escapeHtml(name)}</span>
           </div>
         `;
       }).join('');

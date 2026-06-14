@@ -127,7 +127,7 @@ window.getOnlineViewers = function() {
   var merged = new Map();
   for (var i = 0; i < heartbeatOnlineUsers.length; i++) {
     var u = heartbeatOnlineUsers[i];
-    if (u.id && u.id !== 'freshwax-bot') merged.set(u.id, { id: u.id, name: u.name || 'User', avatar: u.avatar || null });
+    if (u.id && u.id !== 'freshwax-bot') merged.set(u.id, { id: u.id, name: (u.name === 'Viewer' ? 'Junglist' : (u.name || 'Junglist')), avatar: u.avatar || null });
   }
   var cutoff = Date.now() - 300000;
   activeUsers.forEach(function(val, key) {

@@ -81,6 +81,7 @@ export async function setupLiveStatusListener(deps) {
           channel.members.each(function(member) {
             var avatar = member.info ? member.info.avatar : null;
             var name = (member.info ? member.info.name : null) || 'Junglist';
+            if (name === 'Viewer') name = 'Junglist'; // legacy default from pre-fix sessions
             var avatarHtml = avatar
               ? '<div class="online-user-avatar"><img src="' + escapeHtml(avatar) + '" alt="' + escapeHtml(name) + '" width="32" height="32" loading="lazy" decoding="async" /></div>'
               : '<div class="online-user-avatar">' + escapeHtml(name.charAt(0).toUpperCase()) + '</div>';
