@@ -2205,8 +2205,10 @@ try {
       else if (slot.status === 'scheduled') statusText = 'Scheduled';
       else if (slot.status === 'live') statusText = 'LIVE';
 
-      // For relay streams, show title as main name (not DJ name)
-      const displayName = isRelay ? (slot.title || 'Relay Stream') : slot.djName;
+      // For relay streams, show the STATION NAME as the main title (stable),
+      // not the per-track now-playing text (which keeps changing).
+      const relayStation = (slot.relaySource && slot.relaySource.stationName) || 'External Station';
+      const displayName = isRelay ? relayStation : slot.djName;
       const showTitle = !isRelay && slot.title && slot.title !== slot.djName;
 
       return `<div class="schedule-item${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}${isRelay ? ' relay' : ''}">
@@ -2217,7 +2219,7 @@ try {
           </div>
           ${showTitle ? `<span class="schedule-title">${escapeHtml(slot.title)}</span>` : ''}
           <div class="schedule-times">
-            <span class="schedule-time-range">${isRelay ? `Relayed from ${escapeHtml(slot.relaySource?.stationName || 'External Station')}` : `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`}</span>
+            <span class="schedule-time-range">${isRelay ? (slot.title ? `♪ ${escapeHtml(slot.title)}` : 'Relayed stream') : `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`}</span>
           </div>
         </div>
         ${isMySlot && (slot.status === 'scheduled' || slot.status === 'queued') ? `<button class="cancel-slot-btn" data-cancel-slot="${slot.id}" aria-label="Cancel slot">×</button>` : ''}
@@ -2323,7 +2325,7 @@ try {
       if (onAirText) onAirText.classList.remove('hidden');
       if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
       // Session-title ticker in the top info bar (schedule-detected path)
-      if (window.setStreamTicker) window.setStreamTicker(currentLive.isRelay ? (currentLive.relayNowPlaying || currentLive.title || '') : ((currentLive.title && currentLive.title !== 'Live Session') ? currentLive.title : 'Live and Direct on FreshWax'));
+      if (window.setStreamTicker) window.setStreamTicker(currentLive.isRelay ? (((currentLive.relaySource && currentLive.relaySource.stationName) || currentLive.title || 'Relayed stream')) : ((currentLive.title && currentLive.title !== 'Live Session') ? currentLive.title : 'Live and Direct on FreshWax'));
       if (djAvatar) djAvatar.src = avatarToUse;
 
       // Update controls DJ info bar
@@ -3015,7 +3017,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260614e"></script>
+<script type="module" src="/live-stream.js?v=20260614f"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page
