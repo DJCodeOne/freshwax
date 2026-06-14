@@ -99,6 +99,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return successResponse({ exists: true });
       }
 
+      // ---- Dedupe guard ----------------------------------------------------
+      // Firebase Auth treats gmail.com and googlemail.com as DIFFERENT
+      // identities, and a Google sign-in is a different identity from an
+      // email/password account with the "same" address. Without this guard a
+      // Google sign-in for an email that already has an account silently
+      // creates a SECOND profile (different UID), orphaning the user from their
+      // real account (roles, partner status, bypass, orders).
+      //
+      // If the normalised email already belongs to a DIFFERENT, non-deleted
+      // account, refuse to create a duplicate and tell them to use their
+      // original sign-in method (their password account) instead.
+      const normEmail = (email || authEmail || '')
+        .trim()
+        .toLowerCase()
+        .replace(/@googlemail\.com$/i, '@gmail.com');
+      if (normEmail) {
+        const emailVariants = Array.from(new Set([normEmail, (email || authEmail || '').trim()]));
+        const lookups = emailVariants.flatMap((value) => [
+          queryCollection('users', { filters: [{ field: 'email', op: 'EQUAL', value }], limit: 5, skipCache: true }).catch(() => []),
+          queryCollection('artists', { filters: [{ field: 'email', op: 'EQUAL', value }], limit: 5, skipCache: true }).catch(() => []),
+        ]);
+        const matches = (await Promise.all(lookups)).flat();
+        const conflict = matches.some((d) => d && d.id !== userId && d.deleted !== true);
+        if (conflict) {
+          log.warn(`[init-user] Blocked duplicate Google account for existing email (uid ${userId})`);
+          return errorResponse('An account already exists for this email. Please sign in with your email and password instead of "Sign in with Google".', 409);
+        }
+      }
+
       // New user via Google - need display name
       const googleDisplayName = displayName || (email ? email.split('@')[0] : 'User');
       const googleNameLower = googleDisplayName.toLowerCase();

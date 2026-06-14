@@ -1198,10 +1198,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
-        if (!initResponse.ok) throw new Error('Google register failed: ' + initResponse.status);
-        const initData = await initResponse.json();
+        const initData = await initResponse.json().catch(() => ({}));
 
-        if (!initData.success) {
+        if (!initResponse.ok || !initData.success) {
           if (initData.error === 'display_name_taken') {
             // Sign out the Google user since we can't complete registration
             await signOut(auth);
@@ -1209,7 +1208,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             formError.style.display = 'block';
             return;
           }
-          throw new Error(initData.message || 'Failed to create account');
+          // Duplicate-account guard (409) or any other init failure: sign the
+          // Google session out and surface the server's message.
+          try { await signOut(auth); } catch (e) {}
+          throw new Error(initData.error || initData.message || ('Google register failed: ' + initResponse.status));
         }
 
         if (initData.exists) {
@@ -1238,7 +1240,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           return;
         }
 
-        formError.textContent = 'Google sign-in failed. Please try again.';
+        const gMsg = (error && error.message) ? error.message : '';
+        formError.textContent = /already exists/i.test(gMsg) ? gMsg : 'Google sign-in failed. Please try again.';
         formError.style.display = 'block';
         googleBtn.disabled = false;
         googleBtn.innerHTML = originalText;

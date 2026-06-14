@@ -341,7 +341,10 @@ const csrfToken = Astro.locals.csrfToken || '';
 
         if (!initResponse.ok) {
           const initData = await initResponse.json();
-          throw new Error(initData.message || 'Failed to initialize user profile');
+          // Sign out the Google session so a blocked duplicate doesn't leave a
+          // half-authenticated state, then surface the server's message.
+          try { await signOut(auth); } catch (e) {}
+          throw new Error(initData.error || initData.message || 'Failed to initialize user profile');
         }
 
         // Set auth cookies (HttpOnly via server API)
@@ -369,7 +372,10 @@ const csrfToken = Astro.locals.csrfToken || '';
           return;
         }
 
-        errorMessage.textContent = 'Google sign-in failed. Please try again.';
+        // Show the specific server message (e.g. "account already exists for
+        // this email — sign in with your password") rather than a generic one.
+        const msg = (error && error.message) ? error.message : '';
+        errorMessage.textContent = /already exists/i.test(msg) ? msg : 'Google sign-in failed. Please try again.';
         errorMessage.style.display = 'block';
         googleBtn.disabled = false;
         googleBtn.innerHTML = originalText;
