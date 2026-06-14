@@ -59,6 +59,40 @@ const totalTracks = allReleases.reduce((sum, r) => {
   return sum + (Number((r as Record<string, unknown>).trackCount) || 0);
 }, 0);
 
+// Build the list of purchasable vinyl items for a label's releases.
+// Mirrors ReleasePlate's availability logic: multi-part vinyl yields one cart
+// item per pressed/in-stock part; single vinyl yields one item (price>0 + available).
+function buildVinylItems(releases: Record<string, unknown>[], label: string) {
+  const out: Record<string, unknown>[] = [];
+  for (const r of releases) {
+    const rr = r as any;
+    const finalVinylPrice = (rr.vinyl?.price ?? rr.pricing?.vinyl ?? rr.vinylPrice ?? 0);
+    const artwork = rr.coverArtUrl || '/place-holder.webp';
+    const title = rr.releaseName || 'Untitled';
+    const artist = rr.artistName || 'Unknown Artist';
+    const parts = Array.isArray(rr.vinylParts) ? rr.vinylParts : [];
+    if (parts.length > 0) {
+      parts.forEach((p: any, idx: number) => {
+        const canBuy = p.pressed !== false && (typeof p.stock === 'number' ? p.stock : 0) > 0;
+        const partPrice = (typeof p.price === 'number' && p.price > 0) ? p.price : finalVinylPrice;
+        if (!canBuy || !(partPrice > 0)) return;
+        out.push({ id: rr.id, title: `${title} (${p.name || 'Part ' + (idx + 1)})`, artist, price: partPrice, artwork, vinylPartId: `part-${idx + 1}`, vinylPartName: p.name || `Part ${idx + 1}` });
+      });
+    } else {
+      const finalVinylAvailable = rr.vinyl?.available !== undefined ? rr.vinyl.available : rr.vinylRelease;
+      const recordCount = parseInt((rr.vinyl?.recordCount ?? rr.vinylRecordCount ?? 0).toString()) || 0;
+      if (!!finalVinylAvailable && recordCount > 0 && finalVinylPrice > 0) {
+        out.push({ id: rr.id, title, artist, price: finalVinylPrice, artwork, vinylPartId: null, vinylPartName: null });
+      }
+    }
+  }
+  return out;
+}
+const vinylByLabel: Record<string, Record<string, unknown>[]> = {};
+for (const label of sortedLabels) {
+  vinylByLabel[label] = buildVinylItems(releasesByLabel[label], label);
+}
+
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 
 // Preload the first visible release cover image for faster LCP
@@ -218,26 +252,42 @@ const releaseItemList = {
                     </div>
                   </div>
 
-                  {/* Buy All Discography Button */}
-                  {releasesByLabel[label].length > 1 && (
-                    <div class="flex justify-center mt-3">
-                      <button
-                        class="buy-discography-btn flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold rounded-lg shadow-lg transition-colors text-sm"
-                        data-label={label}
-                        data-releases={JSON.stringify(releasesByLabel[label].map(r => ({
-                          id: r.id,
-                          title: r.releaseName || 'Untitled',
-                          artist: r.artistName || 'Unknown Artist',
-                          price: r.pricing?.digital || r.pricePerSale || 0,
-                          artwork: r.coverArtUrl || '/place-holder.webp'
-                        })))}
-                        data-total-price={releasesByLabel[label].reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}
-                      >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                        </svg>
-                        <span>Buy All ({releasesByLabel[label].length}) - £{releasesByLabel[label].reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}</span>
-                      </button>
+                  {/* Buy All buttons — digital discography (green) + vinyl (red) */}
+                  {(releasesByLabel[label].length > 1 || vinylByLabel[label].length > 0) && (
+                    <div class="flex flex-wrap justify-center gap-3 mt-3">
+                      {releasesByLabel[label].length > 1 && (
+                        <button
+                          class="buy-discography-btn flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold rounded-lg shadow-lg transition-colors text-sm"
+                          data-label={label}
+                          data-releases={JSON.stringify(releasesByLabel[label].map(r => ({
+                            id: r.id,
+                            title: r.releaseName || 'Untitled',
+                            artist: r.artistName || 'Unknown Artist',
+                            price: r.pricing?.digital || r.pricePerSale || 0,
+                            artwork: r.coverArtUrl || '/place-holder.webp'
+                          })))}
+                          data-total-price={releasesByLabel[label].reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}
+                        >
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                          </svg>
+                          <span>Buy All ({releasesByLabel[label].length}) - £{releasesByLabel[label].reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}</span>
+                        </button>
+                      )}
+                      {vinylByLabel[label].length > 0 && (
+                        <button
+                          class="buy-vinyl-all-btn flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold rounded-lg shadow-lg transition-colors text-sm"
+                          data-label={label}
+                          data-vinyl={JSON.stringify(vinylByLabel[label])}
+                          data-total-price={vinylByLabel[label].reduce((sum, v) => sum + (Number(v.price) || 0), 0).toFixed(2)}
+                        >
+                          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                          </svg>
+                          <span>Buy All Vinyl ({vinylByLabel[label].length}) - £{vinylByLabel[label].reduce((sum, v) => sum + (Number(v.price) || 0), 0).toFixed(2)}</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -436,6 +486,93 @@ const releaseItemList = {
           btn.innerHTML = originalHTML;
           btn.classList.remove('from-green-500', 'to-green-600');
           btn.classList.add('from-green-600', 'to-green-700');
+        }, 800);
+      });
+    });
+
+    // Buy All Vinyl — adds every pressed/in-stock vinyl item (incl. each part of
+    // multi-part sets) for a label to the cart.
+    document.querySelectorAll('.buy-vinyl-all-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        if (!window.FreshWaxCart || !FreshWaxCart.isLoggedIn()) {
+          window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
+          return;
+        }
+
+        const label = btn.getAttribute('data-label');
+        var vinylData = [];
+        try {
+          vinylData = JSON.parse(btn.getAttribute('data-vinyl') || '[]');
+        } catch (err) {
+          showToast('Failed to load vinyl data', 'error');
+          return;
+        }
+        if (vinylData.length === 0) {
+          showToast('No vinyl found for this label', 'error');
+          return;
+        }
+
+        btn.disabled = true;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Adding...</span>';
+
+        const cart = FreshWaxCart.get();
+        let items = cart.items || [];
+        let addedCount = 0;
+        let skippedCount = 0;
+
+        for (const v of vinylData) {
+          const partId = v.vinylPartId || null;
+          // Single vinyl bundles the digital, so drop any digital line for it
+          // to avoid double-charge (matches ReleasePlate's mutex). Multi-part
+          // parts only bundle their own tracks — leave other lines alone.
+          if (!partId) {
+            items = items.filter(item => !(item.id === v.id && item.type === 'digital'));
+          }
+          const existing = items.findIndex(item =>
+            item.id === v.id && item.type === 'vinyl' && (item.vinylPartId || null) === partId
+          );
+          if (existing !== -1) { skippedCount++; continue; }
+
+          items.push({
+            id: v.id,
+            releaseId: v.id,
+            type: 'vinyl',
+            format: 'vinyl',
+            name: v.artist + ' - ' + v.title,
+            title: v.title,
+            artist: v.artist,
+            labelName: label,
+            price: v.price,
+            image: v.artwork,
+            artwork: v.artwork,
+            quantity: 1,
+            vinylPartId: partId,
+            vinylPartName: v.vinylPartName || null,
+            fromDiscography: true,
+            label: label
+          });
+          addedCount++;
+        }
+
+        FreshWaxCart.save({items: items});
+        FreshWaxCart.updateBadge();
+
+        btn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Added!</span>';
+        btn.classList.remove('from-red-600', 'to-red-700');
+        btn.classList.add('from-red-500', 'to-red-600');
+
+        let message = `Added ${addedCount} vinyl item${addedCount !== 1 ? 's' : ''} from ${label} to cart!`;
+        if (skippedCount > 0) message += ` (${skippedCount} already in cart)`;
+        showToast(message);
+
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerHTML = originalHTML;
+          btn.classList.remove('from-red-500', 'to-red-600');
+          btn.classList.add('from-red-600', 'to-red-700');
         }, 800);
       });
     });
@@ -846,7 +983,8 @@ const releaseItemList = {
     }
 
     /* Buy All Discography Button */
-    .buy-discography-btn {
+    .buy-discography-btn,
+    .buy-vinyl-all-btn {
       transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
     }
 
@@ -855,11 +993,18 @@ const releaseItemList = {
       box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
     }
 
-    .buy-discography-btn:active {
+    .buy-vinyl-all-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+    }
+
+    .buy-discography-btn:active,
+    .buy-vinyl-all-btn:active {
       transform: translateY(0);
     }
 
-    .buy-discography-btn:disabled {
+    .buy-discography-btn:disabled,
+    .buy-vinyl-all-btn:disabled {
       opacity: 0.7;
       cursor: wait;
     }
@@ -869,7 +1014,8 @@ const releaseItemList = {
     }
 
     @media (max-width: 640px) {
-      .buy-discography-btn {
+      .buy-discography-btn,
+      .buy-vinyl-all-btn {
         width: 100%;
         justify-content: center;
         padding: 0.875rem 1rem;
