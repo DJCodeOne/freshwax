@@ -902,6 +902,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           </button>
         </div>
 
+        <!-- Live Title Editor — change your session title while live -->
+        <div class="live-title-editor hidden" id="liveTitleEditor">
+          <label for="liveTitleInput">Live Title <span class="live-title-hint">— update on air</span></label>
+          <div class="title-input-row">
+            <input type="text" id="liveTitleInput" placeholder="Update your live title…" maxlength="40" />
+            <button type="button" id="liveTitleUpdateBtn" class="title-action-btn save-btn" title="Update live title" aria-label="Update live title">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </button>
+          </div>
+          <span id="liveTitleStatus" class="title-saved-msg hidden">Updated!</span>
+        </div>
+
         <!-- Go Live Setup Section -->
         <div class="stream-key-section" id="streamKeySection">
           <div id="keyAvailable" class="key-available">
@@ -2506,6 +2518,57 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   let lastLufsBlockTime = 0;
 
 
+  // Show/hide the live-title editor: only when MY own (non-relay) stream is live.
+  function updateLiveTitleEditor() {
+    const editor = document.getElementById('liveTitleEditor');
+    if (!editor) return;
+    const input = document.getElementById('liveTitleInput');
+    const isMine = currentStream && currentUser && currentStream.djId === currentUser.uid && !currentStream.isRelay;
+    if (isMine) {
+      editor.classList.remove('hidden');
+      // Prefill with the current title (skip the system default) — don't clobber while typing.
+      if (input && document.activeElement !== input) {
+        const t = currentStream.title || '';
+        input.value = (t && t !== 'Live Session' && t !== 'Live and Direct on FreshWax') ? t : '';
+      }
+    } else {
+      editor.classList.add('hidden');
+    }
+  }
+
+  // Update the live session title on the server (works on a live slot).
+  document.getElementById('liveTitleUpdateBtn')?.addEventListener('click', async function() {
+    const input = document.getElementById('liveTitleInput');
+    const statusEl = document.getElementById('liveTitleStatus');
+    const btn = document.getElementById('liveTitleUpdateBtn');
+    const newTitle = input && input.value ? input.value.trim() : '';
+    if (!newTitle) { if (input) input.focus(); return; }
+    const slotId = (currentStream && (currentStream.slotId || currentStream.id)) || window.currentLiveSlotId;
+    if (!slotId || !currentUser) return;
+    if (btn) btn.disabled = true;
+    try {
+      const token = await currentUser.getIdToken();
+      const resp = await fetch('/api/livestream/slots/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ action: 'update_slot', slotId: slotId, title: newTitle })
+      });
+      if (resp.ok) {
+        if (currentStream) currentStream.title = newTitle;
+        const buttPreviewShowTitle = document.getElementById('buttPreviewShowTitle');
+        if (buttPreviewShowTitle) buttPreviewShowTitle.textContent = newTitle;
+        if (statusEl) { statusEl.textContent = 'Updated!'; statusEl.classList.remove('hidden'); setTimeout(function(){ statusEl.classList.add('hidden'); }, 2000); }
+        if (typeof loadStreamStatus === 'function') loadStreamStatus(true);
+      } else {
+        if (statusEl) { statusEl.textContent = 'Update failed — try again'; statusEl.classList.remove('hidden'); }
+      }
+    } catch (e) {
+      if (statusEl) { statusEl.textContent = 'Update failed — try again'; statusEl.classList.remove('hidden'); }
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
   async function loadStreamStatus(skipCache = false) {
     try {
       // Add cache buster to prevent stale cached responses
@@ -2528,6 +2591,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Track the actual stream ID for stream-specific features (reactions, video URL, etc.)
         // Chat and viewer count stay on the global 'playlist-global' channel — see chat.js init.
         window.currentStreamId = currentStream.slotId || currentStream.id || currentStream.streamId;
+        updateLiveTitleEditor();
 
         statusDot?.classList.remove('offline');
         statusDot?.classList.add('live');
@@ -2865,6 +2929,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         updateStreamInfoPanel(true, currentStream);
       } else {
         currentStream = null;
+        updateLiveTitleEditor();
         streamStartTime = null;
         streamEndTime = null;
         videoPlayer.setStreamStartTime(null);

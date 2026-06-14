@@ -17,7 +17,7 @@ import {
 
 import {
   getPusherConfig, loadPusherScript, setupLiveStatusPusher
-} from '/live/pusher-events.js?v=20260612b';
+} from '/live/pusher-events.js?v=20260614a';
 
 import {
   initChatHandler, setChatCurrentUser, setChatCurrentStream,

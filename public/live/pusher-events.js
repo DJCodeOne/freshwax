@@ -82,6 +82,12 @@ export async function setupLiveStatusPusher(deps) {
       if (onCheckLiveStatus) onCheckLiveStatus(true);
       if (typeof window.refreshSchedule === 'function') window.refreshSchedule();
     });
+
+    liveStatusChannel.bind('stream-updated', function(data) {
+      // DJ changed the title/genre mid-stream — pull fresh status so the
+      // session-title ticker and DJ info update for viewers right away.
+      if (onCheckLiveStatus) onCheckLiveStatus(true);
+    });
   } catch (e) {
     /* Pusher setup failed, falling back to polling */
   }
