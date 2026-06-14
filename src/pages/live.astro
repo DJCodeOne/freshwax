@@ -2323,7 +2323,7 @@ try {
       if (onAirText) onAirText.classList.remove('hidden');
       if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
       // Session-title ticker in the top info bar (schedule-detected path)
-      if (window.setStreamTicker) window.setStreamTicker(currentLive.isRelay ? ((currentLive as any).relayNowPlaying || currentLive.title || '') : (currentLive.title || ''));
+      if (window.setStreamTicker) window.setStreamTicker(currentLive.isRelay ? (currentLive.relayNowPlaying || currentLive.title || '') : (currentLive.title || ''));
       if (djAvatar) djAvatar.src = avatarToUse;
 
       // Update controls DJ info bar

@@ -3841,7 +3841,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               djAvatar: userInfo?.avatar || currentUser.photoURL || '/place-holder.webp',
               startTime: now.toISOString(),
               duration: 60,
-              title: 'Live Session',
+              title: ((document.getElementById('inlineStreamTitle') && document.getElementById('inlineStreamTitle').value) ? document.getElementById('inlineStreamTitle').value.trim() : '') || 'Live Session',
               genre: '',
               description: ''
             })
@@ -3944,7 +3944,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               djAvatar: userInfo?.avatar || currentUser.photoURL || '/place-holder.webp',
               startTime: now.toISOString(),
               duration: 60, // Default 1 hour slot
-              title: 'Live Session',
+              title: ((document.getElementById('inlineStreamTitle') && document.getElementById('inlineStreamTitle').value) ? document.getElementById('inlineStreamTitle').value.trim() : '') || 'Live Session',
               genre: '',
               description: ''
             })
