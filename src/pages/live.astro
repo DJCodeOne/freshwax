@@ -2322,6 +2322,8 @@ try {
       const onAirText = document.getElementById('onAirText');
       if (onAirText) onAirText.classList.remove('hidden');
       if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
+      // Session-title ticker in the top info bar (schedule-detected path)
+      if (window.setStreamTicker) window.setStreamTicker(currentLive.isRelay ? ((currentLive as any).relayNowPlaying || currentLive.title || '') : (currentLive.title || ''));
       if (djAvatar) djAvatar.src = avatarToUse;
 
       // Update controls DJ info bar
@@ -2380,6 +2382,7 @@ try {
         const onAirTextOff = document.getElementById('onAirText');
         if (onAirTextOff) onAirTextOff.classList.add('hidden');
         if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
+        if (window.setStreamTicker) window.setStreamTicker('');
         if (djAvatar) djAvatar.src = '/place-holder.webp';
 
         // Update controls DJ info bar to offline state (only if playlist isn't playing)
