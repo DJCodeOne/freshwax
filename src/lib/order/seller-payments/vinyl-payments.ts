@@ -47,6 +47,7 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
       paypalEmail: string | null;
       payoutMethod: string | null;
       amount: number;
+      shippingAmount: number;
       items: string[];
     }> = {};
 
@@ -129,11 +130,15 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
           paypalEmail: seller.paypalEmail || null,
           payoutMethod: seller.payoutMethod || null,
           amount: 0,
+          shippingAmount: 0,
           items: []
         };
       }
 
       sellerPayments[sellerId].amount += sellerShare;
+      // Seller receives 100% of the postage — tracked separately so payout
+      // records/statements can itemise the shipping portion.
+      sellerPayments[sellerId].shippingAmount += crateShipping;
       sellerPayments[sellerId].items.push(item.name || item.title || 'Vinyl');
     }
 
@@ -179,6 +184,8 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
               orderId,
               orderNumber,
               amount: paypalAmount,
+              shippingAmount: payment.shippingAmount,
+              itemAmount: Math.round((paypalAmount - payment.shippingAmount) * 100) / 100,
               paypalPayoutFee: paypalPayoutFee,
               currency: 'gbp',
               status: 'completed',
@@ -215,6 +222,8 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
             orderId,
             orderNumber,
             amount: paypalAmount,
+            shippingAmount: payment.shippingAmount,
+            itemAmount: Math.round((paypalAmount - payment.shippingAmount) * 100) / 100,
             paypalPayoutFee: paypalPayoutFee,
             currency: 'gbp',
             status: 'retry_pending',
@@ -255,6 +264,8 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
             orderId,
             orderNumber,
             amount: payment.amount,
+            shippingAmount: payment.shippingAmount,
+            itemAmount: Math.round((payment.amount - payment.shippingAmount) * 100) / 100,
             currency: 'gbp',
             status: 'completed',
             items: payment.items,
@@ -284,6 +295,8 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
             orderId,
             orderNumber,
             amount: payment.amount,
+            shippingAmount: payment.shippingAmount,
+            itemAmount: Math.round((payment.amount - payment.shippingAmount) * 100) / 100,
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
@@ -304,6 +317,8 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
           orderId,
           orderNumber,
           amount: payment.amount,
+          shippingAmount: payment.shippingAmount,
+          itemAmount: Math.round((payment.amount - payment.shippingAmount) * 100) / 100,
           currency: 'gbp',
           status: 'awaiting_connect',
           items: payment.items,
