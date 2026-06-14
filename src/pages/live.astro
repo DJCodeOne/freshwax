@@ -2213,7 +2213,7 @@ try {
         ${isLive ? '<span class="live-headphone-icon">🎧</span>' : ''}
         <div class="schedule-dj-info">
           <div class="schedule-dj-header">
-            <h3>${escapeHtml(displayName)}</h3>
+            <h3 title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</h3>
           </div>
           ${showTitle ? `<span class="schedule-title">${escapeHtml(slot.title)}</span>` : ''}
           <div class="schedule-times">

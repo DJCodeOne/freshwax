@@ -222,6 +222,7 @@ html, body{ overflow:auto; }
 .schedule-item.my-slot{ border-color:#dc2626; background:rgba(220,38,38,.15); }
 .schedule-item.live{ border-color:#10b981; background:rgba(16,185,129,.15); padding:.75rem .6rem; border-radius:10px; }
 .schedule-item.relay h4{ color:#dc2626; }
+.schedule-item .schedule-dj-header h3{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; line-height:1.2; word-break:break-word; cursor:default; }
 .schedule-item.relay .schedule-time-range{ font-size:.5rem; color:#fff; }
 .live-headphone-icon{ font-size:1.25rem; flex-shrink:0; display:block; text-align:center; animation:headphonePulse 2s ease-in-out infinite; }
 @keyframes headphonePulse{0%, 100% { opacity:1; transform:scale(1); }
@@ -289,7 +290,7 @@ html, body{ overflow:auto; }
 .stream-info-left{ display:flex; align-items:center; gap:.5rem; }
 .stream-info-right{ display:flex; align-items:center; gap:.5rem; }
 /* Live session-title ticker — centered in the info bar, scrolls right-to-left */
-.stream-ticker{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(42%, 460px); overflow:hidden; white-space:nowrap; pointer-events:none; z-index:1; -webkit-mask-image:linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image:linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+.stream-ticker{ flex:1 1 auto; min-width:0; max-width:480px; margin:0 .75rem; overflow:hidden; white-space:nowrap; pointer-events:none; z-index:1; -webkit-mask-image:linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image:linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
 .stream-ticker.hidden{ display:none; }
 .stream-ticker-text{ display:inline-block; padding-left:100%; white-space:nowrap; font-family:'Bebas Neue','Bebas Fallback',sans-serif; font-size:1rem; letter-spacing:.06em; color:#fff; text-shadow:0 1px 5px rgba(0,0,0,.7); animation:streamTickerScroll 14s linear infinite; }
 .stream-ticker-text::before{ content:'\1F534\00A0\00A0'; }
