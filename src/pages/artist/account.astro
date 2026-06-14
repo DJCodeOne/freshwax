@@ -849,6 +849,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   />
                 </div>
               </div>
+
+              <div class="shipping-card">
+                <div class="shipping-region">
+                  <span class="region-flag">➕</span>
+                  <span class="region-name">Each extra record</span>
+                </div>
+                <div class="shipping-input-group">
+                  <span class="currency">£</span>
+                  <input
+                    type="number"
+                    id="shipping-additional"
+                    class="shipping-input"
+                    value={partner.vinylShippingAdditional ?? ''}
+                    placeholder="0.50"
+                    step="0.01"
+                    min="0"
+                    aria-label="Additional record shipping cost"
+                  />
+                </div>
+              </div>
             </div>
 
             <div class="shipping-location">
@@ -3236,11 +3256,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const ukInput = document.getElementById('shipping-uk');
     const euInput = document.getElementById('shipping-eu');
     const intlInput = document.getElementById('shipping-intl');
+    const additionalInput = document.getElementById('shipping-additional');
     const shipsFromInput = document.getElementById('ships-from');
 
     const vinylShippingUK = ukInput?.value ? parseFloat(ukInput.value) : null;
     const vinylShippingEU = euInput?.value ? parseFloat(euInput.value) : null;
     const vinylShippingIntl = intlInput?.value ? parseFloat(intlInput.value) : null;
+    const vinylShippingAdditional = additionalInput?.value ? parseFloat(additionalInput.value) : null;
     const vinylShipsFrom = shipsFromInput?.value?.trim() || null;
 
     saveShippingBtn.textContent = 'Saving...';
@@ -3257,6 +3279,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           vinylShippingUK,
           vinylShippingEU,
           vinylShippingIntl,
+          vinylShippingAdditional,
           vinylShipsFrom
         })
       });

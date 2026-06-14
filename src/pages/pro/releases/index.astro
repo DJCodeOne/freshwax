@@ -547,14 +547,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         const ukVal = release.vinylShippingUK != null ? release.vinylShippingUK : '';
         const euVal = release.vinylShippingEU != null ? release.vinylShippingEU : '';
         const intlVal = release.vinylShippingIntl != null ? release.vinylShippingIntl : '';
+        const addVal = release.vinylShippingAdditional != null ? release.vinylShippingAdditional : '';
         const shippingEditor = isVinyl ? `
           <div class="shipping-edit" data-shipping-for="${release.id}">
             <h4>Vinyl shipping rates</h4>
-            <p class="hint">Leave a field blank to use your account default (set on <a href="/artist/account/#vinyl-shipping-section">your account page</a>). Enter 0 for free shipping.</p>
+            <p class="hint">Leave a field blank to use your account default (set on <a href="/artist/account/#vinyl-shipping-section">your account page</a>). Enter 0 for free shipping. "Each extra record" is added per additional record in the order (default 50p).</p>
             <div class="shipping-row">
               <label>UK (£)<input type="number" step="0.01" min="0" max="999" data-region="UK" value="${ukVal}"></label>
               <label>EU (£)<input type="number" step="0.01" min="0" max="999" data-region="EU" value="${euVal}"></label>
               <label>International (£)<input type="number" step="0.01" min="0" max="999" data-region="Intl" value="${intlVal}"></label>
+              <label>Each extra record (£)<input type="number" step="0.01" min="0" max="999" data-region="Additional" value="${addVal}"></label>
             </div>
             <div class="shipping-actions">
               <button class="action-btn" data-action="save-shipping">Save shipping</button>
@@ -635,7 +637,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           inputs.forEach(input => {
             const region = input.dataset.region;
             const raw = input.value.trim();
-            const key = region === 'UK' ? 'vinylShippingUK' : region === 'EU' ? 'vinylShippingEU' : 'vinylShippingIntl';
+            const key = region === 'UK' ? 'vinylShippingUK' : region === 'EU' ? 'vinylShippingEU' : region === 'Additional' ? 'vinylShippingAdditional' : 'vinylShippingIntl';
             if (raw === '') {
               payload[key] = null;
             } else {
@@ -671,6 +673,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               local.vinylShippingUK = data.shipping.vinylShippingUK;
               local.vinylShippingEU = data.shipping.vinylShippingEU;
               local.vinylShippingIntl = data.shipping.vinylShippingIntl;
+              local.vinylShippingAdditional = data.shipping.vinylShippingAdditional;
             }
           } catch (e) {
             status.textContent = e instanceof Error ? e.message : 'Save failed';

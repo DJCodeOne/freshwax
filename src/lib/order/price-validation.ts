@@ -120,6 +120,7 @@ export async function validateOrderPrices(items: Record<string, unknown>[]): Pro
             extraFields.serverVinylShippingUK = release.vinylShippingUK ?? null;
             extraFields.serverVinylShippingEU = release.vinylShippingEU ?? null;
             extraFields.serverVinylShippingIntl = release.vinylShippingIntl ?? null;
+            extraFields.serverVinylShippingAdditional = release.vinylShippingAdditional ?? null;
             // Fetch artist-level shipping defaults as fallback
             const artistId = item.artistId || release.artistId;
             if (artistId) {
@@ -128,6 +129,7 @@ export async function validateOrderPrices(items: Record<string, unknown>[]): Pro
                 extraFields.serverArtistShippingUK = artist.vinylShippingUK ?? null;
                 extraFields.serverArtistShippingEU = artist.vinylShippingEU ?? null;
                 extraFields.serverArtistShippingIntl = artist.vinylShippingIntl ?? null;
+                extraFields.serverArtistShippingAdditional = artist.vinylShippingAdditional ?? null;
               }
               extraFields.artistId = artistId;
             }

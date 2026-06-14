@@ -16,6 +16,7 @@ const UpdateShippingSchema = z.object({
   vinylShippingUK: z.union([z.string().max(20), z.number().min(0).max(1000)]).nullish(),
   vinylShippingEU: z.union([z.string().max(20), z.number().min(0).max(1000)]).nullish(),
   vinylShippingIntl: z.union([z.string().max(20), z.number().min(0).max(1000)]).nullish(),
+  vinylShippingAdditional: z.union([z.string().max(20), z.number().min(0).max(1000)]).nullish(),
   vinylShipsFrom: z.string().max(200).nullish(),
 }).strip();
 
@@ -44,7 +45,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!parseResult.success) {
       return ApiErrors.badRequest('Invalid request');
     }
-    const { artistId, vinylShippingUK, vinylShippingEU, vinylShippingIntl, vinylShipsFrom } = parseResult.data;
+    const { artistId, vinylShippingUK, vinylShippingEU, vinylShippingIntl, vinylShippingAdditional, vinylShipsFrom } = parseResult.data;
 
     // Verify the authenticated user matches the artistId
     if (verifiedUserId !== artistId) {
@@ -66,6 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const shippingUK = validateRate(vinylShippingUK, 'UK');
     const shippingEU = validateRate(vinylShippingEU, 'EU');
     const shippingIntl = validateRate(vinylShippingIntl, 'International');
+    const shippingAdditional = validateRate(vinylShippingAdditional, 'Additional record');
 
     // Verify artist exists
     const artist = await getDocument('artists', artistId);
@@ -87,6 +89,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     if (shippingIntl !== null) {
       updateData.vinylShippingIntl = shippingIntl;
+    }
+    if (shippingAdditional !== null) {
+      updateData.vinylShippingAdditional = shippingAdditional;
     }
     if (vinylShipsFrom) {
       updateData.vinylShipsFrom = vinylShipsFrom.trim();

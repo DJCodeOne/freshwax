@@ -30,6 +30,7 @@ const schema = z.object({
   vinylShippingUK: rateSchema.optional(),
   vinylShippingEU: rateSchema.optional(),
   vinylShippingIntl: rateSchema.optional(),
+  vinylShippingAdditional: rateSchema.optional(),
 });
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -45,7 +46,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!parsed.success) {
     return ApiErrors.badRequest('Invalid request: ' + parsed.error.issues.map(i => i.message).join(', '));
   }
-  const { releaseId, vinylShippingUK, vinylShippingEU, vinylShippingIntl } = parsed.data;
+  const { releaseId, vinylShippingUK, vinylShippingEU, vinylShippingIntl, vinylShippingAdditional } = parsed.data;
 
   const release = await getDocument('releases', releaseId);
   if (!release) return ApiErrors.notFound('Release not found');
@@ -66,6 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (vinylShippingUK !== undefined) updateData.vinylShippingUK = vinylShippingUK;
   if (vinylShippingEU !== undefined) updateData.vinylShippingEU = vinylShippingEU;
   if (vinylShippingIntl !== undefined) updateData.vinylShippingIntl = vinylShippingIntl;
+  if (vinylShippingAdditional !== undefined) updateData.vinylShippingAdditional = vinylShippingAdditional;
 
   if (Object.keys(updateData).length === 1) {
     return ApiErrors.badRequest('No shipping rates supplied');
@@ -105,6 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       vinylShippingUK: vinylShippingUK !== undefined ? vinylShippingUK : (release.vinylShippingUK ?? null),
       vinylShippingEU: vinylShippingEU !== undefined ? vinylShippingEU : (release.vinylShippingEU ?? null),
       vinylShippingIntl: vinylShippingIntl !== undefined ? vinylShippingIntl : (release.vinylShippingIntl ?? null),
+      vinylShippingAdditional: vinylShippingAdditional !== undefined ? vinylShippingAdditional : (release.vinylShippingAdditional ?? null),
     },
   });
 };

@@ -182,26 +182,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         if (!artistId || !releaseId) continue;
 
-        // Get shipping rate for this item (already fetched during price validation)
-        // Determine rate based on customer region
-        let shippingRate = 0;
-        if (isUK) {
-          shippingRate = item.vinylShippingUK ?? item.artistVinylShippingUK ?? 4.99;
-        } else if (isEU) {
-          shippingRate = item.vinylShippingEU ?? item.artistVinylShippingEU ?? 9.99;
-        } else {
-          shippingRate = item.vinylShippingIntl ?? item.artistVinylShippingIntl ?? 14.99;
-        }
-
-        // Only charge shipping once per artist (not per item)
+        // First record per artist charges the single (region) rate; each
+        // additional record (extra parts / other releases by the same artist)
+        // charges the seller's additional-record rate (default 50p).
+        let single = 0;
+        if (isUK) single = item.vinylShippingUK ?? item.artistVinylShippingUK ?? 4.99;
+        else if (isEU) single = item.vinylShippingEU ?? item.artistVinylShippingEU ?? 9.99;
+        else single = item.vinylShippingIntl ?? item.artistVinylShippingIntl ?? 14.99;
+        const additional = item.vinylShippingAdditional ?? item.artistVinylShippingAdditional ?? 0.5;
+        const qty = (item.quantity as number) || 1;
+        let lineShip = 0;
         if (!artistShippingBreakdown[artistId]) {
+          lineShip = Math.round((single + additional * Math.max(0, qty - 1)) * 100) / 100;
           artistShippingBreakdown[artistId] = {
             artistId,
             artistName: item.artist || item.artistName || 'Artist',
-            amount: shippingRate
+            amount: lineShip
           };
-          vinylShippingTotal += shippingRate;
+        } else {
+          lineShip = Math.round(additional * qty * 100) / 100;
+          artistShippingBreakdown[artistId].amount += lineShip;
         }
+        vinylShippingTotal += lineShip;
       }
     }
 

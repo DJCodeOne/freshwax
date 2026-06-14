@@ -44,9 +44,11 @@ export interface CartItem {
   vinylShippingUK?: number;
   vinylShippingEU?: number;
   vinylShippingIntl?: number;
+  vinylShippingAdditional?: number; // per additional record (50p default)
   artistVinylShippingUK?: number;
   artistVinylShippingEU?: number;
   artistVinylShippingIntl?: number;
+  artistVinylShippingAdditional?: number;
   // Multi-part vinyl: which pressed part this line refers to (e.g. 'part-1').
   // Set only when type='vinyl' and the release.vinylParts array is present.
   // Stock checks scope to vinylParts[idx].stock, prices to vinylParts[idx].price,

@@ -243,6 +243,7 @@ export async function validateAndGetPrices(
                 item.vinylShippingUK = release.vinylShippingUK;
                 item.vinylShippingEU = release.vinylShippingEU;
                 item.vinylShippingIntl = release.vinylShippingIntl;
+                item.vinylShippingAdditional = release.vinylShippingAdditional;
 
                 const artistId = release.artistId || release.userId || item.artistId;
                 if (artistId) {
@@ -252,6 +253,7 @@ export async function validateAndGetPrices(
                     item.artistVinylShippingUK = artist.vinylShippingUK;
                     item.artistVinylShippingEU = artist.vinylShippingEU;
                     item.artistVinylShippingIntl = artist.vinylShippingIntl;
+                    item.artistVinylShippingAdditional = artist.vinylShippingAdditional;
                     item.artistName = artist.artistName || artist.name;
                   }
                 }

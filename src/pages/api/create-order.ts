@@ -188,23 +188,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // cratesShippingCost; legacy items may carry shippingCost)
           vinylShippingTotal += item.cratesShippingCost ?? item.shippingCost ?? 4.99;
         } else if (artistId) {
-          // Per-artist vinyl shipping (one charge per artist)
+          // Per-artist vinyl shipping: first record at the single (region) rate,
+          // each additional record at the seller's additional rate (50p default).
+          let single = 0;
+          if (isUK) single = item.serverVinylShippingUK ?? item.serverArtistShippingUK ?? 4.99;
+          else if (isEU) single = item.serverVinylShippingEU ?? item.serverArtistShippingEU ?? 9.99;
+          else single = item.serverVinylShippingIntl ?? item.serverArtistShippingIntl ?? 14.99;
+          const additional = item.serverVinylShippingAdditional ?? item.serverArtistShippingAdditional ?? 0.5;
+          const qty = (item.quantity as number) || 1;
+          let lineShip = 0;
           if (!artistShippingBreakdown[artistId]) {
-            let shippingRate = 0;
-            if (isUK) {
-              shippingRate = item.serverVinylShippingUK ?? item.serverArtistShippingUK ?? 4.99;
-            } else if (isEU) {
-              shippingRate = item.serverVinylShippingEU ?? item.serverArtistShippingEU ?? 9.99;
-            } else {
-              shippingRate = item.serverVinylShippingIntl ?? item.serverArtistShippingIntl ?? 14.99;
-            }
+            lineShip = Math.round((single + additional * Math.max(0, qty - 1)) * 100) / 100;
             artistShippingBreakdown[artistId] = {
               artistId,
               artistName: item.artist || item.artistName || 'Artist',
-              amount: shippingRate
+              amount: lineShip
             };
-            vinylShippingTotal += shippingRate;
+          } else {
+            lineShip = Math.round(additional * qty * 100) / 100;
+            artistShippingBreakdown[artistId].amount += lineShip;
           }
+          vinylShippingTotal += lineShip;
         }
       }
     }
