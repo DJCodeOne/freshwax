@@ -23,6 +23,9 @@ const VinylSettingsSchema = z.object({
   shippingEuropeAdditional: z.union([z.string().max(20), z.number()]).nullish(),
   shippingWorldwide: z.union([z.string().max(20), z.number()]).nullish(),
   shippingWorldwideAdditional: z.union([z.string().max(20), z.number()]).nullish(),
+  // Free shipping (seller opt-in over their own threshold)
+  freeShippingEnabled: z.boolean().nullish(),
+  freeShippingThreshold: z.union([z.string().max(20), z.number()]).nullish(),
   // Delivery options
   deliveryMethod: z.string().max(100).nullish(),
   estimatedDelivery: z.string().max(50).nullish(),

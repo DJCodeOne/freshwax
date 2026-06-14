@@ -13,7 +13,6 @@
 // which flows through to both the buyer charge and the seller payout.
 
 import { getDocument } from '../firebase-rest';
-import { d1GetVinylSeller } from '../d1-catalog';
 import { log } from './types';
 import type { CartItem } from './types';
 
@@ -49,9 +48,9 @@ export async function applyCrateFreeShipping(items: CartItem[], db?: D1Db): Prom
 
   for (const [sellerId, group] of bySeller) {
     try {
-      let settings: Record<string, unknown> | null = null;
-      if (db) settings = await d1GetVinylSeller(db, sellerId);
-      if (!settings) settings = await getDocument('vinyl-sellers', sellerId).catch(() => null);
+      // Free-shipping opt-in lives on the Firebase vinyl-sellers doc (the D1
+      // mirror doesn't carry these flags), so read that for the waiver decision.
+      const settings = await getDocument('vinyl-sellers', sellerId).catch(() => null);
       if (!settings || settings.freeShippingEnabled !== true) continue;
 
       const threshold = resolveThreshold(settings.freeShippingThreshold);

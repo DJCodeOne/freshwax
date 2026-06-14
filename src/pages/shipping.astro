@@ -10,7 +10,7 @@ const lastUpdated = 'December 2024';
 const faqs = [
   {
     question: "How much does UK shipping cost?",
-    answer: "UK shipping starts from £3.50 for Royal Mail 2nd Class. We offer free UK shipping on orders over £50. Express options are available at checkout."
+    answer: "UK shipping starts from £3.50 for Royal Mail 2nd Class. Some sellers offer free UK shipping once your order from them reaches their own spend threshold — when it applies, it's shown at checkout. Express options are available at checkout."
   },
   {
     question: "Do you ship vinyl records internationally?",
@@ -38,7 +38,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600,
 
 <InfoPageLayout 
   title="Shipping Rates, Delivery & Returns Policy"
-  description="Shipping rates and returns for jungle and drum & bass vinyl records, digital downloads, and merchandise. Free UK shipping on orders over £50."
+  description="Shipping rates and returns for jungle and drum & bass vinyl records, digital downloads, and merchandise. Some sellers offer free UK shipping over their own spend threshold."
   lastUpdated={lastUpdated}
   faqs={faqs}
 >
@@ -94,8 +94,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600,
   </div>
 
   <div class="bg-red-50 border-l-4 border-red-600 p-4 mb-8">
-    <p class="font-semibold text-red-800">Free UK Shipping on orders over £50</p>
-    <p class="text-red-700 text-sm mt-1">Automatically applied at checkout (Royal Mail 2nd Class)</p>
+    <p class="font-semibold text-red-800">Free UK shipping is offered by some sellers</p>
+    <p class="text-red-700 text-sm mt-1">Individual sellers can waive their shipping once your order from them reaches their own spend threshold — applied automatically at checkout when it qualifies.</p>
   </div>
 
   <h3>European Shipping</h3>
