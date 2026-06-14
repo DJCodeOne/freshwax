@@ -66,7 +66,7 @@ export async function processVinylCrateSellerPayments(params: {
       if (!sellerId && listingId) {
         let listing = listingCache[listingId];
         if (!listing) {
-          listing = await getDocument('crateListings', listingId);
+          listing = await getDocument('vinylListings', listingId);
           if (listing) {
             listingCache[listingId] = listing;
           }

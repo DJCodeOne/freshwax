@@ -66,7 +66,7 @@ export async function processVinylCrateSellerPayments(params: SellerPaymentParam
     // Batch-fetch all crate listings in parallel
     const listingEntries = await Promise.all(
       [...listingIds].map(async (id) => {
-        const doc = await getDocument('crateListings', id).catch(() => null);
+        const doc = await getDocument('vinylListings', id).catch(() => null);
         return [id, doc] as const;
       })
     );

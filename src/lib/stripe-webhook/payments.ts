@@ -242,6 +242,12 @@ export async function processSupplierPayments(params: {
       if (!brandAccountId || brandName === 'Fresh Wax') {
         continue;
       }
+      // Mutually exclusive with the consignment-supplier path (processSupplier
+      // /MerchSupplierPayments pays ~98%). A consignment product must not also
+      // draw a 10% brand royalty — that would be a ~108% double-pay.
+      if (item.supplierId) {
+        continue;
+      }
 
       const itemPrice = (item.price as number) || 0;
       const quantity = (item.quantity as number) || 1;
