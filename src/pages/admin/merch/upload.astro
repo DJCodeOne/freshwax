@@ -326,7 +326,10 @@ const nonce = Astro.locals.nonce || '';
             </label>
           </div>
           </fieldset>
-          
+          <div class="form-hint" id="supplierLockHint" style="display:none; color:#c98a8a;">
+            Disabled — this product has a royalty <strong>brand</strong> selected. A product is either a royalty brand (10%) <em>or</em> a consignment supplier, never both.
+          </div>
+
           <div class="supplier-fields" id="supplierFields">
             <div class="form-row">
               <div class="form-group">
@@ -548,6 +551,34 @@ const nonce = Astro.locals.nonce || '';
           document.getElementById('supplierFields').classList.toggle('active', isConsignment);
         });
       });
+
+      // Brand royalty and consignment supplier are mutually exclusive — a product
+      // is EITHER a FW-stocked royalty brand (10%) OR an external consignment
+      // (~98%), never both (the API rejects both being set). When a royalty brand
+      // is chosen, force back to Fresh Wax stock and lock the consignment
+      // controls; when it returns to Fresh Wax, unlock them.
+      function syncMerchSourceExclusivity() {
+        const hasBrand = !!document.getElementById('brandAccountId').value;
+        const consignmentRadio = document.querySelector('input[name="supplierType"][value="consignment"]');
+        const ownRadio = document.querySelector('input[name="supplierType"][value="own"]');
+        const supplierSelect = document.getElementById('supplierId');
+        const supplierCut = document.getElementById('supplierCut');
+        const hint = document.getElementById('supplierLockHint');
+        if (hasBrand) {
+          if (ownRadio) ownRadio.checked = true;
+          if (consignmentRadio) consignmentRadio.disabled = true;
+          if (supplierSelect) { supplierSelect.value = ''; supplierSelect.disabled = true; }
+          if (supplierCut) supplierCut.disabled = true;
+          document.getElementById('supplierFields').classList.remove('active');
+          if (hint) hint.style.display = '';
+        } else {
+          if (consignmentRadio) consignmentRadio.disabled = false;
+          if (supplierSelect) supplierSelect.disabled = false;
+          if (supplierCut) supplierCut.disabled = false;
+          if (hint) hint.style.display = 'none';
+        }
+      }
+      window.syncMerchSourceExclusivity = syncMerchSourceExclusivity;
 
       // Form inputs for preview (categoryName is a <select> with its own change listener)
       ['productName', 'category', 'retailPrice', 'salePrice', 'lowStockThreshold'].forEach(id => {
@@ -1153,8 +1184,11 @@ const nonce = Astro.locals.nonce || '';
             brandSelect.addEventListener('change', function() {
               var selected = brandSelect.selectedOptions[0];
               document.getElementById('brandAccountId').value = selected ? (selected.dataset.brandId || '') : '';
+              if (window.syncMerchSourceExclusivity) window.syncMerchSourceExclusivity();
               updatePreview();
             });
+            // Reflect the initial brand selection (Fresh Wax → unlocked).
+            if (window.syncMerchSourceExclusivity) window.syncMerchSourceExclusivity();
           }
         }
       } catch (e) {
