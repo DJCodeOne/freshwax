@@ -118,6 +118,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const categoryName = (formData.get('categoryName') as string || 'Fresh Wax').trim().slice(0, 100);
     const brandAccountId = (formData.get('brandAccountId') as string || '').trim().slice(0, 200);
 
+    // The two merch payout models are mutually exclusive — a product is EITHER a
+    // brand-royalty item (FW-stocked, brand gets 10%) OR a consignment supplier
+    // item (external supplier gets ~98%), never both. A doc with both fields set
+    // would draw a royalty AND a supplier share (~108% double-pay), so reject it
+    // at write time (the payout layer also guards this, but block the bad data).
+    if (brandAccountId && supplierId) {
+      return ApiErrors.badRequest('A product cannot have both a royalty brand and a consignment supplier — choose one.');
+    }
+
     const lowStockThreshold = parseInt(formData.get('lowStockThreshold') as string || '5');
 
     const sizesJson = formData.get('sizes') as string || '[]';

@@ -242,6 +242,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     });
 
+    // The two merch payout models are mutually exclusive — a product is EITHER a
+    // brand-royalty item (10%) OR a consignment supplier item (~98%), never both
+    // (a doc with both set draws ~108% in payouts). Guard the EFFECTIVE state
+    // after this partial update merges onto the existing doc.
+    const effBrandAccountId = ('brandAccountId' in updates ? updates.brandAccountId : existingProduct.brandAccountId) as string | null;
+    const effSupplierId = ('supplierId' in updates ? updates.supplierId : existingProduct.supplierId) as string | null;
+    if (effBrandAccountId && effSupplierId) {
+      return ApiErrors.badRequest('A product cannot have both a royalty brand and a consignment supplier — choose one.');
+    }
+    // Keep the consignment flag in sync if the supplier field changed.
+    if ('supplierId' in updates) {
+      updates.isConsignment = !!updates.supplierId;
+    }
+
     const numberFields = [
       'costPrice', 'retailPrice', 'salePrice', 'supplierCut', 'lowStockThreshold'
     ];
