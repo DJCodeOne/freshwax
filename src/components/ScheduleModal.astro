@@ -121,8 +121,12 @@ import DailySchedule from './DailySchedule.astro';
   .schedule-modal-body {
     flex: 1;
     overflow: auto;
+    /* Keep the scroll inside the modal — don't chain to the page behind it. */
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
+    min-height: 0;
   }
 
   /* Remove duplicate border/radius since modal provides it */
@@ -282,9 +286,38 @@ import DailySchedule from './DailySchedule.astro';
       }
     }
 
+    // Body scroll lock — the modals are position:fixed, but on mobile the live
+    // page body scrolls (so the user can reach tab content), which means a
+    // touch-scroll inside the modal chains through to the page behind it. Pin
+    // the body while a modal is open (the position:fixed technique works on iOS,
+    // where overflow:hidden alone does not) and restore the scroll on close.
+    let savedScrollY = 0;
+    let scrollLocked = false;
+    function lockBodyScroll() {
+      if (scrollLocked) return;
+      scrollLocked = true;
+      savedScrollY = window.scrollY || window.pageYOffset || 0;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${savedScrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+    }
+    function unlockBodyScroll() {
+      if (!scrollLocked) return;
+      scrollLocked = false;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      window.scrollTo(0, savedScrollY);
+    }
+
     // Close a modal and restore focus to its trigger
     function closePublic() {
       publicModal?.classList.add('hidden');
+      unlockBodyScroll();
       if (publicTrigger && typeof publicTrigger.focus === 'function') {
         publicTrigger.focus();
         publicTrigger = null;
@@ -293,6 +326,7 @@ import DailySchedule from './DailySchedule.astro';
 
     function closeBooking() {
       bookingModal?.classList.add('hidden');
+      unlockBodyScroll();
       if (bookingTrigger && typeof bookingTrigger.focus === 'function') {
         bookingTrigger.focus();
         bookingTrigger = null;
@@ -303,6 +337,7 @@ import DailySchedule from './DailySchedule.astro';
     window.openPublicSchedule = function() {
       publicTrigger = document.activeElement as HTMLElement;
       publicModal?.classList.remove('hidden');
+      lockBodyScroll();
       window.schedule_publicSchedule?.refresh();
       // Move focus into the modal
       const closeBtn = document.getElementById('closePublicSchedule');
@@ -326,6 +361,7 @@ import DailySchedule from './DailySchedule.astro';
 
       bookingTrigger = document.activeElement as HTMLElement;
       bookingModal?.classList.remove('hidden');
+      lockBodyScroll();
       window.schedule_bookingSchedule?.refresh();
       // Move focus into the modal
       const closeBtn = document.getElementById('closeBookingSchedule');
