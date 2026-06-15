@@ -318,8 +318,17 @@ export async function handleUpdateSlot(
     }
   }
 
-  if (title && title.trim()) {
-    updates.title = title.trim();
+  // A DJ-set title marks the slot as having a custom title (so the ticker shows
+  // it instead of the freshwax default, and the relay now-playing won't clobber
+  // it). An empty title clears that flag → reverts the ticker to the default.
+  if (title !== undefined) {
+    const trimmedTitle = (title || '').trim();
+    if (trimmedTitle) {
+      updates.title = trimmedTitle;
+      updates.customTitle = true;
+    } else {
+      updates.customTitle = false;
+    }
   }
 
   if (genre !== undefined) {

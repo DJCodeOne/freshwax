@@ -112,6 +112,9 @@ export async function handleStartRelay(
     endTime: endTime.toISOString(),
     duration: Math.round((endTime.getTime() - now.getTime()) / 60000),
     title: title || `Live from ${stationName || 'External Station'}`,
+    // A DJ-provided title is a custom ticker title (ticker shows it; relay
+    // now-playing won't clobber it). No title → ticker shows the freshwax default.
+    customTitle: !!(title && (title as string).trim()),
     genre: genre || 'Jungle / D&B',
     description: ((data as Record<string, unknown>).description as string) || '',
     streamKey: relayStreamKey,

@@ -2604,13 +2604,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const editor = document.getElementById('liveTitleEditor');
     if (!editor) return;
     const input = document.getElementById('liveTitleInput');
-    const isMine = currentStream && currentUser && currentStream.djId === currentUser.uid && !currentStream.isRelay;
+    // Show for the streaming DJ regardless of format (relay/OBS/BUTT).
+    const isMine = currentStream && currentUser && currentStream.djId === currentUser.uid;
     if (isMine) {
       editor.classList.remove('hidden');
-      // Prefill with the current title (skip the system default) — don't clobber while typing.
+      // Prefill only with a DJ-set custom title — don't show the relay's
+      // now-playing or the auto default. Don't clobber while typing.
       if (input && document.activeElement !== input) {
-        const t = currentStream.title || '';
-        input.value = (t && t !== 'Live Session' && t !== 'Live and Direct on FreshWax' && t !== 'Live and Direct on freshwax.co.uk') ? t : '';
+        input.value = (currentStream.customTitle && currentStream.title) ? currentStream.title : '';
       }
     } else {
       editor.classList.add('hidden');
@@ -2622,8 +2623,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const input = document.getElementById('liveTitleInput');
     const statusEl = document.getElementById('liveTitleStatus');
     const btn = document.getElementById('liveTitleUpdateBtn');
-    const newTitle = input && input.value ? input.value.trim() : '';
-    if (!newTitle) { if (input) input.focus(); return; }
+    // Empty is allowed — it clears the custom title and reverts the ticker to
+    // the freshwax default.
+    const newTitle = input ? input.value.trim() : '';
     const slotId = (currentStream && (currentStream.slotId || currentStream.id)) || window.currentLiveSlotId;
     if (!slotId || !currentUser) return;
     if (btn) btn.disabled = true;
@@ -2635,7 +2637,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         body: JSON.stringify({ action: 'update_slot', slotId: slotId, title: newTitle })
       });
       if (resp.ok) {
-        if (currentStream) currentStream.title = newTitle;
+        if (currentStream) { if (newTitle) currentStream.title = newTitle; currentStream.customTitle = !!newTitle; }
         const buttPreviewShowTitle = document.getElementById('buttPreviewShowTitle');
         if (buttPreviewShowTitle) buttPreviewShowTitle.textContent = newTitle;
         if (statusEl) { statusEl.textContent = 'Updated!'; statusEl.classList.remove('hidden'); setTimeout(function(){ statusEl.classList.add('hidden'); }, 2000); }

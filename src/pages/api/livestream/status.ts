@@ -181,6 +181,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       id: slot.id,
       slotId: slot.id,
       title: (slot.title || `${slot.djName}'s Stream`).replace(/^UNKNOWN\s*-\s*/i, ''),
+      customTitle: slot.customTitle === true,
       djName: slot.djName,
       djId: slot.djId,
       djAvatar: slot.djAvatar || '/place-holder.webp',
@@ -290,7 +291,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         // Use cached relay metadata
         stream.relayNowPlaying = cachedMeta.nowPlaying as string || undefined;
         stream.relayServerTitle = cachedMeta.serverTitle as string || undefined;
-        if (cachedMeta.nowPlaying) {
+        // Don't clobber a DJ-set custom title with the relay's now-playing.
+        if (cachedMeta.nowPlaying && !stream.customTitle) {
           stream.title = (cachedMeta.nowPlaying as string).replace(/^UNKNOWN\s*-\s*/i, '');
         }
         continue;
@@ -318,7 +320,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
         // Use the song/now-playing field as the title (contains DJ/show name)
         // servertitle is just the static station name
-        if (stationStatus.nowPlaying && stationStatus.nowPlaying !== stream.title) {
+        if (stationStatus.nowPlaying && stationStatus.nowPlaying !== stream.title && !stream.customTitle) {
           stream.title = stationStatus.nowPlaying;
           // Fire-and-forget: update Firestore slot title so it persists
           updateDocument('livestreamSlots', stream.id as string, {
