@@ -158,6 +158,16 @@ import DailySchedule from './DailySchedule.astro';
     .schedule-modal-header h2 {
       font-size: 1.5rem;
     }
+
+    /* On mobile the inner grid-wrapper stops being its own scroll area
+       (overflow-y:visible, columns stacked), so the modal body must scroll. But
+       the :global(.daily-schedule) flex:1 stretches it to exactly the body
+       height, leaving nothing to overflow. Let it take its natural (tall)
+       content height so .schedule-modal-body actually scrolls it. */
+    .schedule-modal-body :global(.daily-schedule) {
+      flex: 0 0 auto;
+      height: auto;
+    }
   }
 
   /* ---- Darkside theme: match the /live page styling ---- */
