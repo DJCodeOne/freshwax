@@ -2216,9 +2216,11 @@ try {
       // back to their loaded profile avatar (bookings may predate avatar storage),
       // otherwise show the initial.
       const slotAvatarUrl = isRelay ? null : (slot.djAvatar || (isMySlot && userInfo && userInfo.avatar) || null);
-      const slotAvatar = slotAvatarUrl
+      // Relays get no avatar circle (no ♪ "music note" dot); DJs use their real
+      // avatar when available, else their initial.
+      const slotAvatar = isRelay ? '' : (slotAvatarUrl
         ? `<span class="schedule-avatar"><img src="${escapeHtml(slotAvatarUrl)}" alt="" loading="lazy" /></span>`
-        : `<span class="schedule-avatar${isRelay ? ' relay-avatar' : ''}">${isRelay ? '♪' : slotInitial}</span>`;
+        : `<span class="schedule-avatar">${slotInitial}</span>`);
       return `<div class="schedule-item${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}${isRelay ? ' relay' : ''}">
         ${isLive ? '<span class="live-headphone-icon">🎧</span>' : ''}
         <div class="schedule-dj-info">
@@ -2333,7 +2335,7 @@ try {
       if (onAirText) onAirText.classList.remove('hidden');
       if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
       // Session-title ticker in the top info bar (schedule-detected path)
-      if (window.setStreamTicker) window.setStreamTicker(currentLive.isRelay ? (((currentLive.relaySource && currentLive.relaySource.stationName) || currentLive.title || 'Relayed stream')) : ((currentLive.title && currentLive.title !== 'Live Session') ? currentLive.title : 'Live and Direct on freshwax.co.uk'));
+      if (window.setStreamTicker) window.setStreamTicker((!currentLive.isRelay && currentLive.title && currentLive.title !== 'Live Session') ? currentLive.title : 'Live and Direct on freshwax.co.uk');
       if (djAvatar) djAvatar.src = avatarToUse;
 
       // Update controls DJ info bar
@@ -3025,7 +3027,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260615a"></script>
+<script type="module" src="/live-stream.js?v=20260615b"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page
