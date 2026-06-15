@@ -2610,7 +2610,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       // Prefill with the current title (skip the system default) — don't clobber while typing.
       if (input && document.activeElement !== input) {
         const t = currentStream.title || '';
-        input.value = (t && t !== 'Live Session' && t !== 'Live and Direct on FreshWax') ? t : '';
+        input.value = (t && t !== 'Live Session' && t !== 'Live and Direct on FreshWax' && t !== 'Live and Direct on freshwax.co.uk') ? t : '';
       }
     } else {
       editor.classList.add('hidden');
