@@ -2320,8 +2320,8 @@ try {
         : (isCurrentUserDj && userInfo?.avatar ? userInfo.avatar : (currentLive.djAvatar || '/place-holder.webp'));
 
       if (liveDjAvatarCard) liveDjAvatarCard.src = avatarToUse;
-      // For relay streams, show title instead of DJ name
-      if (liveDjNameCard) liveDjNameCard.textContent = currentLive.isRelay ? (currentLive.title || 'Relay Stream') : currentLive.djName;
+      // Relay dj-info shows the SOURCE station (not the DJ's custom ticker title).
+      if (liveDjNameCard) liveDjNameCard.textContent = currentLive.isRelay ? ((currentLive.relaySource && currentLive.relaySource.stationName) || 'Relay Stream') : currentLive.djName;
       if (liveDjEndsCard) liveDjEndsCard.textContent = `Ends ${formatTime(currentLive.endTime)}`;
 
       streamInfoBar?.classList.add('is-live');
@@ -2345,14 +2345,15 @@ try {
       const djInfoBar = document.querySelector('.dj-info-bar');
       // Only update DJ name if live-stream.js hasn't already set it (currentStreamData has more accurate relay metadata)
       if (controlsDjName && !window.currentStreamData) {
-        if (currentLive.isRelay && currentLive.title) {
-          const relayTitle = currentLive.title.length > 50 ? currentLive.title.substring(0, 50) + '...' : currentLive.title;
-          controlsDjName.innerHTML = `<span style="color: #ef4444;">${escapeHtml(relayTitle)}</span>`;
+        if (currentLive.isRelay) {
+          // Show the relay's SOURCE station — NOT the DJ's custom ticker title.
+          const relayStation = (currentLive.relaySource && currentLive.relaySource.stationName) || 'Relay Stream';
+          controlsDjName.innerHTML = `<span style="color: #ef4444;">${escapeHtml(relayStation)}</span>`;
         } else {
           controlsDjName.textContent = currentLive.djName || 'DJ';
         }
       }
-      if (controlsSetTitle && !window.currentStreamData) controlsSetTitle.textContent = currentLive.title || 'Live Set';
+      if (controlsSetTitle && !window.currentStreamData) controlsSetTitle.textContent = currentLive.isRelay ? ((currentLive.relaySource && currentLive.relaySource.stationName) || 'Live Set') : (currentLive.djName || 'Live Set');
       if (djInfoBar) djInfoBar.classList.add('is-live');
 
       offlineOverlay?.classList.add('hidden');
@@ -3027,7 +3028,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260615d"></script>
+<script type="module" src="/live-stream.js?v=20260615e"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page
