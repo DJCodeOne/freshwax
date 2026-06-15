@@ -147,6 +147,25 @@ export function hasSameDjNextSlot(djId, currentEndTime) {
   return false;
 }
 
+// True if a DIFFERENT DJ has the next hour booked (their slot starts within 5
+// min of currentEndTime). Used to suppress the "keep streaming" prompt — a DJ
+// can't carry on when someone else is up next.
+export function hasOtherDjNextSlot(djId, currentEndTime) {
+  if (!allDjSlots || allDjSlots.length === 0) return false;
+
+  var endTime = new Date(currentEndTime);
+
+  for (var i = 0; i < allDjSlots.length; i++) {
+    var slot = allDjSlots[i];
+    if (slot.djId === djId) continue;
+    if (['scheduled', 'in_lobby', 'queued', 'live'].indexOf(slot.status) === -1) continue;
+    var slotStart = new Date(slot.startTime);
+    var gap = Math.abs(slotStart.getTime() - endTime.getTime());
+    if (gap <= 5 * 60 * 1000) return true;
+  }
+  return false;
+}
+
 export function isEventSession(djId, streamStart) {
   if (!allDjSlots || allDjSlots.length === 0) return null;
 

@@ -1391,7 +1391,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260613c';
   import * as lobbyChat from '/dj-lobby/chat.js?v=20260612a';
   import * as lobbyDm from '/dj-lobby/dm.js?v=20260612a';
-  import * as scheduling from '/dj-lobby/scheduling.js?v=20260612a';
+  import * as scheduling from '/dj-lobby/scheduling.js?v=20260615a';
   import * as shareModule from '/dj-lobby/share.js?v=20260612a';
   import * as videoPlayer from '/dj-lobby/video-player.js?v=20260613a';
   import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260612d';
@@ -1418,9 +1418,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       back.setAttribute('role', 'alertdialog');
       back.setAttribute('aria-modal', 'true');
       back.setAttribute('aria-label', message);
-      back.style.cssText = 'position:fixed;inset:0;z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fwConfirmFade .18s ease-out;';
+      back.style.cssText = 'position:fixed;inset:0;z-index:10010;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(ellipse at 50% 30%, rgba(125,28,28,.28), transparent 60%), rgba(0,0,0,.66);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fwConfirmFade .18s ease-out;';
       var card = document.createElement('div');
-      card.style.cssText = 'background:#191919;color:#fff;padding:30px 34px;border-radius:18px;border:1px solid #3a3a3a;box-shadow:0 24px 70px rgba(0,0,0,.65);display:flex;flex-direction:column;gap:26px;width:100%;max-width:440px;text-align:center;animation:fwConfirmPop .22s cubic-bezier(.2,.9,.3,1.25);';
+      card.style.cssText = 'background:linear-gradient(160deg,#2a1212,#100707);color:#fff;padding:30px 34px;border-radius:18px;border:1px solid #dc2626;box-shadow:0 24px 70px rgba(0,0,0,.7), 0 0 30px rgba(220,38,38,.18);display:flex;flex-direction:column;gap:26px;width:100%;max-width:440px;text-align:center;animation:fwConfirmPop .22s cubic-bezier(.2,.9,.3,1.25);';
       var msg = document.createElement('div');
       msg.textContent = message;
       msg.style.cssText = 'font-weight:700;font-size:1.5rem;line-height:1.3;';
@@ -1429,7 +1429,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       var cancelBtn = document.createElement('button');
       cancelBtn.type = 'button';
       cancelBtn.textContent = opts.cancelText || 'Cancel';
-      cancelBtn.style.cssText = 'flex:1;padding:15px 22px;border-radius:12px;border:1px solid #555;background:#333;color:#fff;font-weight:600;font-size:1.05rem;cursor:pointer;';
+      cancelBtn.style.cssText = 'flex:1;padding:15px 22px;border-radius:12px;border:1px solid rgba(220,38,38,.4);background:rgba(40,18,18,.9);color:#f0e3e3;font-weight:600;font-size:1.05rem;cursor:pointer;';
       var okBtn = document.createElement('button');
       okBtn.type = 'button';
       okBtn.textContent = opts.confirmText || 'Confirm';
@@ -1559,6 +1559,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   };
   var calculateContinuousEndTime = scheduling.calculateContinuousEndTime;
   var hasSameDjNextSlot = scheduling.hasSameDjNextSlot;
+  var hasOtherDjNextSlot = scheduling.hasOtherDjNextSlot;
   var isEventSession = scheduling.isEventSession;
   var calculateMaxStreamEndTime = scheduling.calculateMaxStreamEndTime;
   var isInEventMode = scheduling.isInEventMode;
@@ -2366,6 +2367,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const remaining = endMs - Date.now();
       if (remaining > 5 * 60 * 1000 || remaining <= 0) return;      // only inside the final 5 min
       if (slotEndPromptOpen || slotEndPromptFor === endMs) return;  // ask once per end
+      // Don't prompt if another DJ has the next hour booked — the DJ can't carry
+      // on, so the slot just ends at the hour (the server also refuses extend).
+      try { if (hasOtherDjNextSlot && hasOtherDjNextSlot(currentStream.djId, streamEndTime)) return; } catch (e) {}
       // Skip when a consecutive booked slot carries the DJ seamlessly, or in event mode.
       try { if (hasSameDjNextSlot && hasSameDjNextSlot(currentStream.djId, streamEndTime)) return; } catch (e) {}
       try { if (isInEventMode && isInEventMode()) return; } catch (e) {}
@@ -2414,7 +2418,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     try {
       const t = document.createElement('div');
       t.setAttribute('role', 'status');
-      t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10011;background:#191919;color:#fff;border:1px solid #3a3a3a;border-left:3px solid #16a34a;padding:12px 18px;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);font-weight:600;font-size:.95rem;max-width:90vw;animation:fwConfirmFade .18s ease-out;';
+      t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10011;background:linear-gradient(160deg,#2a1212,#100707);color:#fff;border:1px solid #dc2626;border-left:3px solid #dc2626;padding:12px 18px;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.55), 0 0 20px rgba(220,38,38,.15);font-weight:600;font-size:.95rem;max-width:90vw;animation:fwConfirmFade .18s ease-out;';
       t.textContent = message;
       document.body.appendChild(t);
       setTimeout(function () { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(function () { t.remove(); }, 320); }, 3600);
