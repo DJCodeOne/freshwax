@@ -609,10 +609,17 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
   :global(.schedule-grid .slot-cell.available) {
     cursor: pointer;
     background: rgba(22, 163, 74, 0.03);
+    /* Register a single tap as a click on touch (no 300ms delay / double-tap). */
+    touch-action: manipulation;
   }
 
-  :global(.schedule-grid .slot-cell.available:hover) {
-    background: rgba(22, 163, 74, 0.12);
+  /* Hover only on real pointer devices. On iOS/touch a :hover that changes
+     appearance makes the FIRST tap apply hover and swallow the click, so the
+     slot never selects and the Save button stays disabled — the user's bug. */
+  @media (hover: hover) and (pointer: fine) {
+    :global(.schedule-grid .slot-cell.available:hover) {
+      background: rgba(22, 163, 74, 0.12);
+    }
   }
 
   :global(.mode-public .slot-cell.available) {
