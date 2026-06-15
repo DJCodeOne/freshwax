@@ -258,8 +258,14 @@ export async function handleCancel(
 
   invalidateCache();
 
-  // Sync cancellation to D1 (non-blocking)
-  syncSlotStatusToD1(db, slotId, 'cancelled', { cancelledAt: nowISO });
+  // Sync the cancellation to D1 BEFORE responding — the schedule reads D1 first,
+  // and a Worker kills un-awaited promises once it responds, so a fire-and-forget
+  // sync routinely never landed, leaving the slot still 'scheduled' in D1.
+  try {
+    await syncSlotStatusToD1(db, slotId, 'cancelled', { cancelledAt: nowISO });
+  } catch (d1Err: unknown) {
+    log.warn('D1 sync after cancel failed:', d1Err instanceof Error ? d1Err.message : d1Err);
+  }
 
   return successResponse({ message: 'Slot cancelled' });
 }
@@ -327,8 +333,13 @@ export async function handleUpdateSlot(
   await updateDocument('livestreamSlots', slotId, updates, idToken);
   invalidateCache();
 
-  // Sync updates to D1 (non-blocking)
-  syncSlotToD1(db, slotId, { ...slot, ...updates, id: slotId });
+  // Sync updates to D1 before responding (un-awaited promises are killed once
+  // the Worker responds, so the schedule's D1 read would miss the change).
+  try {
+    await syncSlotToD1(db, slotId, { ...slot, ...updates, id: slotId });
+  } catch (d1Err: unknown) {
+    log.warn('D1 sync after slot update failed:', d1Err instanceof Error ? d1Err.message : d1Err);
+  }
 
   // If the slot is live, broadcast the update for real-time UI updates
   if (slot.status === 'live') {
