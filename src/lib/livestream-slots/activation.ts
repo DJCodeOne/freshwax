@@ -135,6 +135,11 @@ export async function handleGoLive(
   endTime.setHours(endTime.getHours() + 1);
   if (now.getMinutes() >= 55) endTime.setHours(endTime.getHours() + 1);
 
+  // Snap the slot's START to the hour for the schedule display (reads
+  // "22:00 – 23:00", not "22:49 – …"). The actual go-live moment lives in
+  // startedAt, which drives the live duration/countdown.
+  const slotStartHour = new Date(now); slotStartHour.setMinutes(0, 0, 0);
+
   // Create live slot
   const slotId = generateId();
 
@@ -150,7 +155,7 @@ export async function handleGoLive(
     djId,
     djName: djName.trim(),
     djAvatar: (data as Record<string, unknown>).djAvatar || null,
-    startTime: nowISO,
+    startTime: slotStartHour.toISOString(),
     endTime: endTime.toISOString(),
     duration: Math.round((endTime.getTime() - now.getTime()) / 60000),
     title: title || `${djName.trim()} - Live Now`,
@@ -291,6 +296,9 @@ export async function handleGoLiveNow(
   endTime.setHours(endTime.getHours() + 1);
   if (now.getMinutes() >= 55) endTime.setHours(endTime.getHours() + 1);
 
+  // Snap the slot's START to the hour for the schedule display (actual moment is startedAt).
+  const slotStartHour = new Date(now); slotStartHour.setMinutes(0, 0, 0);
+
   const slotId = generateId();
   const streamKey = generateStreamKey(djId, slotId, now, endTime);
 
@@ -298,7 +306,7 @@ export async function handleGoLiveNow(
     djId,
     djName: (djName as string).trim(),
     djAvatar: djAvatar || null,
-    startTime: nowISO,
+    startTime: slotStartHour.toISOString(),
     endTime: endTime.toISOString(),
     duration: Math.round((endTime.getTime() - now.getTime()) / 60000),
     title: title || `${(djName as string).trim()} - Live Now`,

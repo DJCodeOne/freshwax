@@ -102,14 +102,19 @@ export async function handleStartRelay(
   // nobody's booked next. With no booking (admin ad-hoc relay), default to the
   // next hour boundary.
   let endTime: Date;
+  let slotStart: Date;
   if (bookedSlot && bookedSlot.endTime) {
     endTime = new Date(bookedSlot.endTime as string);
+    // Use the booking's hour-aligned start so the schedule reads "22:00 – 23:00".
+    slotStart = bookedSlot.startTime ? new Date(bookedSlot.startTime as string) : new Date(now);
   } else {
     endTime = new Date(now);
     endTime.setMinutes(0, 0, 0);
     endTime.setHours(endTime.getHours() + 1);
     if (now.getMinutes() >= 55) endTime.setHours(endTime.getHours() + 1);
+    slotStart = new Date(now);
   }
+  slotStart.setMinutes(0, 0, 0); // snap start to the hour for display (actual = startedAt)
 
   // Generate a relay stream key
   const relaySlotId = generateId();
@@ -119,7 +124,7 @@ export async function handleStartRelay(
     djId,
     djName: djName.trim(),
     djAvatar: (data as Record<string, unknown>).djAvatar || null,
-    startTime: nowISO,
+    startTime: slotStart.toISOString(),
     endTime: endTime.toISOString(),
     duration: Math.round((endTime.getTime() - now.getTime()) / 60000),
     title: title || `Live from ${stationName || 'External Station'}`,
