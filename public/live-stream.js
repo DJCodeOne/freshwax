@@ -479,13 +479,20 @@ function showLiveStream(streamData) {
     var liveState = document.getElementById('liveState'); if (liveState) liveState.classList.remove('hidden');
     var initOverlay = document.getElementById('initializingOverlay'); if (initOverlay) { initOverlay.classList.add('fade-out', 'hidden'); initOverlay.style.cssText = 'display: none !important; animation: none !important;'; }
     var playlistOverlay = document.getElementById('playlistLoadingOverlay'); if (playlistOverlay) playlistOverlay.classList.add('hidden');
+    // The top-right playlist track countdown must not linger once a DJ is live —
+    // on some screens it was left showing over the Fresh Wax logo.
+    var liveDurBox = document.getElementById('bottomDurationBox'); if (liveDurBox) liveDurBox.style.display = 'none';
     var badge = document.getElementById('liveBadge'); var statusText = document.getElementById('liveStatusText');
     if (badge) { badge.classList.remove('is-loading'); badge.classList.add('is-live'); } if (statusText) statusText.textContent = 'LIVE';
     var fsBadge = document.getElementById('fsLiveBadge'); var fsStatus = document.getElementById('fsLiveStatus');
     if (fsBadge) { fsBadge.classList.remove('is-loading'); fsBadge.classList.add('is-live'); } if (fsStatus) fsStatus.textContent = 'LIVE';
     var djInfoBar = document.querySelector('.dj-info-bar'); if (djInfoBar) djInfoBar.classList.add('is-live');
-    var displayName = streamData.isRelay ? (streamData.title || 'Relay Stream') : streamData.djName;
-    var uiFields = { djName: displayName, controlsDjName: displayName || 'DJ', streamGenre: streamData.genre || 'Jungle / D&B', viewerCount: streamData.totalViews || streamData.currentViewers || 0, likeCount: streamData.totalLikes || 0, avgRating: (streamData.averageRating || 0).toFixed(1), streamDescription: streamData.description || 'No description', audioDjName: displayName || 'DJ', audioShowTitle: streamData.isRelay ? (streamData.relayNowPlaying ? 'Now Playing: ' + streamData.relayNowPlaying : 'Relayed from ' + ((streamData.relaySource && streamData.relaySource.stationName) || 'External Station')) : (streamData.title || 'Live on Fresh Wax'), fsStreamTitle: streamData.title || 'Live Stream', fsDjName: displayName || 'DJ', fsAudioDjName: displayName || 'DJ' };
+    // Relay dj-info bar keeps the source's now-playing / station (the "from the
+    // underground lair" view) — NOT the DJ's custom ticker title. The custom
+    // title only drives the top scrolling ticker (setStreamTicker below).
+    var relayInfoTitle = streamData.relayNowPlaying || (streamData.relaySource && streamData.relaySource.stationName) || streamData.title || 'Relay Stream';
+    var displayName = streamData.isRelay ? relayInfoTitle : streamData.djName;
+    var uiFields = { djName: displayName, controlsDjName: displayName || 'DJ', streamGenre: streamData.genre || 'Jungle / D&B', viewerCount: streamData.totalViews || streamData.currentViewers || 0, likeCount: streamData.totalLikes || 0, avgRating: (streamData.averageRating || 0).toFixed(1), streamDescription: streamData.description || 'No description', audioDjName: displayName || 'DJ', audioShowTitle: streamData.isRelay ? (streamData.relayNowPlaying ? 'Now Playing: ' + streamData.relayNowPlaying : 'Relayed from ' + ((streamData.relaySource && streamData.relaySource.stationName) || 'External Station')) : (streamData.title || 'Live on Fresh Wax'), fsStreamTitle: streamData.isRelay ? relayInfoTitle : (streamData.title || 'Live Stream'), fsDjName: displayName || 'DJ', fsAudioDjName: displayName || 'DJ' };
     Object.keys(uiFields).forEach(function(key) { var el = document.getElementById(key); if (!el) return; var isNameField = (key === 'controlsDjName' || key === 'djName' || key === 'audioDjName' || key === 'fsDjName' || key === 'fsAudioDjName'); if (streamData.isRelay && isNameField) el.innerHTML = '<span style="color: #ef4444;">' + escapeHtml(uiFields[key]) + '</span>'; else el.textContent = uiFields[key]; });
     var streamTitle = document.getElementById('streamTitle');
     if (streamTitle) { if (streamData.isRelay && streamData.relaySource && streamData.relaySource.stationName) streamTitle.innerHTML = '<span class="title-live">RELAYED FROM</span> <span class="title-relay-from">' + escapeHtml(streamData.relaySource.stationName).toUpperCase() + '</span>'; else streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>'; }
