@@ -8,6 +8,7 @@
 import type { APIRoute } from 'astro';
 
 import { cleanupExpiredReservations } from '../../../lib/order-utils';
+import { expireStaleSlots } from '../../../lib/livestream-slots/get-actions';
 import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
 
@@ -49,11 +50,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // which are initialized by middleware's initFirebaseEnv(runtime.env) on every request,
     // including cron POST requests — no env parameter needed here.
     const cleaned = await cleanupExpiredReservations();
+
+    // Also expire stale livestream slots (scheduled/in_lobby whose booked time
+    // has fully passed without going live) so they stop accumulating.
+    let slotsExpired = 0;
+    try {
+      slotsExpired = await expireStaleSlots(db);
+    } catch (slotErr: unknown) {
+      log.error('[Cleanup Reservations] Stale-slot cleanup failed:', slotErr instanceof Error ? slotErr.message : String(slotErr));
+    }
+
     const duration = Date.now() - startTime;
-    log.info(`[Cleanup Reservations] Done. Cleaned: ${cleaned}, Duration: ${duration}ms`);
+    log.info(`[Cleanup Reservations] Done. Reservations cleaned: ${cleaned}, stale slots expired: ${slotsExpired}, Duration: ${duration}ms`);
     log.info('[Cleanup Reservations] ========== COMPLETED ==========');
 
-    return successResponse({ cleaned, duration });
+    return successResponse({ cleaned, slotsExpired, duration });
   } catch (err: unknown) {
     log.error('[Cleanup Reservations] Error:', err instanceof Error ? err.message : String(err));
     return ApiErrors.serverError('Cleanup failed');

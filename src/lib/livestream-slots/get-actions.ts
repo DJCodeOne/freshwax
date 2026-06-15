@@ -468,3 +468,57 @@ async function autoEndExpiredSlots(
     }
   }
 }
+
+/**
+ * Expire stale slots: bookings left in 'scheduled'/'in_lobby' whose endTime is
+ * fully in the past (the booked time passed without going live, and they were
+ * never completed/cancelled). Marks them 'expired' (a terminal status no
+ * schedule query matches) in Firestore + D1 so they stop accumulating. Run from
+ * the hourly cleanup cron. Mirrors scripts/cleanup-stale-slots.cjs.
+ * Returns the number of slots expired.
+ */
+export async function expireStaleSlots(db: unknown): Promise<number> {
+  const nowISO = new Date().toISOString();
+  let expired = 0;
+  // 'scheduled'/'in_lobby' are small, bounded sets (active + not-yet-cleaned),
+  // so an unfiltered scan with a generous cap is safe here.
+  for (const status of ['scheduled', 'in_lobby']) {
+    let slots: Record<string, unknown>[] = [];
+    try {
+      slots = await queryCollection('livestreamSlots', {
+        filters: [{ field: 'status', op: 'EQUAL', value: status }],
+        skipCache: true,
+        limit: 200,
+      });
+    } catch (qErr: unknown) {
+      log.warn(`expireStaleSlots: query for status=${status} failed:`, qErr);
+      continue;
+    }
+    for (const slot of slots) {
+      const endTime = slot.endTime as string | undefined;
+      // Only past slots — an upcoming/active booking has endTime in the future.
+      if (!endTime || endTime >= nowISO) continue;
+      const slotId = slot.id as string;
+      try {
+        await updateDocument('livestreamSlots', slotId, {
+          status: 'expired',
+          expiredAt: nowISO,
+          updatedAt: nowISO,
+        });
+        try {
+          await syncSlotStatusToD1(db, slotId, 'expired', { expiredAt: nowISO });
+        } catch (d1Err: unknown) {
+          log.warn('expireStaleSlots: D1 sync failed for', slotId, d1Err);
+        }
+        expired++;
+      } catch (uErr: unknown) {
+        log.warn('expireStaleSlots: failed to expire', slotId, uErr);
+      }
+    }
+  }
+  if (expired > 0) {
+    invalidateCache();
+    clearCache('livestreamSlots');
+  }
+  return expired;
+}
