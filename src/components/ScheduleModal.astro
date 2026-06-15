@@ -355,7 +355,7 @@ import DailySchedule from './DailySchedule.astro';
     };
 
     // Open Booking Schedule
-    window.openBookingSchedule = function(userId: string, displayName: string) {
+    window.openBookingSchedule = function(userId: string, displayName: string, avatar?: string | null) {
       if (!userId) {
         console.error('[ScheduleModal] No userId provided!');
         alert('You must be logged in to book a slot.');
@@ -364,7 +364,7 @@ import DailySchedule from './DailySchedule.astro';
 
       // Set user info on the schedule component
       if (window.schedule_bookingSchedule) {
-        window.schedule_bookingSchedule.setUser(userId, displayName);
+        window.schedule_bookingSchedule.setUser(userId, displayName, avatar || null);
       } else {
         console.error('[ScheduleModal] schedule_bookingSchedule not found!');
       }

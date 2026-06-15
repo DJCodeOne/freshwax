@@ -1300,7 +1300,8 @@ try {
           } catch (err) { console.error('[Live] Auth check error:', err); }
           if (!user) { window.location.href = '/login/?redirect=/live/'; return; }
           var displayName = user.displayName || (user.email && user.email.split('@')[0]) || 'DJ';
-          window.openBookingSchedule(user.uid, displayName);
+          var bookingAvatar = (userInfo && userInfo.avatar) || user.photoURL || null;
+          window.openBookingSchedule(user.uid, displayName, bookingAvatar);
         })();
       });
     }
@@ -2209,11 +2210,14 @@ try {
       // not the per-track now-playing text (which keeps changing).
       const relayStation = (slot.relaySource && slot.relaySource.stationName) || 'External Station';
       const displayName = isRelay ? relayStation : slot.djName;
-      const showTitle = !isRelay && slot.title && slot.title !== slot.djName;
 
       const slotInitial = escapeHtml(((displayName || '?').trim().charAt(0) || '?').toUpperCase());
-      const slotAvatar = (!isRelay && slot.djAvatar)
-        ? `<span class="schedule-avatar"><img src="${escapeHtml(slot.djAvatar)}" alt="" loading="lazy" /></span>`
+      // Use the real avatar when available; for the current DJ's own slot fall
+      // back to their loaded profile avatar (bookings may predate avatar storage),
+      // otherwise show the initial.
+      const slotAvatarUrl = isRelay ? null : (slot.djAvatar || (isMySlot && userInfo && userInfo.avatar) || null);
+      const slotAvatar = slotAvatarUrl
+        ? `<span class="schedule-avatar"><img src="${escapeHtml(slotAvatarUrl)}" alt="" loading="lazy" /></span>`
         : `<span class="schedule-avatar${isRelay ? ' relay-avatar' : ''}">${isRelay ? '♪' : slotInitial}</span>`;
       return `<div class="schedule-item${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}${isRelay ? ' relay' : ''}">
         ${isLive ? '<span class="live-headphone-icon">🎧</span>' : ''}
@@ -2222,7 +2226,6 @@ try {
           <div class="schedule-dj-header">
             <h3 title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</h3>
           </div>
-          ${showTitle ? `<span class="schedule-title">${escapeHtml(slot.title)}</span>` : ''}
           <div class="schedule-times">
             <span class="schedule-time-range">${isRelay ? (slot.title ? `♪ ${escapeHtml(slot.title)}` : 'Relayed stream') : `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`}</span>
           </div>
@@ -2466,12 +2469,7 @@ try {
             slot.status === 'queued' ?
             '<span class="status-badge queued">QUEUED</span>' :
             '';
-          const initial = escapeHtml(((slot.djName || '?').trim().charAt(0) || '?').toUpperCase());
-          const avatar = slot.djAvatar
-            ? `<span class="queue-avatar"><img src="${escapeHtml(slot.djAvatar)}" alt="" loading="lazy" /></span>`
-            : `<span class="queue-avatar">${initial}</span>`;
           return `<div class="queue-item${i === 0 ? ' next-up' : ''}">
-            ${avatar}
             <span class="queue-name">${escapeHtml(slot.djName)}${statusBadge}</span>
             <span class="queue-time">${formatTime(slot.startTime)}</span>
           </div>`;
