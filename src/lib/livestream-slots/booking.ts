@@ -58,14 +58,21 @@ export async function handleBook(
   let slotStart = new Date(startTime);
   let slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
 
+  // When going live now, the auto-booker sends liveNow:true to book the current
+  // HOUR slot (e.g. 22:00–23:00 at 22:37). That start is in the past but still
+  // covers now, so allow it and keep its hour-aligned start (don't snap to now).
+  const liveNow = (data as { liveNow?: boolean }).liveNow === true;
+  const coversNow = liveNow && slotStart.getTime() <= now.getTime() && now.getTime() < slotEnd.getTime();
+
   // Allow booking up to 2 minutes in the past (for instant booking tolerance)
   const toleranceMs = 2 * 60 * 1000;
-  if (slotStart.getTime() < now.getTime() - toleranceMs) {
+  if (!coversNow && slotStart.getTime() < now.getTime() - toleranceMs) {
     return ApiErrors.badRequest('Cannot book in the past');
   }
 
-  // If start time is in the past (but within tolerance), adjust to now
-  if (slotStart.getTime() < now.getTime()) {
+  // If start time is in the past (but within tolerance), adjust to now —
+  // except a legitimate current-hour "live now" slot, which keeps its start.
+  if (!coversNow && slotStart.getTime() < now.getTime()) {
     slotStart = new Date(now.getTime());
     slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
   }

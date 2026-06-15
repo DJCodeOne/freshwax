@@ -20,6 +20,7 @@ export const SlotsPostSchema = z.object({
   broadcastMode: z.string().max(50).nullish(),
   relayUrl: z.string().max(2000).nullish(),
   stationName: z.string().max(200).nullish(),
+  liveNow: z.boolean().nullish(),
 }).strip();
 
 export const SlotsDeleteSchema = z.object({

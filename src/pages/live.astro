@@ -2172,8 +2172,13 @@ try {
       }
     }
 
-    // Sort by start time
-    todaySlots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+    // Live (the current DJ) sorts to the top, then upcoming by start time.
+    todaySlots.sort((a, b) => {
+      const aLive = a.status === 'live' ? 0 : 1;
+      const bLive = b.status === 'live' ? 0 : 1;
+      if (aLive !== bLive) return aLive - bLive;
+      return new Date(a.startTime) - new Date(b.startTime);
+    });
 
     if (todaySlots.length === 0) {
       list.innerHTML = '<p class="empty-message">No upcoming shows today</p>';

@@ -4076,8 +4076,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
           const token = await currentUser.getIdToken();
           const now = new Date();
-          // Round to nearest minute
-          now.setSeconds(0, 0);
+          // Snap the auto-booked slot to the current HOUR (22:00–23:00) so the
+          // schedule reads clean hours, not the broken minute you went live at.
+          now.setMinutes(0, 0, 0);
 
           const bookResponse = await fetch('/api/livestream/slots/', {
             method: 'POST',
@@ -4091,6 +4092,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               djName: userInfo?.name || currentUser.displayName || 'DJ',
               djAvatar: userInfo?.avatar || currentUser.photoURL || '/place-holder.webp',
               startTime: now.toISOString(),
+              liveNow: true, // current-hour slot for going live now (allow the past-but-covers-now start)
               duration: 60, // Default 1 hour slot
               title: ((document.getElementById('inlineStreamTitle') && document.getElementById('inlineStreamTitle').value) ? document.getElementById('inlineStreamTitle').value.trim() : '') || 'Live Session',
               genre: '',
