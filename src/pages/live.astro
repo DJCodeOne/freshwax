@@ -2211,9 +2211,14 @@ try {
       const displayName = isRelay ? relayStation : slot.djName;
       const showTitle = !isRelay && slot.title && slot.title !== slot.djName;
 
+      const slotInitial = escapeHtml(((displayName || '?').trim().charAt(0) || '?').toUpperCase());
+      const slotAvatar = (!isRelay && slot.djAvatar)
+        ? `<span class="schedule-avatar"><img src="${escapeHtml(slot.djAvatar)}" alt="" loading="lazy" /></span>`
+        : `<span class="schedule-avatar${isRelay ? ' relay-avatar' : ''}">${isRelay ? '♪' : slotInitial}</span>`;
       return `<div class="schedule-item${isMySlot ? ' my-slot' : ''}${isLive ? ' live' : ''}${isRelay ? ' relay' : ''}">
         ${isLive ? '<span class="live-headphone-icon">🎧</span>' : ''}
         <div class="schedule-dj-info">
+          ${slotAvatar}
           <div class="schedule-dj-header">
             <h3 title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</h3>
           </div>
@@ -2455,14 +2460,19 @@ try {
     
     if (queueListCard) {
       if (upcomingSlots.length > 0) {
-        queueListCard.innerHTML = upcomingSlots.slice(0, 5).map(slot => {
-          const statusBadge = slot.status === 'in_lobby' ? 
-            '<span class="status-badge lobby">LOBBY</span>' : 
+        queueListCard.innerHTML = upcomingSlots.slice(0, 5).map((slot, i) => {
+          const statusBadge = slot.status === 'in_lobby' ?
+            '<span class="status-badge lobby">LOBBY</span>' :
             slot.status === 'queued' ?
             '<span class="status-badge queued">QUEUED</span>' :
             '';
-          return `<div class="queue-item">
-            <span>${escapeHtml(slot.djName)}${statusBadge}</span>
+          const initial = escapeHtml(((slot.djName || '?').trim().charAt(0) || '?').toUpperCase());
+          const avatar = slot.djAvatar
+            ? `<span class="queue-avatar"><img src="${escapeHtml(slot.djAvatar)}" alt="" loading="lazy" /></span>`
+            : `<span class="queue-avatar">${initial}</span>`;
+          return `<div class="queue-item${i === 0 ? ' next-up' : ''}">
+            ${avatar}
+            <span class="queue-name">${escapeHtml(slot.djName)}${statusBadge}</span>
             <span class="queue-time">${formatTime(slot.startTime)}</span>
           </div>`;
         }).join('');
