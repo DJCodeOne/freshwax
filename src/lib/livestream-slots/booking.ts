@@ -199,8 +199,15 @@ export async function handleBook(
     // Release lock after successful booking
     await releaseCronLock(db, 'slot_booking');
 
-    // Sync to D1 (non-blocking)
-    syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
+    // Sync to D1 BEFORE responding. The schedule GET reads D1 first, and a
+    // Worker kills un-awaited promises once the response is sent — so a
+    // fire-and-forget sync routinely never landed, leaving the new booking
+    // invisible until the (now date-windowed) Firestore fallback ran.
+    try {
+      await syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
+    } catch (d1Err: unknown) {
+      log.warn('D1 sync after booking failed (Firestore fallback will cover it):', d1Err instanceof Error ? d1Err.message : d1Err);
+    }
 
     return successResponse({ slot: { id: slotId, ...newSlot },
       streamKey,

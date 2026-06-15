@@ -165,9 +165,16 @@ export async function handleSchedule(
   // Try D1 first for scheduled slots (FREE and fast), unless fresh=1 is set
   let allSlots = (db && !skipD1) ? await d1GetScheduledSlots(db, startDate) : [];
 
-  // Fall back to Firebase if D1 is empty or bypassed
+  // Fall back to Firebase if D1 is empty or bypassed. Query the actual date
+  // window (startTime >= startDate, ordered) — NOT the first 200 by document id.
+  // The collection accumulates hundreds of completed/cancelled slots, so an
+  // unordered limit:200 returns only the oldest docs and silently drops any
+  // recent booking (its high id falls past the window), leaving the schedule
+  // empty. A range filter on startTime needs an orderBy on the same field.
   if (allSlots.length === 0) {
     allSlots = await queryCollection('livestreamSlots', {
+      filters: [{ field: 'startTime', op: 'GREATER_THAN_OR_EQUAL', value: startDate }],
+      orderBy: { field: 'startTime', direction: 'ASCENDING' },
       skipCache: true,
       limit: 200
     });
