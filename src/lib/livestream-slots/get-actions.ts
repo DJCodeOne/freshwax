@@ -300,8 +300,6 @@ async function autoEndExpiredSlots(
   for (const liveSlot of firebaseLiveSlots) {
     const slotEnd = new Date(liveSlot.endTime as string);
     if (now > slotEnd) {
-      // Relay streams stay alive until manually ended (unless another DJ needs the slot)
-      const isRelayStream = liveSlot.isRelay === true;
 
       // Check if ANOTHER DJ has a slot starting soon — only cut off if someone else needs the slot
       const upcomingAllSlots = await queryCollection('livestreamSlots', {
@@ -318,25 +316,9 @@ async function autoEndExpiredSlots(
         return nextStart.getTime() - slotEnd.getTime() <= 15 * 60 * 1000;
       });
 
-      // Relay streams: skip auto-end unless another DJ is waiting
-      if (isRelayStream && !anotherDjWaiting) {
-        // Extend the relay endTime by another 24 hours so it doesn't keep triggering
-        const newEnd = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        try {
-          // Conditional on the snapshot's updateTime: if the relay was ended
-          // since the snapshot, skip — don't write 'live' back to D1.
-          const applied = await extendIfStillLive(liveSlot, {
-            endTime: newEnd.toISOString(),
-            updatedAt: now.toISOString()
-          });
-          if (applied) {
-            await syncSlotStatusToD1(db, liveSlot.id, 'live', { endTime: newEnd.toISOString() });
-          }
-        } catch (extErr: unknown) {
-          log.warn('Failed to extend relay endTime:', extErr);
-        }
-        continue;
-      }
+      // Relays are treated like any booked session: they end at their booked
+      // endTime, and the DJ extends at the hour via the 5-min prompt (opt-in,
+      // only when nobody's booked next). No automatic 24h keep-alive.
 
       // Enforce max duration: 2hr standard, 2hr + approved event hours for Plus
       const startedAt = new Date((liveSlot.startedAt || liveSlot.startTime) as string);

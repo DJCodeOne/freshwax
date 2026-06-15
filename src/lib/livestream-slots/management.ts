@@ -192,7 +192,6 @@ export async function handleExtendSlot(
 
   if (!slot) return ApiErrors.notFound('No active stream to extend');
   if (slot.djId !== authUserId && !extendIsAdmin) return ApiErrors.forbidden('Not authorized');
-  if (slot.isRelay === true) return ApiErrors.badRequest('Relay streams cannot be extended this way');
 
   // Next hour boundary after the current end.
   const currentEnd = new Date((slot.endTime as string) || nowISO);

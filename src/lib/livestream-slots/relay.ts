@@ -97,8 +97,19 @@ export async function handleStartRelay(
     }
   }
 
-  // Relay streams run until manually ended — set endTime 24 hours ahead
-  const endTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  // A relay covers the DJ's booked slot, just like a direct stream — it ends at
+  // the booking's end and the DJ can extend at the hour (the 5-min prompt) if
+  // nobody's booked next. With no booking (admin ad-hoc relay), default to the
+  // next hour boundary.
+  let endTime: Date;
+  if (bookedSlot && bookedSlot.endTime) {
+    endTime = new Date(bookedSlot.endTime as string);
+  } else {
+    endTime = new Date(now);
+    endTime.setMinutes(0, 0, 0);
+    endTime.setHours(endTime.getHours() + 1);
+    if (now.getMinutes() >= 55) endTime.setHours(endTime.getHours() + 1);
+  }
 
   // Generate a relay stream key
   const relaySlotId = generateId();

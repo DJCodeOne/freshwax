@@ -2360,8 +2360,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     try {
       if (!streamEndTime || !currentStream || !currentUser) return;
       // Only the streaming DJ themselves (not viewers/admins watching) is asked.
+      // Relays get the prompt too — they end at the booked hour like any session.
       if (currentStream.djId !== currentUser.uid) return;
-      if (currentStream.isRelay) return;
       const endMs = streamEndTime instanceof Date ? streamEndTime.getTime() : new Date(streamEndTime).getTime();
       if (!endMs) return;
       const remaining = endMs - Date.now();
