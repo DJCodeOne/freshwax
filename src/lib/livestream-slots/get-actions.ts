@@ -375,95 +375,46 @@ async function autoEndExpiredSlots(
         : (timeSinceSlotEnd > 5 * 60 * 1000); // No heartbeat field at all + 5 min past end
       const djDisconnected = heartbeatStale && timeSinceSlotEnd > 2 * 60 * 1000;
 
-      const shouldAutoEnd = anotherDjWaiting || exceededMaxDuration || djDisconnected;
+      // Extension is OPT-IN: the DJ's 5-min "keep streaming" prompt calls the
+      // 'extend' action, which pushes endTime forward BEFORE the slot expires.
+      // So any non-relay live slot that has reached its booked endTime without
+      // being extended is ended here — "cut at the hour". The signals below just
+      // record a more specific reason when one applies.
+      const reason = anotherDjWaiting ? 'next_dj_waiting'
+        : (exceededMaxDuration ? 'max_duration_reached'
+        : (djDisconnected ? 'dj_disconnected' : 'slot_ended'));
+      log.info(`Auto-ending slot ${liveSlot.id} for ${liveSlot.djName} (${reason})`);
+      try {
+        await updateDocument('livestreamSlots', liveSlot.id, {
+          status: 'completed',
+          endedAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+          autoEnded: true,
+          autoEndReason: reason
+        });
 
-      if (shouldAutoEnd) {
-        const reason = anotherDjWaiting ? 'next_dj_waiting' : (exceededMaxDuration ? 'max_duration_reached' : 'dj_disconnected');
-        log.info(`Auto-ending slot ${liveSlot.id} for ${liveSlot.djName} (${reason})`);
-        try {
-          await updateDocument('livestreamSlots', liveSlot.id, {
-            status: 'completed',
-            endedAt: now.toISOString(),
-            updatedAt: now.toISOString(),
-            autoEnded: true,
-            autoEndReason: reason
-          });
+        // Sync to D1 (await to ensure D1 is up to date before status checks)
+        await syncSlotStatusToD1(db, liveSlot.id, 'completed', {
+          endedAt: now.toISOString(),
+          autoEnded: true
+        });
 
-          // Sync to D1 (await to ensure D1 is up to date before status checks)
-          await syncSlotStatusToD1(db, liveSlot.id, 'completed', {
-            endedAt: now.toISOString(),
-            autoEnded: true
-          });
+        // Broadcast end via Pusher
+        await broadcastLiveStatus('stream-ended', {
+          djId: liveSlot.djId,
+          djName: liveSlot.djName,
+          slotId: liveSlot.id,
+          reason: reason
+        }, env);
 
-          // Broadcast end via Pusher
-          await broadcastLiveStatus('stream-ended', {
-            djId: liveSlot.djId,
-            djName: liveSlot.djName,
-            slotId: liveSlot.id,
-            reason: reason
-          }, env);
+        invalidateCache();
 
-          invalidateCache();
-
-          // Clear all caches so status endpoint returns fresh data
-          clearCache('livestreamSlots');
-          await kvDelete('general', { prefix: 'status' });
-          await invalidateStatusCacheFn();
-        } catch (autoEndError: unknown) {
-          log.error('Failed to auto-end slot:', autoEndError);
-        }
-      } else {
-        // Slot is past its booked endTime but DJ is still streaming, no other DJ
-        // is queued, and they haven't hit max duration → keep the broadcast
-        // seamless by extending endTime. This avoids the "stream cut off at the
-        // hour" problem when the DJ wants more time and nobody's after them.
-        // Extend to either the next booked DJ's startTime, or the next hour
-        // boundary if nothing's queued. The same streamKey stays valid because
-        // validateStreamKeyTiming reads the slot's current endTime.
-        const nextBooked = upcomingAllSlots
-          .filter((s: Record<string, unknown>) => s.djId !== liveSlot.djId
-            && ['scheduled', 'in_lobby', 'queued'].includes(s.status as string))
-          .map((s: Record<string, unknown>) => new Date(s.startTime as string))
-          .filter((d: Date) => d.getTime() > now.getTime())
-          .sort((a: Date, b: Date) => a.getTime() - b.getTime())[0];
-
-        const nextHour = new Date(now);
-        nextHour.setMinutes(0, 0, 0);
-        nextHour.setHours(nextHour.getHours() + 1);
-
-        const newEnd = nextBooked && nextBooked.getTime() < nextHour.getTime()
-          ? nextBooked
-          : nextHour;
-
-        // Only extend if it actually moves forward (avoid no-op writes when
-        // we're already past nextHour but a new nextBooked sits earlier — that
-        // would shrink the window).
-        if (newEnd.getTime() > slotEnd.getTime()) {
-          log.info(`Extending slot ${liveSlot.id} for ${liveSlot.djName}: endTime ${slotEnd.toISOString()} → ${newEnd.toISOString()} (no DJ queued)`);
-          try {
-            // Conditional on the snapshot's updateTime: if the stream was ended
-            // (endStream / concurrent auto-end) since the snapshot at the top of
-            // this function, skip the extend and do NOT write 'live' back to D1 —
-            // that would resurrect an ended slot on the public pages.
-            const applied = await extendIfStillLive(liveSlot, {
-              endTime: newEnd.toISOString(),
-              updatedAt: now.toISOString(),
-              extended: true,
-              lastExtendedAt: now.toISOString(),
-            });
-            if (applied) {
-              await syncSlotStatusToD1(db, liveSlot.id, 'live', { endTime: newEnd.toISOString() });
-              invalidateCache();
-              clearCache('livestreamSlots');
-              await kvDelete('general', { prefix: 'status' });
-              await invalidateStatusCacheFn();
-            } else {
-              log.info(`Skipped extend for ${liveSlot.id} — slot changed since snapshot (likely ended); not resurrecting to live`);
-            }
-          } catch (extendErr: unknown) {
-            log.warn('Failed to extend slot endTime:', extendErr);
-          }
-        }
+        // Clear all caches so status endpoint returns fresh data
+        clearCache('livestreamSlots');
+        await kvDelete('general', { prefix: 'status' });
+        await invalidateStatusCacheFn();
+      } catch (autoEndError: unknown) {
+        log.error('Failed to auto-end slot:', autoEndError);
       }
     }
   }

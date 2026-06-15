@@ -2333,7 +2333,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (document.hidden) return;
       loadStreamStatus();
     }, 60000); // 60s instead of 10s - saves ~84% reads
-    lobbyTimeRemainingInterval = setInterval(updateTimeRemaining, 500); // Update every 500ms — 2x/sec is smooth enough for countdown
+    lobbyTimeRemainingInterval = setInterval(function() {
+      updateTimeRemaining();
+      checkSlotEndPrompt(); // 5-min "keep streaming or cut" prompt (guarded; asks once per end)
+    }, 500); // Update every 500ms — 2x/sec is smooth enough for countdown
     lobbyStreamKeyInterval = setInterval(function() {
       if (document.hidden) return;
       checkStreamKeyAvailability();
@@ -2344,6 +2347,80 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }, 60000); // Refresh slots every minute for consecutive slot detection
   }
   
+  // --- 5-minute "keep streaming or cut" prompt ---------------------------
+  // Extension is OPT-IN. Five minutes before the booked slot ends, the DJ who
+  // is actually streaming is asked whether to carry into the next hour. "Keep
+  // streaming" calls the server `extend` action (pushes endTime forward); "Cut
+  // at the hour" / no answer lets the slot end at the booked hour (the server
+  // cuts it). Guarded to ask once per endTime, and re-arms after an extend.
+  let slotEndPromptFor = null;   // streamEndTime (ms) we've already asked about
+  let slotEndPromptOpen = false;
+  async function checkSlotEndPrompt() {
+    try {
+      if (!streamEndTime || !currentStream || !currentUser) return;
+      // Only the streaming DJ themselves (not viewers/admins watching) is asked.
+      if (currentStream.djId !== currentUser.uid) return;
+      if (currentStream.isRelay) return;
+      const endMs = streamEndTime instanceof Date ? streamEndTime.getTime() : new Date(streamEndTime).getTime();
+      if (!endMs) return;
+      const remaining = endMs - Date.now();
+      if (remaining > 5 * 60 * 1000 || remaining <= 0) return;      // only inside the final 5 min
+      if (slotEndPromptOpen || slotEndPromptFor === endMs) return;  // ask once per end
+      // Skip when a consecutive booked slot carries the DJ seamlessly, or in event mode.
+      try { if (hasSameDjNextSlot && hasSameDjNextSlot(currentStream.djId, streamEndTime)) return; } catch (e) {}
+      try { if (isInEventMode && isInEventMode()) return; } catch (e) {}
+
+      slotEndPromptFor = endMs;
+      slotEndPromptOpen = true;
+      const keep = await window.showConfirmToast(
+        'Your slot ends in 5 minutes. Keep streaming into the next hour, or cut at the hour?',
+        { confirmText: 'Keep streaming', cancelText: 'Cut at the hour', danger: false }
+      );
+      slotEndPromptOpen = false;
+      if (keep) await requestSlotExtend();
+    } catch (e) {
+      slotEndPromptOpen = false;
+    }
+  }
+
+  async function requestSlotExtend() {
+    try {
+      const slotId = (currentStream && (currentStream.slotId || currentStream.id)) || window.currentLiveSlotId;
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/livestream/slots/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ action: 'extend', slotId: slotId, djId: currentUser.uid, idToken: token })
+      });
+      const data = await res.json().catch(function () { return {}; });
+      if (res.ok && data.success && data.endTime) {
+        streamEndTime = new Date(data.endTime);
+        if (currentStream) currentStream.endTime = data.endTime;
+        try { videoPlayer.setStreamEndTime(streamEndTime); } catch (e) {}
+        slotEndPromptFor = null;   // re-arm for the new end time
+        log('[Stream] Extended to ' + streamEndTime.toLocaleTimeString());
+        showLobbyInfo('Stream extended to ' + streamEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      } else {
+        showLobbyInfo((data && data.error) ? data.error : 'Could not extend — the next hour may be booked.');
+      }
+    } catch (e) {
+      console.error('[Stream] extend failed', e);
+      showLobbyInfo('Could not extend your slot. Please try again.');
+    }
+  }
+
+  // Minimal auto-dismissing corner toast for one-line info messages.
+  function showLobbyInfo(message) {
+    try {
+      const t = document.createElement('div');
+      t.setAttribute('role', 'status');
+      t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10011;background:#191919;color:#fff;border:1px solid #3a3a3a;border-left:3px solid #16a34a;padding:12px 18px;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);font-weight:600;font-size:.95rem;max-width:90vw;animation:fwConfirmFade .18s ease-out;';
+      t.textContent = message;
+      document.body.appendChild(t);
+      setTimeout(function () { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(function () { t.remove(); }, 320); }, 3600);
+    } catch (e) {}
+  }
+
   // Page cleanup - called when leaving
   function setupPageCleanup() {
     // Full page navigation cleanup

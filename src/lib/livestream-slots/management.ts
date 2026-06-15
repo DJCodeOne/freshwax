@@ -153,6 +153,94 @@ export async function handleEndStream(
   return successResponse({ message: 'Stream ended' });
 }
 
+// Extend a live slot by one hour (the DJ opted to "keep streaming" on the 5-min
+// prompt). Pushes endTime to the next hour boundary, capped to the next booked
+// DJ's start time; refuses if another DJ is up next. Extension is opt-in — the
+// server no longer auto-extends, so this is the only way to carry past the hour.
+export async function handleExtendSlot(
+  data: Record<string, unknown>,
+  authUserId: string,
+  db: unknown,
+  env: Record<string, unknown>,
+  now: Date,
+  nowISO: string,
+  invalidateStatusCacheFn: () => Promise<void>
+): Promise<Response> {
+  const { slotId } = data as { slotId?: string };
+  const extendIsAdmin = await isAdmin(authUserId);
+
+  // Resolve the live slot — prefer slotId, fall back to the caller's live slot.
+  let slot;
+  let targetSlotId = slotId;
+  if (slotId) {
+    slot = await getDocument('livestreamSlots', slotId);
+  }
+  if (!slot || slot.status !== 'live') {
+    const liveSlots = await queryCollection('livestreamSlots', {
+      filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+      skipCache: true
+    });
+    slot = extendIsAdmin ? liveSlots[0] : liveSlots.find(s => s.djId === authUserId);
+    if (slot) targetSlotId = slot.id;
+  }
+
+  if (!slot) return ApiErrors.notFound('No active stream to extend');
+  if (slot.djId !== authUserId && !extendIsAdmin) return ApiErrors.forbidden('Not authorized');
+  if (slot.isRelay === true) return ApiErrors.badRequest('Relay streams cannot be extended this way');
+
+  // Next hour boundary after the current end.
+  const currentEnd = new Date((slot.endTime as string) || nowISO);
+  const newEnd = new Date(currentEnd);
+  newEnd.setMinutes(0, 0, 0);
+  newEnd.setHours(newEnd.getHours() + 1);
+  while (newEnd.getTime() <= currentEnd.getTime()) newEnd.setHours(newEnd.getHours() + 1);
+
+  // Don't extend into another DJ's booked slot. If they start before the new
+  // end, cap to their start; if they're already up at the hour, refuse.
+  const upcoming = await queryCollection('livestreamSlots', {
+    filters: [{ field: 'startTime', op: 'GREATER_THAN_OR_EQUAL', value: currentEnd.toISOString() }],
+    orderBy: { field: 'startTime', direction: 'ASCENDING' },
+    limit: 10,
+    skipCache: true
+  });
+  const nextOther = upcoming.find(s => s.djId !== slot.djId && ['scheduled', 'in_lobby', 'queued'].includes(s.status as string));
+  if (nextOther) {
+    const nextStart = new Date(nextOther.startTime as string);
+    if (nextStart.getTime() <= currentEnd.getTime()) {
+      return ApiErrors.conflict('The next slot is booked by another DJ — you can\'t extend.');
+    }
+    if (nextStart.getTime() < newEnd.getTime()) newEnd.setTime(nextStart.getTime());
+  }
+
+  await updateDocument('livestreamSlots', targetSlotId as string, {
+    endTime: newEnd.toISOString(),
+    extended: true,
+    lastExtendedAt: nowISO,
+    updatedAt: nowISO
+  });
+
+  // Sync the new end to D1 before responding (the schedule reads D1 first).
+  try {
+    await syncSlotStatusToD1(db, targetSlotId as string, 'live', { endTime: newEnd.toISOString() });
+  } catch (d1Err: unknown) {
+    log.warn('extend: D1 sync failed:', d1Err instanceof Error ? d1Err.message : d1Err);
+  }
+
+  invalidateCache();
+  clearCache('livestreamSlots');
+  await kvDelete('general', { prefix: 'status' });
+  await invalidateStatusCacheFn();
+
+  await broadcastLiveStatus('stream-updated', {
+    slotId: targetSlotId,
+    djId: slot.djId,
+    djName: slot.djName,
+    endTime: newEnd.toISOString()
+  }, env);
+
+  return successResponse({ message: 'Slot extended', endTime: newEnd.toISOString() });
+}
+
 export async function handleHeartbeat(
   data: Record<string, unknown>,
   authUserId: string,

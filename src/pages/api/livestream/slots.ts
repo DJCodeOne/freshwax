@@ -24,6 +24,7 @@ import {
   handleEarlyStart,
   handleCancel,
   handleEndStream,
+  handleExtendSlot,
   handleHeartbeat,
   handleGetStreamKey,
   handleGenerateKey,
@@ -175,6 +176,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (action === 'endStream') {
       return handleEndStream(data, authUserId, db, env, now, nowISO, invalidateStatusCache);
+    }
+
+    if (action === 'extend') {
+      return handleExtendSlot(data, authUserId, db, env, now, nowISO, invalidateStatusCache);
     }
 
     if (action === 'heartbeat') {
