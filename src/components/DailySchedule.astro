@@ -1600,7 +1600,9 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       const slotEnd = slotStart + 60 * 60 * 1000;
 
       const found = bookings.find(booking => {
-        if (booking.status === 'cancelled') return false;
+        // Only active bookings occupy a grid cell. Finished/cancelled sessions
+        // (incl. completed 24h relays) must not keep filling the schedule.
+        if (['cancelled', 'completed', 'expired', 'ended'].includes(booking.status)) return false;
         const bookingStart = new Date(booking.startTime).getTime();
         const bookingEnd = new Date(booking.endTime).getTime();
         const match = slotStart >= bookingStart && slotStart < bookingEnd;

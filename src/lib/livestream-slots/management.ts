@@ -79,14 +79,20 @@ export async function handleEndStream(
     return ApiErrors.forbidden('Not authorized');
   }
 
-  await updateDocument('livestreamSlots', targetSlotId, {
+  const endStreamUpdates: Record<string, unknown> = {
     status: 'completed',
     endedAt: nowISO,
     updatedAt: nowISO
-  });
+  };
+  // Cap a future-dated endTime (e.g. a relay's 24h window) to the actual end so
+  // the finished session doesn't keep occupying the schedule for hours.
+  if (slot.endTime && new Date(slot.endTime as string).getTime() > now.getTime()) {
+    endStreamUpdates.endTime = nowISO;
+  }
+  await updateDocument('livestreamSlots', targetSlotId, endStreamUpdates);
 
   // Sync status change to D1 (non-blocking)
-  syncSlotStatusToD1(db, targetSlotId, 'completed', { endedAt: nowISO });
+  syncSlotStatusToD1(db, targetSlotId, 'completed', { endedAt: nowISO, ...(endStreamUpdates.endTime ? { endTime: nowISO } : {}) });
 
   // Record streaming time for usage tracking
   try {
