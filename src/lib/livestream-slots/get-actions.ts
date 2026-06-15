@@ -75,7 +75,7 @@ export async function handleCurrentLive(
   if (slots.length === 0) {
     slots = await queryCollection('livestreamSlots', {
       filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-      limit: 1,
+      limit: 5,
       skipCache: true
     });
   }
@@ -84,7 +84,8 @@ export async function handleCurrentLive(
     return successResponse({ isLive: false, currentStream: null });
   }
 
-  const liveSlot = slots[0];
+  // A real DJ takes precedence over a relay filler.
+  const liveSlot = slots.find((s: Record<string, unknown>) => !s.isRelay) || slots[0];
   const endTime = new Date(liveSlot.endTime);
   const now = new Date();
   const timeRemaining = Math.max(0, endTime.getTime() - now.getTime());
@@ -231,8 +232,11 @@ export async function handleSchedule(
   if (djId) slots = slots.filter((slot: Record<string, unknown>) => slot.djId === djId);
 
   const nowISO = now.toISOString();
-  // Find any slot that's currently live (regardless of scheduled end time - they might still be streaming)
-  const liveSlot = slots.find((slot: Record<string, unknown>) => slot.status === 'live');
+  // Find the currently-live slot (regardless of scheduled end time — they might
+  // still be streaming). A real DJ takes precedence over a relay filler, so the
+  // public ticker/player shows the DJ (and their title), not the relay station.
+  const liveSlots = slots.filter((slot: Record<string, unknown>) => slot.status === 'live');
+  const liveSlot = liveSlots.find((slot: Record<string, unknown>) => !slot.isRelay) || liveSlots[0];
   const upcomingSlots = slots.filter((slot: Record<string, unknown>) => (slot.startTime as string) > nowISO && ['scheduled', 'in_lobby', 'queued'].includes(slot.status as string));
 
   // SECURITY: Sanitize all slots to remove stream keys from public response

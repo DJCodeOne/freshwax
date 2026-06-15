@@ -333,8 +333,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Sort by startedAt desc
+    // A real DJ stream always takes precedence over a relay filler — otherwise a
+    // 24/7 relay (e.g. "The Underground Lair") can outrank a DJ who just went
+    // live and the public ticker/player shows the relay instead of the DJ.
+    // Within the same kind, most-recently-started wins.
     const streams = liveStreams.sort((a, b) => {
+      const relayA = a.isRelay ? 1 : 0;
+      const relayB = b.isRelay ? 1 : 0;
+      if (relayA !== relayB) return relayA - relayB; // non-relay (0) sorts first
       const dateA = a.startedAt ? new Date(a.startedAt).getTime() : 0;
       const dateB = b.startedAt ? new Date(b.startedAt).getTime() : 0;
       return dateB - dateA;
