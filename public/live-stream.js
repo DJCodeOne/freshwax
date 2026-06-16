@@ -530,6 +530,9 @@ function showLiveStream(streamData) {
       var twitchUser = streamData.twitchChannel || streamData.twitchUsername; if (window.setupFsTwitchChat) window.setupFsTwitchChat(twitchUser);
       joinStream('playlist-global'); setupChat('playlist-global'); startDurationTimer(streamData.startedAt); setupReactions(streamData.id);
     }
+    // Same live slot but the end time moved (DJ extended into the next hour) —
+    // refresh the schedule + today's lineup so the displayed slot time updates.
+    if (sameStreamRefresh && prevData.endTime !== streamData.endTime && typeof window.refreshSchedule === 'function') window.refreshSchedule();
   } catch (e) { console.error('[showLiveStream] Error in UI setup:', e); }
 }
 
