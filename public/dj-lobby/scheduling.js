@@ -708,13 +708,14 @@ export async function handleGoLiveReady() {
   var userRelayUrl = isRelayMode && selectedRelaySource ? (selectedRelaySource.playbackUrl || 'https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8') : null;
   var relaySourceName = selectedRelaySource ? (selectedRelaySource.name || 'External Source') : 'External Source';
 
-  if (isRelayMode && selectedRelaySource && selectedRelaySource.nowPlaying) {
-    title = selectedRelaySource.nowPlaying;
-  } else {
-    var titleEl = document.getElementById('inlineStreamTitle');
-    title = titleEl ? (titleEl.value ? titleEl.value.trim() : '') : '';
-    if (!title) title = 'Live Session';
-  }
+  // The title comes from the DJ's setup field (inlineStreamTitle) for BOTH relay
+  // and direct streams — it's the manual title that drives the top scrolling
+  // ticker, the same value the on-air "Live Title" editor edits. Leave it blank
+  // and the server sets customTitle=false so the ticker shows the freshwax
+  // default. The relay's now-playing track shows in the dj-info bar (from the
+  // status endpoint), NOT here — so we never override the title with nowPlaying.
+  var titleEl = document.getElementById('inlineStreamTitle');
+  title = titleEl ? (titleEl.value ? titleEl.value.trim() : '') : '';
   var genreEl = document.getElementById('inlineStreamGenre');
   genre = genreEl ? (genreEl.value || 'Jungle / D&B') : 'Jungle / D&B';
 

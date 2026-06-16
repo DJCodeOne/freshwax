@@ -1391,7 +1391,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260613c';
   import * as lobbyChat from '/dj-lobby/chat.js?v=20260612a';
   import * as lobbyDm from '/dj-lobby/dm.js?v=20260612a';
-  import * as scheduling from '/dj-lobby/scheduling.js?v=20260615a';
+  import * as scheduling from '/dj-lobby/scheduling.js?v=20260616a';
   import * as shareModule from '/dj-lobby/share.js?v=20260612a';
   import * as videoPlayer from '/dj-lobby/video-player.js?v=20260613a';
   import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260612d';
@@ -2613,6 +2613,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (input && document.activeElement !== input) {
         input.value = (currentStream.customTitle && currentStream.title) ? currentStream.title : '';
       }
+      // Keep the setup-form Title field in sync so both show the same title.
+      const setupInput = document.getElementById('inlineStreamTitle');
+      if (setupInput && document.activeElement !== setupInput) {
+        setupInput.value = (currentStream.customTitle && currentStream.title) ? currentStream.title : '';
+      }
     } else {
       editor.classList.add('hidden');
     }
@@ -2651,6 +2656,51 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (btn) btn.disabled = false;
     }
   });
+
+  // Setup-form Title field (inlineStreamTitle) is the SAME title as the on-air
+  // "Live Title" editor: the DJ sets it before going live (scheduling.js reads it
+  // at go-live to drive the ticker; blank → freshwax default) and can change it
+  // during the stream. The ✓ confirms/saves it and the × clears it; when the DJ
+  // is already live, both push straight to the server like the on-air editor.
+  (function wireSetupTitleField() {
+    const setupInput = document.getElementById('inlineStreamTitle');
+    if (!setupInput) return;
+    const saveBtn = document.getElementById('saveTitleBtn');
+    const clearBtn = document.getElementById('clearTitleBtn');
+    const savedMsg = document.getElementById('titleSavedMsg');
+    function toggleClear() { if (clearBtn) clearBtn.classList.toggle('hidden', !setupInput.value.trim()); }
+    setupInput.addEventListener('input', toggleClear);
+    toggleClear();
+    async function pushIfLive(value) {
+      const slotId = (currentStream && (currentStream.slotId || currentStream.id)) || window.currentLiveSlotId;
+      const isMineLive = currentStream && currentUser && currentStream.djId === currentUser.uid;
+      if (!slotId || !isMineLive || !currentUser) return;
+      const token = await currentUser.getIdToken();
+      await fetch('/api/livestream/slots/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ action: 'update_slot', slotId: slotId, title: value })
+      });
+      if (currentStream) { if (value) currentStream.title = value; currentStream.customTitle = !!value; }
+      if (typeof loadStreamStatus === 'function') loadStreamStatus(true);
+    }
+    saveBtn?.addEventListener('click', async function() {
+      const value = setupInput.value.trim();
+      const liveInput = document.getElementById('liveTitleInput');
+      if (liveInput) liveInput.value = value; // keep both fields showing the same title
+      try { await pushIfLive(value); } catch (e) { /* not live yet — staged for go-live */ }
+      if (savedMsg) { savedMsg.classList.remove('hidden'); setTimeout(function(){ savedMsg.classList.add('hidden'); }, 2000); }
+      toggleClear();
+    });
+    clearBtn?.addEventListener('click', async function() {
+      setupInput.value = '';
+      const liveInput = document.getElementById('liveTitleInput');
+      if (liveInput) liveInput.value = '';
+      try { await pushIfLive(''); } catch (e) { /* */ }
+      toggleClear();
+      setupInput.focus();
+    });
+  })();
 
   async function loadStreamStatus(skipCache = false) {
     try {
