@@ -462,9 +462,9 @@ export function setupRelayEventListeners() {
     }
 
     savedTitle = escapeHtml(titleInput.value.trim());
-    titleInput.readOnly = true;
-    titleInput.style.background = '#0a0a0a';
-    titleInput.style.color = '#22c55e';
+    // Keep the field editable after saving — locking it (readOnly) trapped the
+    // DJ with whatever was last saved; if they then retyped a new ticker title it
+    // silently didn't take and the stale title went live.
 
     if (saveBtn) saveBtn.classList.add('saved');
     if (clearBtn) clearBtn.classList.remove('hidden');

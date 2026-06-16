@@ -1395,7 +1395,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as shareModule from '/dj-lobby/share.js?v=20260612a';
   import * as videoPlayer from '/dj-lobby/video-player.js?v=20260613a';
   import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260612d';
-  import * as relayModule from '/dj-lobby/relay.js?v=20260612a';
+  import * as relayModule from '/dj-lobby/relay.js?v=20260616a';
   import * as initModalModule from '/dj-lobby/init-modal.js?v=20260614a';
   import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260612a';
   import * as stereoMetersModule from '/dj-lobby/stereo-meters.js?v=20260612a';
@@ -2708,11 +2708,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (input && document.activeElement !== input) {
         input.value = (currentStream.customTitle && currentStream.title) ? currentStream.title : '';
       }
-      // Keep the setup-form Title field in sync so both show the same title.
-      const setupInput = document.getElementById('inlineStreamTitle');
-      if (setupInput && document.activeElement !== setupInput) {
-        setupInput.value = (currentStream.customTitle && currentStream.title) ? currentStream.title : '';
-      }
+      // NOTE: deliberately do NOT mirror the live title back into the setup-form
+      // Title field (inlineStreamTitle). Doing so made a relay/live title persist
+      // in the setup field after the stream ended and get reused on the next
+      // go-live. The setup field is the DJ's pre-live input; the on-air editor
+      // (above) owns live changes.
     } else {
       editor.classList.add('hidden');
     }
