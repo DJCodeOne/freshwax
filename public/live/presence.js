@@ -235,54 +235,40 @@ export function getHeartbeatInterval() {
   return heartbeatInterval;
 }
 
-// Re-subscribe to presence channel with correct user info
+// Re-subscribe to the presence channel with the authenticated user's REAL
+// identity. The initial subscribe (setupLiveStatusListener, ~500ms) usually runs
+// before auth + the user's display name resolve, so the member joins as an
+// anonymous "Junglist". Mutating the live Pusher instance's auth config is
+// unreliable, so tear the early/anonymous presence connection down and reconnect
+// with the user's name/avatar in the auth headers — the same approach the DJ
+// lobby uses. This is what makes a DJ's name show to other viewers while they're
+// on /live, not just when they're in the lobby.
 export function resubscribePresence(deps) {
-  if (!window.presencePusher || !window.presenceChannel) return;
-
   var currentUser = deps.getCurrentUser();
   var userInfo = deps.getUserInfo();
   if (!currentUser) return;
+  var config = window.PUSHER_CONFIG;
+  if (!config || !config.key || !window.Pusher) return;
 
-  var streamId = 'playlist-global'; // global presence channel (see setupLiveStatusListener)
-  var channelName = 'presence-stream-' + streamId;
-
-  window.presencePusher.unsubscribe(channelName);
-
+  var channelName = 'presence-stream-playlist-global';
   var displayName = (userInfo && userInfo.name) || currentUser.displayName || 'Junglist';
   var avatarUrl = (userInfo && userInfo.avatar) || currentUser.photoURL || '';
 
-  var resubHeaders = {
-    'x-user-id': currentUser.uid,
-    'x-user-name': displayName,
-    'x-user-avatar': avatarUrl
-  };
+  // Drop the anonymous/early connection so its "Junglist" member leaves the list.
+  try { if (window.presencePusher) window.presencePusher.disconnect(); } catch (e) { /* ignore */ }
 
-  // Add auth token if available
-  currentUser.getIdToken().then(function(token) {
-    if (token) resubHeaders['Authorization'] = 'Bearer ' + token;
-    window.presencePusher.config.auth = { headers: resubHeaders };
-
-    var newChannel = window.presencePusher.subscribe(channelName);
-    window.presenceChannel = newChannel;
-
-    newChannel.bind('pusher:subscription_succeeded', function() {
-      if (typeof window.updateOnlineUsers === 'function') {
-        window.updateOnlineUsers();
-      }
-    });
-    newChannel.bind('pusher:member_added', function() {
-      if (typeof window.updateOnlineUsers === 'function') {
-        window.updateOnlineUsers();
-      }
-    });
-    newChannel.bind('pusher:member_removed', function() {
-      if (typeof window.updateOnlineUsers === 'function') {
-        window.updateOnlineUsers();
-      }
-    });
-  }).catch(function() {
-    window.presencePusher.config.auth = { headers: resubHeaders };
-    var newChannel = window.presencePusher.subscribe(channelName);
-    window.presenceChannel = newChannel;
+  var pp = new window.Pusher(config.key, {
+    cluster: config.cluster || 'eu',
+    forceTLS: true,
+    authEndpoint: '/api/pusher/auth/',
+    auth: { headers: { 'x-user-id': currentUser.uid, 'x-user-name': displayName, 'x-user-avatar': avatarUrl } }
   });
+  window.presencePusher = pp;
+
+  var ch = pp.subscribe(channelName);
+  window.presenceChannel = ch;
+  function refresh() { if (typeof window.updateOnlineUsers === 'function') window.updateOnlineUsers(); }
+  ch.bind('pusher:subscription_succeeded', refresh);
+  ch.bind('pusher:member_added', refresh);
+  ch.bind('pusher:member_removed', refresh);
 }
