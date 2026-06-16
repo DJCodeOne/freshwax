@@ -1436,10 +1436,28 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       var accent = (opts.danger === false ? '#16a34a' : '#dc2626');
       var glow = (opts.danger === false ? 'rgba(22,163,74,.45)' : 'rgba(220,38,38,.45)');
       okBtn.style.cssText = 'flex:1;padding:15px 22px;border-radius:12px;border:0;background:' + accent + ';color:#fff;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 6px 22px ' + glow + ';';
+      // Optional countdown: when opts.countdownUntil (absolute ms timestamp) is
+      // set, show a live mm:ss timer; when it reaches 0 with no button pressed,
+      // the toast auto-resolves with opts.timeoutValue.
+      var countdownWrap = null, countdownEl = null, countdownTimer = null;
+      if (opts.countdownUntil) {
+        countdownWrap = document.createElement('div');
+        countdownWrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;align-items:center;';
+        if (opts.countdownLabel) {
+          var cdLabel = document.createElement('div');
+          cdLabel.textContent = opts.countdownLabel;
+          cdLabel.style.cssText = 'font-size:.85rem;font-weight:600;color:#f0a9a9;letter-spacing:.08em;text-transform:uppercase;opacity:.9;';
+          countdownWrap.appendChild(cdLabel);
+        }
+        countdownEl = document.createElement('div');
+        countdownEl.style.cssText = 'font-size:3rem;font-weight:800;letter-spacing:.04em;color:#fca5a5;font-variant-numeric:tabular-nums;line-height:1;text-shadow:0 2px 12px rgba(220,38,38,.45);';
+        countdownWrap.appendChild(countdownEl);
+      }
       var done = false;
       function finish(val) {
         if (done) return;
         done = true;
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
         document.removeEventListener('keydown', onKey);
         back.remove();
         resolve(val);
@@ -1452,6 +1470,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       row.appendChild(cancelBtn);
       row.appendChild(okBtn);
       card.appendChild(msg);
+      if (countdownWrap) card.appendChild(countdownWrap);
       card.appendChild(row);
       back.appendChild(card);
       if (!document.getElementById('fw-confirm-toast-style')) {
@@ -1461,6 +1480,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         document.head.appendChild(st);
       }
       document.body.appendChild(back);
+      if (opts.countdownUntil && countdownEl) {
+        var fmtCd = function (ms) { if (ms < 0) ms = 0; var s = Math.ceil(ms / 1000); var m = Math.floor(s / 60); var ss = s % 60; return m + ':' + (ss < 10 ? '0' : '') + ss; };
+        var tickCd = function () { var ms = opts.countdownUntil - Date.now(); if (countdownEl) countdownEl.textContent = fmtCd(ms); if (ms <= 0) finish(opts.timeoutValue); };
+        tickCd();
+        countdownTimer = setInterval(tickCd, 250);
+      }
       okBtn.focus();
     });
   };
@@ -2414,11 +2439,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       slotEndPromptFor = endMs;
       slotEndPromptOpen = true;
       const keep = await window.showConfirmToast(
-        'Your slot ends in 5 minutes. Keep streaming into the next hour, or cut at the hour?',
-        { confirmText: 'Keep streaming', cancelText: 'Cut at the hour', danger: false }
+        'Your slot is ending — keep streaming into the next hour, or cut at the hour?',
+        { confirmText: 'Keep streaming', cancelText: 'Cut at the hour', danger: false,
+          countdownUntil: endMs, countdownLabel: 'Feed cuts automatically in', timeoutValue: 'timeout' }
       );
       slotEndPromptOpen = false;
-      if (keep) await requestSlotExtend();
+      if (keep === true) {
+        await requestSlotExtend();
+      } else if (keep === 'timeout') {
+        // No answer within the final 5 minutes — cut the feed and drop back to the
+        // lobby's ready state (the toast has already auto-closed).
+        await endStreamNow();
+      }
+      // keep === false ("Cut at the hour") lets the slot end at the booked hour.
     } catch (e) {
       slotEndPromptOpen = false;
     }
@@ -2448,6 +2481,31 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       console.error('[Stream] extend failed', e);
       showLobbyInfo('Could not extend your slot. Please try again.');
     }
+  }
+
+  // Cut the live feed and return the lobby to its ready (offline) state. Used by
+  // the 5-minute end prompt when it times out with no answer; mirrors the header
+  // "End Stream" button so the behaviour is identical.
+  async function endStreamNow() {
+    try {
+      if (!currentUser) return;
+      const token = await currentUser.getIdToken();
+      if (mobileBroadcast.getIsLive()) {
+        await mobileBroadcast.endStream(token);
+      } else {
+        await fetch('/api/livestream/slots/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ action: 'endStream', djId: currentUser.uid })
+        });
+      }
+    } catch (e) { /* best effort — still drop back to offline below */ }
+    try { resetMobileToOffline(); } catch (e) {}
+    if (typeof loadStreamStatus === 'function') await loadStreamStatus();
+    if (typeof updateEndStreamButton === 'function') updateEndStreamButton(false, false);
+    const statusText = document.getElementById('mobileStatusText');
+    if (statusText) statusText.textContent = 'Stream ended';
+    showLobbyInfo('Your slot ended at the hour — feed cut.');
   }
 
   // Minimal auto-dismissing corner toast for one-line info messages.
