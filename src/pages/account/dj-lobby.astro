@@ -2987,7 +2987,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // Setup audio stream with auto-play
           const audioEl = document.getElementById('audioElement');
           const audioUrl = currentStream.audioStreamUrl || currentStream.streamUrl;
-          if (audioEl && audioUrl) {
+          if (audioEl && audioUrl && audioEl._currentAudioUrl === audioUrl && !audioEl.paused) {
+            // Already streaming this exact source and playing — don't tear it
+            // down. loadStreamStatus runs every ~10s and on every title update;
+            // a needless re-attach restarts the stream and clicks the audio.
+          } else if (audioEl && audioUrl) {
+            audioEl._currentAudioUrl = audioUrl;
             log('[Audio] Setting up audio stream:', audioUrl);
             (async () => {
               // Clean up any previous Hls.js instance attached to this element

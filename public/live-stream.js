@@ -459,6 +459,17 @@ function showOfflineState(scheduled) {
 
 // --- Show live stream ---
 function showLiveStream(streamData) {
+  // A "stream-updated" refresh (DJ changed the title/genre mid-stream) re-runs
+  // this for the SAME stream that's already playing. Re-initialising the audio/
+  // HLS player in that case restarts playback and audibly clicks. Detect a pure
+  // metadata refresh — same stream id AND same playback config — and skip the
+  // player/chat re-init below; the on-screen metadata (ticker, dj-info, badges)
+  // still updates because that runs before the guarded block.
+  var prevData = window.currentStreamData;
+  var sameStreamRefresh = !!(window.isLiveStreamActive && prevData && window.currentStreamId === streamData.id
+    && prevData.broadcastMode === streamData.broadcastMode
+    && prevData.streamSource === streamData.streamSource
+    && (prevData.relaySource && prevData.relaySource.url) === (streamData.relaySource && streamData.relaySource.url));
   try { currentStream = streamData; window.isLiveStreamActive = true; streamDetectedThisSession = true; window.streamDetectedThisSession = true; window.liveStreamState.currentStream = streamData; window.emojiAnimationsEnabled = true; setReactionButtonsEnabled(true); setChatEnabled(true); setChatCurrentStream(streamData); requestWakeLock(); hidePlaylistWave(); showLiveMeters(); } catch (e) { console.error('[showLiveStream] Error in initial setup:', e); }
   try {
     window.currentStreamId = streamData.id; window.currentStreamData = streamData; window.firebaseAuth = auth;
@@ -504,16 +515,21 @@ function showLiveStream(streamData) {
     var vinylSrc = streamData.isRelay ? '/place-holder.webp' : streamData.djAvatar; if (vinylSrc && vinyl1) vinyl1.src = vinylSrc; if (vinylSrc && vinyl2) vinyl2.src = vinylSrc;
     var fsDjAvatar = document.getElementById('fsDjAvatar'); var fsVinyl1 = document.getElementById('fsVinylDjAvatar'); var fsVinyl2 = document.getElementById('fsVinylDjAvatar2');
     var fsAvatar = streamData.isRelay ? '/place-holder.webp' : (streamData.djAvatar || '/place-holder.webp'); if (fsDjAvatar) fsDjAvatar.src = fsAvatar; if (fsVinyl1) fsVinyl1.src = fsAvatar; if (fsVinyl2) fsVinyl2.src = fsAvatar;
-    var isPlaceholderOrAudio = streamData.broadcastMode === 'placeholder' || streamData.broadcastMode === 'audio';
-    var hlsDeps = { shouldAutoplay: shouldAutoplay, wasLiveStreamPlaying: wasLiveStreamPlaying, rememberAutoplay: rememberAutoplay, setLiveStreamPlaying: setLiveStreamPlaying };
-    if (streamData.streamSource === 'twitch' && streamData.twitchChannel) setupTwitchPlayer(streamData);
-    else if (isPlaceholderOrAudio || streamData.isRelay || (streamData.streamSource !== 'red5' && !streamData.hlsUrl)) {
-      if (streamData.isRelay && streamData.relaySource && streamData.relaySource.url) { var relayUrl = streamData.relaySource.url; var relayPath = null; if (relayUrl.includes('relay.freshwax.co.uk/')) relayPath = relayUrl.split('relay.freshwax.co.uk/')[1]; else if (relayUrl.includes('/api/relay-stream/?station=')) relayPath = relayUrl.split('station=')[1]; streamData.audioStreamUrl = relayPath ? 'https://relay.freshwax.co.uk/' + relayPath : relayUrl; }
-      else if (!streamData.audioStreamUrl) streamData.audioStreamUrl = 'https://icecast.freshwax.co.uk/live';
-      setupAudioPlayer(streamData, hlsDeps);
-    } else setupHlsPlayer(streamData, hlsDeps);
-    var twitchUser = streamData.twitchChannel || streamData.twitchUsername; if (window.setupFsTwitchChat) window.setupFsTwitchChat(twitchUser);
-    joinStream('playlist-global'); setupChat('playlist-global'); startDurationTimer(streamData.startedAt); setupReactions(streamData.id);
+    // Skip the player/chat/reactions (re)init on a pure metadata refresh — the
+    // audio is already playing and tearing it down would click. Only set it up
+    // on first detection of the stream or a real playback-config change.
+    if (!sameStreamRefresh) {
+      var isPlaceholderOrAudio = streamData.broadcastMode === 'placeholder' || streamData.broadcastMode === 'audio';
+      var hlsDeps = { shouldAutoplay: shouldAutoplay, wasLiveStreamPlaying: wasLiveStreamPlaying, rememberAutoplay: rememberAutoplay, setLiveStreamPlaying: setLiveStreamPlaying };
+      if (streamData.streamSource === 'twitch' && streamData.twitchChannel) setupTwitchPlayer(streamData);
+      else if (isPlaceholderOrAudio || streamData.isRelay || (streamData.streamSource !== 'red5' && !streamData.hlsUrl)) {
+        if (streamData.isRelay && streamData.relaySource && streamData.relaySource.url) { var relayUrl = streamData.relaySource.url; var relayPath = null; if (relayUrl.includes('relay.freshwax.co.uk/')) relayPath = relayUrl.split('relay.freshwax.co.uk/')[1]; else if (relayUrl.includes('/api/relay-stream/?station=')) relayPath = relayUrl.split('station=')[1]; streamData.audioStreamUrl = relayPath ? 'https://relay.freshwax.co.uk/' + relayPath : relayUrl; }
+        else if (!streamData.audioStreamUrl) streamData.audioStreamUrl = 'https://icecast.freshwax.co.uk/live';
+        setupAudioPlayer(streamData, hlsDeps);
+      } else setupHlsPlayer(streamData, hlsDeps);
+      var twitchUser = streamData.twitchChannel || streamData.twitchUsername; if (window.setupFsTwitchChat) window.setupFsTwitchChat(twitchUser);
+      joinStream('playlist-global'); setupChat('playlist-global'); startDurationTimer(streamData.startedAt); setupReactions(streamData.id);
+    }
   } catch (e) { console.error('[showLiveStream] Error in UI setup:', e); }
 }
 
