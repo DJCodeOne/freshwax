@@ -2157,13 +2157,16 @@ try {
     if (currentLive && currentLive.isRelay) {
       var existingSlot = todaySlots.find(s => s.id === currentLive.id || s.id === currentLive.slotId);
       if (existingSlot) {
-        // Update existing slot title with fresh Shoutcast metadata
-        if (currentLive.title) existingSlot.title = currentLive.title;
+        // Mirror the dj-info bar (the relay feed's now-playing track), NOT the
+        // DJ's custom ticker title.
+        existingSlot.title = currentLive.relayNowPlaying || '';
+        if (currentLive.relaySource) existingSlot.relaySource = currentLive.relaySource;
       } else {
         todaySlots.unshift({
           id: currentLive.id || currentLive.slotId,
           djName: currentLive.djName,
-          title: currentLive.title,
+          title: currentLive.relayNowPlaying || '',
+          relaySource: currentLive.relaySource || null,
           startTime: currentLive.startTime || currentLive.startedAt,
           endTime: currentLive.endTime,
           status: 'live',
