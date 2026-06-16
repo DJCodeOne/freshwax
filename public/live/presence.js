@@ -20,7 +20,11 @@ export async function setupLiveStatusListener(deps) {
 
   try {
     // Subscribe to presence channel for viewer tracking
-    var streamId = window.currentStreamId || 'playlist-global';
+    // Online presence is GLOBAL — one channel for the whole site, not per-stream.
+    // There's only ever one live stream at a time, and this lets a DJ who steps
+    // into the lobby stay in the same member list viewers see on /live (the lobby
+    // subscribes to this same channel), instead of vanishing from the online list.
+    var streamId = 'playlist-global';
     var presenceChannelName = 'presence-stream-' + streamId;
 
     // Get user info for presence data
@@ -239,7 +243,7 @@ export function resubscribePresence(deps) {
   var userInfo = deps.getUserInfo();
   if (!currentUser) return;
 
-  var streamId = window.currentStreamId || 'playlist-global';
+  var streamId = 'playlist-global'; // global presence channel (see setupLiveStatusListener)
   var channelName = 'presence-stream-' + streamId;
 
   window.presencePusher.unsubscribe(channelName);
