@@ -2237,8 +2237,9 @@ try {
             <h3 title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</h3>
           </div>
           <div class="schedule-times">
-            <span class="schedule-time-range">${isRelay ? (slot.title ? `♪ ${escapeHtml(slot.title)}` : 'Relayed stream') : `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`}</span>
+            <span class="schedule-time-range">${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}</span>
           </div>
+          ${isRelay ? `<span class="schedule-now-playing" title="${escapeHtml(slot.title || 'Relayed stream')}">${slot.title ? '♪ ' + escapeHtml(slot.title) : 'Relayed stream'}</span>` : ''}
         </div>
         ${isMySlot && (slot.status === 'scheduled' || slot.status === 'queued') ? `<button class="cancel-slot-btn" data-cancel-slot="${slot.id}" aria-label="Cancel slot">×</button>` : ''}
       </div>`;
