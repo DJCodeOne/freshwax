@@ -2264,6 +2264,43 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       document.getElementById('chatForm')?.classList.remove('hidden');
     }
 
+    // Keep the DJ visible as "online" on the public /live page while they're in
+    // the lobby. The live page builds its online list from (a) the Pusher
+    // presence channel presence-stream-playlist-global and (b) the /listeners/
+    // list — a DJ who steps into the lobby leaves both and vanishes from the
+    // public online avatars. Re-join both here so viewers keep seeing the DJ.
+    if (currentUser) {
+      (function keepDjOnlineOnPublicPage() {
+        var djName = (userInfo && userInfo.name) || currentUser.displayName || (currentUser.email && currentUser.email.split('@')[0]) || 'DJ';
+        var djAvatar = (userInfo && userInfo.avatar) || currentUser.photoURL || '';
+        // (b) /listeners/ heartbeat — LISTENER_TTL is 120s, so 60s keeps us active.
+        function listenersBeat() {
+          fetch('/api/livestream/listeners/', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'heartbeat', streamId: 'playlist-global', userId: currentUser.uid, userName: djName, avatarUrl: djAvatar || null })
+          }).catch(function() {});
+        }
+        listenersBeat();
+        setInterval(listenersBeat, 60000);
+        // (a) Pusher presence membership — what the live page's online avatars render from.
+        var tries = 0;
+        (function joinPresence() {
+          var cfg = window.PUSHER_CONFIG;
+          if (!window.Pusher || !cfg || !cfg.key) { if (tries++ < 50) setTimeout(joinPresence, 200); return; }
+          if (window.lobbyPresencePusher) return;
+          try {
+            var pp = new window.Pusher(cfg.key, {
+              cluster: cfg.cluster || 'eu', forceTLS: true,
+              authEndpoint: '/api/pusher/auth/',
+              auth: { headers: { 'x-user-id': currentUser.uid, 'x-user-name': djName, 'x-user-avatar': djAvatar } }
+            });
+            window.lobbyPresencePusher = pp;
+            pp.subscribe('presence-stream-playlist-global');
+          } catch (e) { /* presence is best-effort */ }
+        })();
+      })();
+    }
+
     // Load initial data from API
     await loadAllSlots(); // Load all slots for consecutive slot detection
     await loadStreamStatus();
@@ -2278,7 +2315,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         var headerBack = document.getElementById('headerBackToLive');
         var headerEnd = document.getElementById('headerEndStreamBtn');
         var statusText = document.getElementById('mobileStatusText');
-        if (headerBack) headerBack.style.display = 'none';
+        if (headerBack) headerBack.style.display = ''; // keep "Back to Live" available even while live (don't lock the DJ in the lobby)
         if (headerEnd) headerEnd.style.display = '';
         if (statusText) statusText.textContent = 'Your stream is still live. End it from the header button.';
       }
@@ -2297,7 +2334,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               var headerBack = document.getElementById('headerBackToLive');
               var headerEnd = document.getElementById('headerEndStreamBtn');
               var statusText = document.getElementById('mobileStatusText');
-              if (headerBack) headerBack.style.display = 'none';
+              if (headerBack) headerBack.style.display = ''; // keep "Back to Live" available even while live (don't lock the DJ in the lobby)
               if (headerEnd) headerEnd.style.display = '';
               if (statusText) statusText.textContent = 'Your stream is still live. End it from the header button.';
             }
@@ -4659,7 +4696,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       // Swap header: hide Back to Live, show End Stream
       var headerBack = document.getElementById('headerBackToLive');
       var headerEnd = document.getElementById('headerEndStreamBtn');
-      if (headerBack) headerBack.style.display = 'none';
+      if (headerBack) headerBack.style.display = ''; // keep "Back to Live" available even while live (don't lock the DJ in the lobby)
       if (headerEnd) headerEnd.style.display = '';
 
       // Sync desktop buttons
