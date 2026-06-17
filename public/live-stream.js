@@ -411,8 +411,8 @@ function setStreamTicker(text) {
   if (el.textContent === t && !ticker.classList.contains('hidden')) return; // no-op if unchanged
   el.textContent = t;
   ticker.classList.remove('hidden');
-  // Keep scroll speed roughly constant regardless of title length.
-  var dur = Math.max(18, Math.round(t.length * 0.7));
+  // Keep scroll speed roughly constant regardless of title length (lower factor = faster scroll).
+  var dur = Math.max(12, Math.round(t.length * 0.45));
   el.style.animation = 'none';
   void el.offsetWidth; // force reflow so the animation restarts cleanly
   el.style.animation = 'streamTickerScroll ' + dur + 's linear infinite';
