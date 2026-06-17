@@ -407,14 +407,20 @@ function setStreamTicker(text) {
   var el = document.getElementById('streamTickerText');
   if (!ticker || !el) return;
   var t = (text == null ? '' : String(text)).trim();
-  if (!t) { ticker.classList.add('hidden'); el.textContent = ''; el.style.animation = 'none'; return; }
-  if (el.textContent === t && !ticker.classList.contains('hidden')) return; // no-op if unchanged
-  el.textContent = t;
+  if (!t) { ticker.classList.add('hidden'); el.innerHTML = ''; el.style.animation = 'none'; el._fwTicker = ''; return; }
+  if (el._fwTicker === t && !ticker.classList.contains('hidden')) return; // no-op if unchanged
+  el._fwTicker = t;
+  // Two identical copies make the scroll seamless: the second copy enters from
+  // the right as the first leaves on the left, so there's no big gap between
+  // cycles (the keyframe travels -50% — exactly one copy's width).
+  var seg = '<span class="stream-ticker-seg">' + escapeHtml(t) + '</span>';
+  el.innerHTML = seg + seg;
   ticker.classList.remove('hidden');
-  // Keep scroll speed roughly constant regardless of title length (lower factor = faster scroll).
-  var dur = Math.max(12, Math.round(t.length * 0.45));
   el.style.animation = 'none';
-  void el.offsetWidth; // force reflow so the animation restarts cleanly
+  void el.offsetWidth; // reflow so the width is measurable + the animation restarts cleanly
+  // Constant ~40px/s scroll speed, sized to one copy's actual rendered width.
+  var oneCopy = (el.scrollWidth / 2) || (t.length * 12);
+  var dur = Math.max(8, Math.round(oneCopy / 40));
   el.style.animation = 'streamTickerScroll ' + dur + 's linear infinite';
 }
 window.setStreamTicker = setStreamTicker;

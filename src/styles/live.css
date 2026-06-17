@@ -305,9 +305,10 @@ html, body{ overflow:auto; }
    it and the flex algorithm collapses it to zero. min-width keeps it visible. */
 .stream-ticker{ flex:1 1 0%; min-width:120px; max-width:480px; margin:0 .75rem; overflow:hidden; white-space:nowrap; pointer-events:none; z-index:1; -webkit-mask-image:linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image:linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
 .stream-ticker.hidden{ display:none; }
-.stream-ticker-text{ display:inline-block; padding-left:100%; white-space:nowrap; font-family:'Bebas Neue','Bebas Fallback',sans-serif; font-size:1.5rem; letter-spacing:.06em; color:#fff; text-shadow:0 1px 5px rgba(0,0,0,.7); animation:streamTickerScroll 22s linear infinite; }
-@keyframes streamTickerScroll{ 0%{ transform:translateX(0); } 100%{ transform:translateX(-100%); } }
-@media (prefers-reduced-motion: reduce){ .stream-ticker-text{ animation:none; padding-left:0; } .stream-ticker{ text-align:center; } }
+.stream-ticker-text{ display:inline-flex; white-space:nowrap; font-family:'Bebas Neue','Bebas Fallback',sans-serif; font-size:1.5rem; letter-spacing:.06em; color:#fff; text-shadow:0 1px 5px rgba(0,0,0,.7); animation:streamTickerScroll 22s linear infinite; will-change:transform; }
+.stream-ticker-seg{ flex:0 0 auto; white-space:nowrap; padding-right:4rem; }
+@keyframes streamTickerScroll{ 0%{ transform:translateX(0); } 100%{ transform:translateX(-50%); } }
+@media (prefers-reduced-motion: reduce){ .stream-ticker-text{ animation:none; } .stream-ticker-seg + .stream-ticker-seg{ display:none; } .stream-ticker{ text-align:center; } }
 @media (max-width:760px){ .stream-ticker{ display:none !important; } }
 .stream-stats{ display:flex; align-items:center; gap:.25rem; background:rgba(0,0,0,.3); padding:.25rem .5rem; border-radius:6px; border:1px solid #333; }
 /* Desktop only: spread the info bar (stats to the left, status to the right)
