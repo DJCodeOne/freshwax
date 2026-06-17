@@ -2404,7 +2404,7 @@ try {
         const onAirTextOff = document.getElementById('onAirText');
         if (onAirTextOff) onAirTextOff.classList.add('hidden');
         if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
-        if (window.setStreamTicker) window.setStreamTicker('');
+        if (window.setStreamTicker) window.setStreamTicker(window.PLAYLIST_TICKER || '');
         if (djAvatar) djAvatar.src = '/place-holder.webp';
 
         // Update controls DJ info bar to offline state (only if playlist isn't playing)
@@ -3037,7 +3037,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260616c"></script>
+<script type="module" src="/live-stream.js?v=20260617a"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page

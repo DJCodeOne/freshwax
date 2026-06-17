@@ -188,6 +188,8 @@ function handlePlaylistUpdate(e) {
   var streamGenre = document.getElementById('streamGenre');
   var streamInfoBar = document.getElementById('streamInfoBar');
   if (queue.length > 0) {
+    // Playlist mode (no DJ live): promo the playlist in the top scrolling ticker.
+    setStreamTicker(window.PLAYLIST_TICKER);
     if (offlineOverlay) offlineOverlay.classList.add('hidden');
     if (audioPlayer) audioPlayer.classList.add('hidden');
     if (hlsVideo) hlsVideo.classList.add('hidden');
@@ -416,6 +418,9 @@ function setStreamTicker(text) {
   el.style.animation = 'streamTickerScroll ' + dur + 's linear infinite';
 }
 window.setStreamTicker = setStreamTicker;
+// Promo shown in the top ticker whenever no DJ is live (playlist / offline mode):
+// invite listeners to log in and build their own playlist from YouTube links.
+window.PLAYLIST_TICKER = '🎧 Fresh Wax community playlist — log in to create your own: paste a YouTube link to add any track, save it, and listen back anytime. Free for every junglist.';
 
 function stopLiveStream() {
   setStreamTicker('');
@@ -436,7 +441,8 @@ function showOfflineState(scheduled) {
   // stream we KNOW just started is on its way in. See pusher-events.js.
   if (window._awaitingLiveStart && (Date.now() - window._awaitingLiveStart) < 25000) return;
   window.isLiveStreamActive = false; setLiveStreamPlaying(false);
-  setStreamTicker('');
+  // Offline (no DJ live): show the playlist promo rather than a blank ticker.
+  setStreamTicker(window.PLAYLIST_TICKER || '');
   var initOverlay = document.getElementById('initializingOverlay'); if (initOverlay) initOverlay.classList.add('hidden');
   var badge = document.getElementById('liveBadge'); var statusText = document.getElementById('liveStatusText');
   var offOverlay = document.getElementById('offlineOverlay'); var offIcon = document.getElementById('offlineIconText');
