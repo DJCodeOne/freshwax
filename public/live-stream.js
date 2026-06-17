@@ -426,7 +426,7 @@ function setStreamTicker(text) {
 window.setStreamTicker = setStreamTicker;
 // Promo shown in the top ticker whenever no DJ is live (playlist / offline mode):
 // invite listeners to log in and build their own playlist from YouTube links.
-window.PLAYLIST_TICKER = '🎧 Fresh Wax community playlist — log in to create your own: paste a YouTube link to add any track, save it, and listen back anytime. Free for every junglist.';
+window.PLAYLIST_TICKER = '🎧 Fresh Wax community playlist — log in to build your own: paste a YouTube link to add any track. Save it, play it, listen back anytime. Free for every junglist.';
 
 function stopLiveStream() {
   setStreamTicker('');
