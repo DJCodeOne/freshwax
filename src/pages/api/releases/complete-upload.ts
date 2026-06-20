@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { createS3Client } from '../../../lib/s3-client';
-import { processImageToSquareWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
+import { processImageToSquareWebP, processImageToFacebookOG, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { getAdminDb } from '../../../lib/firebase-admin';
 import { setDocument, getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
@@ -54,7 +54,7 @@ async function processReleaseArtwork(
   coverArtUrl: string,
   env: Record<string, unknown>,
   logger: typeof logger
-): Promise<{ coverUrl: string; thumbUrl: string; originalArtworkUrl: string } | null> {
+): Promise<{ coverUrl: string; thumbUrl: string; originalArtworkUrl: string; ogImageUrl: string } | null> {
   if (!coverArtUrl || coverArtUrl === '') return null;
 
   // Skip if already WebP
@@ -105,21 +105,26 @@ async function processReleaseArtwork(
     if (bodyBytes.length > MAX_SIZE_FOR_PROCESSING) {
       log.info(`Artwork too large for WASM processing (${(bodyBytes.length / (1024 * 1024)).toFixed(1)}MB), using original`);
       const originalArtworkUrl = `${cdnDomain}/${r2Key}`;
-      return { coverUrl: originalArtworkUrl, thumbUrl: originalArtworkUrl, originalArtworkUrl };
+      return { coverUrl: originalArtworkUrl, thumbUrl: originalArtworkUrl, originalArtworkUrl, ogImageUrl: '' };
     }
 
-    // 2. Process cover + thumb in parallel
-    const [coverResult, thumbResult] = await Promise.all([
+    // 2. Process cover + thumb + Facebook OG (1200x630) in parallel
+    const [coverResult, thumbResult, ogResult] = await Promise.all([
       processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 800, 80),
       processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 400, 75),
+      processImageToFacebookOG(bodyBytes.buffer as ArrayBuffer, 78).catch((e: unknown) => {
+        log.warn('OG image generation failed (non-critical):', e);
+        return null;
+      }),
     ]);
 
     // 3. Determine output keys
     const dir = r2Key.substring(0, r2Key.lastIndexOf('/') + 1);
     const coverKey = `${dir}cover${imageExtension(coverResult.format)}`;
     const thumbKey = `${dir}thumb${imageExtension(thumbResult.format)}`;
+    const ogKey = ogResult ? `${dir}og${imageExtension(ogResult.format)}` : '';
 
-    // 4. Upload both image files
+    // 4. Upload cover + thumb (+ OG when generated)
     await Promise.all([
       s3Client.send(new PutObjectCommand({
         Bucket: r2Config.bucketName,
@@ -135,10 +140,18 @@ async function processReleaseArtwork(
         ContentType: imageContentType(thumbResult.format),
         CacheControl: 'public, max-age=31536000',
       })),
+      ...(ogResult ? [s3Client.send(new PutObjectCommand({
+        Bucket: r2Config.bucketName,
+        Key: ogKey,
+        Body: Buffer.from(ogResult.buffer),
+        ContentType: imageContentType(ogResult.format),
+        CacheControl: 'public, max-age=31536000',
+      }))] : []),
     ]);
 
     log.info(`Processed cover: ${coverKey} (${(coverResult.buffer.length / 1024).toFixed(1)}KB)`);
     log.info(`Processed thumb: ${thumbKey} (${(thumbResult.buffer.length / 1024).toFixed(1)}KB)`);
+    if (ogResult) log.info(`Processed OG: ${ogKey} (${(ogResult.buffer.length / 1024).toFixed(1)}KB)`);
 
     // 5. Keep original file for full-res download by buyers
     const originalArtworkUrl = `${cdnDomain}/${r2Key}`;
@@ -146,8 +159,9 @@ async function processReleaseArtwork(
 
     const coverUrl = `${cdnDomain}/${coverKey}`;
     const thumbUrl = `${cdnDomain}/${thumbKey}`;
+    const ogImageUrl = ogKey ? `${cdnDomain}/${ogKey}` : '';
 
-    return { coverUrl, thumbUrl, originalArtworkUrl };
+    return { coverUrl, thumbUrl, originalArtworkUrl, ogImageUrl };
   } catch (err: unknown) {
     log.error('Artwork processing failed (using original URL):', err);
     return null;
@@ -216,6 +230,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const finalCoverUrl = processedArt?.coverUrl || coverArtUrl || '';
     const finalThumbUrl = processedArt?.thumbUrl || '';
     const finalOriginalArtworkUrl = processedArt?.originalArtworkUrl || coverArtUrl || '';
+    // 1200x630 Facebook OG card (square art on a blurred fill) — preserve an
+    // existing one on re-upload if this pass didn't regenerate it.
+    const finalOgImageUrl = processedArt?.ogImageUrl || existingRelease?.ogImageUrl || '';
 
     // Build track documents with consistent structure
     const processedTracks = tracks.map((track: Record<string, unknown>, index: number) => ({
@@ -251,6 +268,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       coverArt: finalCoverUrl,
       thumbUrl: finalThumbUrl,
       originalArtworkUrl: finalOriginalArtworkUrl,
+      ogImageUrl: finalOgImageUrl,
       tracks: processedTracks,
       trackCount,
       status: existingRelease?.status || 'pending',

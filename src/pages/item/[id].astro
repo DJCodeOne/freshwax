@@ -98,6 +98,7 @@ const {
   catalogNumber = '',
   genre = '',
   coverArtUrl = '/place-holder.webp',
+  ogImageUrl = '',
   thumbUrl: releaseThumbUrl = '',
   additionalArtwork = [],
   tracks = [],
@@ -377,13 +378,25 @@ const productAvailability = isPreOrder ? 'PreOrder' as const
 // Determine effective price for structured data (use digital price, fall back to track price * count)
 const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTrackPrice * tracksWithIds.length);
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+
+// Social-share image. Prefer the dedicated 1200x630 (1.91:1) OG card so Facebook
+// stops cropping the top + bottom of the square cover art. Fall back to the
+// square cover (800x800) when a release hasn't had its OG image generated yet.
+const hasOgCard = !!(ogImageUrl && ogImageUrl !== '/place-holder.webp');
+const shareImage = hasOgCard
+  ? ogImageUrl
+  : (coverArtUrl && coverArtUrl !== '/place-holder.webp' ? coverArtUrl : undefined);
+const shareImageWidth = hasOgCard ? 1200 : (shareImage ? 800 : undefined);
+const shareImageHeight = hasOgCard ? 630 : (shareImage ? 800 : undefined);
 ---
 
 <Layout
   title={release ? `${releaseName} - ${artistName}` : 'Release Not Found'}
   description={release ? `${releaseName} by ${artistName}${genre ? ` - ${genre}` : ''}${labelName ? ` on ${labelName}` : ''}. Stream, buy and download on Fresh Wax.` : 'Release not found'}
   noindex={!release}
-  image={coverArtUrl && coverArtUrl !== '/place-holder.webp' ? coverArtUrl : undefined}
+  image={shareImage}
+  imageWidth={shareImageWidth}
+  imageHeight={shareImageHeight}
   imageAlt={release ? `${releaseName} by ${artistName} - Album Artwork` : undefined}
   type="music.album"
   music={release ? {

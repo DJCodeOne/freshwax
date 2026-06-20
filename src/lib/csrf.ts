@@ -60,6 +60,7 @@ const CSRF_SKIP = new Set([
   // Admin endpoints — authenticated via X-Admin-Key / requireAdminAuth
   '/api/admin/backfill-followers/',
   '/api/admin/backfill-mix-og/',
+  '/api/admin/backfill-release-og/',
   '/api/admin/scan-tracklists/',
   '/api/admin/send-plus-welcome-email/',
   '/api/admin/send-bypass-approval-email/',
