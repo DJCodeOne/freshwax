@@ -58,7 +58,10 @@ async function processOne(
   if (!sourceUrl.startsWith(prefix)) {
     return { releaseId, ok: false, error: `Artwork URL outside R2 (${sourceUrl})` };
   }
-  const sourceKey = sourceUrl.slice(prefix.length);
+  // Decode percent-encoding (e.g. %23 → #): the stored URL is encoded but the
+  // actual R2 object key is the decoded path, or GetObject 404s with NoSuchKey.
+  let sourceKey = sourceUrl.slice(prefix.length);
+  try { sourceKey = decodeURIComponent(sourceKey); } catch { /* keep as-is if malformed */ }
   const folderPath = sourceKey.includes('/') ? sourceKey.slice(0, sourceKey.lastIndexOf('/')) : '';
 
   // Fetch existing artwork from R2
