@@ -776,9 +776,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           if (urlMatch) {
             socialLinks.push(urlMatch[1]);
           }
-        } else if (line.indexOf('SoundCloud:') !== -1 || line.indexOf('Facebook:') !== -1 || 
+        } else if (line.indexOf('SoundCloud:') !== -1 || line.indexOf('Facebook:') !== -1 ||
                    line.indexOf('Instagram:') !== -1 || line.indexOf('Twitter:') !== -1 ||
-                   line.indexOf('Bandcamp:') !== -1 || line.indexOf('Spotify:') !== -1) {
+                   line.indexOf('Bandcamp:') !== -1 || line.indexOf('Spotify:') !== -1 ||
+                   line.indexOf('Discogs:') !== -1) {
           // Line has label but URL might be on same line or missing
           var parts = line.split(/:\s*/);
           if (parts.length > 1 && parts[1]) {

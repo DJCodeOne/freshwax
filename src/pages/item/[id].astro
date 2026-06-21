@@ -196,6 +196,9 @@ if (notesText) {
     } else if (trimmed.includes('bandcamp.com') || trimmed.includes('Bandcamp:')) {
       const url = trimmed.replace('Bandcamp:', '').trim();
       socialLinksTemp.push({ platform: 'Bandcamp', url: url, icon: '🎸' });
+    } else if (trimmed.includes('discogs.com') || trimmed.includes('Discogs:')) {
+      const url = trimmed.replace('Discogs:', '').trim();
+      socialLinksTemp.push({ platform: 'Discogs', url: url, icon: '💿' });
     } else if (trimmed.includes('youtube.com/') || trimmed.includes('YouTube:')) {
       const url = trimmed.replace('YouTube:', '').trim();
       socialLinksTemp.push({ platform: 'YouTube', url: url, icon: '📺' });
@@ -217,7 +220,17 @@ if (notesText) {
     }
   }
   
-  socialLinks = socialLinksTemp;
+  // Ensure every extracted link has a scheme. A note like "Bandcamp: artist.bandcamp.com"
+  // yields a scheme-less URL; rendered raw in href= the browser treats it as a
+  // RELATIVE path (→ /item/<id>/artist.bandcamp.com, a 404), so prepend https://.
+  const ensureScheme = (u: string): string => {
+    const s = (u || '').trim();
+    if (!s) return s;
+    if (/^(https?:|mailto:|tel:)/i.test(s)) return s;
+    if (s.startsWith('//')) return 'https:' + s;
+    return 'https://' + s.replace(/^\/+/, '');
+  };
+  socialLinks = socialLinksTemp.map((l) => ({ ...l, url: ensureScheme(l.url) }));
   otherInfo = otherLinesTemp.join('\n');
 }
 
