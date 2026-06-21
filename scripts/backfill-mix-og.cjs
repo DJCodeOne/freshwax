@@ -23,21 +23,30 @@ if (!adminKey) {
 }
 
 async function callBackfill(body) {
-  const res = await fetch(`${baseUrl}/api/admin/backfill-mix-og/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Admin-Key': adminKey,
-    },
-    body: JSON.stringify(body),
-  });
-  const text = await res.text();
-  let json;
-  try { json = JSON.parse(text); } catch { json = { _raw: text }; }
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${JSON.stringify(json)}`);
+  // adminBulk limiter = 5 req/60s then a 5-min block; retry on 429 instead of dying.
+  for (;;) {
+    const res = await fetch(`${baseUrl}/api/admin/backfill-mix-og/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Key': adminKey,
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); } catch { json = { _raw: text }; }
+    if (res.status === 429) {
+      const wait = (json.retryAfter || 60) + 2;
+      console.log(`  …rate limited, waiting ${wait}s`);
+      await new Promise((r) => setTimeout(r, wait * 1000));
+      continue;
+    }
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${JSON.stringify(json)}`);
+    }
+    return json;
   }
-  return json;
 }
 
 (async () => {
@@ -80,8 +89,8 @@ async function callBackfill(body) {
       console.log(`[stuck] ${r.candidates} candidates but 0 processed — stopping to avoid infinite loop.`);
       break;
     }
-    // Small delay to avoid hammering the rate limiter
-    await new Promise((res) => setTimeout(res, 500));
+    // Pace under the adminBulk limiter (5 req/60s)
+    await new Promise((res) => setTimeout(res, 13000));
   }
 
   console.log('');
