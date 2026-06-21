@@ -1,0 +1,10 @@
+# Real secrets — never commit (use the .example templates instead)
+relay-secrets.bat
+relay-secrets.ps1
+
+# Local backups, logs, and the large placeholder video (regenerable from R2)
+*.bak
+*.log
+*.mp4
+*.json
+current-dj-twitch-key.txt
