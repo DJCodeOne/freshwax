@@ -246,7 +246,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
 
     function copyLink(e) {
       var btn = e.currentTarget;
-      var url = window.location.href;
+      // Clean canonical URL (drop any ?utm_/?ref/?page params the reader arrived
+      // with) so social scrapers aren't blocked by robots.txt on a shared link.
+      var url = window.location.origin + window.location.pathname;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(function() {
           showCopied(btn);

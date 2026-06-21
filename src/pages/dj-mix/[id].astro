@@ -1410,7 +1410,11 @@ Artist - Track Title
     const title = shareBtn.getAttribute('data-title') || 'DJ Mix';
     const dj = shareBtn.getAttribute('data-dj') || 'Unknown DJ';
     const artwork = shareBtn.getAttribute('data-artwork') || '/place-holder.webp';
-    const shareUrl = window.location.href;
+    // Share the clean canonical URL (no query/hash). window.location.href would
+    // carry whatever params the user arrived with (?utm_*, ?ref=, ?search=…),
+    // which robots.txt disallows for the generic User-agent: * — so WhatsApp/
+    // Discord/Slack/Telegram/iMessage would refuse to render a link preview.
+    const shareUrl = window.location.origin + window.location.pathname;
 
     currentShareData = { title, dj, url: shareUrl, artwork };
 

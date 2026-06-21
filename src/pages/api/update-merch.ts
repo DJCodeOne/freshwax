@@ -10,7 +10,7 @@ import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import { saUpdateDocument, saGetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
-import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
+import { processImageToSquareWebP, processImageToWebP, processImageToFacebookOG, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 
@@ -358,8 +358,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Original buffer + URL of the newly-uploaded image that becomes the primary,
+    // captured so we can build its 1200x630 Facebook OG card after the loop.
+    let primaryNewBuffer: ArrayBuffer | null = null;
+    let primaryNewUrl = '';
+    let ogFolderPath = '';
+
     if (newImageCount > 0) {
       const folderPath = existingProduct.r2FolderPath;
+      ogFolderPath = folderPath;
       const startIndex = images.length;
 
       for (let i = 0; i < newImageCount; i++) {
@@ -401,12 +408,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const imageUrl = R2_CONFIG.publicDomain + '/' + imageKey;
 
+        const becomesPrimary = images.length === 0;
         images.push({
           url: imageUrl,
           key: imageKey,
           index: startIndex + i,
-          isPrimary: images.length === 0
+          isPrimary: becomesPrimary
         });
+        // Keep the original buffer of the image that becomes the primary so we
+        // can generate the 1200x630 Facebook OG card from it below.
+        if (becomesPrimary) { primaryNewBuffer = imageBuffer; primaryNewUrl = imageUrl; }
 
         log.info('[update-merch] Uploaded:', imageUrl);
       }
@@ -421,6 +432,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       updates.images = images;
       updates.primaryImage = images[0]?.url || null;
+    }
+
+    // Generate the 1200x630 Facebook OG card when the primary image changed to a
+    // newly-uploaded one. Best-effort — a failure must not break the merch update.
+    if (primaryNewBuffer && updates.primaryImage === primaryNewUrl && ogFolderPath) {
+      try {
+        const og = await processImageToFacebookOG(primaryNewBuffer, 78);
+        const ogKey = ogFolderPath + '/og' + imageExtension(og.format);
+        await s3Client.send(new PutObjectCommand({
+          Bucket: R2_CONFIG.bucketName,
+          Key: ogKey,
+          Body: Buffer.from(og.buffer),
+          ContentType: imageContentType(og.format),
+          CacheControl: 'public, max-age=31536000',
+        }));
+        updates.ogImageUrl = R2_CONFIG.publicDomain + '/' + ogKey;
+        log.info('[update-merch] Generated OG card:', updates.ogImageUrl);
+      } catch (ogErr: unknown) {
+        log.warn('[update-merch] OG card generation failed (non-critical):', ogErr);
+      }
     }
 
     if (updates.lowStockThreshold !== undefined) {

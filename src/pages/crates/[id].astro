@@ -72,7 +72,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   title={pageTitle}
   description={pageDescription}
   noindex={!productMeta}
-  image={pageImage}
+  {/* Crate covers are square (Facebook crops top+bottom in its 1.91:1 link card)
+      and crates have no dedicated OG card, so fall back to the static 1200x630
+      site card for a reliable, uncropped preview across all platforms. */}
   type="product"
   product={productMeta}
   breadcrumbs={[
@@ -1176,16 +1178,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     var ogType = document.querySelector('meta[property="og:type"]');
     if (ogType) ogType.setAttribute('content', 'product');
 
-    if (l.images && l.images.length > 0) {
-      var ogImage = document.querySelector('meta[property="og:image"]');
-      if (ogImage) ogImage.setAttribute('content', l.images[0]);
-
-      var ogImageSecure = document.querySelector('meta[property="og:image:secure_url"]');
-      if (ogImageSecure) ogImageSecure.setAttribute('content', l.images[0]);
-
-      var twImage = document.querySelector('meta[name="twitter:image"]');
-      if (twImage) twImage.setAttribute('content', l.images[0]);
-    }
+    // NOTE: deliberately do NOT rewrite og:image / twitter:image to the square
+    // crate cover here — social scrapers don't run JS (they read the SSR tags),
+    // so this only mattered for the rare JS-running scraper, for which it would
+    // (re)introduce the square-image crop. The SSR default 1200x630 card stands.
 
     var twTitle = document.querySelector('meta[name="twitter:title"]');
     if (twTitle) twTitle.setAttribute('content', l.title + ' by ' + l.artist + ' | Fresh Wax Crates');

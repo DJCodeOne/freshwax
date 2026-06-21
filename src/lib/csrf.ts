@@ -61,6 +61,7 @@ const CSRF_SKIP = new Set([
   '/api/admin/backfill-followers/',
   '/api/admin/backfill-mix-og/',
   '/api/admin/backfill-release-og/',
+  '/api/admin/backfill-merch-og/',
   '/api/admin/scan-tracklists/',
   '/api/admin/send-plus-welcome-email/',
   '/api/admin/send-bypass-approval-email/',
