@@ -68,9 +68,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content={streamTitle} />
 
-  <!-- Twitter Player Card -->
+  <!-- Twitter Player Card (no twitter:site — Fresh Wax has no X account) -->
   <meta name="twitter:card" content="player" />
-  <meta name="twitter:site" content="@freshwaxuk" />
   <meta name="twitter:title" content={`${isLive ? '🔴 LIVE: ' : ''}${streamTitle}`} />
   <meta name="twitter:description" content={isLive ? `${djName} is streaming live!` : 'Watch live DJ streams on Fresh Wax'} />
   <meta name="twitter:image" content={thumbnailUrl} />

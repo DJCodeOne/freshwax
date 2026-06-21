@@ -150,7 +150,6 @@ const SITE = {
   name: 'Fresh Wax',
   tagline: 'Jungle and Drum & Bass Releases, Tracks & DJ Mixes',
   locale: 'en_GB',
-  twitter: '@freshwaxuk',
   logo: `${SITE_URL}/logo.webp`,
   email: 'contact@freshwax.co.uk',
   foundingDate: '2024'
@@ -233,10 +232,8 @@ const organizationSchema = {
   "sameAs": [
     "https://www.facebook.com/people/Fresh-Wax/61585403216797/",
     "https://www.instagram.com/freshwaxuk",
-    "https://x.com/freshwaxuk",
     "https://www.youtube.com/@freshwaxuk",
-    "https://www.mixcloud.com/freshwaxuk",
-    "https://www.discogs.com/label/Fresh+Wax"
+    "https://www.mixcloud.com/freshwaxuk"
   ],
   "slogan": "Jungle and Drum & Bass",
   "knowsAbout": [
@@ -682,8 +679,8 @@ const articleSchema = article ? {
 
 <!-- Twitter -->
 <meta name="twitter:card" content={video ? "player" : "summary_large_image"} />
-<meta name="twitter:site" content={SITE.twitter} />
-<meta name="twitter:creator" content={SITE.twitter} />
+{/* No twitter:site/twitter:creator — Fresh Wax has no X account. The card still
+    renders (image/title/description) when anyone shares a link on X. */}
 <meta name="twitter:title" content={socialTitle} />
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={imageUrl} />
