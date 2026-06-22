@@ -34,6 +34,7 @@ $ErrorActionPreference = 'Continue'
 # --- Config -----------------------------------------------------------------
 $FFMPEG      = 'C:\ffmpeg\bin\ffmpeg.exe'
 $PLACEHOLDER = 'C:\mediamtx\placeholder-bg.mp4'
+$BUG         = 'C:\mediamtx\freshwax-bug.png'   # top-right FreshWax bug baked into freshwax-main
 $ICECAST     = 'http://localhost:8000/live'
 $LOCAL_MAIN  = 'rtmp://localhost:1935/live/freshwax-main'
 $MTX_API     = 'http://localhost:9997/v3/paths/list'
@@ -87,8 +88,10 @@ function Get-ObsPath { @(Get-ReadyPaths | Where-Object { $_.name -match '^live/f
 
 # --- Source detection -------------------------------------------------------
 function Test-Icecast {
-  try { (Invoke-WebRequest -Uri $ICECAST -Method Head -TimeoutSec 4 -UseBasicParsing).StatusCode -eq 200 }
-  catch { $false }
+  # BUTT audio is flowing iff the icecast-bridge has 'icecast-live' ready on
+  # MediaMTX. (Icecast returns 400 to a HEAD on a live source mount, so don't
+  # probe it directly — use the bridge's readiness as the signal.)
+  @(Get-ReadyPaths | Where-Object { $_.name -eq 'icecast-live' }).Count -gt 0
 }
 function Test-ButtDj {
   try {
@@ -120,15 +123,21 @@ function Start-Producer($src) {
   $venc = @('-c:v', $ENCODER, '-b:v','4000k','-maxrate','6000k','-bufsize','8000k','-g','60')
   if ($ENCODER -eq 'h264_qsv') { $venc += @('-pix_fmt','nv12') } else { $venc += @('-preset','veryfast','-pix_fmt','yuv420p') }
 
+  # The FreshWax bug (freshwax-bug.png) is overlaid top-right and baked into
+  # freshwax-main, so it shows on Twitch/YouTube for BOTH source types. The
+  # website paints its own overlay, so it never doubles up there.
   if ($src.kind -eq 'obs') {
     $in = "rtmp://localhost:1935/$($src.path)"
-    $a = @('-hide_banner','-loglevel','warning','-i',$in,
-           '-vf','fade=t=in:st=0:d=2') + $venc +
-         @('-c:a','aac','-b:a','192k','-ar','44100','-af',$LOUDNORM,'-fps_mode','cfr','-f','flv',$LOCAL_MAIN)
+    $a = @('-hide_banner','-loglevel','warning','-i',$in,'-i',$BUG,
+           '-filter_complex',"[0:v]fade=t=in:st=0:d=2[fg];[fg][1:v]overlay=W-w-16:16[v];[0:a]$LOUDNORM[a]",
+           '-map','[v]','-map','[a]') + $venc +
+         @('-c:a','aac','-b:a','192k','-ar','44100','-fps_mode','cfr','-f','flv',$LOCAL_MAIN)
   } else {
     $a = @('-hide_banner','-loglevel','warning','-stream_loop','-1','-re','-i',$PLACEHOLDER,
-           '-thread_queue_size','1024','-i',$ICECAST,'-map','0:v:0','-map','1:a:0') + $venc +
-         @('-c:a','aac','-b:a','192k','-ar','44100','-ac','2','-af',"aresample=async=1,$LOUDNORM",'-fps_mode','cfr','-f','flv',$LOCAL_MAIN)
+           '-thread_queue_size','1024','-i',$ICECAST,'-i',$BUG,
+           '-filter_complex',"[0:v][2:v]overlay=W-w-16:16[v];[1:a]aresample=async=1,$LOUDNORM[a]",
+           '-map','[v]','-map','[a]') + $venc +
+         @('-c:a','aac','-b:a','192k','-ar','44100','-ac','2','-fps_mode','cfr','-f','flv',$LOCAL_MAIN)
   }
   $script:producerPid  = Start-Ff $a 'C:\mediamtx\relay-main.log'
   $script:producerKind = $src.kind
