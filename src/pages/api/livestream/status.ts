@@ -12,6 +12,17 @@ import { APPROVED_RELAY_STATIONS, checkStationLive } from '../../../lib/relay-st
 
 const log = createLogger('[livestream/status]');
 
+// If a relay slot's upstream station also streams video on Twitch (see
+// APPROVED_RELAY_STATIONS), /live should embed that Twitch player instead of the
+// audio + placeholder. Match the slot's relaySource.url to a station and return
+// its channel (or null). Data-driven: add `twitchChannel` to a station to enable.
+function relayTwitchChannel(relaySource: { url?: string } | null | undefined): string | null {
+  const url = relaySource?.url;
+  if (!url) return null;
+  const st = APPROVED_RELAY_STATIONS.find(s => s.streamUrl === url || s.httpsStreamUrl === url);
+  return st?.twitchChannel || null;
+}
+
 // Cache TTLs in seconds
 // Pusher handles real-time updates, so polling can be slower
 const CACHE_TTL = {
@@ -201,11 +212,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
         : (!slot.isRelay && slot.streamKey ? buildHlsUrl(slot.streamKey) : (slot.hlsUrl || null)),
       broadcastMode: slot.broadcastMode || 'video',
       // streamKey intentionally omitted - security risk
-      // A slot may carry an explicit streamSource:'twitch' (e.g. an audio relay
-      // whose upstream also streams video on Twitch) so /live embeds the Twitch
-      // video player (A/V in sync) instead of the audio+placeholder. Additive —
-      // falls back to the relay/red5 derivation for every existing slot.
-      streamSource: slot.streamSource === 'twitch' ? 'twitch' : (slot.isRelay ? 'relay' : 'red5'),
+      // A relay slot whose station also streams video on Twitch (or one that sets
+      // streamSource:'twitch' explicitly) reports 'twitch' so /live embeds the
+      // Twitch player (video+audio in sync) instead of the audio + placeholder.
+      // Additive — every other slot still derives relay/red5.
+      streamSource: (slot.streamSource === 'twitch' || (slot.isRelay && relayTwitchChannel(slot.relaySource)))
+        ? 'twitch' : (slot.isRelay ? 'relay' : 'red5'),
       isRelay: slot.isRelay || false,
       relaySource: slot.relaySource || null,
       // For BUTT/Icecast streamers, fall back to the HLS-bridged version of
@@ -216,7 +228,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         || (slot.isRelay && slot.relaySource?.url)
         || 'https://stream.freshwax.co.uk/icecast-live/index.m3u8',
       youtubeLiveId: slot.youtubeLiveId || null,
-      twitchChannel: slot.twitchChannel || slot.twitchUsername || null,
+      twitchChannel: slot.twitchChannel || slot.twitchUsername || relayTwitchChannel(slot.relaySource) || null,
       currentViewers: slot.currentViewers || 0,
       totalViews: slot.totalViews || 0,
       totalLikes: slot.totalLikes || 0,

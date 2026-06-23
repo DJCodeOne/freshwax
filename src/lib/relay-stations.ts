@@ -14,6 +14,9 @@ export interface RelayStation {
   genre: string;
   description: string;
   checkUrl?: string;        // URL to check if station is live
+  twitchChannel?: string;   // If the station ALSO streams video on Twitch, /live
+                            // embeds that player (video+audio in sync) instead of
+                            // the audio relay + placeholder. Just the channel name.
 }
 
 export const APPROVED_RELAY_STATIONS: RelayStation[] = [
@@ -26,7 +29,8 @@ export const APPROVED_RELAY_STATIONS: RelayStation[] = [
     logoUrl: '/place-holder.webp',
     genre: 'Jungle / D&B / Breakcore',
     description: 'Underground Music Webradio - Jungle, DnB, Breakcore, Hip-Hop, Dub',
-    checkUrl: 'https://cressida.shoutca.st:2199/rpc/theundergroundlair/streaminfo.get'
+    checkUrl: 'https://cressida.shoutca.st:2199/rpc/theundergroundlair/streaminfo.get',
+    twitchChannel: 'theundergroundlair23'
   },
 ];
 
