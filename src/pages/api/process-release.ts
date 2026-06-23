@@ -211,6 +211,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let artworkUrl = `${publicDomain}/place-holder.webp`;
     let thumbUrl = artworkUrl;
     let originalArtworkUrl = '';
+    let ogImageUrl = '';
 
     const artworkResult = await processReleaseArtwork({
       artworkKey,
@@ -230,6 +231,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     artworkUrl = artworkResult.artworkUrl;
     thumbUrl = artworkResult.thumbUrl;
     originalArtworkUrl = artworkResult.originalArtworkUrl;
+    ogImageUrl = artworkResult.ogImageUrl;
     copiedFiles.push(...artworkResult.copiedFiles);
 
     // Copy audio files with retry + bounded concurrency. Previously this used
@@ -379,6 +381,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       thumbUrl: thumbUrl,
       imageUrl: artworkUrl,
       originalArtworkUrl: originalArtworkUrl,
+      ogImageUrl: ogImageUrl,
       genre: metadata.genre || 'Drum and Bass',
       catalogNumber: metadata.labelCode || '',
       labelCode: metadata.labelCode || '',

@@ -2,7 +2,7 @@
 // Artwork processing extracted from process-release.ts
 // Handles magic byte validation, WebP conversion, R2 upload for cover + thumb + original
 
-import { processImageToSquareWebP, getImageDimensions, imageExtension, imageContentType } from '../image-processing';
+import { processImageToSquareWebP, processImageToFacebookOG, getImageDimensions, imageExtension, imageContentType } from '../image-processing';
 import { errorResponse } from '../api-utils';
 import type { createLogger } from '../api-utils';
 
@@ -10,6 +10,7 @@ export interface ArtworkResult {
   artworkUrl: string;
   thumbUrl: string;
   originalArtworkUrl: string;
+  ogImageUrl: string;
   copiedFiles: { oldKey: string; newKey: string }[];
 }
 
@@ -45,6 +46,7 @@ export async function processReleaseArtwork(params: ProcessArtworkParams): Promi
     artworkUrl: placeholderUrl,
     thumbUrl: placeholderUrl,
     originalArtworkUrl: '',
+    ogImageUrl: '',
     copiedFiles: [],
   };
 
@@ -154,6 +156,25 @@ export async function processReleaseArtwork(params: ProcessArtworkParams): Promi
       result.originalArtworkUrl = `${publicDomain}/${originalKey}`;
       result.copiedFiles.push({ oldKey: artworkKey, newKey: originalKey });
       log.info(`Copied original artwork for downloads`);
+    }
+
+    // Facebook/social OG card (1200x630): square art centered on a blurred fill
+    // so link shares aren't cropped to a square. Non-critical — skipped on any
+    // failure. The source is already <=2500px here (past the guard above), so it
+    // won't trip guardDecodeSize. Oversized art (which copies its original as the
+    // cover and returns earlier) gets no OG here — backfill it after an offline
+    // cover is made (see /api/admin/backfill-release-og).
+    try {
+      const og = await processImageToFacebookOG(artworkBuffer, 78);
+      const ogKey = `${releaseFolder}/og${imageExtension(og.format)}`;
+      await r2.put(ogKey, og.buffer, {
+        httpMetadata: { contentType: imageContentType(og.format), cacheControl: 'public, max-age=31536000, immutable' },
+      });
+      result.ogImageUrl = `${publicDomain}/${ogKey}`;
+      result.copiedFiles.push({ oldKey: artworkKey, newKey: ogKey });
+      log.info(`Created OG card (${(og.buffer.length / 1024).toFixed(0)}KB)`);
+    } catch (ogErr: unknown) {
+      log.warn(`OG card generation failed (non-critical): ${ogErr}`);
     }
   } catch (imgErr: unknown) {
     // Fallback: copy original if image processing fails
