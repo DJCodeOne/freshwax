@@ -142,6 +142,21 @@ export function getImageDimensions(bytes: Uint8Array): { width: number; height: 
   return null;
 }
 
+// Hard ceiling on what we'll even attempt to decode in-worker. Decoding to RGBA
+// needs ~width*height*4 bytes; a source past this traps/OOMs Photon's WASM on the
+// 128MB Worker (a 3600x3600 ~52MB decode did). Keep in sync with artwork.ts.
+const MAX_DECODE_PIXELS = 2500 * 2500;
+
+// Throw BEFORE decoding when a source is too large, so callers fall back to the
+// original (or skip) instead of risking an uncatchable OOM mid-decode. Oversized
+// art should be downscaled client-side at upload; this is the server backstop.
+function guardDecodeSize(input: Uint8Array): void {
+  const d = getImageDimensions(input);
+  if (d && d.width * d.height > MAX_DECODE_PIXELS) {
+    throw new Error(`Image ${d.width}x${d.height} exceeds the in-worker decode budget (resize to <=2500px)`);
+  }
+}
+
 /**
  * Resize and crop image to a square WebP, guaranteed under 100KB.
  * If the first encode exceeds 100KB, progressively reduces dimensions.
@@ -154,6 +169,8 @@ export async function processImageToSquareWebP(
   const input = inputBuffer instanceof Uint8Array
     ? inputBuffer
     : new Uint8Array(inputBuffer);
+
+  guardDecodeSize(input);
 
   // Cap working resolution before the crop so a huge source can't OOM the Worker
   const img = capWorkingImage(PhotonImage.new_from_byteslice(input));
@@ -215,6 +232,8 @@ export async function processImageToWebP(
   const input = inputBuffer instanceof Uint8Array
     ? inputBuffer
     : new Uint8Array(inputBuffer);
+
+  guardDecodeSize(input);
 
   // Cap working resolution before processing so a huge source can't OOM the Worker
   const img = capWorkingImage(PhotonImage.new_from_byteslice(input));
@@ -283,6 +302,8 @@ export async function processImageToFacebookOG(
   const input = inputBuffer instanceof Uint8Array
     ? inputBuffer
     : new Uint8Array(inputBuffer);
+
+  guardDecodeSize(input);
 
   const FB_W = 1200;
   const FB_H = 630;

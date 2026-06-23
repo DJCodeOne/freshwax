@@ -108,15 +108,17 @@ async function processReleaseArtwork(
       return { coverUrl: originalArtworkUrl, thumbUrl: originalArtworkUrl, originalArtworkUrl, ogImageUrl: '' };
     }
 
-    // 2. Process cover + thumb + Facebook OG (1200x630) in parallel
-    const [coverResult, thumbResult, ogResult] = await Promise.all([
-      processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 800, 80),
-      processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 400, 75),
-      processImageToFacebookOG(bodyBytes.buffer as ArrayBuffer, 78).catch((e: unknown) => {
-        log.warn('OG image generation failed (non-critical):', e);
-        return null;
-      }),
-    ]);
+    // 2. Process cover + thumb + Facebook OG (1200x630) — SEQUENTIAL, not
+    // Promise.all: they share one Photon WASM heap and running them concurrently
+    // races on it (intermittently corrupting the encode → thumb-but-no-cover) and
+    // multiplies peak memory. Oversized sources throw early (see image-processing
+    // guardDecodeSize) so this whole block is caught below → original is used.
+    const coverResult = await processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 800, 80);
+    const thumbResult = await processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 400, 75);
+    const ogResult = await processImageToFacebookOG(bodyBytes.buffer as ArrayBuffer, 78).catch((e: unknown) => {
+      log.warn('OG image generation failed (non-critical):', e);
+      return null;
+    });
 
     // 3. Determine output keys
     const dir = r2Key.substring(0, r2Key.lastIndexOf('/') + 1);

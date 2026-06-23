@@ -116,6 +116,43 @@ function debug(msg) {
   debugLog.scrollTop = debugLog.scrollHeight;
 }
 
+// Downscale an oversized image in the browser BEFORE upload so the in-Worker
+// cover pipeline never has to decode a huge bitmap. A source over ~2500px
+// (e.g. 3600x3600 -> ~52MB RGBA) exhausts the Worker's 128MB limit and the
+// cover falls back to serving the unoptimised original. Keeps the source
+// format; a no-op for images already <= maxSide on the long side. On any
+// failure it returns the original blob so the upload still proceeds.
+async function resizeImageIfLarge(srcBlob, srcType, maxSide = 2000) {
+  if (!srcType || srcType.indexOf("image/") !== 0) return { blob: srcBlob, type: srcType };
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(srcBlob);
+  } catch (e) {
+    debug("Resize: could not decode image, uploading original");
+    return { blob: srcBlob, type: srcType };
+  }
+  const ow = bitmap.width, oh = bitmap.height;
+  const longSide = Math.max(ow, oh);
+  if (longSide <= maxSide) {
+    if (bitmap.close) bitmap.close();
+    return { blob: srcBlob, type: srcType };
+  }
+  const scale = maxSide / longSide;
+  const w = Math.round(ow * scale), h = Math.round(oh * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d").drawImage(bitmap, 0, 0, w, h);
+  if (bitmap.close) bitmap.close();
+  const outType = (srcType === "image/png" || srcType === "image/webp") ? srcType : "image/jpeg";
+  const out = await new Promise(function (res) {
+    canvas.toBlob(res, outType, outType === "image/png" ? undefined : 0.9);
+  });
+  if (!out) return { blob: srcBlob, type: srcType };
+  debug(`Resize: ${ow}x${oh} -> ${w}x${h} (${(srcBlob.size / 1024).toFixed(0)}KB -> ${(out.size / 1024).toFixed(0)}KB)`);
+  return { blob: out, type: outType };
+}
+
 debug("Page loaded, JSZip will be loaded on first use");
 
 // Extracted data
@@ -286,10 +323,14 @@ async function processZip(file) {
     debug("Extracting cover art to blob...");
     setProgress(20, "Processing files...");
 
-    const coverBlob = await coverFile.async("blob");
-    debug(`Cover blob size: ${(coverBlob.size/1024).toFixed(2)} KB`);
+    const coverBlobRaw = await coverFile.async("blob");
     const coverExt = coverName.split('.').pop().toLowerCase();
-    const coverType = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[coverExt] || 'image/jpeg';
+    const coverTypeRaw = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[coverExt] || 'image/jpeg';
+    // Downscale oversized art before upload so the Worker can build an optimized WebP cover
+    const coverResized = await resizeImageIfLarge(coverBlobRaw, coverTypeRaw);
+    const coverBlob = coverResized.blob;
+    const coverType = coverResized.type;
+    debug(`Cover blob size: ${(coverBlob.size/1024).toFixed(2)} KB`);
 
     const tracks = [];
     for (let i = 0; i < trackFiles.length; i++) {
@@ -703,8 +744,13 @@ manualBtn.onclick = async () => {
       throw new Error("No audio files selected! Please include at least one MP3/WAV file.");
     }
 
+    // Downscale an oversized cover in the browser so the Worker can build an
+    // optimized WebP (a >2500px source OOMs the in-Worker image pipeline).
+    const coverSrc = coverInput.files[0];
+    const coverOut = await resizeImageIfLarge(coverSrc, coverSrc.type || 'image/jpeg');
+
     const files = [
-      { filename: coverInput.files[0].name, contentType: coverInput.files[0].type, size: coverInput.files[0].size },
+      { filename: coverSrc.name, contentType: coverOut.type, size: coverOut.blob.size },
       ...Array.from(tracksInput.files).map(f => ({ filename: f.name, contentType: f.type, size: f.size }))
     ];
 
@@ -725,7 +771,10 @@ manualBtn.onclick = async () => {
       throw new Error(presignData.error || "Failed to get upload URLs");
     }
 
-    const allFiles = [coverInput.files[0], ...Array.from(tracksInput.files)];
+    const allFiles = [
+      { data: coverOut.blob, name: coverSrc.name },
+      ...Array.from(tracksInput.files).map(f => ({ data: f, name: f.name }))
+    ];
     let coverArtUrl = "";
     const trackData = [];
 
@@ -734,7 +783,7 @@ manualBtn.onclick = async () => {
       const upload = presignData.uploads[i];
 
       setProgress(10 + (i / allFiles.length) * 80, `Uploading ${file.name}...`);
-      await uploadFileWithProgress(upload.uploadUrl, file, upload.contentType, file.name);
+      await uploadFileWithProgress(upload.uploadUrl, file.data, upload.contentType, file.name);
 
       if (i === 0) {
         coverArtUrl = upload.publicUrl;
