@@ -47,45 +47,65 @@ async function processOne(
   if (!doc) return { releaseId, ok: false, error: 'Release not found' };
   if (doc.ogImageUrl) return { releaseId, ok: true, error: 'Already has ogImageUrl' };
 
-  // Prefer the highest-quality square source available.
-  const sourceUrl = (doc.originalArtworkUrl || doc.coverArtUrl || doc.coverArt) as string | undefined;
-  if (!sourceUrl || sourceUrl === '/place-holder.webp') {
+  // Candidate square sources, best-quality first. Fall back to the next when one
+  // is too large for the in-worker decoder (guardDecodeSize throws) — e.g. a
+  // 3600px original → use the optimized cover.webp instead of failing outright.
+  const candidateUrls = [doc.originalArtworkUrl, doc.coverArtUrl, doc.coverArt]
+    .filter((u): u is string => typeof u === 'string' && u.length > 0 && u !== '/place-holder.webp');
+  const uniqueUrls = Array.from(new Set(candidateUrls));
+  if (uniqueUrls.length === 0) {
     return { releaseId, ok: false, error: 'No artwork to process' };
   }
-
-  // Extract R2 key from public URL: <publicDomain>/<key>
   const prefix = publicDomain.endsWith('/') ? publicDomain : publicDomain + '/';
-  if (!sourceUrl.startsWith(prefix)) {
-    return { releaseId, ok: false, error: `Artwork URL outside R2 (${sourceUrl})` };
-  }
-  // Decode percent-encoding (e.g. %23 → #): the stored URL is encoded but the
-  // actual R2 object key is the decoded path, or GetObject 404s with NoSuchKey.
-  let sourceKey = sourceUrl.slice(prefix.length);
-  try { sourceKey = decodeURIComponent(sourceKey); } catch { /* keep as-is if malformed */ }
-  const folderPath = sourceKey.includes('/') ? sourceKey.slice(0, sourceKey.lastIndexOf('/')) : '';
 
-  // Fetch existing artwork from R2
-  const getRes = await s3Client.send(new GetObjectCommand({ Bucket: bucket, Key: sourceKey }));
-  const body = getRes.Body;
-  if (!body) return { releaseId, ok: false, error: 'Empty artwork body from R2' };
+  let ogImg: Awaited<ReturnType<typeof processImageToFacebookOG>> | null = null;
+  let folderPath = '';
+  let lastError = '';
+  let dryKB = 0;
+  for (const sourceUrl of uniqueUrls) {
+    if (!sourceUrl.startsWith(prefix)) { lastError = `Artwork URL outside R2 (${sourceUrl})`; continue; }
+    // Decode percent-encoding (e.g. %23 → #): the stored URL is encoded but the
+    // actual R2 object key is the decoded path, or GetObject 404s with NoSuchKey.
+    let sourceKey = sourceUrl.slice(prefix.length);
+    try { sourceKey = decodeURIComponent(sourceKey); } catch { /* keep as-is if malformed */ }
+    folderPath = sourceKey.includes('/') ? sourceKey.slice(0, sourceKey.lastIndexOf('/')) : '';
 
-  // Convert stream to buffer
-  const chunks: Uint8Array[] = [];
-  // @ts-expect-error — Body is a Web ReadableStream in Workers
-  for await (const chunk of body as AsyncIterable<Uint8Array>) {
-    chunks.push(chunk);
+    let artworkBuffer: Uint8Array;
+    try {
+      const getRes = await s3Client.send(new GetObjectCommand({ Bucket: bucket, Key: sourceKey }));
+      const body = getRes.Body;
+      if (!body) { lastError = 'Empty artwork body from R2'; continue; }
+      const chunks: Uint8Array[] = [];
+      // @ts-expect-error — Body is a Web ReadableStream in Workers
+      for await (const chunk of body as AsyncIterable<Uint8Array>) { chunks.push(chunk); }
+      let total = 0;
+      for (const c of chunks) total += c.length;
+      artworkBuffer = new Uint8Array(total);
+      let off = 0;
+      for (const c of chunks) { artworkBuffer.set(c, off); off += c.length; }
+    } catch (e: unknown) {
+      lastError = `Fetch failed for ${sourceKey}: ${String(e)}`;
+      continue;
+    }
+
+    if (dryRun) { dryKB = Math.round(artworkBuffer.length / 1024); break; }
+
+    try {
+      ogImg = await processImageToFacebookOG(artworkBuffer.buffer as ArrayBuffer, 78);
+      break; // success
+    } catch (e: unknown) {
+      // Too large for the decoder (guardDecodeSize) or decode error — try next source.
+      lastError = String(e);
+      continue;
+    }
   }
-  let total = 0;
-  for (const c of chunks) total += c.length;
-  const artworkBuffer = new Uint8Array(total);
-  let off = 0;
-  for (const c of chunks) { artworkBuffer.set(c, off); off += c.length; }
 
   if (dryRun) {
-    return { releaseId, ok: true, sizeKB: Math.round(artworkBuffer.length / 1024) };
+    return { releaseId, ok: true, sizeKB: dryKB };
   }
-
-  const ogImg = await processImageToFacebookOG(artworkBuffer.buffer as ArrayBuffer, 78);
+  if (!ogImg) {
+    return { releaseId, ok: false, error: lastError || 'OG generation failed' };
+  }
   const ogKey = `${folderPath}/og${imageExtension(ogImg.format)}`;
 
   await s3Client.send(new PutObjectCommand({
