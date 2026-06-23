@@ -155,9 +155,13 @@ const SITE = {
   foundingDate: '2024'
 };
 
+// Title-bar / share-title brand is the joined "FreshWax" (one word) so the brand
+// can't wrap mid-name ("Fresh" / "Wax") on Facebook's link card. The spaced
+// "Fresh Wax" stays canonical for og:site_name + structured data below.
+const TITLE_BRAND = 'FreshWax';
 const fullTitle = title === 'Home'
-  ? `${SITE.tagline} | ${SITE.name}`
-  : `${title} | ${SITE.name}`;
+  ? `${SITE.tagline} | ${TITLE_BRAND}`
+  : `${title} | ${TITLE_BRAND}`;
 
 // Social-share title (og:title + twitter:title). Defaults to the SERP-style
 // `${title} | Fresh Wax` so existing pages are unaffected, but pages can pass
@@ -167,7 +171,7 @@ const socialTitle = ogTitle ?? fullTitle;
 
 // SERP title: truncate to 60 chars max to avoid Google truncation
 const SERP_MAX = 60;
-const SUFFIX = ` | ${SITE.name}`; // " | Fresh Wax" = 13 chars
+const SUFFIX = ` | ${TITLE_BRAND}`; // " | FreshWax"
 const serpTitle = fullTitle.length <= SERP_MAX
   ? fullTitle
   : title.substring(0, SERP_MAX - SUFFIX.length - 3) + `...${SUFFIX}`;
