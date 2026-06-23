@@ -201,7 +201,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
         : (!slot.isRelay && slot.streamKey ? buildHlsUrl(slot.streamKey) : (slot.hlsUrl || null)),
       broadcastMode: slot.broadcastMode || 'video',
       // streamKey intentionally omitted - security risk
-      streamSource: slot.isRelay ? 'relay' : 'red5',
+      // A slot may carry an explicit streamSource:'twitch' (e.g. an audio relay
+      // whose upstream also streams video on Twitch) so /live embeds the Twitch
+      // video player (A/V in sync) instead of the audio+placeholder. Additive —
+      // falls back to the relay/red5 derivation for every existing slot.
+      streamSource: slot.streamSource === 'twitch' ? 'twitch' : (slot.isRelay ? 'relay' : 'red5'),
       isRelay: slot.isRelay || false,
       relaySource: slot.relaySource || null,
       // For BUTT/Icecast streamers, fall back to the HLS-bridged version of
