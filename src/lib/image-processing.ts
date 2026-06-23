@@ -49,6 +49,99 @@ async function encodeLossyWebP(
   return new Uint8Array(encoded);
 }
 
+// Working-resolution cap. Sources larger than this on the long side are
+// downscaled *before* the crop/resize loop (see processImageToSquareWebP /
+// processImageToWebP). A 3600x3600 image decodes to ~52MB RGBA and cropping
+// doubles that; without the cap, processing two sizes — or several images —
+// concurrently blew the Worker's 128MB limit -> uncatchable OOM -> Cloudflare
+// HTML error page -> the admin UI's response.json() failing on "<!DOCTYPE".
+// 2000px is ample for any cover/thumb. No-op for already-small images.
+const WORK_CAP = 2000;
+
+/**
+ * If the decoded image's long side exceeds WORK_CAP, resize it down in place
+ * (Lanczos3) and return the smaller PhotonImage, freeing the original. Otherwise
+ * returns the image unchanged. Keeps peak Worker memory bounded regardless of
+ * source resolution. Caller owns freeing the returned image.
+ */
+function capWorkingImage(img: PhotonImage): PhotonImage {
+  const w = img.get_width();
+  const h = img.get_height();
+  const longSide = Math.max(w, h);
+  if (longSide <= WORK_CAP) return img;
+  const ratio = WORK_CAP / longSide;
+  const shrunk = resize(
+    img,
+    Math.max(1, Math.round(w * ratio)),
+    Math.max(1, Math.round(h * ratio)),
+    SamplingFilter.Lanczos3,
+  );
+  img.free();
+  return shrunk;
+}
+
+/**
+ * Cheaply read pixel dimensions from an image header WITHOUT decoding it.
+ * Supports JPEG, PNG, WebP (VP8/VP8L/VP8X) and GIF; returns null if unknown or
+ * unparseable. Lets callers skip a full WASM decode of a source so large it
+ * would exhaust the Worker's 128MB memory and trap ("unreachable").
+ */
+export function getImageDimensions(bytes: Uint8Array): { width: number; height: number } | null {
+  const n = bytes.length;
+  // PNG — IHDR width/height (big-endian) at offsets 16 / 20
+  if (n >= 24 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    const w = ((bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19]) >>> 0;
+    const h = ((bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23]) >>> 0;
+    if (w > 0 && h > 0) return { width: w, height: h };
+  }
+  // GIF — logical screen width/height (little-endian) at offsets 6 / 8
+  if (n >= 10 && bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    const w = bytes[6] | (bytes[7] << 8);
+    const h = bytes[8] | (bytes[9] << 8);
+    if (w > 0 && h > 0) return { width: w, height: h };
+  }
+  // WebP — RIFF....WEBP then a VP8 / VP8L / VP8X chunk
+  if (n >= 30 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
+      && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+    const fmt = String.fromCharCode(bytes[12], bytes[13], bytes[14], bytes[15]);
+    if (fmt === 'VP8 ') {
+      const w = (bytes[26] | (bytes[27] << 8)) & 0x3FFF;
+      const h = (bytes[28] | (bytes[29] << 8)) & 0x3FFF;
+      if (w > 0 && h > 0) return { width: w, height: h };
+    } else if (fmt === 'VP8L') {
+      const v = (bytes[21] | (bytes[22] << 8) | (bytes[23] << 16) | (bytes[24] << 24)) >>> 0;
+      return { width: 1 + (v & 0x3FFF), height: 1 + ((v >>> 14) & 0x3FFF) };
+    } else if (fmt === 'VP8X') {
+      const w = 1 + (bytes[24] | (bytes[25] << 8) | (bytes[26] << 16));
+      const h = 1 + (bytes[27] | (bytes[28] << 8) | (bytes[29] << 16));
+      return { width: w, height: h };
+    }
+  }
+  // JPEG — scan segments for a SOF marker (C0-CF, excluding C4/C8/CC)
+  if (n >= 4 && bytes[0] === 0xFF && bytes[1] === 0xD8) {
+    let off = 2;
+    while (off + 9 < n) {
+      if (bytes[off] !== 0xFF) { off++; continue; }
+      let marker = bytes[off + 1];
+      while (marker === 0xFF && off + 1 < n) { off++; marker = bytes[off + 1]; }
+      const seg = off + 2;
+      if (marker >= 0xC0 && marker <= 0xCF && marker !== 0xC4 && marker !== 0xC8 && marker !== 0xCC) {
+        if (seg + 6 < n) {
+          const h = (bytes[seg + 3] << 8) | bytes[seg + 4];
+          const w = (bytes[seg + 5] << 8) | bytes[seg + 6];
+          if (w > 0 && h > 0) return { width: w, height: h };
+        }
+        return null;
+      }
+      if (seg + 1 >= n) break;
+      const len = (bytes[seg] << 8) | bytes[seg + 1];
+      if (len < 2) break;
+      off = seg + len;
+    }
+  }
+  return null;
+}
+
 /**
  * Resize and crop image to a square WebP, guaranteed under 100KB.
  * If the first encode exceeds 100KB, progressively reduces dimensions.
@@ -62,7 +155,8 @@ export async function processImageToSquareWebP(
     ? inputBuffer
     : new Uint8Array(inputBuffer);
 
-  const img = PhotonImage.new_from_byteslice(input);
+  // Cap working resolution before the crop so a huge source can't OOM the Worker
+  const img = capWorkingImage(PhotonImage.new_from_byteslice(input));
 
   const originalWidth = img.get_width();
   const originalHeight = img.get_height();
@@ -122,7 +216,8 @@ export async function processImageToWebP(
     ? inputBuffer
     : new Uint8Array(inputBuffer);
 
-  const img = PhotonImage.new_from_byteslice(input);
+  // Cap working resolution before processing so a huge source can't OOM the Worker
+  const img = capWorkingImage(PhotonImage.new_from_byteslice(input));
 
   const originalWidth = img.get_width();
   const originalHeight = img.get_height();

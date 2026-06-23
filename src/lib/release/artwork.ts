@@ -2,7 +2,7 @@
 // Artwork processing extracted from process-release.ts
 // Handles magic byte validation, WebP conversion, R2 upload for cover + thumb + original
 
-import { processImageToSquareWebP, imageExtension, imageContentType } from '../image-processing';
+import { processImageToSquareWebP, getImageDimensions, imageExtension, imageContentType } from '../image-processing';
 import { errorResponse } from '../api-utils';
 import type { createLogger } from '../api-utils';
 
@@ -24,6 +24,13 @@ export interface ProcessArtworkParams {
 }
 
 const MAX_ARTWORK_FOR_PROCESSING = 5 * 1024 * 1024; // 5MB -- skip WASM processing for larger images
+// Skip in-Worker WASM processing above this pixel count. Decoding to RGBA needs
+// ~width*height*4 bytes of WASM memory, and a source that decodes past the
+// Worker's 128MB ceiling traps ("unreachable") — a 3600x3600 (~52MB) JPEG did,
+// which is what surfaced as the admin "<!DOCTYPE...not valid JSON" failure.
+// 2500x2500 (~25MB decode) is a safe ceiling; larger art keeps its original as
+// the cover (process it offline / re-upload <=2500px for an optimized WebP).
+const MAX_PROCESS_PIXELS = 2500 * 2500;
 
 /**
  * Process release artwork: validate magic bytes, convert to WebP (cover 800x800 + thumb 400x400),
@@ -90,12 +97,36 @@ export async function processReleaseArtwork(params: ProcessArtworkParams): Promi
     return errorResponse('Artwork file content does not match a valid image format (JPEG, PNG, WebP, GIF).', 400);
   }
 
-  // Process to WebP: 800x800 cover + 400x400 thumbnail (in parallel)
+  // Guard: a source too large to decode in-Worker would trap ("unreachable") or,
+  // worse, OOM-crash the Worker (the original "<!DOCTYPE...not valid JSON" bug).
+  // Read dimensions cheaply from the header and, if oversized, copy the original
+  // as the cover instead of attempting the dangerous decode.
+  const dims = getImageDimensions(artworkBytes);
+  if (dims && dims.width * dims.height > MAX_PROCESS_PIXELS) {
+    log.warn(`Artwork ${dims.width}x${dims.height} exceeds the in-Worker decode budget — copying original as cover (re-upload <=2500px for an optimized WebP).`);
+    const artworkFilename = artworkKey.split('/').pop() || 'cover.webp';
+    const newArtworkKey = `${releaseFolder}/${artworkFilename}`;
+    const copied = await copyObject(artworkKey, newArtworkKey);
+    if (copied) {
+      result.copiedFiles.push({ oldKey: artworkKey, newKey: newArtworkKey });
+      result.artworkUrl = `${publicDomain}/${newArtworkKey}`;
+      result.originalArtworkUrl = result.artworkUrl;
+      result.thumbUrl = result.artworkUrl;
+    }
+    return result;
+  }
+
+  // Process to WebP: 800x800 cover + 400x400 thumbnail.
+  // SEQUENTIAL, not Promise.all: both calls share one Photon WASM heap, and
+  // running them concurrently let one call grow/realloc WASM memory while the
+  // other held a pixel view across an await — intermittently corrupting the
+  // encode (the tell: many releases ended up with thumb.webp but no cover.webp).
+  // Each call also self-caps working resolution (see processImageToSquareWebP),
+  // so a high-res source no longer OOMs. The full-res original is copied
+  // untouched for buyer downloads via copyObject() below.
   try {
-    const [cover, thumb] = await Promise.all([
-      processImageToSquareWebP(artworkBuffer, 800, 80),
-      processImageToSquareWebP(artworkBuffer, 400, 75),
-    ]);
+    const cover = await processImageToSquareWebP(artworkBuffer, 800, 80);
+    const thumb = await processImageToSquareWebP(artworkBuffer, 400, 75);
 
     // Upload cover + thumb + copy original in parallel
     const coverKey = `${releaseFolder}/cover${imageExtension(cover.format)}`;
