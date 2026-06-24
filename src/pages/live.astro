@@ -3039,7 +3039,7 @@ try {
     }
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('schedule-updated', handleScheduleUpdated);
-    stopListenerHeartbeat();
+    stopListenerHeartbeat(presenceDeps);
   }, { once: true });
 </script>
 

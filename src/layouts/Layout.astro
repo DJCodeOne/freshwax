@@ -328,9 +328,20 @@ const csrfToken = Astro.locals.csrfToken || '';
         }
         function report(msg, stack, url, level) {
           if (!msg) return;
-          // Skip noise: browser extensions, third-party scripts, ResizeObserver
           var s = String(msg);
+          // Skip known noise / false positives that carry no actionable signal:
+          //  - browser extensions and ResizeObserver loop warnings (browser noise)
+          //  - "Script error." — opaque cross-origin errors with no stack/line
+          //  - dynamic-import failures — a deploy changed chunk hashes while an old
+          //    tab was open (expected churn, the page reloads onto the new build)
+          //  - replaceState SecurityError — browser rate-limiting ClientRouter, not ours
+          //  - bare HTTP status codes (e.g. "401") logged as errors — no diagnostic value
           if (s.indexOf('ResizeObserver') > -1 || s.indexOf('extension') > -1) return;
+          if (s === 'Script error.' || s.indexOf('Script error') === 0) return;
+          if (s.indexOf('Failed to fetch dynamically imported module') > -1) return;
+          if (s.indexOf('error loading dynamically imported module') > -1) return;
+          if (s.indexOf('replaceState') > -1) return;
+          if (/^\d{3}$/.test(s.trim())) return;
           if (pending.length >= 20) return; // cap per page load
           pending.push({
             message: s.slice(0, 2000),
