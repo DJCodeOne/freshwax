@@ -5,7 +5,7 @@
 import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { setDocument } from '../../lib/firebase-rest';
+import { updateDocument } from '../../lib/firebase-rest';
 import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { createS3Client } from '../../lib/s3-client';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
@@ -130,7 +130,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Update customer document with idToken for authentication
     try {
-      await setDocument('users', userId, {
+      // NOTE: updateDocument (masked merge PATCH), NOT setDocument — setDocument is a
+      // full-document replace with no updateMask, so it would wipe every other field on
+      // the user doc (email, displayName, roles, pendingRoles). Avatar upload must only
+      // touch the two avatar fields.
+      await updateDocument('users', userId, {
         avatarUrl,
         avatarUpdatedAt: new Date().toISOString()
       }, finalIdToken);
@@ -196,7 +200,9 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     }
 
     // Remove avatar URL from customer document
-    await setDocument('users', userId, {
+    // updateDocument (masked merge), NOT setDocument — only clear the avatar fields,
+    // never replace the whole user doc.
+    await updateDocument('users', userId, {
       avatarUrl: null,
       avatarUpdatedAt: new Date().toISOString()
     }, idToken);

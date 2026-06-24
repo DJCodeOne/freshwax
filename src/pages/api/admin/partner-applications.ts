@@ -99,14 +99,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
         ],
         orderBy: { field: 'requestedAt', direction: 'DESCENDING' },
         limit: 50
-      }).catch(() => []),
+      }).catch((e) => { log.error('[partner-applications] pendingRoleRequests query failed (missing composite index?):', e instanceof Error ? e.message : e); return []; }),
       queryCollection('partnerApplications', {
         filters: [
           { field: 'status', op: 'EQUAL', value: 'pending' }
         ],
         orderBy: { field: 'createdAt', direction: 'DESCENDING' },
         limit: 50
-      }).catch(() => [])
+      }).catch((e) => { log.error('[partner-applications] partnerApplications query failed (missing composite index?):', e instanceof Error ? e.message : e); return []; })
     ]);
 
     // Normalize role requests to match expected format
