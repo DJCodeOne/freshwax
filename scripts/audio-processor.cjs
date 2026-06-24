@@ -24,6 +24,11 @@ if (fs.existsSync(envPath)) {
 
 const PORT = process.env.AUDIO_PROCESSOR_PORT || 8089;
 const TEMP_DIR = path.join(__dirname, '..', 'temp', 'audio-processing');
+// ffmpeg binary. Bare 'ffmpeg' relies on PATH, which fails when run as a
+// LocalSystem service (the winget ffmpeg lives in the user profile, off the
+// service PATH). FFMPEG_PATH (set in .env) points at a fixed binary so the
+// processor works identically when launched manually or as an NSSM service.
+const FFMPEG = process.env.FFMPEG_PATH || 'ffmpeg';
 
 // R2 Configuration
 const R2_CONFIG = {
@@ -223,7 +228,7 @@ function convertAudio(inputPath, outputPath, outputFormat) {
     console.log(`[FFmpeg] Converting to ${outputFormat}: ${path.basename(inputPath)}`);
     console.log(`[FFmpeg] Command: ffmpeg ${args.join(' ')}`);
 
-    const ffmpeg = spawn('ffmpeg', args);
+    const ffmpeg = spawn(FFMPEG, args);
 
     let stderr = '';
     ffmpeg.stderr.on('data', (data) => {
@@ -277,7 +282,7 @@ function createPreview(inputPath, outputPath) {
 
     console.log(`[FFmpeg] Creating preview: ${path.basename(inputPath)}`);
 
-    const ffmpeg = spawn('ffmpeg', args);
+    const ffmpeg = spawn(FFMPEG, args);
 
     let stderr = '';
     ffmpeg.stderr.on('data', (data) => {
