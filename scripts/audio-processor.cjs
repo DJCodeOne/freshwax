@@ -29,6 +29,11 @@ const TEMP_DIR = path.join(__dirname, '..', 'temp', 'audio-processing');
 // service PATH). FFMPEG_PATH (set in .env) points at a fixed binary so the
 // processor works identically when launched manually or as an NSSM service.
 const FFMPEG = process.env.FFMPEG_PATH || 'ffmpeg';
+// ffprobe (duration probing) has the same service-PATH problem as ffmpeg above.
+// FFPROBE_PATH (set in .env) points at a fixed binary that sits next to ffmpeg
+// (e.g. C:\mediamtx\ffprobe.exe). Without this, durations came back empty under
+// the LocalSystem service because bare 'ffprobe' wasn't on the service PATH.
+const FFPROBE = process.env.FFPROBE_PATH || 'ffprobe';
 
 // R2 Configuration
 const R2_CONFIG = {
@@ -311,7 +316,7 @@ function createPreview(inputPath, outputPath) {
  */
 function probeDuration(filePath) {
   try {
-    const r = require('child_process').spawnSync('ffprobe', [
+    const r = require('child_process').spawnSync(FFPROBE, [
       '-v', 'error',
       '-show_entries', 'format=duration',
       '-of', 'default=noprint_wrappers=1:nokey=1',
