@@ -23,6 +23,65 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'amen-break',
+    title: 'The Amen Break: The Most Sampled Drum Loop Ever',
+    excerpt: 'Six seconds of drums from a 1969 funk B-side became the foundation of jungle and drum & bass. The story of the Amen break — and the drummer who never lived to see a penny of it.',
+    featuredImage: '/blog-amen-break.webp',
+    ogImage: '/blog-amen-break-og.jpg',
+    ogImageWidth: 1200,
+    ogImageHeight: 630,
+    category: 'Culture',
+    publishedAt: '2026-07-11',
+    author: 'Fresh Wax',
+    tags: ['amen break', 'jungle', 'drum and bass', 'sampling', 'breakbeat', 'music history', 'the winstons', 'gc coleman'],
+    content: `
+      <p>Somewhere in almost every jungle set you have ever heard — chopped, pitched up, flipped inside out — sits the same six seconds of drums, recorded in one take in 1969 by a funk band who thought so little of the track that they put it on a B-side. The song was <strong>"Amen, Brother" by The Winstons</strong>. The drummer was <strong>Gregory "G.C." Coleman</strong>. And the four bars he played about ninety seconds in have since been sampled more than any other piece of recorded music in history: hip-hop, jungle, drum &amp; bass, Britpop, adverts, even a primetime cartoon theme. This is the story of the Amen break — what it is, how it quietly conquered music, and why the only money that ever came back for it arrived decades late, as a thank-you cheque from the scene itself.</p>
+
+      <h2>Six Seconds in 1969</h2>
+      <p>The Winstons were a Washington, D.C. soul and funk outfit led by tenor saxophonist Richard Lewis Spencer. In 1969 they cut "Color Him Father", a heartfelt soul record that went on to win Spencer a Grammy for Best R&amp;B Song. Every single of the era needed a flip side, so the band knocked out an up-tempo instrumental take on the gospel standard "Amen" — the tune The Impressions had carried into the charts a few years earlier — and titled it "Amen, Brother".</p>
+      <p>About one minute and twenty-six seconds in, the band drops out and Coleman plays four bars on his own. Two bars of his rolling groove, a third bar where the snare pattern shifts, and a fourth where he leaves the downbeat hanging and lands a displaced snare-and-crash figure that has hypnotised producers ever since. Roughly six seconds, around 136 BPM, recorded hot to tape with the whole kit bleeding together beautifully. Nobody involved gave it a second thought. "Amen, Brother" did its modest job as the flip of a hit, The Winstons moved on, and the break slept in record crates for the next seventeen years.</p>
+
+      <h2>Why These Four Bars?</h2>
+      <p>Plenty of old funk records have drum breaks. Why did this one take over the world? Listen closely and it starts to make sense:</p>
+      <ul>
+        <li><strong>Ghost notes everywhere.</strong> Between the backbeats Coleman feathers in quiet snare hits that give the pattern a rolling, human shuffle no drum machine of the era could fake.</li>
+        <li><strong>Variation built in.</strong> It isn't one bar looped four times — it's a phrase with a beginning, a development and a punchline, so even the raw loop never feels static.</li>
+        <li><strong>The bar-four stumble.</strong> That displaced crash is pure tension and release. It's the moment every junglist recognises in their spine.</li>
+        <li><strong>The sound itself.</strong> Saturated, crunchy, mixed loud. Every hit cuts through, and — crucially for what came later — every hit chops out clean.</li>
+      </ul>
+      <p>Cut it apart and each slice is usable: kick, snare, hats, that ride-and-crash flourish. It isn't really a loop at all. It's a full drum kit with an attitude, free to anyone with a sampler.</p>
+
+      <h2>Crate Diggers Give It a Second Life</h2>
+      <p>The break's rebirth came in 1986, when "Amen, Brother" appeared on <strong>Ultimate Breaks &amp; Beats</strong> — a New York compilation series that collected drum-break records for DJs and producers, arriving at the exact moment affordable samplers did. Hip-hop got there first. Salt-N-Pepa's "I Desire" (1986) was among the earliest to flip it; Mantronix built "King of the Beats" (1988) around the break itself; and N.W.A laid it under "Straight Outta Compton" the same year. By the end of the decade the Amen was simply part of hip-hop's furniture.</p>
+
+      <h2>The UK Mutation: Hardcore Into Jungle</h2>
+      <p>Then Britain got hold of it, and the Amen stopped being a drum break and became the seed of an entire genre.</p>
+      <p>Around 1990&ndash;92, UK hardcore producers were speeding breakbeats up to match rave tempos. Run the Amen at 150&ndash;160+ BPM and something magical happens: that human shuffle turns into pure forward motion. Armed with Akai samplers and an Atari ST running Cubase, producers went further than looping — they took the break apart hit by hit and rebuilt it. Resequenced. Reversed. Timestretched until the drums grind and shimmer with that metallic texture that became jungle's calling card. Tracks like Lennie De Ice's "We Are I.E." (1991) sketched the blueprint, and by 1993&ndash;94 jungle had fully arrived — with the Amen as its national instrument.</p>
+      <p>Listen to Shy FX's "Original Nuttah" or Remarc's "R.I.P." and you're hearing Coleman's four bars turned into something he could never have imagined: a drum solo from 1969 running the dance at 160 BPM in a London rave twenty-five years later. "Amen tune" became its own category — it still is. Jungle grew into drum &amp; bass, and thirty years on, producers are still finding new ways to chop those same four bars. Every release we put out at Fresh Wax stands somewhere downstream of them.</p>
+
+      <h2>And Everywhere Else</h2>
+      <p>The Amen's passport got stamped well beyond the rave. Oasis rode it through "D'You Know What I Mean?" at the height of Britpop. The <em>Futurama</em> theme is built on it. It has sold cars and trainers in adverts, and breakcore artists like Squarepusher and Aphex Twin turned extreme Amen surgery into a discipline of its own. <strong>WhoSampled catalogues it in more than six thousand tracks — the most sampled recording ever documented</strong> — and the real number is far higher, because no database will ever count every white-label jungle dubplate ever cut.</p>
+
+      <h2>The Uncomfortable Part</h2>
+      <p>Here's the thing every junglist should know: <strong>neither Coleman nor Spencer ever earned royalties from the break</strong>. The sampling era arrived before clearance culture did, and by the time the law caught up, the Amen was already everywhere and The Winstons weren't watching. Gregory Coleman died in 2006, destitute in Atlanta, very likely unaware that he was the most sampled drummer in human history. Richard Spencer, who held the copyright, said for decades that nobody had ever asked his permission.</p>
+      <p>The scene did, eventually, put its hand in its pocket. In 2015 a British DJ, Martyn Webster, launched a crowdfunder — "The Winstons Amen Breakbeat Gesture" — and junglists around the world raised about &pound;24,000, presented to Spencer as an old-fashioned presentation cheque. To be clear about what that was: a voluntary thank-you from fans, not royalties, and not a settlement — and Coleman, the man who actually played the break, had already been gone nine years when it happened. But Spencer, who died in 2020, described it as the first real acknowledgement the record ever received. Both things are true at once: the music we love was built on six borrowed seconds that were never paid for, and the culture that borrowed them did — imperfectly, decades late — try to honour the men who made them.</p>
+
+      <h2>Still Rolling</h2>
+      <p>More than half a century on, the Amen is still load-bearing. The current jungle resurgence has a whole new generation slicing it up next to modern breaks, and you'll hear it — straight, chopped or in spirit — across our catalogue: it's in the DNA of records like <a href="/item/s_r_s_FW-1782332853126/">100% JUNGLE VOL. 2 by S.R.S</a> and <a href="/item/code_one_bakkus_FW-1775817379627/">The Jungle Disorder EP by Code One &amp; Bakkus</a>, and all over the sets in our <a href="/dj-mixes/">DJ mixes</a>. Fancy chopping breaks yourself? Our <a href="/samples/">sample packs</a> are the modern, cleared way to do exactly what the pioneers did with the Amen.</p>
+      <p>Next time a switch-up sends the dance into the ceiling, spare a thought for G.C. Coleman: one take, four bars, 1969. The most influential six seconds ever committed to tape.</p>
+
+      <h2>The Amen Break in Numbers</h2>
+      <ul>
+        <li><strong>Recorded:</strong> 1969 — B-side of The Winstons' "Color Him Father"</li>
+        <li><strong>Drummer:</strong> Gregory "G.C." Coleman (1944&ndash;2006)</li>
+        <li><strong>The break:</strong> 4 bars, about 6 seconds, starting around 1:26</li>
+        <li><strong>Original tempo:</strong> roughly 136 BPM — jungle runs it at 160+</li>
+        <li><strong>Documented samples:</strong> 6,000+ tracks on WhoSampled — the most of any recording</li>
+        <li><strong>Sampling royalties:</strong> &pound;0 — the break was never licensed. The ~&pound;24,000 raised by fans in 2015 was a gesture to Richard Spencer, made nine years after Coleman's death.</li>
+      </ul>
+    `
+  },
+  {
     slug: 'remote-livestream-tethered-mobile',
     title: 'Stream From Anywhere — DJ-Quality Live Sets Over Mobile Data',
     excerpt: 'You can now run a full DJ-quality livestream from a remote venue with nothing but a mobile signal. BUTT and OBS hold a stable connection over a tethered phone or mobile hotspot — no fixed broadband required.',
