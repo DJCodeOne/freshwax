@@ -199,7 +199,7 @@ const ogImageHeight = imageHeight ?? (isDefaultOgImage ? 630 : 800);
 // Organization Schema - appears in Google Knowledge Panel
 const organizationSchema = {
   "@context": "https://schema.org",
-  "@type": "Store",
+  "@type": "OnlineStore",
   "@id": `${SITE.url}/#organization`,
   "name": SITE.name,
   "alternateName": ["Fresh Wax Records", "Fresh Wax Music"],
@@ -211,12 +211,8 @@ const organizationSchema = {
     "height": 512
   },
   "image": SITE.logo,
-  "description": "Independent UK online music store and record label specialising in jungle and drum & bass. Digital downloads, limited edition vinyl pressings, DJ mixes, and official merchandise.",
+  "description": "Independent UK online record store specialising in jungle and drum & bass. Digital downloads, limited edition vinyl pressings, DJ mixes, and official merchandise from independent underground labels.",
   "foundingDate": SITE.foundingDate,
-  "founder": {
-    "@type": "Person",
-    "name": "Fresh Wax"
-  },
   "address": {
     "@type": "PostalAddress",
     "addressCountry": "GB",
@@ -463,11 +459,14 @@ const musicAlbumSchema = music ? {
     "@type": "MusicGroup",
     "name": music.artist
   },
-  "recordLabel": {
-    "@type": "RecordLabel",
-    "name": music.label || SITE.name,
-    "url": SITE.url
-  },
+  // Fresh Wax is a store/platform, not a label — only emit recordLabel when the
+  // release actually declares one; never fall back to the site name.
+  ...(music.label && {
+    "recordLabel": {
+      "@type": "RecordLabel",
+      "name": music.label
+    }
+  }),
   ...(music.releaseDate && { "datePublished": music.releaseDate }),
   ...(music.genre && { "genre": music.genre }),
   ...(music.catalogNumber && { "catalogNumber": music.catalogNumber }),

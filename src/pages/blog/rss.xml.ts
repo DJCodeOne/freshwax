@@ -45,7 +45,7 @@ export const GET: APIRoute = () => {
   <channel>
     <title>Fresh Wax Blog</title>
     <link>${SITE_URL}/blog/</link>
-    <description>Jungle and drum &amp; bass news, releases, interviews and articles from Fresh Wax — independent UK record label and music store.</description>
+    <description>Jungle and drum &amp; bass news, releases, interviews and articles from Fresh Wax — independent UK record store and streaming platform.</description>
     <language>en-gb</language>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
     <atom:link href="${SITE_URL}/blog/rss.xml" rel="self" type="application/rss+xml" />
