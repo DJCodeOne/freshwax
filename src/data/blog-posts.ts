@@ -23,6 +23,69 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'what-is-jungle-music',
+    title: 'What Is Jungle Music? A Beginner\'s Guide',
+    excerpt: 'Chopped breakbeats, earth-moving sub-bass and soundsystem culture at 160 BPM. A beginner\'s guide to jungle music — where it came from, how it works, and where to start.',
+    featuredImage: '/blog-what-is-jungle-music.webp',
+    ogImage: '/blog-what-is-jungle-music-og.jpg',
+    ogImageWidth: 1200,
+    ogImageHeight: 630,
+    category: 'Culture',
+    publishedAt: '2026-07-11',
+    author: 'Fresh Wax',
+    tags: ['jungle', 'what is jungle', 'drum and bass', 'breakbeat', 'rave culture', 'uk music history', 'junglist'],
+    content: `
+      <p><strong>Jungle is a British dance music genre built on chopped-up breakbeats and heavyweight sub-bass, running at around 160&ndash;170 BPM.</strong> It grew out of the UK rave scene in the early 1990s, when producers — many of them Black British, raised on Jamaican soundsystem culture — began speeding up sampled funk drums and dropping reggae basslines underneath. The result sounded like nothing on earth: frantic and weightless up top, deep and slow underneath, equal parts hip-hop, ragga and rave. Jungle is the parent of drum &amp; bass, the sound of pirate radio London, and — thirty years on — one of the most influential genres Britain has ever produced.</p>
+      <p>That's the short answer. Here's the proper one.</p>
+
+      <h2>Where Jungle Came From</h2>
+      <p>Jungle didn't appear from nowhere — it was made by collision. By 1991, Britain's rave scene was pushing breakbeat hardcore faster and darker: producers sampling American funk drum breaks and running them at rave tempos. At the same time, the UK's Caribbean communities had spent decades building soundsystem culture — bass-first music played loud through custom rigs, MCs toasting over instrumentals, exclusive dubplates cut to keep a crowd guessing.</p>
+      <p>Jungle is what happened when those worlds fully merged. Take the rave's sped-up breakbeats and euphoria, hip-hop's sampling craft, and reggae's bass weight, patois and soundclash rituals — rewinds, MCs, dubplates — and you get a new genre entirely. It happened in London, Bristol and the Midlands between roughly 1991 and 1993, on cheap samplers in bedrooms, tested on pirate radio and settled on rave dancefloors. Early signposts like Lennie De Ice's "We Are I.E." sketched the blueprint; by 1993&ndash;94, jungle was fully itself.</p>
+
+      <h2>The Sound: Four Ingredients</h2>
+      <ul>
+        <li><strong>Chopped breakbeats.</strong> Jungle drums aren't programmed from scratch — they're sampled funk breaks, sliced into individual hits and rebuilt into new patterns. The most famous is <a href="/blog/amen-break/">the Amen break</a>, six seconds of 1969 drumming that became the genre's national instrument, alongside breaks like Think and Apache.</li>
+        <li><strong>Sub-bass.</strong> Under the drum chaos sits a bassline you feel in your chest before you hear it — pure reggae inheritance. The drums sprint at 160+; the bass often rolls at half that feel, which is why jungle sounds fast and slow at the same time.</li>
+        <li><strong>Sampling as an art form.</strong> Ragga vocals, film dialogue, soul stabs, sirens — jungle tunes are collages, flipping fragments of other records into something new. It shares DNA with hip-hop production more than any other dance genre.</li>
+        <li><strong>Soundsystem culture.</strong> MCs riding the rhythm, dubplate exclusives, the rewind when a tune is too good to let finish. Jungle is participatory — a dialogue between DJ, MC and crowd — and that culture came directly from Jamaica via Britain's soundsystems.</li>
+      </ul>
+
+      <h2>Why Is It Called "Jungle"?</h2>
+      <p>The most common account traces the name back to Kingston, Jamaica, where "the Jungle" was the street name for the Arnett Gardens area — its residents "junglists". The phrase crossed into UK music through sampled soundclash tapes and toasts ("alla the junglists!"), and dancers began asking for the tunes with the junglist chants. Like most genre names it stuck by accident, and it carried baggage — parts of the media used it to paint the scene as dangerous, which junglists have pushed back on ever since. The name outlived the noise around it.</p>
+
+      <h2>The Golden Era: 1993&ndash;96</h2>
+      <p>For a few years jungle was the most exciting music in Britain, and it ran on its own infrastructure. Pirate stations like Kool FM broadcast it from tower blocks; raves and club nights like AWOL and Jungle Fever became institutions; dubplate culture meant the biggest tunes existed only as one-off acetates for months. In 1994 the sound broke the surface: M-Beat and General Levy's "Incredible" hit the UK Top 10, and a year later Goldie's <em>Timeless</em> put breakbeat science in the album charts and on television. Shy FX's "Original Nuttah", Remarc's "R.I.P.", Origin Unknown's "Valley of the Shadows" — this era produced anthems the scene still rewinds today.</p>
+
+      <h2>Jungle vs Drum &amp; Bass</h2>
+      <p>Around 1996&ndash;97 the scene's centre of gravity shifted: drums got more streamlined, the ragga influence receded in the big rooms, and the industry settled on a new name — drum &amp; bass. Whether jungle and D&amp;B are two genres or two eras of one genre is a debate that will outlive us all. The working answer: <strong>jungle leans into chopped breaks, reggae bass and soundsystem flavour; drum &amp; bass tends toward tighter two-step drums and cleaner production</strong> — and today the two happily coexist, often in the same set. We'll give that debate the full post it deserves soon.</p>
+
+      <h2>Ten Tunes to Start With</h2>
+      <ol>
+        <li><strong>Lennie De Ice — We Are I.E. (1991)</strong> — the proto-jungle blueprint.</li>
+        <li><strong>A Guy Called Gerald — 28 Gun Bad Boy (1992)</strong> — the Manchester connection.</li>
+        <li><strong>Origin Unknown — Valley of the Shadows (1993)</strong> — "thirty-one seconds..." — the eeriest bassline in rave.</li>
+        <li><strong>Shy FX &amp; UK Apachi — Original Nuttah (1994)</strong> — jungle's national anthem.</li>
+        <li><strong>M-Beat ft. General Levy — Incredible (1994)</strong> — the Top 10 moment.</li>
+        <li><strong>Remarc — R.I.P. (1994)</strong> — Amen chopping as a martial art.</li>
+        <li><strong>Goldie — Inner City Life (1994)</strong> — jungle goes cinematic.</li>
+        <li><strong>LTJ Bukem — Horizons (1995)</strong> — the deep, atmospheric end.</li>
+        <li><strong>DJ Zinc — Super Sharp Shooter (1995)</strong> — hip-hop and jungle shaking hands.</li>
+        <li><strong>Congo Natty — UK Allstars (various)</strong> — the ragga jungle flame-keeper.</li>
+      </ol>
+
+      <h2>Jungle Today</h2>
+      <p>Jungle never died — it went underground and kept mutating, and the 2020s brought a full-blown resurgence: a new generation of producers like Nia Archives, Tim Reaper and Coco Bryce chopping breaks for new dancefloors, festival stages full of 160, and labels pressing jungle to vinyl again. That new wave is exactly what Fresh Wax exists for. Hear it in the catalogue — <a href="/item/s_r_s_FW-1782332853126/">100% JUNGLE VOL. 2 by S.R.S</a> does what it says on the tin, and <a href="/item/hangry_records_FW-1780739181417/">Hangry Records' Jungle &amp; DnB Vol.1</a> puts the modern sound on wax — or go deeper with <a href="/releases/">all releases</a>, the <a href="/dj-mixes/">DJ mixes</a>, and the <a href="/live/">live streams</a> where DJs run jungle sets direct to the community most weeks.</p>
+
+      <h2>Quick Answers</h2>
+      <ul>
+        <li><strong>What BPM is jungle?</strong> Roughly 160&ndash;170 BPM today; the earliest tunes sat closer to 150&ndash;160.</li>
+        <li><strong>Is jungle the same as drum &amp; bass?</strong> They're family — jungle came first; drum &amp; bass grew out of it. Junglists will debate the border forever.</li>
+        <li><strong>Where did jungle start?</strong> The UK — above all London — in the early 1990s, from rave, hip-hop and Jamaican soundsystem culture colliding.</li>
+        <li><strong>What's the most famous jungle sample?</strong> <a href="/blog/amen-break/">The Amen break</a> — read the full story.</li>
+      </ul>
+    `
+  },
+  {
     slug: 'amen-break',
     title: 'The Amen Break: The Most Sampled Drum Loop Ever',
     excerpt: 'Six seconds of drums from a 1969 funk B-side became the foundation of jungle and drum & bass. The story of the Amen break — and the drummer who never lived to see a penny of it.',
