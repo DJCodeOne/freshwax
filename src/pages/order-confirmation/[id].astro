@@ -240,6 +240,24 @@ const physicalItems = enrichedItems.filter((item: Record<string, unknown>) =>
   item.type === 'vinyl' ||
   item.type === 'merch'
 ) || [];
+
+// GA4 purchase payload — fired client-side below (consent-gated, deduped per order).
+// Built from the authoritative order doc, not the client cart snapshot: every
+// payment flow (Stripe, PayPal, free) lands on this page, so this is the single
+// tracking point. Item names capped to keep the event under GA4 param limits.
+const nonce = Astro.locals.nonce || '';
+const gaPurchase = order && order.totals ? {
+  tid: String(order.orderNumber || id),
+  value: Number(order.totals.total) || 0,
+  shipping: Number(order.totals.shipping) || 0,
+  items: orderItems.map((item) => ({
+    item_id: String(item.releaseId || item.productId || item.id || ''),
+    item_name: String(item.name || item.title || 'Item').slice(0, 100),
+    price: Number(item.price) || 0,
+    quantity: Number(item.quantity) || 1,
+    ...(item.type ? { item_category: String(item.type) } : {})
+  }))
+} : null;
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
@@ -1463,6 +1481,36 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
   }
 </style>
+
+{gaPurchase && (
+  <script define:vars={{ gaPurchase }} nonce={nonce}>
+    // GA4 purchase event — fires once per order (localStorage dedupe).
+    // Analytics is consent-gated (no-op stubs before consent), so only the real
+    // gtag counts as fired: never mark the order tracked off a stub call, and
+    // wait for the cookie banner's grant event if consent isn't in yet.
+    (function () {
+      var key = 'fw_ga_purchase_' + gaPurchase.tid;
+      function tracked() { try { return localStorage.getItem(key) === '1'; } catch (e) { return false; } }
+      function mark() { try { localStorage.setItem(key, '1'); } catch (e) { /* private browsing */ } }
+      function fire() {
+        if (tracked()) return true;
+        if (!window._analyticsInitialized || typeof window.gtag !== 'function') return false;
+        window.gtag('event', 'purchase', {
+          transaction_id: gaPurchase.tid,
+          currency: 'GBP',
+          value: gaPurchase.value,
+          shipping: gaPurchase.shipping,
+          items: gaPurchase.items
+        });
+        mark();
+        return true;
+      }
+      if (!fire()) {
+        window.addEventListener('cookie-consent-granted', function () { setTimeout(fire, 0); }, { once: true });
+      }
+    })();
+  </script>
+)}
 
 <script>
   // Clear cart after successful order (localStorage + KV + badge)

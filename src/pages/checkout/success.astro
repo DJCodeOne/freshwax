@@ -63,17 +63,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     // Handle free orders (have orderId instead of session_id)
     if (orderId) {
-      // Track purchase before clearing cart
+      // GA4 purchase fires on the order-confirmation page (authoritative totals,
+      // deduped) — this transient page only clears the cart
       const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
       try {
         if (customerId) {
-          const cartData = localStorage.getItem('freshwax_cart_' + customerId);
-          if (cartData) {
-            const parsed = JSON.parse(cartData);
-            const items = parsed.items || [];
-            const total = items.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
-            window.trackPurchase?.(orderId, total, items, 0);
-          }
           localStorage.removeItem('freshwax_cart_' + customerId);
         }
         localStorage.removeItem('cart');
@@ -119,16 +113,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (result.success || result.paymentStatus === 'paid') {
           const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
 
-          // Track purchase before clearing cart
+          // GA4 purchase fires on the order-confirmation page (authoritative
+          // totals, deduped) — this transient page only clears the cart
           try {
             if (customerId) {
-              const cartData = localStorage.getItem('freshwax_cart_' + customerId);
-              if (cartData) {
-                const parsed = JSON.parse(cartData);
-                const items = parsed.items || [];
-                const total = items.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
-                window.trackPurchase?.(result.orderId || sessionId, total, items, 0);
-              }
               localStorage.removeItem('freshwax_cart_' + customerId);
             }
             localStorage.removeItem('cart');
