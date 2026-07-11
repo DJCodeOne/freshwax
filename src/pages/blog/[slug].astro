@@ -548,6 +548,37 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
     padding: 0;
   }
 
+  /* Tables (e.g. comparison tables in Culture posts) */
+  .article-content :global(.table-scroll) {
+    overflow-x: auto;
+    margin: 2rem 0;
+  }
+
+  .article-content :global(table) {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.95rem;
+  }
+
+  .article-content :global(th),
+  .article-content :global(td) {
+    text-align: left;
+    padding: 0.6rem 1rem 0.6rem 0;
+    border-bottom: 1px solid #2a2a2a;
+    vertical-align: top;
+  }
+
+  .article-content :global(thead th) {
+    color: #dc2626;
+    font-weight: 700;
+  }
+
+  .article-content :global(tbody th) {
+    color: #9ca3af;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
   /* Tags */
   .article-tags {
     display: flex;

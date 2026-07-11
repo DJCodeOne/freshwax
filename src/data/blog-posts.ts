@@ -23,6 +23,67 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'jungle-vs-drum-and-bass',
+    title: 'Jungle vs Drum & Bass: What\'s the Difference?',
+    excerpt: 'Same family, different animals. How jungle became drum & bass, what actually separates them — drums, bass, culture — and which word to use without getting corrected.',
+    featuredImage: '/blog-jungle-vs-drum-and-bass.webp',
+    ogImage: '/blog-jungle-vs-drum-and-bass-og.jpg',
+    ogImageWidth: 1200,
+    ogImageHeight: 630,
+    category: 'Culture',
+    publishedAt: '2026-07-11',
+    author: 'Fresh Wax',
+    tags: ['jungle vs drum and bass', 'jungle', 'drum and bass', 'dnb', 'breakbeat', 'uk music history'],
+    content: `
+      <p><strong>The short answer: jungle came first, drum &amp; bass grew out of it, and the border between them is drums.</strong> Jungle (from about 1992) is built on sampled funk breakbeats — chopped, swung and human — with reggae bass and soundsystem culture running through everything. Drum &amp; bass (the name took over from about 1996) streamlined that formula: tighter, machine-precise two-step drums, synthesised bass design and cleaner production. They share a tempo, a family tree and most of a record collection — which is exactly why people have argued about the difference for thirty years.</p>
+
+      <h2>Why Everyone's Confused</h2>
+      <p>There was never an announcement. No committee renamed jungle in 1996; one scene simply kept mutating, and somewhere along the way the new name stuck. The same DJs played through the whole transition, the same labels released both, and plenty of tunes sit exactly on the border. So three different claims all feel true depending on where you stood: that they're two names for one music, that D&amp;B is what jungle turned into, and that jungle is a specific style that never stopped existing. The third one is closest to how the scene talks today — but the history explains why.</p>
+
+      <h2>How Jungle Became Drum &amp; Bass</h2>
+      <p>By 1994, <a href="/blog/what-is-jungle-music/">jungle</a> was the biggest underground music in Britain — Top 10 crossovers, tabloid attention, the lot. The reaction inside the scene shaped what came next. Some producers went deep and atmospheric (LTJ Bukem's Good Looking camp, the so-called "intelligent" end); others went dark and stripped-back, trading chopped breaks for colder, harder two-step patterns — the sound that became techstep through producers like Ed Rush and the No U-Turn camp. Clubs like Metalheadz' Sunday Sessions at the Blue Note became the laboratory where the rebuilt sound was stress-tested.</p>
+      <p>As the ragga samples receded and the production got more engineered, "drum &amp; bass" gradually replaced "jungle" as the scene's working name — partly natural drift, partly a fresh start after the mainstream moment and the baggage the media had loaded onto the word. By the time Roni Size &amp; Reprazent's <em>New Forms</em> won the Mercury Prize in 1997, the industry knew the music as drum &amp; bass. Jungle didn't die; it became the name for the breaks-forward, bass-heavy, soundsystem-flavoured end of the spectrum — and stayed there, alive, ever since.</p>
+
+      <h2>Hear the Difference</h2>
+      <ul>
+        <li><strong>Drums.</strong> The clearest tell. Jungle rides sampled breaks — <a href="/blog/amen-break/">the Amen</a>, Think, Apache — chopped and rearranged so the pattern dances and changes constantly. D&amp;B favours the programmed two-step: kick, snare, ghost, snare, locked tight and engineered to the millimetre. If the drums sound like a drummer having an out-of-body experience, you're in jungle; if they sound like a precision machine, you're in drum &amp; bass.</li>
+        <li><strong>Bass.</strong> Jungle's basslines come from reggae and dub — warm, melodic, rolling at half the drums' speed. D&amp;B made bass a science: growling Reese basses, sculpted subs, sound design as the lead instrument.</li>
+        <li><strong>Voices.</strong> Jungle keeps the soundclash: ragga chat, sampled toasts, the MC as co-star. D&amp;B uses voices more sparingly — soul hooks, atmospheric vocals — with the MC usually hosting rather than leading.</li>
+        <li><strong>Ethos.</strong> Jungle is collage culture: flipping records into new records. D&amp;B is studio culture: original synthesis, engineering, loudness. Neither is better; they're different kinds of craft.</li>
+      </ul>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th></th><th>Jungle</th><th>Drum &amp; Bass</th></tr>
+          </thead>
+          <tbody>
+            <tr><th>Born</th><td>~1992, UK rave + soundsystem culture</td><td>~1996, evolved from jungle</td></tr>
+            <tr><th>Drums</th><td>Chopped sampled breaks, swung, ever-changing</td><td>Programmed two-step, tight, precise</td></tr>
+            <tr><th>Bass</th><td>Reggae/dub basslines, half-time roll</td><td>Synthesised bass design — Reese, engineered subs</td></tr>
+            <tr><th>Voices</th><td>Ragga samples, MCs front and centre</td><td>Sparser — soul hooks, atmospherics, MC as host</td></tr>
+            <tr><th>Feel</th><td>Rolling, swinging, rowdy</td><td>Driving, streamlined, engineered</td></tr>
+            <tr><th>Anthem</th><td>Shy FX — Original Nuttah</td><td>Ed Rush &amp; Optical, Roni Size — New Forms era</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>So Which Word Should You Use?</h2>
+      <p>In 2026, <strong>drum &amp; bass is the umbrella</strong> — the family name covering everything at 170, from liquid to neuro to jump-up. <strong>Jungle is two things at once</strong>: the origin story of that whole family, and a living style within it — the end that still chops breaks, still leans on the sub, still carries the soundsystem in its bones. Nobody sensible will correct you for calling a jungle tune drum &amp; bass. Call a polished neuro roller "jungle", though, and a junglist somewhere will feel it.</p>
+
+      <h2>Where It's All Going</h2>
+      <p>The neat irony: after decades apart, the two ends are converging again. The 2020s jungle revival put chopped breaks back at the centre of dancefloors, and modern producers move freely between the camps — often inside one tune. You can hear that border-crossing all over Fresh Wax: <a href="/item/hangry_records_FW-1780739181417/">Hangry Records' Jungle &amp; DnB Vol.1</a> puts both names on the sleeve and both sounds in the grooves, <a href="/item/s_r_s_FW-1782332853126/">100% JUNGLE VOL. 2</a> plants its flag in the title, and the <a href="/dj-mixes/">DJ mixes</a> roll through both without asking permission. Browse <a href="/releases/">the full catalogue</a> and try drawing the line yourself — it's harder and more fun than it sounds.</p>
+
+      <h2>Quick Answers</h2>
+      <ul>
+        <li><strong>Which came first?</strong> Jungle — early 1990s. Drum &amp; bass emerged from it around 1996&ndash;97.</li>
+        <li><strong>Are they the same tempo?</strong> Nearly — both live around 160&ndash;175 BPM; modern D&amp;B often sits a touch faster than classic jungle.</li>
+        <li><strong>Is liquid D&amp;B jungle?</strong> No — liquid is a melodic drum &amp; bass style. The jungle revival is its own lane, built on chopped breaks.</li>
+        <li><strong>Can one tune be both?</strong> Constantly — and some of the best ones refuse to pick a side.</li>
+      </ul>
+    `
+  },
+  {
     slug: 'what-is-jungle-music',
     title: 'What Is Jungle Music? A Beginner\'s Guide',
     excerpt: 'Chopped breakbeats, earth-moving sub-bass and soundsystem culture at 160 BPM. A beginner\'s guide to jungle music — where it came from, how it works, and where to start.',
@@ -57,7 +118,7 @@ export const blogPosts: BlogPost[] = [
       <p>For a few years jungle was the most exciting music in Britain, and it ran on its own infrastructure. Pirate stations like Kool FM broadcast it from tower blocks; raves and club nights like AWOL and Jungle Fever became institutions; dubplate culture meant the biggest tunes existed only as one-off acetates for months. In 1994 the sound broke the surface: M-Beat and General Levy's "Incredible" hit the UK Top 10, and a year later Goldie's <em>Timeless</em> put breakbeat science in the album charts and on television. Shy FX's "Original Nuttah", Remarc's "R.I.P.", Origin Unknown's "Valley of the Shadows" — this era produced anthems the scene still rewinds today.</p>
 
       <h2>Jungle vs Drum &amp; Bass</h2>
-      <p>Around 1996&ndash;97 the scene's centre of gravity shifted: drums got more streamlined, the ragga influence receded in the big rooms, and the industry settled on a new name — drum &amp; bass. Whether jungle and D&amp;B are two genres or two eras of one genre is a debate that will outlive us all. The working answer: <strong>jungle leans into chopped breaks, reggae bass and soundsystem flavour; drum &amp; bass tends toward tighter two-step drums and cleaner production</strong> — and today the two happily coexist, often in the same set. We'll give that debate the full post it deserves soon.</p>
+      <p>Around 1996&ndash;97 the scene's centre of gravity shifted: drums got more streamlined, the ragga influence receded in the big rooms, and the industry settled on a new name — drum &amp; bass. Whether jungle and D&amp;B are two genres or two eras of one genre is a debate that will outlive us all. The working answer: <strong>jungle leans into chopped breaks, reggae bass and soundsystem flavour; drum &amp; bass tends toward tighter two-step drums and cleaner production</strong> — and today the two happily coexist, often in the same set. We've given that debate <a href="/blog/jungle-vs-drum-and-bass/">the full post it deserves</a>.</p>
 
       <h2>Ten Tunes to Start With</h2>
       <ol>
@@ -79,7 +140,7 @@ export const blogPosts: BlogPost[] = [
       <h2>Quick Answers</h2>
       <ul>
         <li><strong>What BPM is jungle?</strong> Roughly 160&ndash;170 BPM today; the earliest tunes sat closer to 150&ndash;160.</li>
-        <li><strong>Is jungle the same as drum &amp; bass?</strong> They're family — jungle came first; drum &amp; bass grew out of it. Junglists will debate the border forever.</li>
+        <li><strong>Is jungle the same as drum &amp; bass?</strong> They're family — jungle came first; drum &amp; bass grew out of it. <a href="/blog/jungle-vs-drum-and-bass/">Here's the full breakdown</a>.</li>
         <li><strong>Where did jungle start?</strong> The UK — above all London — in the early 1990s, from rave, hip-hop and Jamaican soundsystem culture colliding.</li>
         <li><strong>What's the most famous jungle sample?</strong> <a href="/blog/amen-break/">The Amen break</a> — read the full story.</li>
       </ul>
@@ -120,7 +181,7 @@ export const blogPosts: BlogPost[] = [
       <h2>The UK Mutation: Hardcore Into Jungle</h2>
       <p>Then Britain got hold of it, and the Amen stopped being a drum break and became the seed of an entire genre.</p>
       <p>Around 1990&ndash;92, UK hardcore producers were speeding breakbeats up to match rave tempos. Run the Amen at 150&ndash;160+ BPM and something magical happens: that human shuffle turns into pure forward motion. Armed with Akai samplers and an Atari ST running Cubase, producers went further than looping — they took the break apart hit by hit and rebuilt it. Resequenced. Reversed. Timestretched until the drums grind and shimmer with that metallic texture that became jungle's calling card. Tracks like Lennie De Ice's "We Are I.E." (1991) sketched the blueprint, and by 1993&ndash;94 jungle had fully arrived — with the Amen as its national instrument.</p>
-      <p>Listen to Shy FX's "Original Nuttah" or Remarc's "R.I.P." and you're hearing Coleman's four bars turned into something he could never have imagined: a drum solo from 1969 running the dance at 160 BPM in a London rave twenty-five years later. "Amen tune" became its own category — it still is. Jungle grew into drum &amp; bass, and thirty years on, producers are still finding new ways to chop those same four bars. Every release on Fresh Wax stands somewhere downstream of them.</p>
+      <p>Listen to Shy FX's "Original Nuttah" or Remarc's "R.I.P." and you're hearing Coleman's four bars turned into something he could never have imagined: a drum solo from 1969 running the dance at 160 BPM in a London rave twenty-five years later. "Amen tune" became its own category — it still is. Jungle grew into <a href="/blog/jungle-vs-drum-and-bass/">drum &amp; bass</a>, and thirty years on, producers are still finding new ways to chop those same four bars. Every release on Fresh Wax stands somewhere downstream of them.</p>
 
       <h2>And Everywhere Else</h2>
       <p>The Amen's passport got stamped well beyond the rave. Oasis rode it through "D'You Know What I Mean?" at the height of Britpop. The <em>Futurama</em> theme is built on it. It has sold cars and trainers in adverts, and breakcore artists like Squarepusher and Aphex Twin turned extreme Amen surgery into a discipline of its own. <strong>WhoSampled catalogues it in more than six thousand tracks — the most sampled recording ever documented</strong> — and the real number is far higher, because no database will ever count every white-label jungle dubplate ever cut.</p>

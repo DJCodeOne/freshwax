@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+  body {
+    background: #0a0a0b;
+    color: #f2f1ee;
+    font-family: "Arial Black", "Segoe UI", Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4.2vh 4.5vw;
+    position: relative;
+  }
+  /* faint groove texture */
+  body::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(255,255,255,0.012) 5px 6px);
+    pointer-events: none;
+  }
+  .top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .logo { height: 16vh; filter: brightness(1.35) contrast(1.05); }
+  .yearchip {
+    font-size: 3.4vh; font-weight: 900; letter-spacing: 0.12em;
+    color: #0a0a0b; background: #e33b3b; padding: 0.8vh 1.2vw;
+  }
+  .mid { position: relative; }
+  canvas { width: 100%; height: 26vh; display: block; }
+  .tc {
+    position: absolute; top: -3.4vh; left: 0.5%;
+    font-size: 2.6vh; font-weight: 900; letter-spacing: 0.12em; color: #f2f1ee;
+  }
+  .tc2 {
+    position: absolute; top: -3.4vh; right: 0.5%;
+    font-size: 2.6vh; font-weight: 900; letter-spacing: 0.12em; color: #f2f1ee;
+  }
+  .bottom { }
+  h1 {
+    font-size: 12vh; line-height: 0.96; font-weight: 900;
+    letter-spacing: -0.015em; text-transform: uppercase;
+  }
+  h1 .r { color: #e33b3b; }
+  .sub {
+    margin-top: 1.8vh;
+    font-size: 4.6vh; font-weight: 900; letter-spacing: 0.14em;
+    text-transform: uppercase; color: #f2f1ee;
+  }
+  .row {
+    margin-top: 2.6vh; display: flex; justify-content: space-between; align-items: baseline;
+    border-top: 0.7vh solid #e33b3b; padding-top: 2.2vh;
+  }
+  .stats { font-size: 3.1vh; font-weight: 900; letter-spacing: 0.1em; color: #b9b8b4; text-transform: uppercase; }
+  .stats b { color: #f2f1ee; }
+  .site { font-size: 3.1vh; font-weight: 900; letter-spacing: 0.12em; color: #e33b3b; text-transform: uppercase; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <img class="logo" src="file:///C:/Users/Owner/freshwax/public/logo.webp" alt="">
+    <div class="yearchip">VS</div>
+  </div>
+
+  <div class="mid">
+    <div class="tc">JUNGLE</div>
+    <div class="tc2">DRUM &amp; BASS</div>
+    <canvas id="wave"></canvas>
+  </div>
+
+  <div class="bottom">
+    <h1>Jungle <span class="r">vs</span><br>Drum &amp; Bass</h1>
+    <div class="sub">What's the difference?</div>
+    <div class="row">
+      <div class="stats"><b>b. 1992</b> &middot; <b>b. 1996</b> &middot; <b>both 160&ndash;175 BPM</b></div>
+      <div class="site">freshwax.co.uk</div>
+    </div>
+  </div>
+
+<script>
+  // Deterministic "chopped break" waveform — no randomness so renders are reproducible.
+  const cv = document.getElementById('wave');
+  const scale = 2;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * scale; cv.height = H * scale;
+  const ctx = cv.getContext('2d');
+  ctx.scale(scale, scale);
+
+  const N = 176;                    // bars
+  const bw = W / N;
+  const mid = H / 2;
+
+  // amplitude envelope: four "bars" of a break — kick spikes, snare spikes, hat chatter
+  function amp(i) {
+    const t = i / N;                       // 0..1 across the loop
+    const bar = Math.floor(t * 4);         // which musical bar
+    const p = (t * 4) % 1;                 // position within bar
+    let a = 0.16 + 0.10 * Math.abs(Math.sin(i * 1.7));          // hat chatter bed
+    const hit = (c, w, h) => { if (Math.abs(p - c) < w) a = Math.max(a, h * (1 - Math.abs(p - c) / w)); };
+    hit(0.02, 0.045, 0.95);                // kick on the one
+    hit(0.27, 0.04, 0.80);                 // snare
+    hit(0.52, 0.04, 0.60);                 // kick
+    hit(0.77, 0.045, 0.85);                // snare
+    if (bar === 2) { hit(0.63, 0.04, 0.75); }               // bar-3 variation
+    if (bar === 3) { hit(0.88, 0.055, 1.0); a *= 1.08; }    // bar-4 crash stumble
+    return Math.min(a, 1);
+  }
+
+  // split panel: left = jungle (chopped, human, ever-varying),
+  // right = drum & bass (two-step grid, machine-precise)
+  for (let i = 0; i < N; i++) {
+    const t = i / N;
+    if (t < 0.475) {
+      // jungle side — the amp() envelope's rolling variation
+      const a = amp(i * 2.1);
+      const h = a * (H * 0.92);
+      ctx.fillStyle = '#f2f1ee';
+      ctx.globalAlpha = 0.28 + a * 0.72;
+      ctx.fillRect(i * bw + bw * 0.18, mid - h / 2, bw * 0.64, h);
+    } else if (t > 0.525) {
+      // d&b side — locked two-step: kick . snare . repeated exactly
+      const step = i % 8;
+      const lvl = step === 0 ? 0.95 : step === 4 ? 0.8 : step % 2 === 0 ? 0.42 : 0.2;
+      const h = lvl * (H * 0.88);
+      ctx.fillStyle = '#f2f1ee';
+      ctx.globalAlpha = 0.3 + lvl * 0.7;
+      ctx.fillRect(i * bw + bw * 0.18, mid - h / 2, bw * 0.64, h);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // the red border between the camps
+  ctx.strokeStyle = '#e33b3b';
+  ctx.lineWidth = 4;
+  ctx.setLineDash([10, 8]);
+  ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
+
+  window.__ready = true;
+</script>
+</body>
+</html>
