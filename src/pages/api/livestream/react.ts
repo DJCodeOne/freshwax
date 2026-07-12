@@ -121,6 +121,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const pusherSuccess = await triggerPusher(channel, 'reaction', reactionData, env);
 
+        // /live viewers are subscribed to the GLOBAL chat channel even during a
+        // live stream (live-stream.js setupChat('playlist-global')), while
+        // senders use the slot id — without this mirror, reactions during any
+        // live stream landed on a channel nobody listens to and only the
+        // sender saw their own local animation (fixed Jul 12).
+        if (channel !== 'stream-playlist-global') {
+          await triggerPusher('stream-playlist-global', 'reaction', reactionData, env);
+        }
+
         if (!pusherSuccess) {
           return ApiErrors.serverError('Failed to broadcast reaction via Pusher');
         }
@@ -135,13 +144,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Broadcast star rating animation to all viewers
         const starCount = rating || 1;
 
-        await triggerPusher(`stream-${streamId}`, 'reaction', {
+        const starData = {
           type: 'star',
           count: starCount,
           userName: userName || 'Someone',
           userId: userId || null,
           timestamp: now
-        }, env);
+        };
+        await triggerPusher(`stream-${streamId}`, 'reaction', starData, env);
+        // Same global-channel mirror as the emoji branch (see above).
+        if (`stream-${streamId}` !== 'stream-playlist-global') {
+          await triggerPusher('stream-playlist-global', 'reaction', starData, env);
+        }
         
         return successResponse({ message: 'Star reaction broadcast' });
       }
