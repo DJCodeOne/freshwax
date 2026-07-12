@@ -165,6 +165,30 @@ async function listBoundBroadcast(
   return (data.items || []).find((b) => b.contentDetails?.boundStreamId === streamId) || null;
 }
 
+async function maybeRetitle(
+  token: string,
+  b: BroadcastResource,
+  opts: { title: string; description: string }
+): Promise<void> {
+  if (!b.snippet || b.snippet.title === opts.title) return;
+  try {
+    // Send only the mutable snippet fields — spreading the resource would
+    // include read-only fields the update API may reject.
+    await ytApi(token, 'PUT', 'liveBroadcasts', { part: 'snippet' }, {
+      id: b.id,
+      snippet: {
+        title: opts.title,
+        description: opts.description,
+        scheduledStartTime: b.snippet.scheduledStartTime || new Date().toISOString(),
+      },
+    });
+    log.info('Retitled broadcast', b.id, 'to', opts.title);
+  } catch (e: unknown) {
+    // Retitle is cosmetic — a stale title must not block going live.
+    log.warn('Broadcast retitle failed:', e);
+  }
+}
+
 function toResult(b: BroadcastResource, reused: EnsuredBroadcast['reused']): EnsuredBroadcast {
   return {
     videoId: b.id,
@@ -185,9 +209,12 @@ export async function ensureBroadcast(
   const token = await getAccessToken(env);
   const streamId = await getStreamId(token);
 
-  // 1. Already live on our key (relay ffmpeg crash-restart) — reuse as-is.
+  // 1. Already live on our key (crash-restart, DJ handover, or mid-set title
+  //    edit) — reuse, retitling if the computed title changed. YouTube allows
+  //    snippet updates while live.
   const active = await listBoundBroadcast(token, streamId, 'active');
   if (active) {
+    await maybeRetitle(token, active, opts);
     log.info('Reusing active broadcast', active.id);
     return toResult(active, 'active');
   }
@@ -195,22 +222,7 @@ export async function ensureBroadcast(
   // 2. Waiting broadcast bound to our key (e.g. dashboard-created) — retitle + reuse.
   const upcoming = await listBoundBroadcast(token, streamId, 'upcoming');
   if (upcoming) {
-    if (upcoming.snippet && upcoming.snippet.title !== opts.title) {
-      try {
-        await ytApi(token, 'PUT', 'liveBroadcasts', { part: 'snippet' }, {
-          id: upcoming.id,
-          snippet: {
-            ...upcoming.snippet,
-            title: opts.title,
-            description: opts.description,
-            scheduledStartTime: upcoming.snippet.scheduledStartTime || new Date().toISOString(),
-          },
-        });
-      } catch (e: unknown) {
-        // Retitle is cosmetic — a stale title must not block going live.
-        log.warn('Broadcast retitle failed:', e);
-      }
-    }
+    await maybeRetitle(token, upcoming, opts);
     log.info('Reusing upcoming broadcast', upcoming.id);
     return toResult(upcoming, 'upcoming');
   }

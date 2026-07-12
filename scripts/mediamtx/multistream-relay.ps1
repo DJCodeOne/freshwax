@@ -76,6 +76,9 @@ $script:ytStoppedAt = $null      # set by Stop-All; gates the YouTube cool-off
 $script:ytCooloffLogged = $false
 $script:ytEnsured = $false       # broadcast auto-create done for this session
 $script:ytEnsureFails = 0
+$script:ytSlotFp = $null         # live-slot fingerprint (id|dj|title) from last ensure
+$script:ytSlotId = $null
+$script:ytSlotCheckAt = [datetime]::MinValue
 
 function Start-Ff([string[]]$ffargs, [string]$logfile) {
   (Start-Process -FilePath $FFMPEG -ArgumentList $ffargs -WindowStyle Hidden -PassThru -RedirectStandardError $logfile).Id
@@ -219,6 +222,7 @@ function Stop-All {
   $script:fanout = @{}; $script:djKey = $null; $script:ytFetched = $false
   $script:ytStoppedAt = Get-Date; $script:ytCooloffLogged = $false
   $script:ytEnsured = $false; $script:ytEnsureFails = 0
+  $script:ytSlotFp = $null; $script:ytSlotId = $null; $script:ytSlotCheckAt = [datetime]::MinValue
   Remove-Item $STATUS_FILE -ErrorAction SilentlyContinue
   Log 'Stopped all relays'
 }
@@ -263,6 +267,36 @@ while ($true) {
             -ContentType 'application/json' -Body '{"streamKey":"live/freshwax-main"}' -TimeoutSec 15 | Out-Null
           $script:ytFetched = $true
         } catch { Log "YouTube live-id fetch failed: $($_.Exception.Message)" }
+      }
+      # 4) Slot watch (~20s): a b2b DJ handover or a mid-set title edit must never
+      #    leave the previous DJ's title on YouTube. On any change to the live
+      #    slot (id/DJ/title) re-call the ensure endpoint — it retitles the ACTIVE
+      #    broadcast and links the new slot's youtubeLiveId. The first pass (no
+      #    fingerprint yet) also re-ensures, catching edits made right after
+      #    go-live. Fingerprint only advances on success so failures retry.
+      if ($YT_AUTOCREATE -and $script:ytEnsured -and
+          ((Get-Date) - $script:ytSlotCheckAt).TotalSeconds -ge 20) {
+        $script:ytSlotCheckAt = Get-Date
+        try {
+          $ps = (Invoke-RestMethod -Uri $STATUS_API -TimeoutSec 6).primaryStream
+          if ($ps) {
+            $fp = "$($ps.id)|$($ps.djName)|$($ps.customTitle)|$($ps.title)"
+            if ($fp -ne $script:ytSlotFp) {
+              if ($script:ytSlotFp) {
+                Log 'Live slot changed (handover/title edit) - re-ensuring YouTube broadcast'
+                # A different SLOT is a real handover: refresh the DJ personal
+                # Twitch relay too (drops the old DJ's, picks up the new DJ's key).
+                if ($ps.id -ne $script:ytSlotId) { $script:djKey = $null }
+              }
+              try {
+                $bc = Invoke-RestMethod -Uri $YTBCAST_API -Method Post `
+                  -Headers @{ 'x-server-key' = $SERVER_KEY } -TimeoutSec 15
+                Log ("YouTube broadcast re-ensured: {0} (reused={1})" -f $bc.videoId, $bc.reused)
+                $script:ytSlotFp = $fp; $script:ytSlotId = $ps.id
+              } catch { Log "YouTube re-ensure failed: $($_.Exception.Message)" }
+            }
+          }
+        } catch {}
       }
     }
   }
