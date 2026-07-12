@@ -72,6 +72,8 @@ $script:producerKind = $null     # 'obs' | 'butt'
 $script:fanout = @{}             # name -> @{ pid; url }
 $script:djKey = $null
 $script:ytFetched = $false
+$script:ytStoppedAt = $null      # set by Stop-All; gates the YouTube cool-off
+$script:ytCooloffLogged = $false
 
 function Start-Ff([string[]]$ffargs, [string]$logfile) {
   (Start-Process -FilePath $FFMPEG -ArgumentList $ffargs -WindowStyle Hidden -PassThru -RedirectStandardError $logfile).Id
@@ -157,6 +159,23 @@ function Converge-Fanout {
   if ($script:djKey) { $targets['dj-twitch'] = "rtmp://live.twitch.tv/live/$script:djKey" }
 
   foreach ($name in $targets.Keys) {
+    # YouTube cool-off: a quick same-key reconnect re-attaches YouTube's stale ingest
+    # session and the waiting broadcast never binds (stuck "Preparing stream", validated
+    # Jul 12 2026 — a ~10s gap was not enough, ~100s was). Hold the YouTube relay for
+    # 2 min after a teardown so the next arrival registers as a fresh stream. Twitch
+    # needs no such gap, and mid-stream ffmpeg crash-restarts are unaffected (the
+    # cool-off is armed only by Stop-All).
+    if ($name -eq 'youtube' -and $script:ytStoppedAt) {
+      $since = ((Get-Date) - $script:ytStoppedAt).TotalSeconds
+      if ($since -lt 120) {
+        if (-not $script:ytCooloffLogged) {
+          Log ("YouTube cool-off: holding relay for {0}s so the ingest session expires" -f [int](120 - $since))
+          $script:ytCooloffLogged = $true
+        }
+        continue
+      }
+      $script:ytStoppedAt = $null; $script:ytCooloffLogged = $false
+    }
     $cur = $script:fanout[$name]
     if (-not ($cur -and (Alive $cur.pid))) {
       if ($cur) { Log "Relay '$name' died — restarting" }
@@ -177,6 +196,7 @@ function Stop-All {
   foreach ($v in $script:fanout.Values) { try { Stop-Process -Id $v.pid -Force -ErrorAction SilentlyContinue } catch {} }
   $script:producerPid = $null; $script:producerKind = $null
   $script:fanout = @{}; $script:djKey = $null; $script:ytFetched = $false
+  $script:ytStoppedAt = Get-Date; $script:ytCooloffLogged = $false
   Remove-Item $STATUS_FILE -ErrorAction SilentlyContinue
   Log 'Stopped all relays'
 }
