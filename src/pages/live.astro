@@ -1307,7 +1307,10 @@ try {
           } catch (err) { console.error('[Live] Auth check error:', err); }
           if (!user) { window.location.href = '/login/?redirect=/live/'; return; }
           var displayName = user.displayName || (user.email && user.email.split('@')[0]) || 'DJ';
-          var bookingAvatar = (userInfo && userInfo.avatar) || user.photoURL || null;
+          // userInfo lives in the NEXT script block (separate module scope) —
+          // only window.currentUserInfo is visible here (was a ReferenceError
+          // that killed the Book a Slot button, e458b766).
+          var bookingAvatar = (window.currentUserInfo && window.currentUserInfo.avatar) || user.photoURL || null;
           window.openBookingSchedule(user.uid, displayName, bookingAvatar);
         })();
       });
