@@ -133,8 +133,15 @@ function Start-Producer($src) {
            '-map','[v]','-map','[a]') + $venc +
          @('-c:a','aac','-b:a','192k','-ar','44100','-fps_mode','cfr','-f','flv',$LOCAL_MAIN)
   } else {
+    # Icecast input needs reconnect flags: on a BUTT drop the HTTP stream EOFs and
+    # ffmpeg otherwise keeps encoding the looped video with NO audio (silent zombie
+    # — path stays "ready" so the controller never restarts it). rw_timeout catches
+    # hung sockets (CGNAT teardown) that never EOF.
     $a = @('-hide_banner','-loglevel','warning','-stream_loop','-1','-re','-i',$PLACEHOLDER,
-           '-thread_queue_size','1024','-i',$ICECAST,'-i',$BUG,
+           '-thread_queue_size','1024',
+           '-reconnect','1','-reconnect_at_eof','1','-reconnect_streamed','1',
+           '-reconnect_on_http_error','4xx,5xx','-reconnect_delay_max','5',
+           '-rw_timeout','15000000','-i',$ICECAST,'-i',$BUG,
            '-filter_complex',"[0:v][2:v]overlay=W-w-16:16[v];[1:a]aresample=async=1,$LOUDNORM[a]",
            '-map','[v]','-map','[a]') + $venc +
          @('-c:a','aac','-b:a','192k','-ar','44100','-ac','2','-fps_mode','cfr','-f','flv',$LOCAL_MAIN)
