@@ -8,7 +8,7 @@ import { d1GetLiveSlots, d1GetScheduledSlots, d1GetSlotById } from '../../../lib
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { createLogger, successResponse, jsonResponse as sharedJsonResponse } from '../../../lib/api-utils';
-import { APPROVED_RELAY_STATIONS, checkStationLive } from '../../../lib/relay-stations';
+import { APPROVED_RELAY_STATIONS, checkStationLive, checkTwitchLive } from '../../../lib/relay-stations';
 
 const log = createLogger('[livestream/status]');
 
@@ -186,6 +186,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Gate relay Twitch embeds on the channel ACTUALLY being live — sending a
+    // twitchChannel for an offline channel leaves /live black + silent while
+    // the audio relay sits unused. Checked once per cache fill (result rides
+    // the status cache); failure = offline = audio fallback.
+    const relayTwitchLiveById = new Map<string, string>();
+    for (const slot of liveSlots) {
+      const ch = slot.isRelay ? relayTwitchChannel(slot.relaySource) : null;
+      if (ch && (await checkTwitchLive(ch))) {
+        relayTwitchLiveById.set(slot.id, ch);
+      }
+    }
+
     // Convert slots to stream format for the player
     // SECURITY: Do NOT expose streamKey in public response - it would allow stream hijacking
     let liveStreams = liveSlots.map(slot => ({
@@ -216,7 +228,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // streamSource:'twitch' explicitly) reports 'twitch' so /live embeds the
       // Twitch player (video+audio in sync) instead of the audio + placeholder.
       // Additive — every other slot still derives relay/red5.
-      streamSource: (slot.streamSource === 'twitch' || (slot.isRelay && relayTwitchChannel(slot.relaySource)))
+      streamSource: (slot.streamSource === 'twitch' || relayTwitchLiveById.has(slot.id))
         ? 'twitch' : (slot.isRelay ? 'relay' : 'red5'),
       isRelay: slot.isRelay || false,
       relaySource: slot.relaySource || null,
@@ -228,7 +240,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         || (slot.isRelay && slot.relaySource?.url)
         || 'https://stream.freshwax.co.uk/icecast-live/index.m3u8',
       youtubeLiveId: slot.youtubeLiveId || null,
-      twitchChannel: slot.twitchChannel || slot.twitchUsername || relayTwitchChannel(slot.relaySource) || null,
+      twitchChannel: slot.twitchChannel || slot.twitchUsername || relayTwitchLiveById.get(slot.id) || null,
       currentViewers: slot.currentViewers || 0,
       totalViews: slot.totalViews || 0,
       totalLikes: slot.totalLikes || 0,

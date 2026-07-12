@@ -42,6 +42,38 @@ export interface StationStatus {
   serverTitle?: string; // Current show/DJ name from the station
 }
 
+// Is the station's Twitch channel ACTUALLY broadcasting right now? /live must
+// only embed the Twitch player when it is — an offline embed is a black,
+// silent player while the audio relay sits unused (bit us Jul 12: UL relaying
+// audio-only, their Twitch offline).
+//
+// HTML scraping does NOT work from Workers: Twitch serves Cloudflare egress
+// the bare JS shell with no JSON-LD for live AND offline channels alike
+// (verified Jul 12 via /api/livestream/twitch-live-check against a 24/7
+// channel). Use Twitch's public web GQL endpoint instead — the same
+// unauthenticated Client-ID the twitch.tv web player ships (stable for
+// years, used by countless tools). If Twitch ever rotates it this returns
+// false and /live falls back to the audio relay + placeholder — safe.
+export async function checkTwitchLive(channel: string): Promise<boolean> {
+  if (!/^[a-zA-Z0-9_]{2,30}$/.test(channel)) return false;
+  try {
+    const response = await fetch('https://gql.twitch.tv/gql', {
+      method: 'POST',
+      headers: {
+        'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: `query { user(login: "${channel}") { stream { id } } }` }),
+      signal: AbortSignal.timeout(TIMEOUTS.SHORT),
+    });
+    if (!response.ok) return false;
+    const data = await response.json() as { data?: { user?: { stream?: { id?: string } | null } | null } };
+    return Boolean(data?.data?.user?.stream?.id);
+  } catch (_e: unknown) {
+    return false;
+  }
+}
+
 export async function checkStationLive(station: RelayStation): Promise<StationStatus> {
   if (!station.checkUrl) {
     return { isLive: true }; // Assume live if no check URL
