@@ -60,6 +60,7 @@ const CSRF_SKIP = new Set([
   // Called server-to-server by the MediaMTX relay scripts (no CSRF token);
   // authenticated via the x-server-key header (STREAM_SERVER_KEY).
   '/api/livestream/youtube-live-id/',
+  '/api/livestream/youtube-broadcast/',
   // Admin endpoints — authenticated via X-Admin-Key / requireAdminAuth
   '/api/admin/backfill-followers/',
   '/api/admin/backfill-mix-og/',

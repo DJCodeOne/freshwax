@@ -74,6 +74,8 @@ $script:djKey = $null
 $script:ytFetched = $false
 $script:ytStoppedAt = $null      # set by Stop-All; gates the YouTube cool-off
 $script:ytCooloffLogged = $false
+$script:ytEnsured = $false       # broadcast auto-create done for this session
+$script:ytEnsureFails = 0
 
 function Start-Ff([string[]]$ffargs, [string]$logfile) {
   (Start-Process -FilePath $FFMPEG -ArgumentList $ffargs -WindowStyle Hidden -PassThru -RedirectStandardError $logfile).Id
@@ -176,6 +178,25 @@ function Converge-Fanout {
       }
       $script:ytStoppedAt = $null; $script:ytCooloffLogged = $false
     }
+    # Broadcast auto-create: the FW channel has NO default stream key, so YouTube
+    # never creates broadcasts on arrival — ask the site to insert+bind one
+    # (per-DJ title, auto-start) BEFORE the first push. 3 failures -> push anyway
+    # (a dashboard-created waiting broadcast may still catch it).
+    # See scripts/mediamtx/YOUTUBE-AUTOCREATE-SPEC.md.
+    if ($name -eq 'youtube' -and $YT_AUTOCREATE -and -not $script:ytEnsured) {
+      try {
+        $bc = Invoke-RestMethod -Uri $YTBCAST_API -Method Post `
+          -Headers @{ 'x-server-key' = $SERVER_KEY } -TimeoutSec 15
+        $script:ytEnsured = $true
+        Log ("YouTube broadcast ensured: {0} (reused={1})" -f $bc.videoId, $bc.reused)
+      } catch {
+        $script:ytEnsureFails++
+        Log "YouTube broadcast ensure failed ($script:ytEnsureFails/3): $($_.Exception.Message)"
+        if ($script:ytEnsureFails -lt 3) { continue }
+        Log 'YouTube broadcast ensure giving up - starting push anyway'
+        $script:ytEnsured = $true
+      }
+    }
     $cur = $script:fanout[$name]
     if (-not ($cur -and (Alive $cur.pid))) {
       if ($cur) { Log "Relay '$name' died — restarting" }
@@ -197,6 +218,7 @@ function Stop-All {
   $script:producerPid = $null; $script:producerKind = $null
   $script:fanout = @{}; $script:djKey = $null; $script:ytFetched = $false
   $script:ytStoppedAt = Get-Date; $script:ytCooloffLogged = $false
+  $script:ytEnsured = $false; $script:ytEnsureFails = 0
   Remove-Item $STATUS_FILE -ErrorAction SilentlyContinue
   Log 'Stopped all relays'
 }
@@ -232,8 +254,10 @@ while ($true) {
     elseif (MainReady) {
       if ($null -eq $script:djKey) { $script:djKey = Get-DjKey }
       Converge-Fanout
-      # 3) YouTube live-id fetch (once, header-authed — the old scripts forgot the header)
-      if (-not $script:ytFetched -and $script:fanout['youtube'] -and (Alive $script:fanout['youtube'].pid)) {
+      # 3) LEGACY ($YT_AUTOCREATE off only): Data-API search for the live id.
+      #    With auto-create on, the ensure endpoint stores the videoId on the
+      #    slot synchronously — no laggy search needed.
+      if (-not $YT_AUTOCREATE -and -not $script:ytFetched -and $script:fanout['youtube'] -and (Alive $script:fanout['youtube'].pid)) {
         try {
           Invoke-RestMethod -Uri $YTID_API -Method Post -Headers @{ 'x-server-key' = $SERVER_KEY } `
             -ContentType 'application/json' -Body '{"streamKey":"live/freshwax-main"}' -TimeoutSec 15 | Out-Null
