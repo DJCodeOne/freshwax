@@ -108,7 +108,8 @@ event, or 6 months fully unused — a weekly stream keeps it alive forever).
 - Auth: `x-server-key` timing-safe vs `STREAM_SERVER_KEY` (same as
   `dj-twitch-key`); **add to CSRF_SKIP** in `src/lib/csrf.ts`; rate-limit standard.
 - Reads the current live slot (same D1-first source as `status.ts`) →
-  title = slot `customTitle ? title : "${djName} — Live on Fresh Wax"`,
+  title = slot `customTitle ? title : "Fresh Wax Live"` (neutral default —
+  never auto-insert the DJ's name into an untitled set),
   description = short blurb + `https://freshwax.co.uk/live`.
 - Calls `ensureBroadcast`, then writes `youtubeLiveId` (+ `youtubeIntegration`
   object as in the old endpoint) onto the live slot:

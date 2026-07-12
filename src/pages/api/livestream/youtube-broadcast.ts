@@ -74,9 +74,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const db = env?.DB;
     const slot = await getPrimaryLiveSlot(db);
 
-    const title = slot
-      ? (slot.customTitle && slot.title ? slot.title : `${slot.djName || 'Fresh Wax'} — Live on Fresh Wax`)
-      : 'Fresh Wax Live Stream';
+    // Custom title verbatim when the DJ set one; otherwise the NEUTRAL default —
+    // never auto-insert a DJ's name (operator decision Jul 12: an untitled set
+    // must not go out as "«DJ» — Live on Fresh Wax").
+    const title = slot?.customTitle && slot.title ? slot.title : 'Fresh Wax Live';
     const description =
       "Jungle & Drum'n'Bass live from Fresh Wax — underground vinyl & digital.\n" +
       'Listen, chat and dig the crates: https://freshwax.co.uk/live';
