@@ -189,6 +189,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('[Backup D1] ========== COMPLETED ==========');
     log.info(`[Backup D1] Duration: ${duration}ms`);
 
+    // Chained daily job: IndexNow submit (diffs the sitemap, pings changed
+    // URLs to Bing/Yandex). Piggybacks this cron so no extra schedule is
+    // needed; awaited because fire-and-forget is killed in Workers.
+    try {
+      const cronSecret = env?.CRON_SECRET || import.meta.env.CRON_SECRET;
+      const inRes = await fetch('https://freshwax.co.uk/api/cron/indexnow/', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${cronSecret}` },
+      });
+      log.info(`[Backup D1] Chained IndexNow submit: ${inRes.status}`);
+    } catch (err: unknown) {
+      log.error('[Backup D1] Chained IndexNow submit failed:', err instanceof Error ? err.message : String(err));
+    }
+
     return successResponse({ duration, timestamp, tables: results, retentionCleanup: { deletedCount } });
   } finally {
     await releaseCronLock(db, 'backup-d1');

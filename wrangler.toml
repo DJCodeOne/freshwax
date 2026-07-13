@@ -52,7 +52,9 @@ RED5_HLS_URL = "https://stream.freshwax.co.uk/live"
 # │ 0 * * * *        │ /api/cron/cleanup-reservations      │ Expire stale stock reservations (hourly)     │
 # │ 0 */6 * * *      │ /api/cron/retry-payouts             │ Retry failed Stripe/PayPal payouts (6-hourly)│
 # │ 0 */6 * * *      │ /api/cron/send-restock-notifications│ Email users when items restock (6-hourly)    │
-# │ 0 2 * * *        │ /api/cron/backup-d1                 │ Back up D1 tables to R2 as JSON (02:00)      │
+# │ 0 2 * * *        │ /api/cron/backup-d1                 │ Back up D1 tables to R2 as JSON (02:00);     │
+# │                  │                                     │ chains /api/cron/indexnow (sitemap diff →    │
+# │                  │                                     │ IndexNow ping to Bing/Yandex, no schedule)   │
 # │ 0 3 * * *        │ /api/cron/cleanup-d1                │ Purge old D1 rows (03:00)                    │
 # │ 0 4 * * *        │ /api/cron/image-scan                │ Scan R2 for non-WebP images (04:00)          │
 # │ 0 10 * * *       │ /api/cron/verification-reminders    │ Remind unverified users (10:00)              │

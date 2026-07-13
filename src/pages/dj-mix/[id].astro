@@ -3,7 +3,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-import { getDocument } from '../../lib/firebase-rest';
+import { getDocument, getLiveReleases, getLiveDJMixes } from '../../lib/firebase-rest';
 import { createLogger } from '../../lib/api-utils';
 import { getSupportsForMix } from '../../lib/dj-support';
 import { FIREBASE_API_KEY } from '../../lib/constants';
@@ -171,6 +171,40 @@ function formatDurationDisplay(seconds: number | null) {
 }
 
 const formattedDuration = formatDurationDisplay(durationSeconds);
+
+// Data-driven "About" fallback when the DJ wrote no description — gives thin
+// mix pages unique indexable text composed from real mix facts.
+const mixAboutFallback = mix ? [
+  `${title} — a ${genre || 'jungle / drum & bass'} DJ mix by ${dj_name}${formattedDuration ? `, running ${formattedDuration}` : ''}.`,
+  Array.isArray(tracklistArray) && tracklistArray.length > 0 ? `${tracklistArray.length}-track selection.` : '',
+  upload_date ? `Uploaded ${new Date(upload_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long' })} on Fresh Wax.` : '',
+].filter(Boolean).join(' ') : '';
+
+// Related content (SEO cross-linking): the DJ's releases on the store + more
+// mixes to keep listeners moving. Lookups are triple-tier cached (memory→KV→D1).
+let djReleases: Record<string, unknown>[] = [];
+let moreMixes: Record<string, unknown>[] = [];
+if (mix) {
+  try {
+    const [allReleases, allMixes] = await Promise.all([
+      getLiveReleases(200, mixDb),
+      getLiveDJMixes(200),
+    ]);
+    const norm = (s: unknown) => String(s || '').toLowerCase().trim();
+    const myDj = norm(dj_name);
+    djReleases = (allReleases as Record<string, unknown>[])
+      .filter((r) => myDj && norm(r.artistName || r.artist) === myDj)
+      .slice(0, 4);
+    const others = (allMixes as Record<string, unknown>[]).filter((m) => String(m.id) !== String(id));
+    // Prefer the same DJ's other mixes, then pad with the most recent others
+    moreMixes = [
+      ...others.filter((m) => myDj && norm(m.djName || m.artist) === myDj),
+      ...others.filter((m) => !(myDj && norm(m.djName || m.artist) === myDj)),
+    ].slice(0, 3);
+  } catch (relErr: unknown) {
+    log.debug('[DJ-MIX PAGE] Related content fetch failed:', relErr);
+  }
+}
 
 // Helper to clean track - removes leading numbers like "1." or "01." or "1)" etc
 function cleanTrackLine(line: string): string {
@@ -413,16 +447,53 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         <audio id="mix-audio" src={audio_url} preload="metadata" class="hidden" aria-label="DJ mix audio player"></audio>
 
         <!-- Description Section -->
-        {description && (
+        {(description || mixAboutFallback) && (
           <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-3 sm:p-4 md:p-5 mb-3 sm:mb-4 md:mb-6">
             <h2 class="text-sm sm:text-base md:text-lg font-black text-white uppercase tracking-wider mb-2 pb-2 border-b-2 border-red-600 drop-shadow-lg">
               About This Mix
             </h2>
             <div class="bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 p-2 sm:p-3 rounded shadow-inner overflow-hidden">
               <p class="text-white text-sm sm:text-base md:text-lg font-medium leading-normal whitespace-pre-wrap break-words overflow-wrap-anywhere">
-                {description}
+                {description || mixAboutFallback}
               </p>
             </div>
+          </div>
+        )}
+
+        {(djReleases.length > 0 || moreMixes.length > 0) && (
+          <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-3 sm:p-4 md:p-5 mb-3 sm:mb-4 md:mb-6">
+            <h2 class="text-sm sm:text-base md:text-lg font-black text-white uppercase tracking-wider mb-2 pb-2 border-b-2 border-red-600 drop-shadow-lg">
+              More on Fresh Wax
+            </h2>
+            {djReleases.length > 0 && (
+              <div class="mb-4">
+                <h3 class="text-xs sm:text-sm font-black text-gray-300 uppercase tracking-wide mb-2">Releases by {dj_name}</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {djReleases.map((r) => (
+                    <a href={`/item/${r.id}/`} class="block bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 rounded p-2 hover:border-red-600 transition-colors">
+                      {(r.coverArtUrl || r.artworkUrl) ? (
+                        <img src={String(r.coverArtUrl || r.artworkUrl)} alt={`${String(r.releaseName || r.title || 'Release')} cover art`} loading="lazy" class="w-full aspect-square object-cover rounded mb-2" />
+                      ) : null}
+                      <span class="text-white text-xs sm:text-sm font-bold leading-tight block">{String(r.releaseName || r.title || 'Release')}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+            {moreMixes.length > 0 && (
+              <div>
+                <h3 class="text-xs sm:text-sm font-black text-gray-300 uppercase tracking-wide mb-2">More Mixes</h3>
+                <ul class="space-y-1">
+                  {moreMixes.map((m) => (
+                    <li>
+                      <a href={`/dj-mix/${m.id}/`} class="text-red-400 hover:text-red-300 underline text-sm sm:text-base font-semibold">
+                        {String(m.title || 'DJ Mix')}{m.djName ? ` — ${String(m.djName)}` : ''}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
 
