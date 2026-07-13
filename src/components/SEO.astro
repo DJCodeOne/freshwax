@@ -38,6 +38,7 @@ interface Props {
     category?: string;
     reviews?: { rating: number; count: number };
     priceValidUntil?: string;
+    validFrom?: string; // when the offer/price became valid (release/listing date)
   };
   
   // Music release
@@ -364,6 +365,7 @@ const productSchema = product ? {
     "itemCondition": `https://schema.org/${product.condition || 'NewCondition'}`,
     "seller": { "@id": `${SITE.url}/#organization` },
     ...(product.priceValidUntil && { "priceValidUntil": product.priceValidUntil }),
+    ...(product.validFrom && { "validFrom": product.validFrom }),
     "shippingDetails": [
       {
         "@type": "OfferShippingDetails",
@@ -424,7 +426,11 @@ const productSchema = product ? {
       "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
       "merchantReturnDays": 14,
       "returnMethod": "https://schema.org/ReturnByMail",
-      "returnFees": "https://schema.org/ReturnShippingFees"
+      // Actual policy (/shipping#returns-refunds): change-of-mind returns are
+      // sent at the customer's own postage cost — we don't charge a fixed
+      // return-shipping fee, so ReturnFeesCustomerResponsibility (which needs
+      // no returnShippingFeesAmount), NOT ReturnShippingFees (which does).
+      "returnFees": "https://schema.org/ReturnFeesCustomerResponsibility"
     }
   },
   ...(product.reviews && product.reviews.count > 0 && {

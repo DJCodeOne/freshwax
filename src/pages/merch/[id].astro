@@ -73,6 +73,12 @@ try {
       inStock: inStock,
       sku: item.sku || item.id,
       category: item.category || 'general',
+      // Merch ids embed the upload epoch-ms (merch_tshirt_1769633512843) —
+      // derive the listing date for the schema offer's validFrom.
+      listedDate: (() => {
+        const m = String(item.id || id || '').match(/(\d{13})/);
+        return m ? new Date(Number(m[1])).toISOString().split('T')[0] : undefined;
+      })(),
     };
   } else {
     error = 'Product not found';
@@ -126,6 +132,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     condition: 'NewCondition',
     category: product.category,
     priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    ...(product.listedDate ? { validFrom: product.listedDate } : {}),
   } : undefined}
   breadcrumbs={product ? [
     { name: 'Merchandise', url: '/merch/' },

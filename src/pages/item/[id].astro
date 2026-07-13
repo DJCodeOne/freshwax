@@ -436,6 +436,7 @@ const shareImageHeight = hasOgCard ? 630 : (shareImage ? 800 : undefined);
     brand: labelName || artistName,
     category: 'Music > Digital Downloads',
     priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    validFrom: new Date(releaseDate).toISOString().split('T')[0],
     ...(overallRating.count > 0 ? { reviews: { rating: overallRating.average, count: overallRating.count } } : {})
   } : undefined}
   breadcrumbs={release ? [
