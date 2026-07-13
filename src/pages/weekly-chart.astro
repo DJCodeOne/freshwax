@@ -8,8 +8,31 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { getLiveReleases } from '../lib/firebase-rest';
 import { createLogger } from '../lib/api-utils';
+import CategorySeoBlock from '../components/CategorySeoBlock.astro';
 
 const log = createLogger('weekly-chart-page');
+
+// Chart explainer + FAQ (visible above the footer, mirrored into FAQPage
+// schema via the Layout faqs prop).
+const chartFaqs = [
+  {
+    question: "How is the Fresh Wax chart compiled?",
+    answer: "The chart ranks releases from the last 7 days by real activity on Fresh Wax — sales, ratings and engagement. No payola, no editorial thumb on the scale: what the scene buys is what charts."
+  },
+  {
+    question: "How often does the chart update?",
+    answer: "Continuously — it always reflects the last 7 days of activity, so it moves as the week does."
+  },
+  {
+    question: "Can any release chart?",
+    answer: "Yes. Every release on Fresh Wax is automatically eligible the moment it goes live — sales and plays decide the rest."
+  }
+];
+
+const chartIntro = [
+  "This is the Fresh Wax weekly chart: the jungle and drum & bass releases the underground actually bought this week. It's ranked from real store activity — sales, ratings and plays over the last 7 days — not editorial picks, so it's an honest snapshot of what's moving right now.",
+  "Use it to find your next record: every entry links straight to the release, where you can stream clips, buy the download, or grab the vinyl where a pressing exists.",
+];
 
 // Calculate date range (last 7 days)
 const now = new Date();
@@ -98,7 +121,7 @@ export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
-<Layout title="Weekly Chart - Top Selling Releases" description="Fresh Wax weekly chart — bestselling and trending jungle and drum & bass releases, updated weekly and ranked by sales and streams." itemList={releaseItemList}>
+<Layout title="Weekly Chart - Top Selling Releases" description="Fresh Wax weekly chart — bestselling and trending jungle and drum & bass releases, updated weekly and ranked by sales and streams." itemList={releaseItemList} faqs={chartFaqs}>
   <Header />
   
   <div class="chart-main">
@@ -214,6 +237,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       )}
     </div>
   </div>
+
+  <CategorySeoBlock heading="The Fresh Wax Weekly Chart" paragraphs={chartIntro} faqs={chartFaqs} />
 
   <Footer />
 </Layout>

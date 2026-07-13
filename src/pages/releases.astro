@@ -5,6 +5,34 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ReleasePlate from '../components/ReleasePlate.astro';
+import CategorySeoBlock from '../components/CategorySeoBlock.astro';
+
+// Buyer-intent copy + FAQ (rendered above the footer, mirrored into FAQPage
+// schema via the Layout faqs prop — Google requires the markup to match
+// visible on-page content).
+const releasesFaqs = [
+  {
+    question: "What format are the digital downloads?",
+    answer: "Every digital release comes DRM-free in high-quality WAV with 320kbps MP3 versions included. Once bought, your downloads live in your account — grab them again whenever you need."
+  },
+  {
+    question: "Do the artists get paid when I buy on Fresh Wax?",
+    answer: "Yes. Sales are routed to the release's label and artists — Fresh Wax keeps only a small platform fee. Buying here directly supports the producers keeping jungle and drum & bass alive."
+  },
+  {
+    question: "Does vinyl include the digital version?",
+    answer: "Yes — vinyl releases on Fresh Wax include the digital download, so you can play the records and keep the files."
+  },
+  {
+    question: "How often are new releases added?",
+    answer: "New jungle and drum & bass lands regularly from our partner labels. Check the Weekly Chart for what's moving, or join the newsletter to hear about new drops first."
+  }
+];
+
+const releasesIntro = [
+  "Fresh Wax is an independent UK record store built for jungle and drum & bass. This is the full catalogue — new releases, EPs and albums from underground labels like Hangry Records, Underground Lair Recordings and Bakkus Recordings, available as DRM-free digital downloads and limited-run vinyl.",
+  "Everything here comes straight from the source: independent labels and artists upload their own releases, set their own prices, and get paid when you buy. No majors, no filler — just the jungle, DnB, breakbeat and rave business the underground is actually making right now.",
+];
 import { getLiveReleases } from '../lib/firebase-rest';
 import { createLogger } from '../lib/api-utils';
 
@@ -114,7 +142,7 @@ const releaseItemList = {
 };
 ---
 
-<Layout title="All Releases - Jungle & DnB Music" description="Browse all jungle and drum & bass releases on Fresh Wax. Shop vinyl, digital downloads, and discover new and classic tracks from underground labels." itemList={releaseItemList}>
+<Layout title="All Releases - Jungle & DnB Music" description="Browse all jungle and drum & bass releases on Fresh Wax. Shop vinyl, digital downloads, and discover new and classic tracks from underground labels." itemList={releaseItemList} faqs={releasesFaqs}>
   {firstCoverArt && <link rel="preload" href={firstCoverArt} as="image" slot="head" />}
   <Header />
   
@@ -310,6 +338,8 @@ const releaseItemList = {
       </div>
     </div>
   </div>
+
+  <CategorySeoBlock heading="Buy Jungle & Drum and Bass Music Online" paragraphs={releasesIntro} faqs={releasesFaqs} />
 
   <Footer />
 

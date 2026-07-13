@@ -5,6 +5,7 @@
 
 import { getLiveReleases, getLiveDJMixes, getLiveMerch, queryCollection } from '../lib/firebase-rest';
 import { blogPosts } from '../data/blog-posts';
+import { groupReleasesByLabel } from '../lib/labels';
 import { SITE_URL } from '../lib/constants';
 
 export const prerender = false;
@@ -217,6 +218,20 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
     }
 
     xml += `
+  </url>
+`;
+  }
+
+  // ===========================================
+  // LABEL HUBS - one page per partner label
+  // ===========================================
+  for (const group of groupReleasesByLabel(releases)) {
+    const lastmod = getLatestDate(group.releases, ['updatedAt', 'releaseDate', 'createdAt']);
+    xml += `  <url>
+    <loc>${SITE_URL}/label/${group.slug}/</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
   </url>
 `;
   }

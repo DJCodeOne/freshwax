@@ -4,6 +4,7 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, getLiveReleases, getLiveDJMixes } from '../../lib/firebase-rest';
+import { labelSlug } from '../../lib/labels';
 import { normalizeRelease } from '../../lib/releases';
 import { createLogger } from '../../lib/api-utils';
 import { getSupportersForRelease } from '../../lib/dj-support';
@@ -1124,7 +1125,11 @@ if (release) {
             </h2>
             {moreFromLabel.length > 0 && (
               <div class="mb-4">
-                <h3 class="text-sm md:text-base font-black text-gray-300 uppercase tracking-wide mb-2">More from {labelName || artistName}</h3>
+                <h3 class="text-sm md:text-base font-black text-gray-300 uppercase tracking-wide mb-2">
+                  More from {labelName
+                    ? <a href={`/label/${labelSlug(labelName)}/`} class="text-red-400 hover:text-red-300 underline">{labelName}</a>
+                    : artistName}
+                </h3>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {moreFromLabel.map((r) => (
                     <a href={`/item/${r.id}/`} class="block bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 rounded p-2 hover:border-red-600 transition-colors">

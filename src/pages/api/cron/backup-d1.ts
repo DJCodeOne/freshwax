@@ -203,6 +203,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       log.error('[Backup D1] Chained IndexNow submit failed:', err instanceof Error ? err.message : String(err));
     }
 
+    // Chained daily job: review request emails (~7 days post-order, tokenised
+    // per-item links; see /api/cron/review-requests).
+    try {
+      const cronSecret2 = env?.CRON_SECRET || import.meta.env.CRON_SECRET;
+      const rrRes = await fetch('https://freshwax.co.uk/api/cron/review-requests/', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${cronSecret2}` },
+      });
+      log.info(`[Backup D1] Chained review-requests: ${rrRes.status}`);
+    } catch (err: unknown) {
+      log.error('[Backup D1] Chained review-requests failed:', err instanceof Error ? err.message : String(err));
+    }
+
     return successResponse({ duration, timestamp, tables: results, retentionCleanup: { deletedCount } });
   } finally {
     await releaseCronLock(db, 'backup-d1');

@@ -101,6 +101,14 @@ const pageDescription = product && rawDescription.length > 155
   ? rawDescription.slice(0, 155) + '...'
   : rawDescription;
 
+// Verified-purchase reviews (collected via post-purchase email links).
+// Feeds visible stars + the aggregateRating schema — the field GSC flags as
+// missing on product snippets.
+import { getProductReviews } from '../../lib/reviews';
+const productReviews = product
+  ? await getProductReviews(String(product.id)).catch(() => ({ reviews: [], average: 0, count: 0 }))
+  : { reviews: [], average: 0, count: 0 };
+
 // Social-share image. Prefer the dedicated 1200x630 OG card so Facebook stops
 // cropping the top+bottom of the square merch photo; fall back to the square
 // image (800x800) until a product's OG card has been generated.
@@ -133,6 +141,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     category: product.category,
     priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     ...(product.listedDate ? { validFrom: product.listedDate } : {}),
+    ...(productReviews.count > 0 ? { reviews: { rating: productReviews.average, count: productReviews.count } } : {}),
   } : undefined}
   breadcrumbs={product ? [
     { name: 'Merchandise', url: '/merch/' },
@@ -212,10 +221,34 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             </div>
           )}
         </div>
+
+        {productReviews.count > 0 && (
+          <section class="reviews-box" aria-labelledby="reviews-heading">
+            <h2 id="reviews-heading" class="reviews-heading">
+              Reviews
+              <span class="reviews-stars" aria-label={`Rated ${productReviews.average} out of 5`}>
+                {'★'.repeat(Math.round(productReviews.average))}{'☆'.repeat(5 - Math.round(productReviews.average))}
+              </span>
+              <span class="reviews-avg">{productReviews.average}/5 · {productReviews.count} verified review{productReviews.count === 1 ? '' : 's'}</span>
+            </h2>
+            <ul class="reviews-list">
+              {productReviews.reviews.slice(0, 10).map((r) => (
+                <li class="review-item">
+                  <div class="review-meta">
+                    <span class="review-stars">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                    <span class="review-name">{r.userName}</span>
+                    <span class="review-verified">✓ Verified purchase</span>
+                  </div>
+                  {r.comment && <p class="review-comment">{r.comment}</p>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     )}
   </div>
-  
+
   <footer class="mini-footer">
     © 2025 Fresh<span class="red">Wax</span>
   </footer>
@@ -425,6 +458,80 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     box-shadow: 0 0 0 2px #000;
   }
   
+  /* Reviews */
+  .reviews-box {
+    background: #fff;
+    border: 2px solid #000;
+    padding: 1rem 1.25rem;
+    margin-top: 1rem;
+  }
+
+  .reviews-heading {
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    border-bottom: 2px solid #dc2626;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .reviews-stars, .review-stars {
+    color: #f59e0b;
+    letter-spacing: 0.1em;
+  }
+
+  .reviews-avg {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: 600;
+    text-transform: none;
+  }
+
+  .reviews-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .review-item {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .review-item:last-child {
+    border-bottom: none;
+  }
+
+  .review-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+  }
+
+  .review-name {
+    font-weight: 700;
+  }
+
+  .review-verified {
+    color: #16a34a;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .review-comment {
+    margin: 0.35rem 0 0;
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.5;
+  }
+
   /* Mini Footer */
   .mini-footer {
     text-align: center;

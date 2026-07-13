@@ -6,7 +6,34 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import PageLoader from '../components/PageLoader.astro';
+import CategorySeoBlock from '../components/CategorySeoBlock.astro';
 import { getLiveMerch } from '../lib/firebase-rest';
+
+// Buyer-intent copy + FAQ (visible block above the footer, mirrored into
+// FAQPage schema via the Layout faqs prop).
+const merchFaqs = [
+  {
+    question: "Is this official merchandise?",
+    answer: "Yes — everything in the merch store is either Fresh Wax's own gear or official merchandise from our partner labels and DJs, sold with their direct involvement. No bootlegs."
+  },
+  {
+    question: "How much is UK shipping?",
+    answer: "Standard UK shipping starts from £3.50, with European and worldwide rates shown at checkout. Some sellers offer free UK shipping over a spend threshold — it's shown on their products."
+  },
+  {
+    question: "Can I return merch?",
+    answer: "Unworn, unused items can be returned within 14 days of delivery. Faulty items are replaced or refunded including return postage. Full details on the Shipping & Returns page."
+  },
+  {
+    question: "Will sold-out items come back?",
+    answer: "A lot of our merch is printed in limited runs, so when a size sells out it may not return. Popular lines do get reprinted — join the newsletter to hear about restocks and new drops."
+  }
+];
+
+const merchIntro = [
+  "Official jungle and drum & bass merch from Fresh Wax and the labels we work with — t-shirts, hoodies, caps and more, made in limited runs for the people who actually go to the dances. Every piece sold here supports the label or sound system behind it.",
+  "New drops land alongside label releases through the year. UK shipping from £3.50, worldwide options at checkout, and 14-day returns on unworn items — see the Shipping & Returns page for the full rundown.",
+];
 import '../styles/merch.css';
 
 export const prerender = false;
@@ -150,7 +177,7 @@ const merchItemList = {
 };
 ---
 
-<Layout title="Merchandise - Jungle and Drum & Bass Apparel" description="Official jungle and drum & bass merchandise from Fresh Wax. T-shirts, hoodies, hats and more from sound systems, labels and DJs." itemList={merchItemList}>
+<Layout title="Merchandise - Jungle and Drum & Bass Apparel" description="Official jungle and drum & bass merchandise from Fresh Wax. T-shirts, hoodies, hats and more from sound systems, labels and DJs." itemList={merchItemList} faqs={merchFaqs}>
   {firstProductImage && <link rel="preload" href={firstProductImage} as="image" slot="head" />}
   <PageLoader nonce={nonce} />
   <Header />
@@ -448,6 +475,8 @@ const merchItemList = {
       </div>
     </div>
   </div>
+
+  <CategorySeoBlock heading="Official Jungle & DnB Merch" paragraphs={merchIntro} faqs={merchFaqs} />
 
   <Footer />
 </Layout>

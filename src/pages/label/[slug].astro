@@ -1,0 +1,205 @@
+---
+// src/pages/label/[slug].astro
+// Label hub page: the canonical Fresh Wax page for a partner label — bio,
+// stats and full catalogue. Exists so label-name searches ("Hangry Records",
+// "Underground Lair Recordings"…) have a dedicated, keyword-exact page to
+// rank, and so partner labels have a clean URL to link back to.
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import ReleasePlate from '../../components/ReleasePlate.astro';
+import { getLiveReleases, getLiveDJMixes, getDocument } from '../../lib/firebase-rest';
+import { groupReleasesByLabel } from '../../lib/labels';
+import { createLogger } from '../../lib/api-utils';
+import { SITE_URL } from '../../lib/constants';
+
+export const prerender = false;
+
+const log = createLogger('label-page');
+const { slug } = Astro.params;
+
+const db = (Astro.locals as App.Locals).runtime?.env?.DB;
+
+let labelName = '';
+let labelReleases: Record<string, unknown>[] = [];
+let labelMixes: Record<string, unknown>[] = [];
+let labelBio = '';
+let labelAvatar = '';
+
+try {
+  const [allReleases, allMixes] = await Promise.all([
+    getLiveReleases(500, db),
+    getLiveDJMixes(200).catch(() => [] as Record<string, unknown>[]),
+  ]);
+  const groups = groupReleasesByLabel(allReleases);
+  const group = groups.find((g) => g.slug === slug);
+
+  if (group) {
+    labelName = group.name;
+    // Newest first on the hub (releases page sorts by catalogue number instead)
+    labelReleases = [...group.releases].sort((a, b) => {
+      const da = new Date(String(a.releaseDate || a.createdAt || 0)).getTime();
+      const dbb = new Date(String(b.releaseDate || b.createdAt || 0)).getTime();
+      return dbb - da;
+    });
+
+    // Mixes credited to the label name (some labels DJ under the same name)
+    const norm = (s: unknown) => String(s || '').toLowerCase().trim();
+    labelMixes = (allMixes as Record<string, unknown>[])
+      .filter((m) => norm(m.djName || m.artist) === norm(labelName))
+      .slice(0, 6);
+
+    // Label bio/avatar from the owning user account (most releases win).
+    // Bios live under pendingRoles.<role>.bio; filter placeholder text the
+    // same way the release page does for artist bios.
+    const ownerCounts = new Map<string, number>();
+    for (const r of labelReleases) {
+      const uid = String(r.userId || '');
+      if (uid) ownerCounts.set(uid, (ownerCounts.get(uid) || 0) + 1);
+    }
+    const ownerId = [...ownerCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (ownerId) {
+      const userDoc = await getDocument('users', ownerId).catch(() => null);
+      const pendingRoles = (userDoc?.pendingRoles || {}) as Record<string, Record<string, unknown>>;
+      const rawBio = String(pendingRoles.label?.bio || pendingRoles.artist?.bio || '').trim();
+      const placeholderBios = ['no bio yet', 'bio coming soon', 'n/a', 'na', 'none', '-'];
+      if (rawBio && !placeholderBios.includes(rawBio.toLowerCase())) {
+        labelBio = rawBio;
+      }
+      labelAvatar = String(userDoc?.photoURL || userDoc?.avatarUrl || '');
+    }
+  }
+} catch (e: unknown) {
+  log.error('Failed to build label page:', e);
+}
+
+if (!labelName) {
+  Astro.response.status = 404;
+}
+
+const releaseCount = labelReleases.length;
+const vinylCount = labelReleases.filter((r) => r.vinylRelease === true).length;
+const earliest = labelReleases.length
+  ? Math.min(...labelReleases.map((r) => new Date(String(r.releaseDate || r.createdAt || Date.now())).getTime()).filter((t) => isFinite(t)))
+  : 0;
+const sinceYear = earliest ? new Date(earliest).getFullYear() : null;
+
+const pageTitle = labelName
+  ? `${labelName} — Jungle & Drum and Bass Label`
+  : 'Label Not Found';
+const pageDescription = labelName
+  ? `${labelName} on Fresh Wax: ${releaseCount} jungle & drum and bass release${releaseCount === 1 ? '' : 's'}${vinylCount ? ` including ${vinylCount} on vinyl` : ''}. Stream, download and buy direct — every sale supports the label.`
+  : 'Label not found';
+
+const itemList = labelName ? {
+  name: `${labelName} releases on Fresh Wax`,
+  items: labelReleases.slice(0, 25).map((r, i) => ({
+    name: String(r.releaseName || r.title || 'Release'),
+    url: `${SITE_URL}/item/${r.id}/`,
+    image: (r.coverArtUrl || r.artworkUrl) ? String(r.coverArtUrl || r.artworkUrl) : undefined,
+    position: i + 1,
+  })),
+} : undefined;
+
+// Organization JSON-LD for the label itself — feeds the entity graph so
+// Google associates the label name with this page.
+const labelSchema = labelName ? {
+  "@context": "https://schema.org",
+  "@type": "MusicGroup",
+  "name": labelName,
+  "url": `${SITE_URL}/label/${slug}/`,
+  ...(labelBio && { "description": labelBio }),
+  ...(labelAvatar && { "image": labelAvatar }),
+  "genre": ["Jungle", "Drum and Bass"],
+  "memberOf": { "@id": `${SITE_URL}/#organization` },
+} : null;
+
+Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600');
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  itemList={itemList}
+  breadcrumbs={labelName ? [
+    { name: 'Releases', url: '/releases/' },
+    { name: labelName, url: `/label/${slug}/` },
+  ] : undefined}
+>
+  <Header />
+
+  {labelSchema && <script type="application/ld+json" set:html={JSON.stringify(labelSchema)} slot="head" />}
+
+  {labelName ? (
+    <main class="min-h-screen px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div class="max-w-6xl mx-auto w-full">
+        <!-- Label header -->
+        <header class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-4 md:p-6 mb-6 md:mb-8">
+          <div class="flex items-center gap-4 md:gap-6">
+            {labelAvatar && (
+              <img src={labelAvatar} alt={`${labelName} logo`} class="w-20 h-20 md:w-28 md:h-28 rounded object-cover border-2 border-gray-600 flex-shrink-0" loading="eager" />
+            )}
+            <div class="min-w-0">
+              <p class="text-xs md:text-sm font-black text-red-500 uppercase tracking-widest mb-1">Label</p>
+              <h1 class="text-2xl md:text-4xl font-black text-white uppercase tracking-tight drop-shadow-lg leading-tight">{labelName}</h1>
+              <p class="text-gray-300 text-sm md:text-base mt-2 font-semibold">
+                {releaseCount} release{releaseCount === 1 ? '' : 's'} on Fresh Wax
+                {vinylCount > 0 && ` • ${vinylCount} on vinyl`}
+                {sinceYear && ` • since ${sinceYear}`}
+              </p>
+            </div>
+          </div>
+          {labelBio && (
+            <p class="text-gray-200 text-sm md:text-base leading-relaxed mt-4 pt-4 border-t-2 border-gray-700 whitespace-pre-wrap">{labelBio}</p>
+          )}
+        </header>
+
+        <!-- Catalogue -->
+        <section aria-labelledby="label-catalogue-heading">
+          <h2 id="label-catalogue-heading" class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-4 md:mb-6 pb-3 border-b-2 border-red-600 drop-shadow-lg">
+            Releases
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {labelReleases.map((release) => (
+              <div>
+                <ReleasePlate {...release} />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {labelMixes.length > 0 && (
+          <section class="mt-8" aria-labelledby="label-mixes-heading">
+            <h2 id="label-mixes-heading" class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-4 pb-3 border-b-2 border-red-600 drop-shadow-lg">
+              Mixes
+            </h2>
+            <ul class="space-y-2">
+              {labelMixes.map((m) => (
+                <li>
+                  <a href={`/dj-mix/${m.id}/`} class="text-red-400 hover:text-red-300 underline text-sm md:text-base font-semibold">
+                    {String(m.title || 'DJ Mix')}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <p class="text-gray-400 text-sm mt-8">
+          Browse the full catalogue on <a href="/releases/" class="text-red-400 hover:text-red-300 underline font-semibold">All Releases</a>,
+          or dig second-hand vinyl in <a href="/crates/" class="text-red-400 hover:text-red-300 underline font-semibold">Crates</a>.
+        </p>
+      </div>
+    </main>
+  ) : (
+    <main class="min-h-screen flex items-center justify-center px-4">
+      <div class="text-center">
+        <h1 class="text-3xl font-black text-white uppercase mb-3">Label Not Found</h1>
+        <p class="text-gray-300 mb-6">We couldn't find that label on Fresh Wax.</p>
+        <a href="/releases/" class="text-red-400 hover:text-red-300 underline font-bold">Browse all releases</a>
+      </div>
+    </main>
+  )}
+
+  <Footer />
+</Layout>

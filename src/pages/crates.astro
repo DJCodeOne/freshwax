@@ -5,6 +5,7 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import PageLoader from '../components/PageLoader.astro';
+import CategorySeoBlock from '../components/CategorySeoBlock.astro';
 
 export const prerender = false;
 
@@ -20,7 +21,16 @@ const faqs = [
   {
     question: "What condition grading system do you use?",
     answer: "We use the standard Goldmine grading system: Mint (M), Near Mint (NM), Very Good Plus (VG+), Very Good (VG), Good (G), and Fair (F). Each listing includes detailed condition notes."
+  },
+  {
+    question: "Can I sell my own vinyl on Crates?",
+    answer: "Yes — record shops, stockists and collectors can list vinyl on Crates. Hit Sell Your Vinyl to get started: you grade the condition, set the price, and ship directly to the buyer when it sells."
   }
+];
+
+const cratesIntro = [
+  "Crates is the Fresh Wax vinyl marketplace — a place to dig for second-hand and collector jungle, drum & bass and breakbeat records from UK stockists, shops and private collections. Every listing is condition-graded using the standard Goldmine system (media and sleeve graded separately), with audio samples where the seller has provided them, so you know exactly what's landing on your turntable.",
+  "From 90s jungle classics and rare white labels to recent represses, the crates change as sellers list new finds — if something's gone, it's gone, so if a record you've been hunting turns up, don't sleep on it. Buying works like the rest of Fresh Wax: add to bag, check out, and the seller ships the record directly to you.",
 ];
 const nonce = Astro.locals.nonce || '';
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
@@ -168,6 +178,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       </section>
     </div>
   </div>
+
+  <CategorySeoBlock heading="Second-Hand Jungle & Drum and Bass Vinyl" paragraphs={cratesIntro} faqs={faqs} />
 
   <Footer />
 </Layout>

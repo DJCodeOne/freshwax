@@ -1,0 +1,51 @@
+---
+// src/components/CategorySeoBlock.astro
+// Indexable prose + visible FAQ for category/browse pages. The category pages
+// are otherwise pure product grids — Google has products but no text
+// explaining what the page is FOR, so the buyer-intent queries ("buy jungle
+// vinyl UK", "new dnb releases"…) have nothing to rank. Pair with the `faqs`
+// prop on Layout so the FAQPage schema matches this VISIBLE content (Google
+// requires FAQ markup to reflect on-page text).
+
+interface Props {
+  heading: string;
+  paragraphs: string[];
+  faqs: { question: string; answer: string }[];
+}
+
+const { heading, paragraphs, faqs } = Astro.props;
+---
+
+<section class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12" aria-labelledby="category-seo-heading">
+  <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-4 md:p-6 mb-4 md:mb-6">
+    <h2 id="category-seo-heading" class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 border-red-600 drop-shadow-lg">
+      {heading}
+    </h2>
+    <div class="space-y-3">
+      {paragraphs.map((p) => (
+        <p class="text-gray-200 text-sm md:text-base leading-relaxed">{p}</p>
+      ))}
+    </div>
+  </div>
+
+  {faqs.length > 0 && (
+    <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-4 md:p-6">
+      <h2 class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 border-red-600 drop-shadow-lg">
+        Frequently Asked Questions
+      </h2>
+      <div class="space-y-2">
+        {faqs.map((faq) => (
+          <details class="bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 rounded shadow-inner group">
+            <summary class="cursor-pointer p-3 md:p-4 text-white text-sm md:text-base font-bold flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+              {faq.question}
+              <svg class="w-4 h-4 flex-shrink-0 text-red-500 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <p class="px-3 md:px-4 pb-3 md:pb-4 text-gray-200 text-sm md:text-base leading-relaxed">{faq.answer}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  )}
+</section>

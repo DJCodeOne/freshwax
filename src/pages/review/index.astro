@@ -1,0 +1,159 @@
+---
+// src/pages/review/index.astro
+// Landing page for review-request email links: /review/?o=<orderId>&p=<productId>&t=<token>
+// The token proves purchase (HMAC over order+product) so no login is needed.
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { getDocument } from '../../lib/firebase-rest';
+import { verifyReviewToken, reviewableOrderItems } from '../../lib/reviews';
+
+export const prerender = false;
+
+const url = new URL(Astro.request.url);
+const orderId = url.searchParams.get('o') || '';
+const productId = url.searchParams.get('p') || '';
+const token = url.searchParams.get('t') || '';
+
+const env = (Astro.locals as App.Locals).runtime?.env;
+
+let valid = false;
+let productName = '';
+let productImage = '';
+let reviewerName = '';
+
+if (orderId && productId && token && (await verifyReviewToken(env, orderId, productId, token))) {
+  const order = await getDocument('orders', orderId).catch(() => null);
+  if (order) {
+    const item = reviewableOrderItems(order).find((i) => i.productId === productId);
+    if (item) {
+      valid = true;
+      productName = item.name;
+      productImage = item.image || '';
+      reviewerName = String((order.customer as Record<string, unknown>)?.firstName || '');
+    }
+  }
+}
+
+if (!valid) Astro.response.status = 404;
+Astro.response.headers.set('X-Robots-Tag', 'noindex'); // tokenised URLs must not be indexed
+---
+
+<Layout title="Rate Your Order" description="Leave a review for your Fresh Wax order." noindex={true}>
+  <Header />
+
+  <main class="min-h-screen flex items-start justify-center px-4 py-12">
+    <div class="w-full max-w-lg">
+      {valid ? (
+        <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-5 md:p-7">
+          <h1 class="text-xl md:text-2xl font-black text-white uppercase tracking-wider mb-1 drop-shadow-lg">How was it?</h1>
+          <p class="text-gray-300 text-sm mb-5">Your review helps other junglists — and the labels — know what's good.</p>
+
+          <div class="flex items-center gap-4 bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 rounded p-3 mb-5">
+            {productImage && <img src={productImage} alt={productName} class="w-16 h-16 rounded object-cover border border-gray-600" loading="eager" />}
+            <span class="text-white font-bold text-sm md:text-base">{productName}</span>
+          </div>
+
+          <form id="reviewForm" class="space-y-4">
+            <fieldset>
+              <legend class="text-xs font-black text-gray-300 uppercase tracking-wide mb-2">Your rating</legend>
+              <div id="starRow" class="flex gap-2" role="radiogroup" aria-label="Star rating">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button type="button" class="star-btn text-3xl md:text-4xl text-gray-600 hover:text-yellow-400 transition-colors" data-value={n} aria-label={`${n} star${n === 1 ? '' : 's'}`}>★</button>
+                ))}
+              </div>
+            </fieldset>
+
+            <div>
+              <label for="reviewName" class="text-xs font-black text-gray-300 uppercase tracking-wide block mb-1">Name (shown with your review)</label>
+              <input id="reviewName" type="text" maxlength="60" value={reviewerName} class="w-full px-3 py-2 border-2 border-gray-600 bg-gray-800 text-white rounded text-sm focus:outline-none focus:border-red-600" />
+            </div>
+
+            <div>
+              <label for="reviewComment" class="text-xs font-black text-gray-300 uppercase tracking-wide block mb-1">Review (optional)</label>
+              <textarea id="reviewComment" maxlength="600" rows="4" placeholder="Heavy plates? Fits well? Say it here…" class="w-full px-3 py-2 border-2 border-gray-600 bg-gray-800 text-white rounded text-sm focus:outline-none focus:border-red-600"></textarea>
+            </div>
+
+            <button type="submit" id="submitReview" class="w-full py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-black uppercase tracking-wider rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+              Submit Review
+            </button>
+            <p id="reviewStatus" class="text-sm text-center hidden"></p>
+          </form>
+        </div>
+      ) : (
+        <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-6 text-center">
+          <h1 class="text-xl font-black text-white uppercase mb-2">Review link not valid</h1>
+          <p class="text-gray-300 text-sm mb-4">This review link has expired or isn't quite right. Reviews come from the email we send after your order arrives.</p>
+          <a href="/releases/" class="text-red-400 hover:text-red-300 underline font-bold">Back to the music</a>
+        </div>
+      )}
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<script is:inline define:vars={{ orderId, productId, token }}>
+  var rating = 0;
+  var stars = document.querySelectorAll('.star-btn');
+  var submitBtn = document.getElementById('submitReview');
+  var statusEl = document.getElementById('reviewStatus');
+
+  function paintStars() {
+    stars.forEach(function(s) {
+      var v = parseInt(s.dataset.value, 10);
+      s.style.color = v <= rating ? '#facc15' : '';
+      s.classList.toggle('text-gray-600', v > rating);
+    });
+    if (submitBtn) submitBtn.disabled = rating === 0;
+  }
+
+  stars.forEach(function(s) {
+    s.addEventListener('click', function() {
+      rating = parseInt(s.dataset.value, 10);
+      paintStars();
+    });
+  });
+
+  var form = document.getElementById('reviewForm');
+  if (form) {
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      if (!rating) return;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+      try {
+        var resp = await fetch('/api/reviews/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: orderId,
+            productId: productId,
+            token: token,
+            rating: rating,
+            name: (document.getElementById('reviewName').value || '').trim(),
+            comment: (document.getElementById('reviewComment').value || '').trim()
+          })
+        });
+        var data = await resp.json();
+        statusEl.classList.remove('hidden');
+        if (resp.ok && data.success) {
+          statusEl.textContent = 'Review published - thank you! Big up.';
+          statusEl.style.color = '#4ade80';
+          form.querySelectorAll('input,textarea,button').forEach(function(el) { el.disabled = true; });
+        } else {
+          statusEl.textContent = data.error || 'Could not save your review - try again.';
+          statusEl.style.color = '#f87171';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Review';
+        }
+      } catch (err) {
+        statusEl.classList.remove('hidden');
+        statusEl.textContent = 'Network error - try again.';
+        statusEl.style.color = '#f87171';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Review';
+      }
+    });
+  }
+</script>
