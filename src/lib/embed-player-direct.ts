@@ -8,16 +8,28 @@ import { createClientLogger } from './client-logger';
 const log = createClientLogger('EmbedPlayer:Direct');
 
 /**
+ * Byline under the track title: the selector's name for user-queued tracks,
+ * "Auto-Play" for system picks (and legacy playlist imports). Was hardcoded to
+ * "Auto-Play" for every track — user-selected tracks must credit the selector.
+ */
+function bylineText(addedByName?: string): string {
+  if (addedByName && addedByName !== 'Auto-Play' && addedByName !== 'Playlist Import') {
+    return `Selected by ${addedByName}`;
+  }
+  return 'Auto-Play';
+}
+
+/**
  * Build the audio player HTML with thumbnail and visual placeholder
  */
-export function buildAudioPlayerHTML(thumbnail: string, title: string): string {
+export function buildAudioPlayerHTML(thumbnail: string, title: string, addedByName?: string): string {
   return `
     <div id="audio-container" style="width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); overflow: hidden;">
       <img id="audio-thumbnail" src="${escapeHtml(thumbnail)}" alt="${escapeHtml(title)}" loading="eager" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; filter: blur(3px) brightness(0.6);" onerror="this.style.display='none'" />
       <div style="position: relative; z-index: 1; text-align: center; padding: 1rem; max-height: 100%; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;">
         <img src="${escapeHtml(thumbnail)}" alt="" role="presentation" loading="eager" style="display: block; width: min(150px, 40%); height: auto; aspect-ratio: 1; border-radius: 8px; object-fit: cover; box-shadow: 0 8px 32px rgba(0,0,0,0.4); margin-bottom: .75rem;" onerror="this.outerHTML='<div id=\\'audio-visualizer\\' style=\\'font-size: 4rem; animation: pulse-scale-embed 1.5s ease-in-out infinite;\\'>🎵</div>'" />
         <div id="audio-title" style="color: #fff; font-size: 1rem; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,0.8); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(title)}</div>
-        <div style="color: rgba(255,255,255,0.7); font-size: 0.75rem; margin-top: 0.25rem;">Auto-Play</div>
+        <div id="audio-byline" style="color: rgba(255,255,255,0.7); font-size: 0.75rem; margin-top: 0.25rem;">${escapeHtml(bylineText(addedByName))}</div>
       </div>
       <audio id="direct-audio" autoplay style="display: none;"></audio>
     </div>
@@ -45,7 +57,7 @@ export function buildAudioPlayerHTML(thumbnail: string, title: string): string {
  * isn't interactive; the gradient + blurred cover are opaque enough to hide the
  * video underneath.
  */
-export function buildTrackCardOverlay(thumbnail: string, title: string): string {
+export function buildTrackCardOverlay(thumbnail: string, title: string, addedByName?: string): string {
   const thumb = thumbnail || '/place-holder.webp';
   return `
     <div class="pl-track-card" style="position:absolute; inset:0; z-index:2; pointer-events:none; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); overflow:hidden;">
@@ -53,6 +65,7 @@ export function buildTrackCardOverlay(thumbnail: string, title: string): string 
       <div style="position:relative; z-index:1; text-align:center; padding:1rem; max-height:100%; overflow:hidden; display:flex; flex-direction:column; align-items:center; justify-content:center;">
         <img src="${escapeHtml(thumb)}" alt="" role="presentation" loading="eager" style="display:block; width:min(150px,40%); height:auto; aspect-ratio:1; border-radius:8px; object-fit:cover; box-shadow:0 8px 32px rgba(0,0,0,0.4); margin-bottom:.75rem;" onerror="this.outerHTML='<div style=&quot;font-size:4rem;&quot;>🎵</div>'" />
         <div class="pl-track-title" style="color:#fff; font-size:1rem; font-weight:600; text-shadow:0 2px 8px rgba(0,0,0,0.8); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(title)}</div>
+        <div class="pl-track-byline" style="color:rgba(255,255,255,0.7); font-size:0.75rem; margin-top:0.25rem; text-shadow:0 2px 8px rgba(0,0,0,0.8);">${escapeHtml(bylineText(addedByName))}</div>
       </div>
     </div>
   `;
@@ -123,7 +136,11 @@ export function setupDirectMedia(
 
   if (isAudio) {
     const thumbnail = item.thumbnail || '/place-holder.webp';
-    container.innerHTML = buildAudioPlayerHTML(thumbnail, item.title || 'Audio Track');
+    container.innerHTML = buildAudioPlayerHTML(
+      thumbnail,
+      item.title || 'Audio Track',
+      (item as { addedByName?: string }).addedByName
+    );
     const audio = document.getElementById('direct-audio') as HTMLAudioElement;
 
     audio.src = item.url;

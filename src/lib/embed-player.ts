@@ -102,7 +102,11 @@ export class EmbedPlayerManager {
     // (pointer-events:none); the card overlay is on top (also non-interactive).
     container.innerHTML =
       '<div style="position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:1;"><div id="youtube-player"></div></div>' +
-      buildTrackCardOverlay(item.thumbnail || '/place-holder.webp', item.title || 'Track');
+      buildTrackCardOverlay(
+        item.thumbnail || '/place-holder.webp',
+        item.title || 'Track',
+        (item as { addedByName?: string }).addedByName
+      );
     this.youtubePlayerReady = false;
 
     this.youtubePlayer = new YT.Player('youtube-player', {
