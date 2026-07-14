@@ -37,14 +37,13 @@ RED5_HLS_URL = "https://stream.freshwax.co.uk/live"
 # ──────────────────────────────────────────────────────────────────────
 # Cron Triggers
 # ──────────────────────────────────────────────────────────────────────
-# Pages projects do NOT support [triggers] in wrangler.toml.
-# Crons must be configured in Cloudflare Dashboard:
-#   Dashboard > Pages > freshwax > Settings > Functions > Cron Triggers
+# Pages projects do NOT support [triggers]. The scheduler is the dedicated
+# freshwax-cron Worker — see workers/freshwax-cron/ (its wrangler.toml is
+# the source of truth for the schedule; `wrangler deploy` there applies it).
 #
-# The weekly-digest cron is configured on the freshwax-api Worker instead
-# (Workers support [triggers] directly). Use the Cloudflare API to update:
-#   PUT /accounts/{id}/workers/scripts/freshwax-api/schedules
-#   (replaces ALL schedules, so include existing ones in the payload)
+# HISTORY (Jul 14 2026): schedules used to sit on the freshwax-api Worker,
+# whose scheduled() handler only console.logged — so NO cron ever actually
+# ran until freshwax-cron replaced it. Don't put schedules back there.
 #
 # ┌──────────────────┬─────────────────────────────────────┬──────────────────────────────────────────────┐
 # │ Schedule (UTC)   │ Endpoint                            │ Description                                  │
@@ -52,11 +51,9 @@ RED5_HLS_URL = "https://stream.freshwax.co.uk/live"
 # │ 0 * * * *        │ /api/cron/cleanup-reservations      │ Expire stale stock reservations (hourly)     │
 # │ 0 */6 * * *      │ /api/cron/retry-payouts             │ Retry failed Stripe/PayPal payouts (6-hourly)│
 # │ 0 */6 * * *      │ /api/cron/send-restock-notifications│ Email users when items restock (6-hourly)    │
-# │ 0 2 * * *        │ /api/cron/backup-d1                 │ Back up D1 tables to R2 as JSON (02:00);     │
-# │                  │                                     │ chains /api/cron/indexnow (sitemap diff →    │
-# │                  │                                     │ IndexNow ping to Bing/Yandex, no schedule)   │
-# │                  │                                     │ + /api/cron/review-requests (post-purchase   │
-# │                  │                                     │ review emails, tokenised links, 7d+ orders)  │
+# │ 0 2 * * *        │ /api/cron/backup-d1                 │ Back up D1 tables to R2 as JSON, then        │
+# │ 0 2 * * *        │ (runs inside freshwax-cron worker)  │ sitemap diff → IndexNow ping (Bing/Yandex),  │
+# │ 0 2 * * *        │ /api/cron/review-requests           │ then post-purchase review emails (7d+ orders)│
 # │ 0 3 * * *        │ /api/cron/cleanup-d1                │ Purge old D1 rows (03:00)                    │
 # │ 0 4 * * *        │ /api/cron/image-scan                │ Scan R2 for non-WebP images (04:00)          │
 # │ 0 10 * * *       │ /api/cron/verification-reminders    │ Remind unverified users (10:00)              │
@@ -66,8 +63,13 @@ RED5_HLS_URL = "https://stream.freshwax.co.uk/live"
 #
 # Auth: All cron endpoints require Authorization: Bearer $CRON_SECRET
 #       or X-Admin-Key header. Endpoints are listed in CSRF_SKIP (src/lib/csrf.ts).
+#       CRON_SECRET must match across: Pages project secret, freshwax-cron
+#       Worker secret, and local .env (for manual ops).
 #
-# Staging: Preview/staging deployments share the same D1/KV/R2 bindings.
-#          Use CRON_SECRET to test cron endpoints manually via curl:
-#            curl -X POST https://staging.freshwax.pages.dev/api/cron/cleanup-reservations \
-#              -H "Authorization: Bearer $CRON_SECRET"
+# Manual run: POST https://freshwax.co.uk/api/cron/<job>/ with the bearer, or
+#             https://freshwax-cron.davidhagon.workers.dev/run/<job> (same bearer).
+#
+# GOTCHA: cron endpoints must NEVER fetch https://freshwax.co.uk/* — a Pages
+# Function fetching its own hostname 502s intermittently. Also, Pages egress
+# to api.indexnow.org dies with a platform 502 (bisected Jul 14 2026), which
+# is why the IndexNow job lives inside the freshwax-cron worker, not here.

@@ -7,7 +7,7 @@
 // biggest SERP click-through lever, and GSC flags our products as missing
 // them. Only verified purchasers get links, so the schema stays legitimate.
 //
-// Trigger: chained from the daily backup-d1 cron alongside indexnow.
+// Trigger: called by the freshwax-cron worker daily at 02:00 UTC.
 // Query shape: single inequality on createdAt (auto index), everything else
 // filtered in-process — avoids the Firestore composite-index trap.
 

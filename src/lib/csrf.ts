@@ -37,7 +37,6 @@ const CSRF_SKIP = new Set([
   '/api/cron/verification-reminders/',
   '/api/cron/cleanup-d1/',
   '/api/cron/stock-alerts/',
-  '/api/cron/indexnow/',
   '/api/cron/review-requests/',
   '/api/health/index/',
   '/api/health/payments/',

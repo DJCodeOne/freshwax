@@ -151,27 +151,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const timestamp = new Date().toISOString();
     const results: Record<string, { rows: number } | { error: string }> = {};
 
-    // Backup all tables in parallel
-    const backupResults = await Promise.allSettled(
-      BACKUP_TABLES.map(async (table) => {
-        try {
-          const data = await fetchAllRows(db, table);
-          const key = `backups/d1/${table}/${timestamp}.json`;
-          await r2.put(key, JSON.stringify(data, null, 2), {
-            httpMetadata: {
-              contentType: 'application/json',
-              cacheControl: 'private, max-age=86400',
-            },
-          });
-          log.info(`[Backup D1] ${table}: backed up ${data.length} rows to ${key}`);
-          results[table] = { rows: data.length };
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : String(err);
-          log.error(`[Backup D1] ${table} backup failed:`, message);
-          results[table] = { error: 'backup failed' };
-        }
-      })
-    );
+    // Backup tables sequentially — a Worker gets ~6 concurrent D1
+    // connections, so a 20-way parallel burst makes random tables fail.
+    for (const table of BACKUP_TABLES) {
+      try {
+        const data = await fetchAllRows(db, table);
+        const key = `backups/d1/${table}/${timestamp}.json`;
+        await r2.put(key, JSON.stringify(data, null, 2), {
+          httpMetadata: {
+            contentType: 'application/json',
+            cacheControl: 'private, max-age=86400',
+          },
+        });
+        log.info(`[Backup D1] ${table}: backed up ${data.length} rows to ${key}`);
+        results[table] = { rows: data.length };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        log.error(`[Backup D1] ${table} backup failed:`, message);
+        results[table] = { error: message.slice(0, 120) };
+      }
+    }
 
     // Retention cleanup — delete backups older than 30 days
     let deletedCount = 0;
@@ -189,32 +188,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('[Backup D1] ========== COMPLETED ==========');
     log.info(`[Backup D1] Duration: ${duration}ms`);
 
-    // Chained daily job: IndexNow submit (diffs the sitemap, pings changed
-    // URLs to Bing/Yandex). Piggybacks this cron so no extra schedule is
-    // needed; awaited because fire-and-forget is killed in Workers.
-    try {
-      const cronSecret = env?.CRON_SECRET || import.meta.env.CRON_SECRET;
-      const inRes = await fetch('https://freshwax.co.uk/api/cron/indexnow/', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${cronSecret}` },
-      });
-      log.info(`[Backup D1] Chained IndexNow submit: ${inRes.status}`);
-    } catch (err: unknown) {
-      log.error('[Backup D1] Chained IndexNow submit failed:', err instanceof Error ? err.message : String(err));
-    }
-
-    // Chained daily job: review request emails (~7 days post-order, tokenised
-    // per-item links; see /api/cron/review-requests).
-    try {
-      const cronSecret2 = env?.CRON_SECRET || import.meta.env.CRON_SECRET;
-      const rrRes = await fetch('https://freshwax.co.uk/api/cron/review-requests/', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${cronSecret2}` },
-      });
-      log.info(`[Backup D1] Chained review-requests: ${rrRes.status}`);
-    } catch (err: unknown) {
-      log.error('[Backup D1] Chained review-requests failed:', err instanceof Error ? err.message : String(err));
-    }
+    // NOTE: indexnow + review-requests used to be chained here via
+    // self-fetch. The freshwax-cron worker now runs both on the same 02:00
+    // trigger (indexnow lives inside the worker itself — Pages egress to
+    // api.indexnow.org dies with a platform 502). Don't reintroduce either.
 
     return successResponse({ duration, timestamp, tables: results, retentionCleanup: { deletedCount } });
   } finally {

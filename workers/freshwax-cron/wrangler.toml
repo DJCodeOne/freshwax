@@ -1,0 +1,38 @@
+# freshwax-cron — the ONLY scheduler for the site's /api/cron/* endpoints.
+#
+# WHY THIS EXISTS (Jul 14 2026): the freshwax-api worker carried the cron
+# schedules in name only — its scheduled() handler just console.logged and
+# never called any endpoint, so backup-d1 / cleanup-d1 / retry-payouts /
+# restock notifications / verification-reminders NEVER ran (verified: zero
+# backups/d1/ objects in R2, 4 months of unpurged error_logs). This worker
+# does exactly one thing: map each cron trigger to its Pages endpoint and
+# call it with Bearer CRON_SECRET.
+#
+# Secrets: CRON_SECRET (must equal the Pages project's CRON_SECRET).
+#   wrangler secret put CRON_SECRET   (in this directory)
+#
+# The schedule table below is the source of truth (wrangler deploy applies it).
+
+name = "freshwax-cron"
+main = "src/index.ts"
+compatibility_date = "2025-02-13"
+
+[triggers]
+crons = [
+  "0 * * * *",    # hourly    -> cleanup-reservations
+  "0 */6 * * *",  # 6-hourly  -> retry-payouts + send-restock-notifications
+  "0 2 * * *",    # 02:00     -> backup-d1, indexnow, review-requests (in order)
+  "0 3 * * *",    # 03:00     -> cleanup-d1
+  "0 4 * * *",    # 04:00     -> image-scan
+  "0 10 * * *",   # 10:00     -> verification-reminders
+  "0 10 * * SUN", # Sun 10:00 -> weekly-digest (CF rejects numeric day-of-week here)
+]
+
+# Shared with the Pages project's CACHE namespace — holds the IndexNow
+# sitemap snapshot (indexnow:sitemap-snapshot).
+[[kv_namespaces]]
+binding = "CACHE"
+id = "349d1fd00f3d4de9811529cc96fd4d8b"
+
+[observability]
+enabled = true
