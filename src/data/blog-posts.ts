@@ -23,6 +23,60 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: 'pre-orders-now-live',
+    title: 'Pre-Orders Are Now Live on Fresh Wax',
+    excerpt: 'Lock in upcoming jungle and drum & bass releases before they drop — pay upfront and get your downloads the moment it\'s out, or set a free release-day reminder with one click. Here\'s how it works for buyers, labels and artists.',
+    featuredImage: '/blog-pre-orders-now-live.webp',
+    ogImage: '/blog-pre-orders-now-live-og.jpg',
+    ogImageWidth: 1200,
+    ogImageHeight: 630,
+    category: 'Updates',
+    publishedAt: '2026-07-14',
+    author: 'Fresh Wax',
+    tags: ['pre-order', 'preorder vinyl', 'jungle', 'drum and bass', 'new releases', 'fresh wax updates'],
+    content: `
+      <p><strong>Pre-orders are live across the whole store.</strong> From today, any release scheduled for a future date can be bought before it drops — digital or vinyl — and if you're not ready to commit, you can set a <strong>free release-day reminder</strong> instead with one click. No pressure, no payment, just a nudge the morning it lands. Here's how the whole thing works, whichever side of the counter you're on.</p>
+
+      <h2>For Buyers: Two Ways to Never Miss a Release</h2>
+      <p>When a release is scheduled ahead of its street date, you'll spot it easily: the artwork carries an orange <strong>Pre-order</strong> badge with a countdown, and the buy buttons turn orange wherever you find the record — the <a href="/releases/">releases grid</a>, the release's own page, or the dedicated <a href="/pre-orders/">Pre-Orders hub</a> (you'll find that in the header menu and the footer too).</p>
+      <p>From there you've got two options:</p>
+      <ul>
+        <li><strong>Pre-order it.</strong> Pay now — same price as release day, no premium — and your copy is locked in. Your downloads sit safely in your account showing exactly when they unlock, and at release-day o'clock the order completes itself: downloads open up and an email lands in your inbox with everything ready to grab. Vinyl pre-orders work the same way, with your record reserved from the pressing.</li>
+        <li><strong>Set a free reminder.</strong> Under every pre-order button there's a second option: <em>"Not ready to buy? Get a release-day reminder — free."</em> One click (you'll need a free Fresh Wax account, so we know where to send it) and we'll email you the morning it's out with a link straight to the release. One email, no follow-ups, no strings.</li>
+      </ul>
+      <p>Either way, you'll never find out about a release two weeks late again.</p>
+
+      <h2>For Labels &amp; Artists: One Date Does Everything</h2>
+      <p>There's nothing new to learn and no extra buttons to press. When you upload a release, just give it a <strong>release date in the future</strong> — that's it. The moment it's approved, the entire store flips into pre-order mode for you automatically:</p>
+      <ul>
+        <li>Your release appears on the <a href="/pre-orders/">Pre-Orders hub</a> and across the store with the countdown badge.</li>
+        <li>Buyers can pay upfront from day one — money in before the release is even out.</li>
+        <li>Downloads stay locked until your street date, so nothing leaks early. On the day, every pre-order completes and every buyer gets their music automatically — nothing for you to send out.</li>
+        <li>The free reminder list quietly counts heads in the background. That's real demand data: if you're weighing up a vinyl pressing, ask us how much interest a release is pulling and we'll share the numbers.</li>
+      </ul>
+      <p>Pre-orders count like any other sale — same splits, same payouts, same everything. The only difference is when the money arrives: earlier.</p>
+
+      <h2>Why Bother Pre-Ordering?</h2>
+      <ul>
+        <li><strong>Guaranteed copy</strong> — vinyl runs in this scene are small and gone fast. A pre-order is your name on one before the pressing sells through.</li>
+        <li><strong>Same price</strong> — pre-ordering costs exactly what it'll cost on release day.</li>
+        <li><strong>Zero effort on the day</strong> — the music turns up in your account and inbox while you're still asleep.</li>
+        <li><strong>It backs the release</strong> — early sales tell a label their record is landing, and that keeps the records coming.</li>
+      </ul>
+
+      <h2>Quick Answers</h2>
+      <ul>
+        <li><strong>When am I charged?</strong> Immediately, at pre-order — it's a normal checkout. The wait is only for the music.</li>
+        <li><strong>When do I get my downloads?</strong> The moment the release date arrives, automatically — you'll get an email, and they'll be waiting in your <a href="/account/dashboard/">account</a>.</li>
+        <li><strong>Does the free reminder cost anything or sign me up to a mailing list?</strong> No and no. It's one email about that one release, ever.</li>
+        <li><strong>Do I need an account?</strong> For the free reminder, yes (it's where we get your email). For pre-ordering — same as any purchase.</li>
+        <li><strong>I run a label — how do I get my next release up as a pre-order?</strong> Upload as normal and set the release date ahead. Not on Fresh Wax yet? <a href="/contact/">Get in touch</a> or <a href="/register/">create an account</a> and apply from your dashboard.</li>
+      </ul>
+
+      <p>The first pre-orders will be appearing on the <a href="/pre-orders/">hub</a> as labels schedule their next drops — keep an eye on it, or just wait for the orange badges to find you.</p>
+    `
+  },
+  {
     slug: 'jungle-vs-drum-and-bass',
     title: 'Jungle vs Drum & Bass: What\'s the Difference?',
     excerpt: 'Same family, different animals. How jungle became drum & bass, what actually separates them — drums, bass, culture — and which word to use without getting corrected.',
