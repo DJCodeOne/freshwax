@@ -36,6 +36,19 @@ try {
   errorMessage = error instanceof Error ? error.message : 'Unknown error';
 }
 
+// Free "notify me on release" signups per release (demand signal for
+// pre-orders / pressing decisions). One query, grouped here — non-critical.
+const interestCounts: Record<string, number> = {};
+try {
+  const interest = await queryCollection('releaseInterest', { skipCache: true, limit: 1000 });
+  for (const sub of interest) {
+    const rid = String(sub.releaseId || '');
+    if (rid) interestCounts[rid] = (interestCounts[rid] || 0) + 1;
+  }
+} catch (e) {
+  console.error('[MANAGE] Error loading release interest counts:', e);
+}
+
 // Stats
 const totalReleases = releases.length;
 const liveReleases = releases.filter(r => r.status === 'live').length;
@@ -194,6 +207,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                   <span class={`badge badge-${release.status || 'draft'}`}>
                     {release.status || 'draft'}
                   </span>
+                  {interestCounts[String(release.id)] > 0 && (
+                    <div class="cell-secondary" title="Release-day reminder signups (free interest, no payment)">
+                      🔔 {interestCounts[String(release.id)]} interested
+                    </div>
+                  )}
                 </td>
                 <td class="cell-secondary">
                   {formatDate(release.processedAt || release.createdAt)}
