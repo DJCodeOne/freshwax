@@ -122,6 +122,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Item not found in order');
     }
 
+    // SECURITY: pre-order audio is embargoed until release day. Gate on the
+    // item's own releaseDate (not order status) so downloads unlock on time
+    // even if the release-preorders cron hasn't flipped the order yet.
+    // Artwork is fine — it's public on the item page anyway.
+    if (item.isPreOrder && fileType !== 'artwork') {
+      const embargoRaw = item.releaseDate || order.preOrderDeliveryDate;
+      const embargo = embargoRaw ? new Date(String(embargoRaw)) : null;
+      if (embargo && !isNaN(embargo.getTime()) && embargo.getTime() > Date.now()) {
+        return ApiErrors.forbidden(`Pre-order locked until ${embargo.toISOString().split('T')[0]}`);
+      }
+    }
+
     // Resolve file URL
     let fileUrl: string | null = null;
 

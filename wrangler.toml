@@ -54,6 +54,7 @@ RED5_HLS_URL = "https://stream.freshwax.co.uk/live"
 # │ 0 2 * * *        │ /api/cron/backup-d1                 │ Back up D1 tables to R2 as JSON, then        │
 # │ 0 2 * * *        │ (runs inside freshwax-cron worker)  │ sitemap diff → IndexNow ping (Bing/Yandex),  │
 # │ 0 2 * * *        │ /api/cron/review-requests           │ then post-purchase review emails (7d+ orders)│
+# │ 0 2 * * *        │ /api/cron/release-preorders         │ then complete due pre-orders + notify buyers │
 # │ 0 3 * * *        │ /api/cron/cleanup-d1                │ Purge old D1 rows (03:00)                    │
 # │ 0 4 * * *        │ /api/cron/image-scan                │ Scan R2 for non-WebP images (04:00)          │
 # │ 0 10 * * *       │ /api/cron/verification-reminders    │ Remind unverified users (10:00)              │

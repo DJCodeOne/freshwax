@@ -481,7 +481,10 @@ const firebaseConfig = {
       
       // Use status (new) or orderStatus (legacy) for compatibility
       var orderStatus = order.status || order.orderStatus;
+      // awaiting_release = paid pre-order still under embargo; the paymentStatus
+      // fallback must not defeat that gate (downloads unlock on release day)
       var canDownload = hasDigital &&
+        orderStatus !== 'awaiting_release' &&
         (orderStatus === 'completed' || orderStatus === 'paid' || order.paymentStatus === 'completed' || order.paymentStatus === 'paid');
       
       // Build tracking section for shipped/delivered orders

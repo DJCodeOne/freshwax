@@ -451,14 +451,20 @@ export function renderDownloads(ordersList) {
 
   // Extract all digital items from orders with orderId for secure downloads
   var allDownloads = [];
+  var nowMs = Date.now();
   (ordersList || []).forEach(function(order) {
     (order.items || []).forEach(function(item) {
       if (item.downloads?.tracks?.length > 0 || item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.type === 'vinyl') {
+        // Pre-orders stay locked until their release date (server enforces this too)
+        var lockDate = item.isPreOrder ? (item.releaseDate || order.preOrderDeliveryDate) : null;
+        var locked = !!(lockDate && new Date(lockDate).getTime() > nowMs);
         allDownloads.push({
           ...item,
           orderId: order.id, // Include orderId for presigned URL requests
           orderNumber: order.orderNumber,
-          orderDate: order.createdAt
+          orderDate: order.createdAt,
+          locked: locked,
+          lockDate: lockDate
         });
       }
     });
@@ -511,6 +517,28 @@ export function renderDownloads(ordersList) {
     var orderDate = item.orderDate ? new Date(item.orderDate).toLocaleDateString('en-GB', {
       day: 'numeric', month: 'short', year: 'numeric'
     }) : '';
+
+    // Locked pre-order: show the card but no download buttons until release day
+    if (item.locked) {
+      var unlockDate = item.lockDate ? new Date(item.lockDate).toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'short', year: 'numeric'
+      }) : 'release day';
+      var lockedArtist = item.downloads?.artistName || item.artist || '';
+      var lockedName = item.downloads?.releaseName || item.name || '';
+      var lockedDisplay = lockedArtist ? lockedArtist + ' - ' + lockedName : lockedName;
+      return '<div class="download-card" style="opacity:0.75;">' +
+        '<div class="download-header">' +
+          '<img src="' + escapeHtml(item.image || item.downloads?.artworkUrl || '/place-holder.webp') + '" alt="' + escapeHtml(lockedDisplay) + '" class="download-art" width="80" height="80" loading="lazy" decoding="async">' +
+          '<div class="download-info">' +
+            '<h4>' + escapeHtml(lockedDisplay) + '</h4>' +
+            '<p>Pre-order &middot; ' + escapeHtml(orderDate) + '</p>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.3);border-radius:8px;color:#fca5a5;font-size:13px;font-weight:600;">' +
+          '🔒 Unlocks on ' + escapeHtml(unlockDate) + ' — we’ll email you on release day' +
+        '</div>' +
+      '</div>';
+    }
 
     var artistName = item.downloads?.artistName || item.artist || '';
     var releaseName = item.downloads?.releaseName || item.name || '';

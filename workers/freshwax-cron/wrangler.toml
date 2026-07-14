@@ -21,7 +21,7 @@ compatibility_date = "2025-02-13"
 crons = [
   "0 * * * *",    # hourly    -> cleanup-reservations
   "0 */6 * * *",  # 6-hourly  -> retry-payouts + send-restock-notifications
-  "0 2 * * *",    # 02:00     -> backup-d1, indexnow, review-requests (in order)
+  "0 2 * * *",    # 02:00     -> backup-d1, indexnow, review-requests, release-preorders (in order)
   "0 3 * * *",    # 03:00     -> cleanup-d1
   "0 4 * * *",    # 04:00     -> image-scan
   "0 10 * * *",   # 10:00     -> verification-reminders
