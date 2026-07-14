@@ -39,6 +39,7 @@ const CSRF_SKIP = new Set([
   '/api/cron/stock-alerts/',
   '/api/cron/review-requests/',
   '/api/cron/release-preorders/',
+  '/api/cron/notify-release-interest/',
   '/api/health/index/',
   '/api/health/payments/',
   // Pusher channel auth — Pusher JS library uses its own XHR transport,

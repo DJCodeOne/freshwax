@@ -693,6 +693,19 @@ if (release) {
                   })}
                 </div>
 
+                {isPreOrder && (
+                  <div class="notify-release-row mt-3" data-release-id={id}>
+                    <button type="button" class="notify-release-btn w-full text-sm font-semibold text-gray-400 hover:text-white border border-dashed border-gray-500 hover:border-red-600 rounded-lg px-3 py-2.5 transition-colors cursor-pointer bg-transparent">
+                      🔔 Not ready to buy? Get a release-day reminder — free
+                    </button>
+                    <form class="notify-release-form flex gap-2" hidden>
+                      <input type="email" class="notify-release-email flex-1 min-w-0 bg-white/10 border border-white/20 focus:border-red-600 outline-none rounded-lg text-white text-sm px-3 py-2.5" placeholder="your@email.com" autocomplete="email" required maxlength="320" />
+                      <button type="submit" class="notify-release-submit bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg px-4 py-2.5 disabled:opacity-60 cursor-pointer border-0">Remind me</button>
+                    </form>
+                    <p class="notify-release-done text-green-400 text-sm font-semibold text-center mb-0" hidden></p>
+                  </div>
+                )}
+
               </div>
 
               {additionalArtwork && additionalArtwork.length > 0 && (
@@ -3036,4 +3049,61 @@ if (release) {
   }
   document.addEventListener('astro:page-load', init);
 })();
+</script>
+
+<script>
+  // Free release-day reminder for pre-order releases (see /api/notify-release)
+  (function() {
+    function initNotifyRelease() {
+      document.querySelectorAll('.notify-release-row').forEach(function(row) {
+        if ((row as HTMLElement).dataset.notifyWired) return;
+        (row as HTMLElement).dataset.notifyWired = '1';
+        const trigger = row.querySelector('.notify-release-btn') as HTMLButtonElement | null;
+        const form = row.querySelector('.notify-release-form') as HTMLFormElement | null;
+        const emailInput = row.querySelector('.notify-release-email') as HTMLInputElement | null;
+        const done = row.querySelector('.notify-release-done') as HTMLElement | null;
+        if (!trigger || !form || !emailInput || !done) return;
+
+        trigger.addEventListener('click', function() {
+          trigger.hidden = true;
+          form.hidden = false;
+          const w = window as unknown as { currentUserInfo?: { email?: string } };
+          const known = (w.currentUserInfo && w.currentUserInfo.email) || localStorage.getItem('fw-notify-email') || '';
+          if (known) emailInput.value = known;
+          emailInput.focus();
+        });
+
+        form.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const email = emailInput.value.trim();
+          if (!email) return;
+          const submitBtn = form.querySelector('.notify-release-submit') as HTMLButtonElement | null;
+          if (submitBtn) submitBtn.disabled = true;
+          try {
+            const res = await fetch('/api/notify-release/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: email, releaseId: (row as HTMLElement).dataset.releaseId })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
+            try { localStorage.setItem('fw-notify-email', email); } catch (_e) { /* private mode */ }
+            form.hidden = true;
+            done.textContent = '✓ ' + (data.message || "Sorted — we'll email you on release day");
+            done.hidden = false;
+          } catch (err) {
+            if (submitBtn) submitBtn.disabled = false;
+            done.textContent = 'Something went wrong — try again in a minute';
+            done.hidden = false;
+          }
+        });
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initNotifyRelease);
+    } else {
+      initNotifyRelease();
+    }
+    document.addEventListener('astro:page-load', initNotifyRelease);
+  })();
 </script>

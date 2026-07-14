@@ -23,7 +23,7 @@ const JOBS: Record<string, string[]> = {
   '0 * * * *': ['cleanup-reservations'],
   '0 */6 * * *': ['retry-payouts', 'send-restock-notifications'],
   // 02:00 daily chain — order matters: backup first, then SEO ping, then emails
-  '0 2 * * *': ['backup-d1', 'indexnow', 'review-requests', 'release-preorders'],
+  '0 2 * * *': ['backup-d1', 'indexnow', 'review-requests', 'release-preorders', 'notify-release-interest'],
   '0 3 * * *': ['cleanup-d1'],
   '0 4 * * *': ['image-scan'],
   '0 10 * * *': ['verification-reminders'],

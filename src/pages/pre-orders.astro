@@ -190,7 +190,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   <span class="price">£{getPrice(release).toFixed(2)}</span>
                 </div>
                 
-                <button 
+                <button
                   class="preorder-btn"
                   data-release-id={release.id}
                   data-title={release.releaseName}
@@ -204,6 +204,16 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   </svg>
                   Pre-order Now
                 </button>
+              </div>
+
+              <!-- Free release reminder (no payment) -->
+              <div class="notify-release-row" data-release-id={release.id}>
+                <button type="button" class="notify-release-btn">🔔 Not ready to buy? Get a release-day reminder — free</button>
+                <form class="notify-release-form" hidden>
+                  <input type="email" class="notify-release-email" placeholder="your@email.com" autocomplete="email" required maxlength="320" />
+                  <button type="submit" class="notify-release-submit">Remind me</button>
+                </form>
+                <p class="notify-release-done" hidden></p>
               </div>
             </article>
           ))}
@@ -321,6 +331,67 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   @keyframes pulse-preorder {
     0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
     50% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+  }
+
+  /* Free release-day reminder row */
+  .notify-release-row {
+    padding: 0 1.25rem 1.1rem;
+  }
+  .notify-release-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    color: #9ca3af;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .notify-release-btn:hover {
+    border-color: rgba(220, 38, 38, 0.6);
+    color: #fff;
+  }
+  .notify-release-form {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .notify-release-email {
+    flex: 1;
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 0.55rem 0.75rem;
+  }
+  .notify-release-email:focus {
+    outline: none;
+    border-color: #dc2626;
+  }
+  .notify-release-submit {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.55rem 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .notify-release-submit:disabled {
+    opacity: 0.6;
+    cursor: wait;
+  }
+  .notify-release-done {
+    margin: 0;
+    color: #4ade80;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
   }
   
   .hero-badge svg {
@@ -796,7 +867,52 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', function() {
     initPreorderButtons();
+    initNotifyRelease();
   });
+
+  // Free release-day reminders — email capture, no payment (see /api/notify-release)
+  function initNotifyRelease() {
+    document.querySelectorAll('.notify-release-row').forEach(function(row) {
+      const trigger = row.querySelector('.notify-release-btn');
+      const form = row.querySelector('.notify-release-form');
+      const emailInput = row.querySelector('.notify-release-email');
+      const done = row.querySelector('.notify-release-done');
+      if (!trigger || !form || !emailInput || !done) return;
+
+      trigger.addEventListener('click', function() {
+        trigger.hidden = true;
+        form.hidden = false;
+        const known = (window.currentUserInfo && window.currentUserInfo.email) || localStorage.getItem('fw-notify-email') || '';
+        if (known) emailInput.value = known;
+        emailInput.focus();
+      });
+
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = emailInput.value.trim();
+        if (!email) return;
+        const submitBtn = form.querySelector('.notify-release-submit');
+        if (submitBtn) submitBtn.disabled = true;
+        try {
+          const res = await fetch('/api/notify-release/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, releaseId: row.dataset.releaseId })
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) throw new Error(data.error || 'Failed');
+          try { localStorage.setItem('fw-notify-email', email); } catch (_e) { /* private mode */ }
+          form.hidden = true;
+          done.textContent = '✓ ' + (data.message || "Sorted — we'll email you on release day");
+          done.hidden = false;
+        } catch (err) {
+          if (submitBtn) submitBtn.disabled = false;
+          done.textContent = 'Something went wrong — try again in a minute';
+          done.hidden = false;
+        }
+      });
+    });
+  }
   
   function initPreorderButtons() {
     const buttons = document.querySelectorAll('.preorder-btn');
