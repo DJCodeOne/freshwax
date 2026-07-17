@@ -82,6 +82,9 @@ const CSRF_SKIP = new Set([
   // Listener tracking — public endpoint for join/leave/heartbeat.
   // Uses sendBeacon (no CSRF header) and anonymous viewer tracking.
   '/api/livestream/listeners/',
+  // RFC 8058 one-click unsubscribe — POSTed by Gmail/Yahoo, not by our pages,
+  // so no CSRF cookie exists. Authorised by the per-recipient HMAC token.
+  '/api/newsletter/one-click/',
 ]);
 
 /**

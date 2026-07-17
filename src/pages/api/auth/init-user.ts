@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument, setDocument, queryCollection } from '../../../lib/firebase-rest';
 import { errorResponse, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { recordMarketingConsent } from '../../../lib/newsletter-consent';
 
 const log = createLogger('auth/init-user');
 
@@ -16,6 +17,7 @@ const InitUserSchema = z.object({
   email: z.string().email().max(320).optional(),
   provider: z.enum(['email', 'Google']).optional(),
   photoURL: z.string().url().max(2048).optional().nullable(),
+  marketingConsent: z.boolean().optional(),
   requestArtist: z.boolean().optional(),
   requestMerchSeller: z.boolean().optional(),
   requestVinylSeller: z.boolean().optional(),
@@ -67,6 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     email,
     provider,
     photoURL,
+    marketingConsent,
     requestArtist,
     requestMerchSeller,
     requestVinylSeller,
@@ -221,6 +224,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         emailVerified: false,
         createdAt: now,
         updatedAt: now,
+        // Marketing consent as given at signup. The `subscribers` doc is the
+        // list of record for sending; this is the per-user audit trail.
+        marketingConsent: marketingConsent === true,
+        marketingConsentAt: marketingConsent === true ? now : null,
+        marketingConsentSource: marketingConsent === true ? 'register' : null,
         roles: {
           customer: true,
           dj: true,
@@ -264,6 +272,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Save user document
       await setDocument('users', userId, userData);
+
+      // Add to the newsletter list if they ticked the box. Awaited (not
+      // fire-and-forget — Workers kill bare async) but never allowed to fail
+      // the registration.
+      if (marketingConsent === true) {
+        await recordMarketingConsent({
+          email: email || authEmail || '',
+          name: displayName,
+          source: 'register',
+          ip: clientId,
+        });
+      }
 
       // Write pending role requests to separate collection (for REST API access / admin)
       const rolePromises: Promise<unknown>[] = [];

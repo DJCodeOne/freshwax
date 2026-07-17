@@ -258,6 +258,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <input type="checkbox" id="agreeTerms" name="agreeTerms" required aria-required="true">
             <span>I agree to the <a href="/terms/" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a></span>
           </label>
+          {/* Marketing consent — optional and NOT pre-ticked. A pre-ticked box is
+              not valid consent under UK GDPR (Recital 32 / Planet49). Leave unchecked. */}
+          <label class="checkbox-label">
+            <input type="checkbox" id="marketingConsent" name="marketingConsent">
+            <span>Email me about new releases, DJ mixes and live streams. Unsubscribe any time.</span>
+          </label>
         </div>
 
         <button type="submit" class="btn btn-primary btn-full" id="submitBtn">
@@ -1311,6 +1317,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const requestArtist = artistCheckbox.checked;
       const requestMerchSeller = merchCheckbox.checked;
       const requestVinylSeller = vinylCheckbox.checked;
+      const marketingConsent = document.getElementById('marketingConsent').checked;
 
       let firstErrorField = null;
 
@@ -1410,6 +1417,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             email: normalizedEmail,
             displayName: displayName,
             provider: 'email',
+            marketingConsent: marketingConsent,
             requestArtist: requestArtist,
             requestMerchSeller: requestMerchSeller,
             requestVinylSeller: requestVinylSeller,

@@ -1,12 +1,29 @@
 ---
 // src/pages/unsubscribe.astro
-// Public unsubscribe page for newsletter recipients
+// Public unsubscribe page for newsletter recipients.
+//
+// Two ways in:
+//  1. Tokenised link from an email footer (?e=&t=) — we verify the HMAC and show
+//     a single confirm button. No retyping, and nothing happens on the GET itself
+//     (mailbox link-scanners fetch every URL in an email; acting on GET would
+//     unsubscribe people who never clicked).
+//  2. Bare visit — fall back to the manual "type your email" form.
 import Layout from '../layouts/Layout.astro';
+import { verifyUnsubscribeToken, normalizeEmail } from '../lib/newsletter-tokens';
 
 export const prerender = false;
 
-const email = Astro.url.searchParams.get('email') || '';
+// `email` is the legacy param from pre-token sends still sitting in mailboxes.
+const tokenEmail = normalizeEmail(Astro.url.searchParams.get('e') || '');
+const token = Astro.url.searchParams.get('t') || '';
+const email = tokenEmail || Astro.url.searchParams.get('email') || '';
+
+const env = Astro.locals.runtime?.env;
+const hasValidToken = Boolean(tokenEmail && token) &&
+  await verifyUnsubscribeToken(env, tokenEmail, token);
+
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+Astro.response.headers.set('X-Robots-Tag', 'noindex');
 ---
 
 <Layout title="Unsubscribe from Newsletter" description="Unsubscribe from Fresh Wax newsletter emails. You can resubscribe at any time from our website." noindex={true}>
@@ -20,37 +37,46 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <p class="text-gray-300">We're sorry to see you go!</p>
       </div>
       
-      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800" data-email={hasValidToken ? tokenEmail : ''} data-token={hasValidToken ? token : ''} id="unsubscribeRoot">
         <div id="unsubscribeForm">
-          <p class="text-gray-300 mb-4">
-            Enter your email address to unsubscribe from our newsletter.
-          </p>
-          
-          <div class="mb-4">
-            <label for="email" class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              required
-              aria-required="true"
-              autocomplete="email"
-              class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
-              placeholder="your@email.com"
-            />
-          </div>
-          
-          <button 
+          {hasValidToken ? (
+            <p class="text-gray-300 mb-4">
+              Unsubscribing <strong class="text-white">{tokenEmail}</strong> from the Fresh Wax newsletter.
+              You'll still get emails about orders you place.
+            </p>
+          ) : (
+            <p class="text-gray-300 mb-4">
+              Enter your email address to unsubscribe from our newsletter.
+            </p>
+          )}
+
+          {!hasValidToken && (
+            <div class="mb-4">
+              <label for="email" class="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                required
+                aria-required="true"
+                autocomplete="email"
+                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors"
+                placeholder="your@email.com"
+              />
+            </div>
+          )}
+
+          <button
             id="unsubscribeBtn"
             type="button"
             class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors"
           >
-            Unsubscribe
+            {hasValidToken ? 'Confirm unsubscribe' : 'Unsubscribe'}
           </button>
-          
+
           <div id="message" class="mt-4 text-center hidden"></div>
         </div>
-        
+
         <div id="successState" class="hidden text-center">
           <div class="text-green-500 text-5xl mb-4">✓</div>
           <h2 class="text-xl font-bold text-white mb-2">You've been unsubscribed</h2>
@@ -76,25 +102,37 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const form = document.getElementById('unsubscribeForm') as HTMLDivElement;
     const successState = document.getElementById('successState') as HTMLDivElement;
     
-    const email = emailInput.value.trim();
-    
+    const root = document.getElementById('unsubscribeRoot') as HTMLDivElement;
+    const tokenEmail = root?.dataset.email || '';
+    const token = root?.dataset.token || '';
+    const hasToken = Boolean(tokenEmail && token);
+
+    const email = hasToken ? tokenEmail : (emailInput?.value.trim() || '');
+
     if (!email) {
       message.textContent = 'Please enter your email address';
       message.className = 'mt-4 text-center text-red-500';
       message.classList.remove('hidden');
       return;
     }
-    
+
     btn.disabled = true;
     btn.textContent = 'Processing...';
     message.classList.add('hidden');
-    
+
     try {
-      const response = await fetch('/api/newsletter/unsubscribe/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
+      // Tokenised links go to the one-click endpoint (token authorises it);
+      // manual entry falls back to the email-only endpoint.
+      const response = hasToken
+        ? await fetch(
+            `/api/newsletter/one-click/?e=${encodeURIComponent(tokenEmail)}&t=${encodeURIComponent(token)}`,
+            { method: 'POST' }
+          )
+        : await fetch('/api/newsletter/unsubscribe/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+          });
 
       if (!response.ok) throw new Error('Unsubscribe failed: ' + response.status);
       const data = await response.json();

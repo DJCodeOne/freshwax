@@ -98,6 +98,28 @@ export function updateCreditDisplay(state: CheckoutState) {
 }
 
 // Update payment button text with new total
+/**
+ * Record the marketing opt-in, if ticked, at the moment the order is placed.
+ *
+ * Deliberately called from the submit paths rather than the checkbox's change
+ * event: ticking and then unticking before paying must record nothing. The
+ * address is taken from the session server-side, never sent from here.
+ * Never allowed to block or fail an order.
+ */
+export async function submitMarketingConsent(): Promise<void> {
+  const box = document.getElementById('marketingConsentCheckbox') as HTMLInputElement | null;
+  if (!box?.checked) return;
+  try {
+    await fetch('/api/newsletter/consent/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'checkout' }),
+    });
+  } catch (_e: unknown) {
+    /* intentional: a newsletter write must never break checkout */
+  }
+}
+
 export function updatePaymentButtonText(state: CheckoutState, finalTotal: number) {
   const stripeBtn = document.getElementById('submitBtn');
   const paypalBtn = document.getElementById('customPaypalBtn');
@@ -492,6 +514,18 @@ export function renderCheckout(
         </div>
       </div>
       ` : ''}
+
+      <!-- Marketing opt-in. Unticked by default — a pre-ticked box is not valid
+           consent under UK GDPR (Recital 32 / Planet49). Order confirmation and
+           dispatch emails are transactional and are unaffected by this. -->
+      <div style="background: #fff; border: 2px solid #d1d5db; border-radius: 12px; margin-bottom: 1.5rem; padding: 1rem 1.25rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <label for="marketingConsentCheckbox" style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer; user-select: none;">
+          <input type="checkbox" id="marketingConsentCheckbox" style="width: 1.25rem; height: 1.25rem; accent-color: #dc2626; cursor: pointer; flex-shrink: 0; margin-top: 0.125rem;">
+          <span style="font-size: 0.9375rem; color: #374151; line-height: 1.5;">
+            Email me about new releases, DJ mixes and live streams. Unsubscribe any time.
+          </span>
+        </label>
+      </div>
 
       <!-- Payment / Complete Order Section -->
       <div style="background: #fff; border: 2px solid #d1d5db; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">

@@ -4,6 +4,7 @@
 import { TIMEOUTS } from '../timeouts';
 import type { CheckoutState } from './types';
 import { calculateTotals, getCustomerIdFromCookie } from './cart-validation';
+import { submitMarketingConsent } from './checkout-ui';
 
 /** Type-safe form field accessor — returns value of a named form element */
 function getFormField(form: HTMLFormElement, name: string): string {
@@ -97,6 +98,10 @@ export async function handleCustomPayPalClick(state: CheckoutState) {
       customBtn.style.opacity = '1';
       return;
     }
+
+    // Placed after the free-order branch above: that path re-dispatches submit,
+    // which records consent via the Stripe handler.
+    await submitMarketingConsent();
 
     // Show loading state
     customBtn.disabled = true;

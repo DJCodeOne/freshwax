@@ -3,10 +3,11 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, addDocument, updateDocument, atomicIncrement } from '../../../lib/firebase-rest';
-import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 import { escapeHtml, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { sendResendEmail } from '../../../lib/email';
+import { unsubscribeUrls } from '../../../lib/newsletter-tokens';
 
 const sendNewsletterSchema = z.object({
   subject: z.string().min(1),
@@ -41,9 +42,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   }
 
   const env = locals.runtime.env;
-
-  // Initialize Resend with Cloudflare runtime env
-  const resend = new Resend(env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY);
+  const apiKey = String(env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY || '');
 
   try {
     // Check admin auth via X-Admin-Key header or body
@@ -106,20 +105,28 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     // If preview/test email, send only to that
     const sendTestTo = previewEmail || testEmail;
     if (sendTestTo) {
-      try {
-        await resend.emails.send({
-          from: 'Fresh Wax <noreply@freshwax.co.uk>',
-          to: sendTestTo,
-          subject: `[PREVIEW] ${subject}`,
-          html: generateNewsletterHTML(subject, content, sendTestTo)
-        });
+      // Preview renders the real unsubscribe furniture so the admin sees exactly
+      // what recipients get — including a live, working unsubscribe link.
+      const links = await unsubscribeUrls(env, SITE_URL, sendTestTo);
+      const result = await sendResendEmail({
+        apiKey,
+        from: 'Fresh Wax <noreply@freshwax.co.uk>',
+        to: sendTestTo,
+        subject: `[PREVIEW] ${subject}`,
+        html: generateNewsletterHTML(subject, content, links.page),
+        replyTo: 'contact@freshwax.co.uk',
+        headers: listUnsubscribeHeaders(links.oneClick),
+        template: 'newsletter-preview',
+        db: env?.DB,
+      });
 
-        return successResponse({ message: `Preview sent to ${sendTestTo}`,
-          previewSent: true });
-      } catch (emailError: unknown) {
-        log.error('Preview email failed:', emailError);
+      if (!result.success) {
+        log.error('Preview email failed:', result.error);
         return ApiErrors.serverError('Failed to send preview email');
       }
+
+      return successResponse({ message: `Preview sent to ${sendTestTo}`,
+        previewSent: true });
     }
 
     // Save newsletter to database
@@ -147,12 +154,26 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       const batch = subscribers.slice(i, i + BATCH_SIZE);
 
       const batchResults = await Promise.allSettled(batch.map(async (subscriber) => {
-        await resend.emails.send({
+        const email = String(subscriber.email);
+        const links = await unsubscribeUrls(env, SITE_URL, email);
+
+        const result = await sendResendEmail({
+          apiKey,
           from: 'Fresh Wax <noreply@freshwax.co.uk>',
-          to: subscriber.email,
+          to: email,
           subject: subject,
-          html: generateNewsletterHTML(subject, content, subscriber.email)
+          html: generateNewsletterHTML(subject, content, links.page),
+          replyTo: 'contact@freshwax.co.uk',
+          headers: listUnsubscribeHeaders(links.oneClick),
+          template: 'newsletter',
+          db: env?.DB,
         });
+
+        // sendResendEmail reports failure by return value, not by throwing —
+        // throw here so Promise.allSettled records it as a rejection.
+        if (!result.success) {
+          throw new Error(result.error || 'Send failed');
+        }
 
         // Update subscriber stats atomically
         try {
@@ -209,7 +230,18 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   }
 };
 
-function generateNewsletterHTML(subject: string, content: string, email: string): string {
+/**
+ * RFC 8058 one-click unsubscribe headers. Gmail and Yahoo have required these
+ * of bulk senders since Feb 2024 — without them, marketing mail gets filtered.
+ */
+function listUnsubscribeHeaders(oneClickUrl: string): Record<string, string> {
+  return {
+    'List-Unsubscribe': `<${oneClickUrl}>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  };
+}
+
+function generateNewsletterHTML(subject: string, content: string, unsubPageUrl: string): string {
   // Escape subject to prevent HTML injection
   const safeSubject = escapeHtml(subject);
 
@@ -246,7 +278,7 @@ function generateNewsletterHTML(subject: string, content: string, email: string)
       <a href="${SITE_URL}/releases/" style="color: #a3a3a3; text-decoration: none; margin: 0 8px;" class="text-secondary">Releases</a>
       <a href="${SITE_URL}/dj-mixes/" style="color: #a3a3a3; text-decoration: none; margin: 0 8px;" class="text-secondary">DJ Mixes</a>
       <br>
-      <a href="${SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}" style="color: #737373; text-decoration: underline;">Unsubscribe from newsletter</a>
+      <a href="${unsubPageUrl}" style="color: #737373; text-decoration: underline;">Unsubscribe from newsletter</a>
     </p>`;
 
   return emailWrapper(newsletterContent, {

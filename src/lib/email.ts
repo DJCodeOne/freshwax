@@ -29,6 +29,11 @@ export interface ResendEmailOptions {
   replyTo?: string;
   /** Optional BCC recipients */
   bcc?: string[];
+  /**
+   * Custom MIME headers, e.g. List-Unsubscribe / List-Unsubscribe-Post on
+   * marketing sends. Passed through to Resend verbatim.
+   */
+  headers?: Record<string, string>;
   /** Template/source identifier for logging (e.g. 'order-confirmation', 'abandoned-cart') */
   template?: string;
   /** D1 database binding for logging (optional — logging is skipped if omitted) */
@@ -134,6 +139,7 @@ export async function sendResendEmail(
     text,
     replyTo,
     bcc,
+    headers,
     template = 'unknown',
     db,
     timeoutMs = DEFAULT_TIMEOUT_MS,
@@ -165,6 +171,7 @@ export async function sendResendEmail(
   if (text) payload.text = text;
   if (replyTo) payload.reply_to = replyTo;
   if (bcc && bcc.length > 0) payload.bcc = bcc;
+  if (headers && Object.keys(headers).length > 0) payload.headers = headers;
 
   const fetchOptions: RequestInit = {
     method: 'POST',

@@ -4,6 +4,7 @@
 import { TIMEOUTS } from '../timeouts';
 import type { CheckoutState, UnavailableItem } from './types';
 import { calculateTotals, getCustomerIdFromCookie } from './cart-validation';
+import { submitMarketingConsent } from './checkout-ui';
 
 /**
  * Handle checkout form submission — Stripe card payment or free order flow.
@@ -31,6 +32,8 @@ export async function handleSubmit(
 
   // Prevent double-submit
   if (submitBtn.disabled) return;
+
+  await submitMarketingConsent();
 
   submitBtn.disabled = true;
   submitBtn.style.background = '#333';
