@@ -154,7 +154,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           if (isPayPal) {
             paypalFee = Math.round((grossTotal * 0.029 + 0.30) * 100) / 100;
           } else if (isStripe) {
-            stripeFee = Math.round((grossTotal * 0.015 + 0.20) * 100) / 100;
+            stripeFee = Math.round((grossTotal * 0.014 + 0.20) * 100) / 100;
           }
         }
 

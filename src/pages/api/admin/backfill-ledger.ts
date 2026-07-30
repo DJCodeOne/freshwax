@@ -236,7 +236,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         let totalFees = freshWaxFee + paypalFee + stripeFee;
         if (totalFees === freshWaxFee && order.paymentMethod === 'stripe') {
           // Estimate Stripe fee if not recorded
-          totalFees = freshWaxFee + (itemPrice * 0.015 + 0.20);
+          totalFees = freshWaxFee + (itemPrice * 0.014 + 0.20);
         } else if (totalFees === freshWaxFee && order.paymentMethod === 'paypal') {
           // Estimate PayPal fee if not recorded (2.9% + £0.30)
           totalFees = freshWaxFee + (itemPrice * 0.029 + 0.30);

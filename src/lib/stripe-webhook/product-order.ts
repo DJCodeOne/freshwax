@@ -393,7 +393,7 @@ export async function handleProductOrder(
     const freshWaxFee = parseFloat(metadata.freshWaxFee) || 0;
     // Actual Stripe fee when available, else estimate from service fees
     const stripeFee = actualStripeFee
-      ?? (serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total! / 100) * 0.015 + 0.20));
+      ?? (serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total! / 100) * 0.014 + 0.20));
 
     // Enrich items with seller info from release/product lookup
     const enrichedItems = await enrichItemsWithSellerInfo(items);

@@ -266,7 +266,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         const serviceFees = parseFloat(session.metadata?.serviceFees) || (pendingTotals?.serviceFees ?? 0);
         const freshWaxFee = parseFloat(session.metadata?.freshWaxFee) || (pendingTotals?.freshWaxFee ?? 0);
         const stripeFee = actualStripeFee
-          ?? (serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total / 100) * 0.015 + 0.20));
+          ?? (serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total / 100) * 0.014 + 0.20));
         const enrichedItems = await enrichItemsWithSellerInfo(items);
         await recordMultiSellerSale({
           orderId: result.orderId!,
