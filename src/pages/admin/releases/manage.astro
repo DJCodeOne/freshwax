@@ -90,7 +90,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         Start Server
       </button>
     </div>
-    <a href="/admin/releases/process/" class="btn btn-outline">Process Submissions</a>
+    <a href="/admin/releases/process/" class="btn btn-outline sub-btn">Process Submissions<span id="pendingSubBadge" class="sub-badge hidden" aria-label="pending submissions"></span></a>
     <a href="/admin/sync-release/" class="btn btn-primary">+ Upload New Release</a>
   </Fragment>
 
@@ -318,6 +318,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   <Fragment slot="scripts">
     <script>
       import { escapeHtml } from '../../../lib/escape-html';
+
+      // Pending-submissions count bubble on the Process Submissions button.
+      // Same de-duped source the Process page uses; admin __session cookie auths it.
+      (async () => {
+        try {
+          const res = await fetch('/api/list-submissions/', { credentials: 'same-origin' });
+          if (!res.ok) return;
+          const data = await res.json();
+          const n = Array.isArray(data?.submissions) ? data.submissions.length : 0;
+          const badge = document.getElementById('pendingSubBadge');
+          if (badge && n > 0) { badge.textContent = String(n); badge.classList.remove('hidden'); }
+        } catch { /* non-critical — leave the badge hidden */ }
+      })();
 
       // Filter functionality
       const filterTabs = document.querySelectorAll('.filter-tab');
@@ -790,6 +803,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 </AdminLayout>
 
 <style>
+  /* Pending-submissions count bubble on the Process Submissions button */
+  .sub-btn { position: relative; overflow: visible; }
+  .sub-badge {
+    position: absolute;
+    top: -9px;
+    right: -9px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 20px;
+    text-align: center;
+    box-shadow: 0 0 0 2px var(--admin-bg, #0f0f0f);
+  }
+  .sub-badge.hidden { display: none; }
+
   /* Delete Confirmation Modal */
   .delete-modal {
     position: fixed;
