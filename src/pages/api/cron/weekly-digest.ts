@@ -94,16 +94,32 @@ async function getDjSupportHighlights(db: D1Database, since: string): Promise<Di
 
 async function getDigestSubscribers(): Promise<Array<{ email: string; name: string }>> {
   try {
-    const users = await queryCollection('users', [
-      { field: 'newsletterSubscribed', op: '==', value: true },
-    ], undefined, 5000);
+    // Lawful marketing audience: the double-opt-in `subscribers` list with
+    // status 'active' — NOT the whole `users` collection. "This Week on
+    // FreshWax" is a marketing email (PECR/GDPR), so it only goes to people who
+    // explicitly opted in. (The previous call queried `users` with a filter
+    // passed as a positional array instead of `{ filters }`, so queryCollection
+    // silently dropped it and mailed EVERY user regardless of consent.)
+    const subs = await queryCollection('subscribers', {
+      filters: [{ field: 'status', op: 'EQUAL', value: 'active' }],
+      limit: 5000,
+    });
 
-    return (users || [])
-      .filter(u => u?.email && typeof u.email === 'string')
-      .map(u => ({
-        email: u.email as string,
-        name: (u.displayName || u.name || '') as string,
-      }));
+    // Dedupe by email so one address never gets the digest twice (e.g. a
+    // duplicate subscriber record, or a person with more than one account).
+    const seen = new Set<string>();
+    const recipients: Array<{ email: string; name: string }> = [];
+    for (const s of subs || []) {
+      if (!s?.email || typeof s.email !== 'string') continue;
+      const key = s.email.trim().toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      recipients.push({
+        email: s.email as string,
+        name: (s.name || s.displayName || '') as string,
+      });
+    }
+    return recipients;
   } catch (err: unknown) {
     log.error('Failed to fetch subscribers:', err instanceof Error ? err.message : err);
     return [];
