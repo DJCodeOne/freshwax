@@ -161,8 +161,8 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     content: '';
     position: fixed;
     inset: 0;
-    background: url('/freshwax-bg.webp') center center / cover no-repeat;
-    filter: blur(3px) brightness(0.4);
+    background: url('/freshwax-graf-bg.webp') center center / cover no-repeat;
+    filter: blur(1px) brightness(0.72);
     transform: scale(1.05); /* hide blur edges */
     z-index: 0;
     pointer-events: none;
@@ -285,7 +285,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     justify-content: center;
     gap: 0.5rem;
     padding: 10px 16px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(13, 13, 17, 0.97);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -302,6 +302,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     text-transform: uppercase;
     text-decoration: none;
     white-space: nowrap;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
     transition: color 0.15s;
     cursor: pointer;
   }
@@ -582,8 +583,12 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     align-items: center;
     text-align: center;
     gap: 0.35rem;
-    padding: 0.25rem 0;
+    padding: 1.1rem 1.5rem;
     margin-bottom: 0;
+    background: rgba(13, 13, 17, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
   }
 
   .releases-title-row {
@@ -612,7 +617,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   }
 
   .releases-subtitle {
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.85);
     font-size: 0.8rem;
     margin: 0;
     font-weight: 400;
