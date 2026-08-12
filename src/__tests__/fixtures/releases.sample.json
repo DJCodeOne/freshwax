@@ -1,0 +1,1730 @@
+[
+ {
+  "id": "code_one_FW-1765803666207",
+  "status": "hidden",
+  "title": "Fresh Wax Demo EP",
+  "artistName": "Code One",
+  "pricePerSale": 0,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "8WmxYeCp4PSym5iWHahgizokn5F2",
+  "submitterId": "8WmxYeCp4PSym5iWHahgizokn5F2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/Code_One-1765771210267/Code_One-1765545036887_Code_One-1765426238911_Code_One-1765411329722_square-image.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/Code_One-1765771210267/Code_One-1765545036887_Code_One-1765426238911_Code_One-1765411329722_square-image.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/Code_One-1765771210267/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Mispent",
+    "trackName": "Mispent",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/01-mispent.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/01-mispent.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/01-mispent.mp3"
+   },
+   {
+    "id": null,
+    "title": "Drift",
+    "trackName": "Drift",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/02-drift.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/02-drift.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/02-drift.mp3"
+   },
+   {
+    "id": null,
+    "title": "The Speed Of Dark",
+    "trackName": "The Speed Of Dark",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/03-the-speed-of-dark.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/03-the-speed-of-dark.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/03-the-speed-of-dark.mp3"
+   },
+   {
+    "id": null,
+    "title": "Entropic Consciousness",
+    "trackName": "Entropic Consciousness",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/04-entropic-consciousness.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/04-entropic-consciousness.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1765803666207/tracks/04-entropic-consciousness.mp3"
+   }
+  ]
+ },
+ {
+  "id": "underground_lair_recordings_FW-1767368892434",
+  "status": "live",
+  "title": "Curiosity Vol.1",
+  "artistName": "Various Artists",
+  "pricePerSale": 7.99,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.99,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/ULVol.1%23.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/ULVol.1%23.jpg",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Migration - Marc OFX",
+    "trackName": "Migration - Marc OFX",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/01.Marc%20OFX%20-%20Migration%20master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/01.Marc%20OFX%20-%20Migration%20master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/01.Marc%20OFX%20-%20Migration%20master.mp3"
+   },
+   {
+    "id": null,
+    "title": "Scrutinized Maniacs - Paludal",
+    "trackName": "Scrutinized Maniacs - Paludal",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/02.Paludal%20-%20Scrutinized%20Maniacs%20-%20master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/02.Paludal%20-%20Scrutinized%20Maniacs%20-%20master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/02.Paludal%20-%20Scrutinized%20Maniacs%20-%20master.mp3"
+   },
+   {
+    "id": null,
+    "title": "Doom Amenizm - Skru",
+    "trackName": "Doom Amenizm - Skru",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/03.Skru%20-%20Doom%20Amenizm%20-%20master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/03.Skru%20-%20Doom%20Amenizm%20-%20master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/03.Skru%20-%20Doom%20Amenizm%20-%20master.mp3"
+   },
+   {
+    "id": null,
+    "title": "Joker - Bakkus",
+    "trackName": "Joker - Bakkus",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/04.Bakkus%20-%20Joker%20master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/04.Bakkus%20-%20Joker%20master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/04.Bakkus%20-%20Joker%20master.mp3"
+   },
+   {
+    "id": null,
+    "title": "A Perfect Day - Antares",
+    "trackName": "A Perfect Day - Antares",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/05.Antares%20-%20A%20Perfect%20Day%20master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/05.Antares%20-%20A%20Perfect%20Day%20master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_1_1767368892434/05.Antares%20-%20A%20Perfect%20Day%20master.mp3"
+   }
+  ]
+ },
+ {
+  "id": "dj_bakkus_FW-1767896005916",
+  "status": "live",
+  "title": "THE 24 STORY EP",
+  "artistName": "DJ Bakkus",
+  "pricePerSale": 2,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.25,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "CCMDrCWRkUXiPN7O83iSfm1BxGo1",
+  "submitterId": "CCMDrCWRkUXiPN7O83iSfm1BxGo1",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/dj_bakkus_the_24_story_ep_1767896005916/social_medicine__by_lowmachine_dfxe0mx-fullview.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/dj_bakkus_the_24_story_ep_1767896005916/social_medicine__by_lowmachine_dfxe0mx-fullview.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/dj_bakkus_the_24_story_ep_1767896005916/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "24 STORY",
+    "trackName": "24 STORY",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/dj_bakkus_the_24_story_ep_1767896005916/24 STORY-FINAL MASTER- 08-12-25.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/dj_bakkus_the_24_story_ep_1767896005916/24 STORY-FINAL MASTER- 08-12-25.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/dj_bakkus_the_24_story_ep_1767896005916/24 STORY-FINAL MASTER- 08-12-25.mp3"
+   },
+   {
+    "id": null,
+    "title": "DEEP CUTZ",
+    "trackName": "DEEP CUTZ",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/dj_bakkus_the_24_story_ep_1767896005916/DEEP CUTZ- FINAL MASTER- 08-12-25.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/dj_bakkus_the_24_story_ep_1767896005916/DEEP CUTZ- FINAL MASTER- 08-12-25.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/dj_bakkus_the_24_story_ep_1767896005916/DEEP CUTZ- FINAL MASTER- 08-12-25.mp3"
+   }
+  ]
+ },
+ {
+  "id": "skru_ultron-ep_FW-1767981893",
+  "status": "live",
+  "title": "Ultron EP",
+  "artistName": "Skru",
+  "pricePerSale": 6.5,
+  "price": 6.5,
+  "digitalPrice": null,
+  "trackPrice": 0,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "BNpWXqfKDoOCXHKN2IqfxWcHtBv2",
+  "submitterId": "BNpWXqfKDoOCXHKN2IqfxWcHtBv2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/cover.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/thumb.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": "skru_ultron-ep_FW-1767981893_track_1",
+    "title": "Emigre",
+    "trackName": "Emigre",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/01-emigre.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/01-emigre.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/01-emigre.mp3"
+   },
+   {
+    "id": "skru_ultron-ep_FW-1767981893_track_2",
+    "title": "Jah Phantom",
+    "trackName": "Jah Phantom",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/02-jah-phantom.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/02-jah-phantom.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/02-jah-phantom.mp3"
+   },
+   {
+    "id": "skru_ultron-ep_FW-1767981893_track_3",
+    "title": "Kitano",
+    "trackName": "Kitano",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/03-kitano.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/03-kitano.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/03-kitano.mp3"
+   },
+   {
+    "id": "skru_ultron-ep_FW-1767981893_track_4",
+    "title": "The Grayl",
+    "trackName": "The Grayl",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/04-the-grayl.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/04-the-grayl.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/04-the-grayl.mp3"
+   },
+   {
+    "id": "skru_ultron-ep_FW-1767981893_track_5",
+    "title": "Ultron",
+    "trackName": "Ultron",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/05-ultron.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/05-ultron.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/05-ultron.mp3"
+   }
+  ]
+ },
+ {
+  "id": "marc_ofx_FW-1768141362174",
+  "status": "live",
+  "title": "Insistence EP",
+  "artistName": "Marc OFX",
+  "pricePerSale": 4,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 2.5,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/marc_ofx_insistence_ep_1768141362174/ULR003.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/marc_ofx_insistence_ep_1768141362174/ULR003.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/marc_ofx_insistence_ep_1768141362174/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Planned Obsolescences",
+    "trackName": "Planned Obsolescences",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/marc_ofx_insistence_ep_1768141362174/01 Marc OFX - Planned Obsolescences.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/marc_ofx_insistence_ep_1768141362174/01 Marc OFX - Planned Obsolescences.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/marc_ofx_insistence_ep_1768141362174/01 Marc OFX - Planned Obsolescences.mp3"
+   },
+   {
+    "id": null,
+    "title": "April's Sunday",
+    "trackName": "April's Sunday",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/marc_ofx_insistence_ep_1768141362174/04 Marc OFX -  Lonely Smiles.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/marc_ofx_insistence_ep_1768141362174/04 Marc OFX -  Lonely Smiles.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/marc_ofx_insistence_ep_1768141362174/04 Marc OFX -  Lonely Smiles.mp3"
+   }
+  ]
+ },
+ {
+  "id": "srs_FW-1768141395772",
+  "status": "live",
+  "title": "When Worlds Collide",
+  "artistName": "SRS",
+  "pricePerSale": 2,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/srs_when_worlds_collide_1768141395772/ULR002.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/srs_when_worlds_collide_1768141395772/ULR002.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/srs_when_worlds_collide_1768141395772/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": " When Worlds Collide",
+    "trackName": " When Worlds Collide",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/srs_when_worlds_collide_1768141395772/01 SRS - when worlds collide [2nd mixdown] - master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/srs_when_worlds_collide_1768141395772/01 SRS - when worlds collide [2nd mixdown] - master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/srs_when_worlds_collide_1768141395772/01 SRS - when worlds collide [2nd mixdown] - master.mp3"
+   },
+   {
+    "id": null,
+    "title": "1st Wave",
+    "trackName": "1st Wave",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/srs_when_worlds_collide_1768141395772/02 SRS - 1st wave.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/srs_when_worlds_collide_1768141395772/02 SRS - 1st wave.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/srs_when_worlds_collide_1768141395772/02 SRS - 1st wave.mp3"
+   }
+  ]
+ },
+ {
+  "id": "antares_FW-1768396901495",
+  "status": "live",
+  "title": "Acheron",
+  "artistName": "Antares",
+  "pricePerSale": 3,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.75,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/antares_acheron_1768396901495/ULR04.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/antares_acheron_1768396901495/ULR04.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/antares_acheron_1768396901495/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Save The Sorrow",
+    "trackName": "Save The Sorrow",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/antares_FW-1768396901495/tracks/01-save-the-sorrow.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/antares_FW-1768396901495/tracks/01-save-the-sorrow.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/antares_FW-1768396901495/tracks/01-save-the-sorrow.mp3"
+   },
+   {
+    "id": null,
+    "title": "The Outermost Region",
+    "trackName": "The Outermost Region",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/antares_FW-1768396901495/tracks/02-the-outermost-region.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/antares_FW-1768396901495/tracks/02-the-outermost-region.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/antares_FW-1768396901495/tracks/02-the-outermost-region.mp3"
+   }
+  ]
+ },
+ {
+  "id": "srs_FW-1768396989370",
+  "status": "live",
+  "title": "Peaks An Valleys EP",
+  "artistName": "SRS",
+  "pricePerSale": 5,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.25,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/srs_peaks_an_valleys_ep_1768396989370/ULR008.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/srs_peaks_an_valleys_ep_1768396989370/ULR008.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/srs_peaks_an_valleys_ep_1768396989370/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "After Hours",
+    "trackName": "After Hours",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/srs_FW-1768396989370/tracks/01-after-hours.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/srs_peaks_an_valleys_ep_1768396989370/ULR008.SRS-AFTER HOURS.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/srs_FW-1768396989370/tracks/01-after-hours.mp3"
+   },
+   {
+    "id": null,
+    "title": "Peaks An Valleys",
+    "trackName": "Peaks An Valleys",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/srs_FW-1768396989370/tracks/02-peaks-an-valleys.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/srs_peaks_an_valleys_ep_1768396989370/ULR008.SRS-PEAKS N VALLEYS.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/srs_FW-1768396989370/tracks/02-peaks-an-valleys.mp3"
+   },
+   {
+    "id": null,
+    "title": "Soundscape",
+    "trackName": "Soundscape",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/srs_FW-1768396989370/tracks/03-soundscape.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/srs_peaks_an_valleys_ep_1768396989370/ULR008.SRS-SOUNDSCAPE.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/srs_FW-1768396989370/tracks/03-soundscape.mp3"
+   },
+   {
+    "id": null,
+    "title": "Underground Sessions",
+    "trackName": "Underground Sessions",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/srs_FW-1768396989370/tracks/04-underground-sessions.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/srs_peaks_an_valleys_ep_1768396989370/ULR008.SRS-UNDERGROUND SESSIONS.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/srs_FW-1768396989370/tracks/04-underground-sessions.mp3"
+   }
+  ]
+ },
+ {
+  "id": "parody_FW-1768396975859",
+  "status": "live",
+  "title": "Revelation Ep",
+  "artistName": "Parody",
+  "pricePerSale": 4,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.75,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/parody_revelation_ep_1768396975859/ULR010.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/parody_revelation_ep_1768396975859/ULR010.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/parody_revelation_ep_1768396975859/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Long Is The Way",
+    "trackName": "Long Is The Way",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/parody_FW-1768396975859/tracks/01-long-is-the-way.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/parody_revelation_ep_1768396975859/ULR010.Parody-Long%20Is%20The%20Way.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/parody_FW-1768396975859/tracks/01-long-is-the-way.mp3"
+   },
+   {
+    "id": null,
+    "title": "Revelation",
+    "trackName": "Revelation",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/parody_FW-1768396975859/tracks/02-revelation.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/parody_revelation_ep_1768396975859/ULR010.Parody-Revelation.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/parody_FW-1768396975859/tracks/02-revelation.mp3"
+   },
+   {
+    "id": null,
+    "title": "Mistakes Of Men",
+    "trackName": "Mistakes Of Men",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/parody_FW-1768396975859/tracks/03-mistakes-of-men.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/parody_revelation_ep_1768396975859/ULR010.Parody-Mistakes%20Of%20Men.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/parody_FW-1768396975859/tracks/03-mistakes-of-men.mp3"
+   }
+  ]
+ },
+ {
+  "id": "paludal_FW-1768396958792",
+  "status": "live",
+  "title": "Monstrosity EP",
+  "artistName": "Paludal",
+  "pricePerSale": 5,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.75,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/paludal_monstrosity_ep_1768396958792/ULR006.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/paludal_monstrosity_ep_1768396958792/ULR006.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/paludal_monstrosity_ep_1768396958792/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Exploration",
+    "trackName": "Exploration",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/paludal_FW-1768396958792/tracks/01-exploration.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/paludal_monstrosity_ep_1768396958792/ULR006.Exploration-Paludal%20Feat%20Jaja.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/paludal_FW-1768396958792/tracks/01-exploration.mp3"
+   },
+   {
+    "id": null,
+    "title": "Monstrosity",
+    "trackName": "Monstrosity",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/paludal_FW-1768396958792/tracks/02-monstrosity.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/paludal_monstrosity_ep_1768396958792/ULR006.Monstrosity-Paludal.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/paludal_FW-1768396958792/tracks/02-monstrosity.mp3"
+   },
+   {
+    "id": null,
+    "title": "Station 8",
+    "trackName": "Station 8",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/paludal_FW-1768396958792/tracks/03-station-8.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/paludal_monstrosity_ep_1768396958792/ULR006.Station%208-Paludal.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/paludal_FW-1768396958792/tracks/03-station-8.mp3"
+   },
+   {
+    "id": null,
+    "title": "Alive",
+    "trackName": "Alive",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/paludal_FW-1768396958792/tracks/04-alive.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/paludal_monstrosity_ep_1768396958792/ULR006.Alive-Paludal.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/paludal_FW-1768396958792/tracks/04-alive.mp3"
+   }
+  ]
+ },
+ {
+  "id": "future_FW-1768396953013",
+  "status": "live",
+  "title": "French Connection",
+  "artistName": "Future",
+  "pricePerSale": 4,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 2.25,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/future_french_connection_1768396953013/ULR009Digital.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/future_french_connection_1768396953013/ULR009Digital.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/future_french_connection_1768396953013/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Shadow Shogan",
+    "trackName": "Shadow Shogan",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/future_FW-1768396953013/tracks/01-shadow-shogan.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/future_french_connection_1768396953013/Future%20-%20Shadow%20Shoganz%20-%20CA%20Mastered%20Loud.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/future_FW-1768396953013/tracks/01-shadow-shogan.mp3"
+   },
+   {
+    "id": null,
+    "title": "Vortex (Bad Dreams Mix)",
+    "trackName": "Vortex (Bad Dreams Mix)",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/future_FW-1768396953013/tracks/02-vortex-bad-dreams-mix.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/future_french_connection_1768396953013/Future%20-%20System%20Vortex%20(Bad%20Dreams%20Mix)%20CA%20Mastered%20Loud.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/future_FW-1768396953013/tracks/02-vortex-bad-dreams-mix.mp3"
+   }
+  ]
+ },
+ {
+  "id": "deadly_silence_FW-1768396940695",
+  "status": "live",
+  "title": "Radioactive EP",
+  "artistName": "Deadly Silence",
+  "pricePerSale": 4,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.75,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/deadly_silence_radioactive_ep_1768396940695/Radioactive EP.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/deadly_silence_radioactive_ep_1768396940695/Radioactive EP.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/deadly_silence_radioactive_ep_1768396940695/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Damage Control",
+    "trackName": "Damage Control",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/deadly_silence_FW-1768396940695/tracks/01-damage-control.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/deadly_silence_radioactive_ep_1768396940695/ULR005.Deadly%20Silence-Damage%20Control.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/deadly_silence_FW-1768396940695/tracks/01-damage-control.mp3"
+   },
+   {
+    "id": null,
+    "title": "Nuclear Fallout",
+    "trackName": "Nuclear Fallout",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/deadly_silence_FW-1768396940695/tracks/02-nuclear-fallout.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/deadly_silence_radioactive_ep_1768396940695/ULR005.Deadly%20Silence-Nuclear%20Fallout.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/deadly_silence_FW-1768396940695/tracks/02-nuclear-fallout.mp3"
+   },
+   {
+    "id": null,
+    "title": "Demon Core (Bonus Track)",
+    "trackName": "Demon Core (Bonus Track)",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/deadly_silence_FW-1768396940695/tracks/03-demon-core-bonus-track.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/deadly_silence_radioactive_ep_1768396940695/ULR005.Deadly%20Silence-Demon%20core%20(bonus%20track).wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/deadly_silence_FW-1768396940695/tracks/03-demon-core-bonus-track.mp3"
+   }
+  ]
+ },
+ {
+  "id": "bsod_FW-1768396912676",
+  "status": "live",
+  "title": "\"Self(sic)\" EP",
+  "artistName": "BSoD",
+  "pricePerSale": 5,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.75,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/bsod__self_sic_ep_1768396912676/ULR007.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/bsod__self_sic_ep_1768396912676/ULR007.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/bsod__self_sic_ep_1768396912676/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Contempt",
+    "trackName": "Contempt",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768396912676/tracks/01-contempt.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/bsod__self_sic_ep_1768396912676/ULR007.BSoD-Contempt.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768396912676/tracks/01-contempt.mp3"
+   },
+   {
+    "id": null,
+    "title": "Helvete",
+    "trackName": "Helvete",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768396912676/tracks/02-helvete.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/bsod__self_sic_ep_1768396912676/ULR007.BSoD-Helvete.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768396912676/tracks/02-helvete.mp3"
+   },
+   {
+    "id": null,
+    "title": "Intraspection",
+    "trackName": "Intraspection",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768396912676/tracks/03-intraspection.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/bsod__self_sic_ep_1768396912676/ULR007.BSoD-Intraspection.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768396912676/tracks/03-intraspection.mp3"
+   },
+   {
+    "id": null,
+    "title": "Self Destruction",
+    "trackName": " Self Destruction",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768396912676/tracks/04-self-destruction.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/bsod__self_sic_ep_1768396912676/ULR007.BSoD-Self%20Destruction.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768396912676/tracks/04-self-destruction.mp3"
+   }
+  ]
+ },
+ {
+  "id": "bakkus_FW-1768396937315",
+  "status": "pending",
+  "title": "Joker",
+  "artistName": "Bakkus",
+  "pricePerSale": 7.99,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.99,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "",
+  "submitterId": "",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/bakkus_joker_1768396937315/ULRFREE2.jpg",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/bakkus_joker_1768396937315/ULRFREE2.jpg",
+  "ogImageUrl": "",
+  "saleDiscount": 0,
+  "tracks": []
+ },
+ {
+  "id": "code_one_FW-1768472389400",
+  "status": "live",
+  "title": "Redemption Ep",
+  "artistName": "Code One",
+  "pricePerSale": 7,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.75,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/code_one_redemption_ep_1768472389400/ULR11.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/code_one_redemption_ep_1768472389400/ULR11.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/code_one_redemption_ep_1768472389400/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Warlock",
+    "trackName": "Warlock",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/01-warlock.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_redemption_ep_1768472389400/ULR011.Code One - Warlock feat Flames.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/01-warlock.mp3"
+   },
+   {
+    "id": null,
+    "title": "Brain Melt",
+    "trackName": "Brain Melt",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/02-brain-melt.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_redemption_ep_1768472389400/ULR011.Code One - Brain Melt.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/02-brain-melt.mp3"
+   },
+   {
+    "id": null,
+    "title": "Mind Control",
+    "trackName": "Mind Control",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/03-mind-control.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_redemption_ep_1768472389400/ULR011.Code One - Mind Control.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/03-mind-control.mp3"
+   },
+   {
+    "id": null,
+    "title": "Redemption",
+    "trackName": "Redemption",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/04-redemption.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_redemption_ep_1768472389400/ULR011.Code One - Redemption.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/04-redemption.mp3"
+   },
+   {
+    "id": null,
+    "title": "Play",
+    "trackName": "Play",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/05-play.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_redemption_ep_1768472389400/ULR011.Code One - Play.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/05-play.mp3"
+   },
+   {
+    "id": null,
+    "title": "Back To The Jungle",
+    "trackName": "Back To The Jungle",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/06-back-to-the-jungle.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_redemption_ep_1768472389400/ULR011.Code One - Back To The Jungle.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_FW-1768472389400/tracks/06-back-to-the-jungle.mp3"
+   }
+  ]
+ },
+ {
+  "id": "bakkus_FW-1768477347252",
+  "status": "live",
+  "title": "Joker Remix",
+  "artistName": "Parody",
+  "pricePerSale": 1.99,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.99,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/bakkus_joker_remix_1768477347252/cover.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/bakkus_joker_remix_1768477347252/cover.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/bakkus_joker_remix_1768477347252/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Joker Remix",
+    "trackName": "Joker Remix",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/bakkus_FW-1768477347252/tracks/01-joker-remix.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/bakkus_joker_remix_1768477347252/01_Joker_Remix.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/bakkus_FW-1768477347252/tracks/01-joker-remix.mp3"
+   }
+  ]
+ },
+ {
+  "id": "bsod_FW-1768518204271",
+  "status": "live",
+  "title": "Eternity",
+  "artistName": "BSoD",
+  "pricePerSale": 4,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 2.25,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/bsod_eternity_1768518204271/ULR013.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/bsod_eternity_1768518204271/ULR013.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/bsod_eternity_1768518204271/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Eternity",
+    "trackName": "Eternity",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768518204271/tracks/01-eternity.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/bsod_eternity_1768518204271/ULR013.BSoD-Eternity.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768518204271/tracks/01-eternity.mp3"
+   },
+   {
+    "id": null,
+    "title": "Lost",
+    "trackName": "Lost",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768518204271/tracks/02-lost.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/bsod_eternity_1768518204271/ULR013.BSoD-Lost.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/bsod_FW-1768518204271/tracks/02-lost.mp3"
+   }
+  ]
+ },
+ {
+  "id": "pushy__FW-1768518215210",
+  "status": "live",
+  "title": "Unconnected",
+  "artistName": "Pushy!",
+  "pricePerSale": 4,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 2,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/pushy__unconnected_1768518215210/ULR014.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/pushy__unconnected_1768518215210/ULR014.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/pushy__unconnected_1768518215210/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Unconnected",
+    "trackName": "Unconnected",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/pushy__FW-1768518215210/tracks/01-unconnected.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/pushy__unconnected_1768518215210/ULR014.Pushy!-Unconnected.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/pushy__FW-1768518215210/tracks/01-unconnected.mp3"
+   },
+   {
+    "id": null,
+    "title": "Antirefrain",
+    "trackName": "Antirefrain",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/pushy__FW-1768518215210/tracks/02-antirefrain.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/pushy__unconnected_1768518215210/ULR014.Pushy!-Antirefrain%20Feat%20Cheravif.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/pushy__FW-1768518215210/tracks/02-antirefrain.mp3"
+   }
+  ]
+ },
+ {
+  "id": "underground_lair_recordings_FW-1768518251667",
+  "status": "live",
+  "title": "Curiosity Vol.2",
+  "artistName": "Various Artists",
+  "pricePerSale": 10,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.75,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/curiosity Vol.2.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/curiosity Vol.2.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Akinsa - Entanglement",
+    "trackName": "Akinsa - Entanglement",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/01-akinsa-entanglement.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.Akinsa -  Entanglement.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/01-akinsa-entanglement.mp3"
+   },
+   {
+    "id": null,
+    "title": "Antares - Rip Your Soul Out",
+    "trackName": "Antares - Rip Your Soul Out",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/02-antares-rip-your-soul-out.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.MAC V -  Conscious Minds.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/02-antares-rip-your-soul-out.mp3"
+   },
+   {
+    "id": null,
+    "title": "Bakkus - Setup",
+    "trackName": "Bakkus - Setup",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/03-bakkus-setup.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.Bakkus - Setup.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/03-bakkus-setup.mp3"
+   },
+   {
+    "id": null,
+    "title": "Botnet - Watcha Do",
+    "trackName": "Botnet - Watcha Do",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/04-botnet-watcha-do.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.Botnet - Watcha Do.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/04-botnet-watcha-do.mp3"
+   },
+   {
+    "id": null,
+    "title": "BSoD - Epiphany",
+    "trackName": "BSoD - Epiphany",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/05-bsod-epiphany.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.BSoD - Epiphany.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/05-bsod-epiphany.mp3"
+   },
+   {
+    "id": null,
+    "title": "Code One - Twisted Assasin",
+    "trackName": "Code One - Twisted Assasin",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/06-code-one-twisted-assasin.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.Code One - Twisted Assasin.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/06-code-one-twisted-assasin.mp3"
+   },
+   {
+    "id": null,
+    "title": "ED808 & Y2 feat NoLightsNoShadows-Beccles - Meat Grinder",
+    "trackName": "ED808 & Y2 feat NoLightsNoShadows-Beccles - Meat Grinder",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/07-ed808-y2-feat-nolightsnoshadows-beccles-meat-grind.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.ED808%20%26%20Y2%20feat%20No%20Lights%20No%20Shadows-Beccles%20-%20Meat%20Grinder.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/07-ed808-y2-feat-nolightsnoshadows-beccles-meat-grind.mp3"
+   },
+   {
+    "id": null,
+    "title": "Gred Lvov & Offish - Shudder",
+    "trackName": "Gred Lvov & Offish - Shudder",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/08-gred-lvov-offish-shudder.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.Greg%20Lvov%20%26%20Offish%20-%20Shudder.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/08-gred-lvov-offish-shudder.mp3"
+   },
+   {
+    "id": null,
+    "title": "Mac V - Consious Minds",
+    "trackName": "Mac V - Consious Minds",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/09-mac-v-consious-minds.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.Mac%20V%20-%20Consious%20Minds.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/09-mac-v-consious-minds.mp3"
+   },
+   {
+    "id": null,
+    "title": "Marc OFX - Cold & Dark",
+    "trackName": "Marc OFX - Cold & Dark",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/10-marc-ofx-cold-dark.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.Marc%20OFX%20-%20Cold%20%26%20Dark.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/10-marc-ofx-cold-dark.mp3"
+   },
+   {
+    "id": null,
+    "title": "Paludal - Mental Shadows",
+    "trackName": "Paludal - Mental Shadows",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/11-paludal-mental-shadows.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.Paludal - Mental Shadows.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/11-paludal-mental-shadows.mp3"
+   },
+   {
+    "id": null,
+    "title": "Parody - Unlocked",
+    "trackName": "Parody - Unlocked",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/12-parody-unlocked.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.Parody - Unlocked.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/12-parody-unlocked.mp3"
+   },
+   {
+    "id": null,
+    "title": "Radiobomb - Hot Air",
+    "trackName": "Radiobomb - Hot Air",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/13-radiobomb-hot-air.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_curiosity_vol_2_1768518251667/ULR012.Radiobomb%20-%20Hot%20Air.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/underground_lair_recordings_FW-1768518251667/tracks/13-radiobomb-hot-air.mp3"
+   }
+  ]
+ },
+ {
+  "id": "NyctophiliaRecordings_EmbraceTheDarkness_1770073110888",
+  "status": "live",
+  "title": "Embrace The Darkness",
+  "artistName": "Various Artists",
+  "pricePerSale": 0,
+  "price": null,
+  "digitalPrice": 0,
+  "trackPrice": 1,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "",
+  "submitterId": "IljMR5LfwdQ7QwoDO2qr4wOb0aO2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/artwork/cover.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/artwork/thumb.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/artwork/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Skeith",
+    "trackName": "Skeith",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/01-skeith.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/Foreseer_-_Embrace_The_Darkness_-_01_Skeith.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/01-skeith.mp3"
+   },
+   {
+    "id": null,
+    "title": "Guppy's Last Breath",
+    "trackName": "Guppy's Last Breath",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/02-guppy-s-last-breath.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/Errorrhythm___Gary_Barking_-_Embrace_The_Darkness_-_02_Guppy_s_Last_Breath.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/02-guppy-s-last-breath.mp3"
+   },
+   {
+    "id": null,
+    "title": "Katana",
+    "trackName": "Katana",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/03-katana.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/Splinter_-_Embrace_The_Darkness_-_03_Katana.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/03-katana.mp3"
+   },
+   {
+    "id": null,
+    "title": "808or",
+    "trackName": "808or",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/04-808or.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/Keig__-_Embrace_The_Darkness_-_04_808or.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/04-808or.mp3"
+   },
+   {
+    "id": null,
+    "title": "Nuclear Winter",
+    "trackName": "Nuclear Winter",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/05-nuclear-winter.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/In.Tension_-_Embrace_The_Darkness_-_05_Nuclear_Winter.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/05-nuclear-winter.mp3"
+   },
+   {
+    "id": null,
+    "title": "Traction Motors",
+    "trackName": "Traction Motors",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/06-traction-motors.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/DJ_Trainspotter_-_Embrace_The_Darkness_-_06_Traction_Motors.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/06-traction-motors.mp3"
+   },
+   {
+    "id": null,
+    "title": "Snows of the Arctic Wasteland",
+    "trackName": "Snows of the Arctic Wasteland",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/07-snows-of-the-arctic-wasteland.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/Antares_-_Embrace_The_Darkness_-_07_Snows_of_the_Arctic_Wasteland.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/07-snows-of-the-arctic-wasteland.mp3"
+   },
+   {
+    "id": null,
+    "title": "Decompensation",
+    "trackName": "Decompensation",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/08-decompensation.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/BSoD_-_Embrace_The_Darkness_-_08_Decompensation.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/08-decompensation.mp3"
+   },
+   {
+    "id": null,
+    "title": "Come 2 U",
+    "trackName": "Come 2 U",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/09-come-2-u.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/Polarity_-_Embrace_The_Darkness_-_09_Come_2_U.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/09-come-2-u.mp3"
+   },
+   {
+    "id": null,
+    "title": "Schism",
+    "trackName": "Schism",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/10-schism.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/For_Example__John_-_Embrace_The_Darkness_-_10_Schism.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/10-schism.mp3"
+   },
+   {
+    "id": null,
+    "title": "One God",
+    "trackName": "One God",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/11-one-god.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/Rusty_Nails_-_Embrace_The_Darkness_-_11_One_God.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/11-one-god.mp3"
+   },
+   {
+    "id": null,
+    "title": "Sneak",
+    "trackName": "Sneak",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/12-sneak.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/Discord___Flava_-_Embrace_The_Darkness_-_12_Sneak.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/12-sneak.mp3"
+   },
+   {
+    "id": null,
+    "title": "Technology Assault",
+    "trackName": "Technology Assault",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/13-technology-assault.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/DJ_Moody_-_Embrace_The_Darkness_-_13_Technology_Assault.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/13-technology-assault.mp3"
+   },
+   {
+    "id": null,
+    "title": "Living A Fantasy",
+    "trackName": "Living A Fantasy",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/14-living-a-fantasy.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/VariousArtists_FW-1770069080959/tracks/Sicknote_-_Embrace_The_Darkness_-_14_Living_A_Fantasy.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/NyctophiliaRecordings_EmbraceTheDarkness_1770073110888/tracks/14-living-a-fantasy.mp3"
+   }
+  ]
+ },
+ {
+  "id": "code_one_bakkus_FW-1775817379627",
+  "status": "live",
+  "title": "The Jungle Disorder ep",
+  "artistName": "CODE ONE & BAKKUS",
+  "pricePerSale": 4,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.25,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "CCMDrCWRkUXiPN7O83iSfm1BxGo1",
+  "submitterId": "CCMDrCWRkUXiPN7O83iSfm1BxGo1",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/cover.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/thumb.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Warrior - Code One",
+    "trackName": "Warrior - Code One",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/Warrior_-_Code_One.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/Warrior_-_Code_One.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/Warrior_-_Code_One.mp3"
+   },
+   {
+    "id": null,
+    "title": "The Relic - Bakkus",
+    "trackName": "The Relic - Bakkus",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/The_Relic_-_Bakkus.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/The_Relic_-_Bakkus.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/The_Relic_-_Bakkus.mp3"
+   },
+   {
+    "id": null,
+    "title": "Dark Space - Code One Remix",
+    "trackName": "Dark Space - Code One Remix",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/Dark_Space_-_Code_One_Remix.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/Dark_Space_-_Code_One_Remix.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/Dark_Space_-_Code_One_Remix.mp3"
+   },
+   {
+    "id": null,
+    "title": "Back In The Jungle - Bakkus Remix",
+    "trackName": "Back In The Jungle - Bakkus Remix",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/Back_In_The_Jungle_-_Bakkus_Remix.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/Back_In_The_Jungle_-_Bakkus_Remix.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/code_one_bakkus_the_jungle_disorder_ep_1775817379627/Back_In_The_Jungle_-_Bakkus_Remix.mp3"
+   }
+  ]
+ },
+ {
+  "id": "elipse_draai_FW-1777226552867",
+  "status": "live",
+  "title": "Universal Language",
+  "artistName": "Elipse & Draai",
+  "pricePerSale": 4,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.25,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": null,
+  "vinylParts": [],
+  "artistId": "",
+  "submitterId": "OcnffhxjgTVvKkIDIG8zjujTOiY2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/cover.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/thumb.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Universal Language",
+    "trackName": "Universal Language",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/DRAAI___JULES_UNIVERSAL_LANGUAGE.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/DRAAI___JULES_UNIVERSAL_LANGUAGE.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/DRAAI___JULES_UNIVERSAL_LANGUAGE.mp3"
+   },
+   {
+    "id": null,
+    "title": "Flûte Tune",
+    "trackName": "Flûte Tune",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/DRAAI___JULES_FLUTE_TUNE.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/DRAAI___JULES_FLUTE_TUNE.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/DRAAI___JULES_FLUTE_TUNE.mp3"
+   },
+   {
+    "id": null,
+    "title": "Righteous Day",
+    "trackName": "Righteous Day",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/JULES_RIGHTEOUS_DAY.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/JULES_RIGHTEOUS_DAY.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/elipse_draai_universal_language_1777226552867/JULES_RIGHTEOUS_DAY.mp3"
+   }
+  ]
+ },
+ {
+  "id": "hangry_records_FW-1780739181417",
+  "status": "live",
+  "title": "Jungle & DnB Volume.1",
+  "artistName": "Various Artists",
+  "pricePerSale": 8.5,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 2.5,
+  "vinylRelease": true,
+  "vinylPrice": 15,
+  "vinylStock": 99999,
+  "vinylParts": [
+   {
+    "pressed": true,
+    "stock": 199,
+    "name": "Part 1",
+    "price": 15,
+    "trackNumbers": [
+     2,
+     4,
+     6,
+     7
+    ],
+    "sold": 1
+   },
+   {
+    "stock": 200,
+    "pressed": true,
+    "trackNumbers": [
+     1,
+     3,
+     5,
+     8
+    ],
+    "price": 15,
+    "name": "Part 2"
+   }
+  ],
+  "artistId": "dW3n7mwOiqgDnODGvPs7fXbgIbo1",
+  "submitterId": "dW3n7mwOiqgDnODGvPs7fXbgIbo1",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/cover.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/thumb.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "16AJ - FadeAway",
+    "trackName": "16AJ - FadeAway",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/16AJ_-FadeAway_-_Master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/16AJ_-FadeAway_-_Master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/16AJ_-FadeAway_-_Master.mp3"
+   },
+   {
+    "id": null,
+    "title": "Abstract Drumz - Higher",
+    "trackName": "Abstract Drumz - Higher",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Abstract_Drumz_-_Higher_-_Master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Abstract_Drumz_-_Higher_-_Master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Abstract_Drumz_-_Higher_-_Master.mp3"
+   },
+   {
+    "id": null,
+    "title": "Illicit - Departures",
+    "trackName": "Illicit - Departures",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Illicit_-_Departures_-_Master__1_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Illicit_-_Departures_-_Master__1_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Illicit_-_Departures_-_Master__1_.mp3"
+   },
+   {
+    "id": null,
+    "title": "MAC V - Panopticon",
+    "trackName": "MAC V - Panopticon",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/MAC-V_Panopticon_-_Master2.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/MAC-V_Panopticon_-_Master2.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/MAC-V_Panopticon_-_Master2.mp3"
+   },
+   {
+    "id": null,
+    "title": "Mom$ - Vogued",
+    "trackName": "Mom$ - Vogued",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Mom$_-_Vogued_-_Master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Mom$_-_Vogued_-_Master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Mom$_-_Vogued_-_Master.mp3"
+   },
+   {
+    "id": null,
+    "title": "Polarity - Final Heaven",
+    "trackName": "Polarity - Final Heaven",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Polarity_-_Final_Heaven_-_Master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Polarity_-_Final_Heaven_-_Master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Polarity_-_Final_Heaven_-_Master.mp3"
+   },
+   {
+    "id": null,
+    "title": "Sargy - Ultimate Reality",
+    "trackName": "Sargy - Ultimate Reality",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Sargy_-_Ultimate_Reality_-_Master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Sargy_-_Ultimate_Reality_-_Master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Sargy_-_Ultimate_Reality_-_Master.mp3"
+   },
+   {
+    "id": null,
+    "title": "SuM - Time Wound",
+    "trackName": "SuM - Time Wound",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Sum_-_Time_Wound_Master.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Sum_-_Time_Wound_Master.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_1_1780739181417/Sum_-_Time_Wound_Master.mp3"
+   }
+  ]
+ },
+ {
+  "id": "hangry_records_FW-1780824861889",
+  "status": "live",
+  "title": "Jungle & DnB Volume.2",
+  "artistName": "Various Artists",
+  "pricePerSale": 8.5,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 2.5,
+  "vinylRelease": true,
+  "vinylPrice": 15,
+  "vinylStock": 99999,
+  "vinylParts": [
+   {
+    "stock": 200,
+    "trackNumbers": [
+     1,
+     3,
+     2,
+     8
+    ],
+    "pressed": true,
+    "name": "Part 1",
+    "price": 15
+   },
+   {
+    "stock": 0,
+    "pressed": false,
+    "trackNumbers": [
+     4,
+     5,
+     6,
+     7
+    ],
+    "name": "Part 2",
+    "price": 15
+   }
+  ],
+  "artistId": "dW3n7mwOiqgDnODGvPs7fXbgIbo1",
+  "submitterId": "dW3n7mwOiqgDnODGvPs7fXbgIbo1",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/cover.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/thumb.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Antares - Ki",
+    "trackName": "Antares - Ki",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Antares_-_Ki__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Antares_-_Ki__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Antares_-_Ki__JT_Master_.mp3"
+   },
+   {
+    "id": null,
+    "title": "D.K.Ritual - War In The Holy Land",
+    "trackName": "D.K.Ritual - War In The Holy Land",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/D.K.Ritual_-_Junglewarz__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/D.K.Ritual_-_Junglewarz__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/D.K.Ritual_-_Junglewarz__JT_Master_.mp3"
+   },
+   {
+    "id": null,
+    "title": "Ed.Asher - Force Field",
+    "trackName": "Ed.Asher - Force Field",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Ed_Asher_-_FORCE_FIELD__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Ed_Asher_-_FORCE_FIELD__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Ed_Asher_-_FORCE_FIELD__JT_Master_.mp3"
+   },
+   {
+    "id": null,
+    "title": "Jamin Nimjah - Yout Dem",
+    "trackName": "Jamin Nimjah - Yout Dem",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Jamin_Nimjah_-_YOUT_DEM__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Jamin_Nimjah_-_YOUT_DEM__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Jamin_Nimjah_-_YOUT_DEM__JT_Master_.mp3"
+   },
+   {
+    "id": null,
+    "title": "Murder Most Foul - Eases Him In",
+    "trackName": "Murder Most Foul - Eases Him In",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Murder_Most_Foul_-_EASES_IN_HIM__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Murder_Most_Foul_-_EASES_IN_HIM__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Murder_Most_Foul_-_EASES_IN_HIM__JT_Master_.mp3"
+   },
+   {
+    "id": null,
+    "title": "REZ - War Cry",
+    "trackName": "REZ - War Cry",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/REZ_-_WAR_CRY__2020_JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/REZ_-_WAR_CRY__2020_JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/REZ_-_WAR_CRY__2020_JT_Master_.mp3"
+   },
+   {
+    "id": null,
+    "title": "Tazz - Nu Style Drumglist",
+    "trackName": "Tazz - Nu Style Drumglist",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Tazz_-_Nu_Style_Drumglist__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Tazz_-_Nu_Style_Drumglist__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Tazz_-_Nu_Style_Drumglist__JT_Master_.mp3"
+   },
+   {
+    "id": null,
+    "title": "Duburban - Meet His Majesty",
+    "trackName": "Duburban - Meet His Majesty",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Duburban_-_Meet_His_Majesty__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Duburban_-_Meet_His_Majesty__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/hangry_records_jungle_dnb_volume_2_1780824861889/Duburban_-_Meet_His_Majesty__JT_Master_.mp3"
+   }
+  ]
+ },
+ {
+  "id": "ninjatron_FW-1782215144912",
+  "status": "live",
+  "title": "Rolling Thunder",
+  "artistName": "Ninjatron",
+  "pricePerSale": 4.5,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 2.5,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": 0,
+  "vinylParts": [],
+  "artistId": "dW3n7mwOiqgDnODGvPs7fXbgIbo1",
+  "submitterId": "dW3n7mwOiqgDnODGvPs7fXbgIbo1",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/cover.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/thumb.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Rolling Thunder",
+    "trackName": "Rolling Thunder",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/tracks/01-rolling-thunder.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/05_-_Ninjatron_-_Rolling_Thunder.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/tracks/01-rolling-thunder.mp3"
+   },
+   {
+    "id": null,
+    "title": "Under The Smoke",
+    "trackName": "Under The Smoke",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/tracks/02-under-the-smoke.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/04_-_Ninjatron_-_Under_the_Smoke.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/tracks/02-under-the-smoke.mp3"
+   },
+   {
+    "id": null,
+    "title": "Spray Paint",
+    "trackName": "Spray Paint",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/tracks/03-spray-paint.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/06_-_Ninjatron_-_Spray_Paint.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/tracks/03-spray-paint.mp3"
+   },
+   {
+    "id": null,
+    "title": "Chill",
+    "trackName": "Chill",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/tracks/04-chill.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/02_-_Ninjatron_-_Chill.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/ninjatron_rolling_thunder_1782215144912/tracks/04-chill.mp3"
+   }
+  ]
+ },
+ {
+  "id": "s_r_s_FW-1782332853126",
+  "status": "live",
+  "title": "100% JUNGLE VOL. 2",
+  "artistName": "S.R.S",
+  "pricePerSale": 6,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.5,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": 0,
+  "vinylParts": [],
+  "artistId": "RIBzv29RbtMmq5tKVj7oGkKTolN2",
+  "submitterId": "RIBzv29RbtMmq5tKVj7oGkKTolN2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/cover.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/thumb.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "BREAKING THROUGH",
+    "trackName": "BREAKING THROUGH",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/tracks/01-breaking-through.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/S.R.S_-_BREAKING_THROUGH.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/tracks/01-breaking-through.mp3"
+   },
+   {
+    "id": null,
+    "title": "DARK STAR",
+    "trackName": "DARK STAR",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/tracks/02-dark-star.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/S.R.S_-_DARK_STAR.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/tracks/02-dark-star.mp3"
+   },
+   {
+    "id": null,
+    "title": "ECHOES IN THE VOID",
+    "trackName": "ECHOES IN THE VOID",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/tracks/03-echoes-in-the-void.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/S.R.S_-_ECHOS_IN_THE_VOID.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/tracks/03-echoes-in-the-void.mp3"
+   },
+   {
+    "id": null,
+    "title": "FOUNDATION",
+    "trackName": "FOUNDATION",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/tracks/04-foundation.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/S.R.S_-_FOUNDATION.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/tracks/04-foundation.mp3"
+   },
+   {
+    "id": null,
+    "title": "PLANET SIDE",
+    "trackName": "PLANET SIDE",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/tracks/05-planet-side.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/S.R.S_-_PLANET_SIDE.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/s_r_s_100_jungle_vol_2_1782332853126/tracks/05-planet-side.mp3"
+   }
+  ]
+ },
+ {
+  "id": "wink_the_dj_FW-1785497828458",
+  "status": "live",
+  "title": "Voodoo Clash EP",
+  "artistName": "WINK The DJ",
+  "pricePerSale": 4.5,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 2.5,
+  "vinylRelease": false,
+  "vinylPrice": 0,
+  "vinylStock": 0,
+  "vinylParts": [],
+  "artistId": "dW3n7mwOiqgDnODGvPs7fXbgIbo1",
+  "submitterId": "dW3n7mwOiqgDnODGvPs7fXbgIbo1",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/IMG_3583.jpeg",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/IMG_3583.jpeg",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Fkn Voodoo",
+    "trackName": "Fkn Voodoo",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Fkn_Voodoo__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Fkn_Voodoo__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Fkn_Voodoo__JT_Master_.mp3"
+   },
+   {
+    "id": null,
+    "title": "Kill Em Clash",
+    "trackName": "Kill Em Clash",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Kill_Em_Clash__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Kill_Em_Clash__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Kill_Em_Clash__JT_Master_.mp3"
+   },
+   {
+    "id": null,
+    "title": "Outta My Mind",
+    "trackName": "Outta My Mind",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Outta_My_mind__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Outta_My_mind__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Outta_My_mind__JT_Master_.mp3"
+   },
+   {
+    "id": null,
+    "title": "Time For Action",
+    "trackName": "Time For Action",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Time_For_Action__JT_Master_.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Time_For_Action__JT_Master_.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/wink_the_dj_voodoo_clash_ep_1785497828458/Wink_The_Dj_-_Time_For_Action__JT_Master_.mp3"
+   }
+  ]
+ },
+ {
+  "id": "drum_unit_recordings_FW-1786529398020",
+  "status": "live",
+  "title": "Stamp Series Vol 1",
+  "artistName": "Drum Unit Recordings",
+  "pricePerSale": 3,
+  "price": null,
+  "digitalPrice": null,
+  "trackPrice": 1.5,
+  "vinylRelease": true,
+  "vinylPrice": 12,
+  "vinylStock": 1,
+  "vinylParts": [],
+  "artistId": "HVXl6a4BQ7WmSw4QemNP76Qnktm2",
+  "submitterId": "HVXl6a4BQ7WmSw4QemNP76Qnktm2",
+  "coverArtUrl": "https://cdn.freshwax.co.uk/releases/drum_unit_recordings_stamp_series_vol_1_1786529398020/cover.webp",
+  "thumbUrl": "https://cdn.freshwax.co.uk/releases/drum_unit_recordings_stamp_series_vol_1_1786529398020/thumb.webp",
+  "ogImageUrl": "https://cdn.freshwax.co.uk/releases/drum_unit_recordings_stamp_series_vol_1_1786529398020/og.webp",
+  "saleDiscount": 0,
+  "tracks": [
+   {
+    "id": null,
+    "title": "Chalice Of Darkness",
+    "trackName": "Chalice Of Darkness",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/drum_unit_recordings_stamp_series_vol_1_1786529398020/CHECK__-_.CHALICE_OF_DARKNESS_CA_Master_1644.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/drum_unit_recordings_stamp_series_vol_1_1786529398020/CHECK__-_.CHALICE_OF_DARKNESS_CA_Master_1644.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/drum_unit_recordings_stamp_series_vol_1_1786529398020/CHECK__-_.CHALICE_OF_DARKNESS_CA_Master_1644.mp3"
+   },
+   {
+    "id": null,
+    "title": "What it Means",
+    "trackName": "What it Means",
+    "price": null,
+    "mp3Url": "https://cdn.freshwax.co.uk/releases/drum_unit_recordings_stamp_series_vol_1_1786529398020/What_It_Means_-_stamp_series_CA_Master_1644.mp3",
+    "wavUrl": "https://cdn.freshwax.co.uk/releases/drum_unit_recordings_stamp_series_vol_1_1786529398020/What_It_Means_-_stamp_series_CA_Master_1644.wav",
+    "previewUrl": "https://cdn.freshwax.co.uk/releases/drum_unit_recordings_stamp_series_vol_1_1786529398020/What_It_Means_-_stamp_series_CA_Master_1644.mp3"
+   }
+  ]
+ }
+]

@@ -61,6 +61,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const updateData = {
       status: action === 'approve' ? 'live' : 'rejected',
       published: action === 'approve',
+      // `approved` was previously left untouched here, so manually-approved
+      // releases went live still flagged approved:false.
+      approved: action === 'approve',
       approvedAt: action === 'approve' ? new Date().toISOString() : null,
       rejectedAt: action === 'reject' ? new Date().toISOString() : null,
       updatedAt: new Date().toISOString()

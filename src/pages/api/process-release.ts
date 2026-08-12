@@ -14,6 +14,9 @@ import { invalidateReleasesKVCache } from '../../lib/kv-cache';
 import type { Track } from '../../lib/types';
 import { processReleaseArtwork } from '../../lib/release/artwork';
 import { buildTrackArray } from '../../lib/release/track-builder';
+import { isEstablishedPartner, releaseStatusFields } from '../../lib/release/auto-approve';
+import { assessReleaseReadiness } from '../../lib/release/readiness';
+import { d1UpsertRelease } from '../../lib/d1-catalog';
 
 const processReleaseSchema = z.object({
   submissionId: z.string().min(1, 'submissionId is required'),
@@ -365,6 +368,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    // Established partners (one live release already) publish without waiting
+    // on the approval queue. An unresolved owner never qualifies.
+    const isEstablished = await isEstablishedPartner(
+      artistOwnerId,
+      (field, value) =>
+        saQueryCollection(serviceAccountKey, projectId, 'releases', {
+          filters: [{ field, op: '==', value }],
+        }),
+      releaseId
+    );
+
     // Build release document
     const releaseData = {
       id: releaseId,
@@ -409,13 +423,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // the item page's `vinylStock > 0` check shows vinyl as available.
       // Without this, the release publishes with vinylStock undefined →
       // treated as 0 → "vinyl unavailable" on item/[id] and an admin has to
-      // backfill (see Hangry Vols.1 and 2 incidents). Labels with a real
-      // pressing count can supply vinylStock / vinylRecordCount and that
-      // value is used instead.
+      // backfill (see Hangry Vols.1 and 2 incidents).
+      //
+      // NEVER fall back to vinylRecordCount: that field is how many DISCS are
+      // in the release ("1 Record (Single / EP)", "2 Records (Double LP)" — it
+      // is a 1-4 dropdown in the uploader), not how many copies exist. Using it
+      // as stock capped a normal single-disc pressing at ONE sellable copy
+      // (Drum Unit "Stamp Series Vol 1", Aug 2026). Only an explicit
+      // vinylStock counts; anything else means "not tracked".
       vinylStock: metadata.vinylRelease
         ? (Number.isFinite(parseInt(metadata.vinylStock)) && parseInt(metadata.vinylStock) >= 0
             ? parseInt(metadata.vinylStock)
-            : (parseInt(metadata.vinylRecordCount) > 0 ? parseInt(metadata.vinylRecordCount) : 99999))
+            : 99999)
         : 0,
       vinylRecordCount: metadata.vinylRecordCount || (metadata.vinylRelease ? '99999' : ''),
       vinylSize: metadata.vinylSize || '',
@@ -425,10 +444,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       vinylShippingEU: metadata.vinylShippingEU ?? null,
       vinylShippingIntl: metadata.vinylShippingIntl ?? null,
 
-      // Status
+      // Status — overwritten below once completeness is known
       status: 'pending',
       published: false,
       approved: false,
+      approvedAt: null as string | null,
+      autoApproved: false,
       storage: 'r2',
 
       // Tracks
@@ -455,8 +476,46 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artistId: artistOwnerId
     };
 
+    // Completeness gate: an established partner still only skips review if the
+    // release is actually finished. Every processing stage above fails soft
+    // (placeholder artwork, swallowed OG errors, and NO automatic MP3
+    // conversion on this path at all), so without this a half-processed
+    // release would go straight to customers with nobody looking at it.
+    const readiness = assessReleaseReadiness(releaseData);
+    const autoPublish = isEstablished && readiness.ready;
+    const statusFields = releaseStatusFields(autoPublish, now);
+    Object.assign(releaseData, statusFields);
+
+    if (readiness.blocking.length > 0) {
+      log.warn(
+        `Release ${releaseId} held for manual review — ${readiness.blocking.length} blocking problem(s): ${readiness.blocking.join(' | ')}`
+      );
+    }
+    if (readiness.warnings.length > 0) {
+      log.warn(`Release ${releaseId} warnings: ${readiness.warnings.join(' | ')}`);
+    }
+    if (isEstablished && !readiness.ready) {
+      log.warn(`Release ${releaseId} would have auto-published but was incomplete — queued for approval instead`);
+    }
+
     // Save to Firebase using service account auth
     await saSetDocument(serviceAccountKey, projectId, 'releases', releaseId, releaseData);
+
+    // Auto-published releases never pass through approve-release, so mirror
+    // them into D1 here — listings read D1 first and would otherwise miss them.
+    if (statusFields.published) {
+      const db = env?.DB;
+      if (db) {
+        try {
+          await d1UpsertRelease(db, releaseId, releaseData);
+          log.info(`D1 synced auto-published release: ${releaseId}`);
+        } catch (e: unknown) {
+          log.error('D1 sync failed for auto-published release:', e instanceof Error ? e.message : String(e));
+        }
+      } else {
+        log.warn('No D1 binding available; auto-published release not mirrored to D1');
+      }
+    }
 
     // Invalidate releases cache so new release appears in listings
     invalidateReleasesCache();

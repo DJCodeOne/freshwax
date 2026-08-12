@@ -7,8 +7,10 @@ import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sd
 import { createS3Client } from '../../../lib/s3-client';
 import { processImageToSquareWebP, processImageToFacebookOG, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { getAdminDb } from '../../../lib/firebase-admin';
-import { setDocument, getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
+import { setDocument, getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
+import { isEstablishedPartner, releaseStatusFields } from '../../../lib/release/auto-approve';
+import { assessReleaseReadiness } from '../../../lib/release/readiness';
 import { errorResponse, successResponse, ApiErrors, createLogger, getR2Config, getAdminKey } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyAdminKey } from '../../../lib/admin';
@@ -227,6 +229,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Check if release already exists (for updates)
     const existingRelease = await getDocument('releases', releaseId);
 
+    // Established partners (one live release already) publish without waiting
+    // on the approval queue. Re-uploads keep whatever status they already had.
+    const releaseOwnerId = String(uploadedBy || existingRelease?.submitterId || existingRelease?.uploadedBy || '');
+    const isEstablished = existingRelease
+      ? false
+      : await isEstablishedPartner(
+          releaseOwnerId,
+          (field, value) => queryCollection('releases', { filters: [{ field, op: '==', value }], skipCache: true }),
+          releaseId
+        );
+
     // Process cover art to WebP if needed
     const processedArt = await processReleaseArtwork(coverArtUrl, env, log);
     const finalCoverUrl = processedArt?.coverUrl || coverArtUrl || '';
@@ -273,9 +286,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       ogImageUrl: finalOgImageUrl,
       tracks: processedTracks,
       trackCount,
+      // Status — overwritten below once completeness is known. A re-upload
+      // keeps whatever status it already had.
       status: existingRelease?.status || 'pending',
       approved: existingRelease?.approved || false,
       published: existingRelease?.published || false,
+      approvedAt: (existingRelease?.approvedAt || null) as string | null,
+      autoApproved: existingRelease?.autoApproved ?? false,
       type: releaseType,
       releaseType,
       uploadedAt: existingRelease?.uploadedAt || new Date().toISOString(),
@@ -299,6 +316,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
         lastUploadAt: new Date().toISOString(),
       },
     };
+
+    // Completeness gate — an established partner still only skips review when
+    // the release is actually finished. Processing stages fail soft, so without
+    // this a half-processed release would reach customers unreviewed.
+    if (!existingRelease) {
+      const readiness = assessReleaseReadiness(releaseDoc);
+      const autoPublish = isEstablished && readiness.ready;
+      Object.assign(releaseDoc, releaseStatusFields(autoPublish, new Date().toISOString()));
+
+      if (readiness.blocking.length > 0) {
+        log.warn(`Release ${releaseId} held for manual review: ${readiness.blocking.join(' | ')}`);
+      }
+      if (readiness.warnings.length > 0) {
+        log.warn(`Release ${releaseId} warnings: ${readiness.warnings.join(' | ')}`);
+      }
+      if (isEstablished && !readiness.ready) {
+        log.warn(`Release ${releaseId} would have auto-published but was incomplete — queued for approval instead`);
+      }
+    }
 
     try {
       // Try Firebase Admin SDK first (bypasses security rules)
