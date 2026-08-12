@@ -29,13 +29,26 @@ export async function cleanupExpiredReservations(): Promise<number> {
 
   try {
     const now = new Date().toISOString();
-    const expired = await queryCollection('stock-reservations', {
-      filters: [
-        { field: 'status', op: 'EQUAL', value: 'active' },
-        { field: 'expiresAt', op: 'LESS_THAN', value: now }
-      ],
-      limit: 50
-    });
+    // throwOnError: this is an equality + range composite query, so it needs a
+    // Firestore composite index on (status, expiresAt). Without one Firestore
+    // returns 400 FAILED_PRECONDITION — and queryCollection's default is to
+    // swallow that and return [], which made the job report a healthy
+    // "cleaned: 0" on every run while reservations piled up for six months.
+    // A missing index must be loud: an unswept reservation holds real stock.
+    let expired: Awaited<ReturnType<typeof queryCollection>>;
+    try {
+      expired = await queryCollection('stock-reservations', {
+        filters: [
+          { field: 'status', op: 'EQUAL', value: 'active' },
+          { field: 'expiresAt', op: 'LESS_THAN', value: now }
+        ],
+        limit: 50
+      }, true);
+    } catch (queryErr: unknown) {
+      const msg = queryErr instanceof Error ? queryErr.message : String(queryErr);
+      log.error('[cleanup] Expired-reservation query FAILED — reservations are NOT being swept:', msg);
+      throw queryErr;
+    }
 
     if (!expired || expired.length === 0) return 0;
 
