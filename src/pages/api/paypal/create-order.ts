@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
-import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry } from '../../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry, countryToISO } from '../../../lib/order/shipping-rules';
 import { SITE_URL } from '../../../lib/constants';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
@@ -142,6 +142,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Determine customer's shipping region
     const customerCountry = orderData.shipping?.country || 'GB';
 
+    // Same address gate as the Stripe flow — a physical order must carry a
+    // complete, shippable address. PayPal is now told SET_PROVIDED_ADDRESS, so
+    // this address is the one that gets shipped to; there is no PayPal-side
+    // picker left to correct an incomplete one.
+    let shippingISO: string | null = null;
+    if (hasPhysicalItems) {
+      const missing = (['address1', 'city', 'postcode'] as const)
+        .filter(f => !String(orderData.shipping?.[f] || '').trim());
+      if (missing.length) {
+        return ApiErrors.badRequest(`Shipping address incomplete — missing ${missing.join(', ')}`);
+      }
+      shippingISO = countryToISO(customerCountry);
+      if (!shippingISO) {
+        return ApiErrors.badRequest(`We don't currently ship to "${customerCountry}"`);
+      }
+    }
+
     // Calculate shipping - merch and vinyl separately (matching Stripe flow)
     let merchShipping = 0;
     let vinylShippingTotal = 0;
@@ -246,23 +263,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
         landing_page: 'NO_PREFERENCE',
         user_action: 'PAY_NOW',
         return_url: `${SITE_URL}/api/paypal/capture-redirect/`,
-        cancel_url: `${SITE_URL}/checkout`
+        cancel_url: `${SITE_URL}/checkout`,
+        // Ship to the address the customer gave us. Without this PayPal
+        // defaults to GET_FROM_FILE and shows its own address picker, so the
+        // buyer can select a different address than the one we quoted postage
+        // for — and re-confirms an address they already entered.
+        // Digital-only orders need no address at all.
+        shipping_preference: hasPhysicalItems ? 'SET_PROVIDED_ADDRESS' : 'NO_SHIPPING',
       }
     };
 
     // Add shipping address if physical items (using validated check)
-    if (hasPhysicalItems && orderData.shipping) {
+    if (hasPhysicalItems) {
       (paypalOrder.purchase_units as Record<string, unknown>[])[0].shipping = {
         name: {
-          full_name: `${orderData.customer.firstName} ${orderData.customer.lastName}`
+          full_name: `${orderData.customer.firstName} ${orderData.customer.lastName}`.trim()
         },
         address: {
-          address_line_1: orderData.shipping.address1,
-          address_line_2: orderData.shipping.address2 || undefined,
-          admin_area_2: orderData.shipping.city,
-          admin_area_1: orderData.shipping.county || undefined,
-          postal_code: orderData.shipping.postcode,
-          country_code: getCountryCode(orderData.shipping.country)
+          address_line_1: orderData.shipping!.address1,
+          address_line_2: orderData.shipping!.address2 || undefined,
+          admin_area_2: orderData.shipping!.city,
+          admin_area_1: orderData.shipping!.county || undefined,
+          postal_code: orderData.shipping!.postcode,
+          country_code: shippingISO!
         }
       };
     }
@@ -363,19 +386,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 // Convert country name to ISO country code
-function getCountryCode(country: string): string {
-  const countryMap: { [key: string]: string } = {
-    'United Kingdom': 'GB',
-    'UK': 'GB',
-    'Ireland': 'IE',
-    'Germany': 'DE',
-    'France': 'FR',
-    'Netherlands': 'NL',
-    'Belgium': 'BE',
-    'USA': 'US',
-    'United States': 'US',
-    'Canada': 'CA',
-    'Australia': 'AU'
-  };
-  return countryMap[country] || 'GB';
-}
+// Country → ISO now lives in order/shipping-rules as `countryToISO`, shared
+// with the Stripe flow. The local copy this replaced defaulted unknown
+// countries to 'GB', which silently turned an unshippable destination into a
+// UK order; the shared helper returns null instead and the caller rejects.

@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { addDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
-import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry } from '../../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry, countryToISO } from '../../../lib/order/shipping-rules';
 import { createLogger, fetchWithTimeout, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
 
 const log = createLogger('[stripe-checkout]');
@@ -147,6 +147,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Determine customer's shipping region from their country
     const customerCountry = orderData.shipping?.country || 'GB';
 
+    // A physical order must carry a complete, shippable address. Stripe used to
+    // enforce this via shipping_address_collection[allowed_countries]; now that
+    // we pass the address through rather than having Stripe re-collect it, the
+    // check belongs here — otherwise an order could reach fulfilment with a
+    // missing line1/postcode or a country we don't ship to.
+    const shippingAddress = orderData.shipping;
+    let shippingISO: string | null = null;
+    if (hasPhysicalItems) {
+      const missing = (['address1', 'city', 'postcode'] as const)
+        .filter(f => !String(shippingAddress?.[f] || '').trim());
+      if (missing.length) {
+        return ApiErrors.badRequest(`Shipping address incomplete — missing ${missing.join(', ')}`);
+      }
+      shippingISO = countryToISO(customerCountry);
+      if (!shippingISO) {
+        return ApiErrors.badRequest(`We don't currently ship to "${customerCountry}"`);
+      }
+    }
+
     // Calculate shipping - vinyl shipping goes to artists, merch shipping stays with platform
     let merchShipping = 0;
     let vinylShippingTotal = 0;
@@ -276,7 +295,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // ALWAYS use the Firestore pending-checkout when there's an
     // artistShippingBreakdown — metadata can't carry it, and losing it would
     // drop the artist's release-vinyl postage from their payout.
-    if (itemsJson.length <= 500 && Object.keys(artistShippingBreakdown).length === 0) {
+    //
+    // ALSO always use it for physical orders: the pending checkout is now the
+    // only place the shipping address lives. Stripe no longer collects one, so
+    // a physical order that took the metadata path would reach fulfilment with
+    // no address at all. (Small merch/crates orders used to take that path and
+    // relied entirely on Stripe's copy.)
+    if (itemsJson.length <= 500 && Object.keys(artistShippingBreakdown).length === 0 && !hasPhysicalItems) {
       metadata['items_json'] = itemsJson;
     } else {
       // Items too large for metadata - store in Firestore pendingCheckouts collection
@@ -358,16 +383,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
         bodyParams.append('shipping_options[0][shipping_rate_data][delivery_estimate][maximum][value]', '7');
       }
 
-      // Enable shipping address collection
-      bodyParams.append('shipping_address_collection[allowed_countries][0]', 'GB');
-      bodyParams.append('shipping_address_collection[allowed_countries][1]', 'IE');
-      bodyParams.append('shipping_address_collection[allowed_countries][2]', 'DE');
-      bodyParams.append('shipping_address_collection[allowed_countries][3]', 'FR');
-      bodyParams.append('shipping_address_collection[allowed_countries][4]', 'NL');
-      bodyParams.append('shipping_address_collection[allowed_countries][5]', 'BE');
-      bodyParams.append('shipping_address_collection[allowed_countries][6]', 'US');
-      bodyParams.append('shipping_address_collection[allowed_countries][7]', 'CA');
-      bodyParams.append('shipping_address_collection[allowed_countries][8]', 'AU');
+      // Pass the address the customer already gave us instead of making Stripe
+      // ask for it a second time. `shipping_address_collection` used to be set
+      // here, which meant re-typing the whole address on the Stripe page — and
+      // for release-vinyl orders that second copy was then discarded anyway,
+      // because verify-session prefers the pendingCheckout address.
+      //
+      // Setting it on the PaymentIntent keeps the address visible in the Stripe
+      // dashboard and available as dispute evidence.
+      const shipName = `${orderData.customer.firstName} ${orderData.customer.lastName}`.trim();
+      bodyParams.append('payment_intent_data[shipping][name]', shipName || 'Customer');
+      bodyParams.append('payment_intent_data[shipping][address][line1]', shippingAddress!.address1!);
+      if (shippingAddress!.address2) {
+        bodyParams.append('payment_intent_data[shipping][address][line2]', shippingAddress!.address2);
+      }
+      bodyParams.append('payment_intent_data[shipping][address][city]', shippingAddress!.city!);
+      if (shippingAddress!.county) {
+        bodyParams.append('payment_intent_data[shipping][address][state]', shippingAddress!.county);
+      }
+      bodyParams.append('payment_intent_data[shipping][address][postal_code]', shippingAddress!.postcode!);
+      bodyParams.append('payment_intent_data[shipping][address][country]', shippingISO!);
+      if (orderData.customer.phone) {
+        bodyParams.append('payment_intent_data[shipping][phone]', orderData.customer.phone);
+      }
     }
 
     // Create Stripe checkout session

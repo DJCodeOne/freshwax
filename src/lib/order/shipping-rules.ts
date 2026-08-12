@@ -43,6 +43,48 @@ export function regionForCountry(country: string | undefined | null): 'UK' | 'EU
 }
 
 /**
+ * The countries the checkout form offers, as name → ISO 3166-1 alpha-2.
+ *
+ * The form submits display names ("United Kingdom", "USA"); Stripe wants ISO
+ * codes. This is also the shippable-destinations allowlist: it used to be
+ * enforced by Stripe's `shipping_address_collection[allowed_countries]`, but
+ * now that we pass the address through instead of having Stripe re-collect it,
+ * that check has to happen here. Keep in sync with the country <select> in
+ * `src/lib/checkout/checkout-ui.ts`.
+ */
+const COUNTRY_NAME_TO_ISO: Record<string, string> = {
+  'United Kingdom': 'GB',
+  'Ireland': 'IE',
+  'Germany': 'DE',
+  'France': 'FR',
+  'Netherlands': 'NL',
+  'Belgium': 'BE',
+  'USA': 'US',
+  'United States': 'US',
+  'Canada': 'CA',
+  'Australia': 'AU',
+};
+
+/** Every ISO code we ship to — the values above, deduped. */
+const SHIPPABLE_ISO = new Set(Object.values(COUNTRY_NAME_TO_ISO));
+
+/**
+ * Normalise a country to its ISO code, or null when we don't ship there.
+ * Accepts a display name or an ISO code (either case) so it works with both
+ * form submissions and data that already went through Stripe.
+ */
+export function countryToISO(country: string | undefined | null): string | null {
+  const c = (country || '').trim();
+  if (!c) return null;
+  if (COUNTRY_NAME_TO_ISO[c]) return COUNTRY_NAME_TO_ISO[c];
+  const upper = c.toUpperCase();
+  if (SHIPPABLE_ISO.has(upper)) return upper;
+  // "UK" isn't the ISO code but users and older records both use it.
+  if (upper === 'UK') return 'GB';
+  return null;
+}
+
+/**
  * Combined crate shipping for ONE seller's crate items (mutates in place):
  * the first record keeps its listing's single rate; every additional record
  * (extra listings + extra quantity from that seller) is charged `additional`.

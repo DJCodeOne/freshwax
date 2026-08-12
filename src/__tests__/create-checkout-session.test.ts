@@ -308,7 +308,61 @@ describe('Stripe Create Checkout Session', () => {
     const stripeCall = mockFetchWithTimeout.mock.calls[0];
     const requestBody = stripeCall[1].body as string;
     expect(requestBody).toContain('shipping_options');
-    expect(requestBody).toContain('shipping_address_collection');
+
+    // The address the customer already gave us is passed to Stripe, NOT
+    // re-collected. `shipping_address_collection` made the buyer type the
+    // whole address a second time on the Stripe page, and for release-vinyl
+    // orders that second copy was discarded anyway (verify-session prefers the
+    // pendingCheckout address). Its absence here is the fix, not an omission.
+    expect(requestBody).not.toContain('shipping_address_collection');
+
+    // Parse rather than string-match: form encoding writes spaces as '+',
+    // which decodeURIComponent does not undo.
+    const sent = new URLSearchParams(requestBody);
+    expect(sent.get('payment_intent_data[shipping][name]')).toBe('Test Buyer');
+    expect(sent.get('payment_intent_data[shipping][address][line1]')).toBe('123 Test St');
+    expect(sent.get('payment_intent_data[shipping][address][city]')).toBe('London');
+    expect(sent.get('payment_intent_data[shipping][address][postal_code]')).toBe('SW1A 1AA');
+    // ISO code, not the "United Kingdom" display name the form submits
+    expect(sent.get('payment_intent_data[shipping][address][country]')).toBe('GB');
+  });
+
+  it('rejects a physical order with an incomplete shipping address', async () => {
+    // Stripe used to backstop this by collecting the address itself. Now that
+    // it doesn't, an incomplete address would reach fulfilment unnoticed.
+    // The default mock returns a DIGITAL item, which skips the address gate —
+    // override it so hasPhysicalItems is true.
+    mockValidateAndGetPrices.mockResolvedValue({
+      validatedItems: [{ productId: 'merch_1', name: 'Underground Lair T-Shirt', type: 'merch', price: 24.99, quantity: 1 }],
+      hasPriceMismatch: false,
+    });
+    const request = makeRequest({
+      items: [{ id: 'merch_1', productId: 'merch_1', name: 'Underground Lair T-Shirt', type: 'merch', price: 24.99, quantity: 1, size: 'L', color: 'Black' }],
+      customer: { email: 'buyer@test.com', firstName: 'Test', lastName: 'Buyer', userId: 'user_123' },
+      shipping: { address1: '', city: 'London', postcode: 'SW1A 1AA', country: 'United Kingdom' },
+      hasPhysicalItems: true,
+    });
+
+    const response = await POST({ request, locals: makeLocals() } as unknown as Parameters<typeof POST>[0]);
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toMatch(/address incomplete/i);
+  });
+
+  it('rejects a physical order shipping to a country we do not serve', async () => {
+    mockValidateAndGetPrices.mockResolvedValue({
+      validatedItems: [{ productId: 'merch_1', name: 'Underground Lair T-Shirt', type: 'merch', price: 24.99, quantity: 1 }],
+      hasPriceMismatch: false,
+    });
+    const request = makeRequest({
+      items: [{ id: 'merch_1', productId: 'merch_1', name: 'Underground Lair T-Shirt', type: 'merch', price: 24.99, quantity: 1, size: 'L', color: 'Black' }],
+      customer: { email: 'buyer@test.com', firstName: 'Test', lastName: 'Buyer', userId: 'user_123' },
+      shipping: { address1: '1 Test St', city: 'Tokyo', postcode: '100-0001', country: 'Japan' },
+      hasPhysicalItems: true,
+    });
+
+    const response = await POST({ request, locals: makeLocals() } as unknown as Parameters<typeof POST>[0]);
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toMatch(/don't currently ship/i);
   });
 
   // -----------------------------------------------------------------------
