@@ -125,6 +125,40 @@ export async function validateStock(items: CartItem[]): Promise<{ available: boo
   return { available: unavailableItems.length === 0, unavailableItems };
 }
 
+/**
+ * Server-side digital prices for a release, mirroring what the item page
+ * charges (src/pages/item/[id].astro).
+ *
+ * `pricePerSale` is the real full-release digital price — `price` and
+ * `digitalPrice` are null on every release in the catalogue, so reading only
+ * those meant the server fell back to the CLIENT-supplied price and validated
+ * nothing. Sale discounts are applied here too; without that, any release put
+ * on sale would fail validation as a "mismatch" on every legitimate purchase.
+ */
+export function resolveReleaseDigitalPrices(release: Record<string, unknown>): {
+  albumPrice: number;
+  trackPrice: number;
+} {
+  const saleDiscount = Number(release.saleDiscount) || 0;
+  const saleMultiplier = saleDiscount > 0 ? 1 - saleDiscount / 100 : 1;
+
+  const baseTrackPrice = Number(
+    release.trackPrice ?? (release as { track_price?: number }).track_price ?? 1.0
+  ) || 0;
+  const trackCount = Array.isArray(release.tracks) ? release.tracks.length : 0;
+
+  const listedAlbumPrice = Number(
+    release.pricePerSale ?? release.price ?? release.digitalPrice ?? 0
+  ) || 0;
+  // Same fallback the item page uses when no album price is set
+  const baseAlbumPrice = listedAlbumPrice || baseTrackPrice * trackCount;
+
+  return {
+    albumPrice: baseAlbumPrice * saleMultiplier,
+    trackPrice: baseTrackPrice * saleMultiplier,
+  };
+}
+
 // Validate item prices server-side to prevent manipulation
 // Shared by Stripe and PayPal checkout flows
 export async function validateAndGetPrices(
@@ -261,9 +295,14 @@ export async function validateAndGetPrices(
                 const track = (release.tracks || []).find((t: Record<string, unknown>) =>
                   t.id === item.trackId || t.trackId === item.trackId
                 );
-                serverPrice = track?.price || release.trackPrice || 0.99;
+                const { trackPrice } = resolveReleaseDigitalPrices(release);
+                serverPrice = (track?.price as number) || trackPrice || 0.99;
               } else {
-                serverPrice = release.price || release.digitalPrice || item.price;
+                // Full-release digital. Falls back to the client price only if
+                // the release genuinely carries no price at all, so a priced
+                // release can never be bought for a tampered amount.
+                const { albumPrice } = resolveReleaseDigitalPrices(release);
+                serverPrice = albumPrice > 0 ? albumPrice : item.price;
               }
             }
           }

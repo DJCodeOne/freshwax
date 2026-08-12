@@ -4,6 +4,7 @@
 
 import { getDocument } from '../firebase-rest';
 import { createLogger } from '../api-utils';
+import { resolveReleaseDigitalPrices } from './stock-validation';
 
 const log = createLogger('create-order');
 
@@ -148,7 +149,8 @@ export async function validateOrderPrices(items: Record<string, unknown>[]): Pro
           const track = (release.tracks || []).find((t: TrackData) =>
             t.id === item.trackId || t.trackId === item.trackId
           );
-          serverPrice = track?.price || release.trackPrice || 0.99;
+          const { trackPrice } = resolveReleaseDigitalPrices(release);
+          serverPrice = track?.price || trackPrice || 0.99;
         }
       } else if (itemType === 'digital' || itemType === 'release') {
         const releaseId = item.releaseId || item.productId || item.id;
@@ -157,7 +159,11 @@ export async function validateOrderPrices(items: Record<string, unknown>[]): Pro
           if (!release) {
             return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
           }
-          serverPrice = release.price || release.digitalPrice;
+          // `pricePerSale` is the real digital price; `price`/`digitalPrice`
+          // are null on every release, so reading only those rejected every
+          // legitimate full-album purchase through this endpoint.
+          const { albumPrice } = resolveReleaseDigitalPrices(release);
+          serverPrice = albumPrice;
           if (serverPrice == null || serverPrice <= 0) {
             return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Unable to verify price for ${item.name}. Please try again.` };
           }
