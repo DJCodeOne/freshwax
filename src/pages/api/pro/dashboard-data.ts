@@ -80,6 +80,12 @@ async function handleReleases(userId: string) {
       vinylShippingUK: r.vinylShippingUK ?? null,
       vinylShippingEU: r.vinylShippingEU ?? null,
       vinylShippingIntl: r.vinylShippingIntl ?? null,
+      // The editor renders this one too; without it the saved "each extra
+      // record" rate always came back blank.
+      vinylShippingAdditional: r.vinylShippingAdditional ?? null,
+      // Sellable copies, so the label can correct it themselves. 99999 is the
+      // "not tracked" sentinel and renders as an empty (unlimited) box.
+      vinylStock: r.vinylStock ?? null,
       // Multi-part vinyl: stripped down to the editable bits per part so the
       // pro dashboard can render the per-part stock/price editor and the label
       // can adjust as they press more (e.g. Vol.2 Part 2 going from stock=0

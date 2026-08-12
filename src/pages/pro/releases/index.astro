@@ -293,6 +293,35 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       border-color: var(--accent, #22c55e);
     }
 
+    .stock-row {
+      margin-bottom: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-color, #262626);
+    }
+
+    .stock-row label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary, #a3a3a3);
+      max-width: 220px;
+    }
+
+    .stock-row input {
+      padding: 0.5rem 0.65rem;
+      background: var(--bg-secondary, #141414);
+      border: 1px solid var(--border-color, #262626);
+      border-radius: 4px;
+      color: var(--text-primary, #fff);
+      font-size: 0.9rem;
+    }
+
+    .stock-row input:focus {
+      outline: none;
+      border-color: var(--accent, #22c55e);
+    }
+
     .shipping-actions {
       display: flex;
       gap: 0.5rem;
@@ -548,6 +577,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         const euVal = release.vinylShippingEU != null ? release.vinylShippingEU : '';
         const intlVal = release.vinylShippingIntl != null ? release.vinylShippingIntl : '';
         const addVal = release.vinylShippingAdditional != null ? release.vinylShippingAdditional : '';
+        // 99999 is the "not tracked" sentinel — show it as blank so the box
+        // reads as "unlimited" rather than a nonsense number.
+        const hasVinylParts = Array.isArray(release.vinylParts) && release.vinylParts.length > 0;
+        const stockNum = release.vinylStock != null ? Number(release.vinylStock) : null;
+        const stockVal = stockNum == null || stockNum >= 99999 ? '' : stockNum;
+        const stockEditor = isVinyl && !hasVinylParts ? `
+          <div class="stock-row">
+            <label>Copies in stock<input type="number" step="1" min="0" max="99999" data-field="vinyl-stock" value="${stockVal}" placeholder="Unlimited"></label>
+            <p class="hint">How many copies you have to sell. Leave blank if you're not tracking stock. This is not the number of records in the release.</p>
+          </div>
+        ` : '';
         const shippingEditor = isVinyl ? `
           <div class="shipping-edit" data-shipping-for="${release.id}">
             <h4>Vinyl shipping rates</h4>
@@ -558,8 +598,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               <label>International (£)<input type="number" step="0.01" min="0" max="999" data-region="Intl" value="${intlVal}"></label>
               <label>Each extra record (£)<input type="number" step="0.01" min="0" max="999" data-region="Additional" value="${addVal}"></label>
             </div>
+            ${stockEditor}
             <div class="shipping-actions">
-              <button class="action-btn" data-action="save-shipping">Save shipping</button>
+              <button class="action-btn" data-action="save-shipping">Save shipping${stockEditor ? ' + stock' : ''}</button>
               <span class="status"></span>
             </div>
           </div>
@@ -646,6 +687,21 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               payload[key] = num;
             }
           });
+          const stockInput = editor.querySelector('input[data-field="vinyl-stock"]');
+          if (stockInput) {
+            const stockRaw = stockInput.value.trim();
+            if (stockRaw === '') {
+              payload.vinylStock = null; // clears back to "not tracked"
+            } else {
+              const num = parseInt(stockRaw, 10);
+              if (!Number.isFinite(num) || num < 0 || num > 99999) {
+                status.textContent = 'Invalid stock';
+                status.className = 'status err';
+                return;
+              }
+              payload.vinylStock = num;
+            }
+          }
           if (invalid) {
             status.textContent = 'Invalid amount';
             status.className = 'status err';
@@ -674,6 +730,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               local.vinylShippingEU = data.shipping.vinylShippingEU;
               local.vinylShippingIntl = data.shipping.vinylShippingIntl;
               local.vinylShippingAdditional = data.shipping.vinylShippingAdditional;
+            }
+            if (local && data.vinylStock !== undefined) {
+              local.vinylStock = data.vinylStock;
             }
           } catch (e) {
             status.textContent = e instanceof Error ? e.message : 'Save failed';

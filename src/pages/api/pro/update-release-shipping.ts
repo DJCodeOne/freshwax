@@ -1,8 +1,15 @@
 // /src/pages/api/pro/update-release-shipping.ts
-// Artist self-service: set per-release vinyl shipping rates (UK / EU / Intl).
+// Artist self-service: set per-release vinyl shipping rates (UK / EU / Intl)
+// and the pressing stock.
 // The cart's price-pick order is: release-level rate → artist-account default
 // → hardcoded floor. Setting any rate here overrides the artist default for
 // that one release; clearing it (sending null) returns to the default.
+//
+// vinylStock is how many copies are sellable. It is NOT vinylRecordCount —
+// that field is how many discs are in the release (single vs double LP) and
+// must never be used as stock. Multi-part releases track stock per part via
+// update-release-vinyl-parts, so stock edits are rejected for those to avoid
+// two competing sources of truth.
 //
 // Authorisation is strictly scoped — release.artistId / release.userId /
 // release.submittedBy must match the authenticated user. Admins still own
@@ -25,12 +32,18 @@ export const prerender = false;
 // shipping on some releases.
 const rateSchema = z.union([z.number().min(0).max(999), z.null()]);
 
+// 99999 is the "unlimited / not tracked" sentinel used across the codebase.
+// null clears the value back to that sentinel rather than to 0, so clearing
+// the box can never accidentally take a release out of stock.
+const stockSchema = z.union([z.number().int().min(0).max(99999), z.null()]);
+
 const schema = z.object({
   releaseId: z.string().min(1),
   vinylShippingUK: rateSchema.optional(),
   vinylShippingEU: rateSchema.optional(),
   vinylShippingIntl: rateSchema.optional(),
   vinylShippingAdditional: rateSchema.optional(),
+  vinylStock: stockSchema.optional(),
 });
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -46,7 +59,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!parsed.success) {
     return ApiErrors.badRequest('Invalid request: ' + parsed.error.issues.map(i => i.message).join(', '));
   }
-  const { releaseId, vinylShippingUK, vinylShippingEU, vinylShippingIntl, vinylShippingAdditional } = parsed.data;
+  const { releaseId, vinylShippingUK, vinylShippingEU, vinylShippingIntl, vinylShippingAdditional, vinylStock } = parsed.data;
 
   const release = await getDocument('releases', releaseId);
   if (!release) return ApiErrors.notFound('Release not found');
@@ -69,8 +82,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (vinylShippingIntl !== undefined) updateData.vinylShippingIntl = vinylShippingIntl;
   if (vinylShippingAdditional !== undefined) updateData.vinylShippingAdditional = vinylShippingAdditional;
 
+  if (vinylStock !== undefined) {
+    const parts = Array.isArray(release.vinylParts) ? release.vinylParts : [];
+    if (parts.length > 0) {
+      return ApiErrors.badRequest('This release tracks stock per vinyl part — set it on each part instead');
+    }
+    updateData.vinylStock = vinylStock === null ? 99999 : vinylStock;
+  }
+
   if (Object.keys(updateData).length === 1) {
-    return ApiErrors.badRequest('No shipping rates supplied');
+    return ApiErrors.badRequest('No shipping rates or stock supplied');
   }
 
   await updateDocument('releases', releaseId, updateData);
@@ -87,9 +108,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (fresh) {
         const dataJson = JSON.stringify({ ...fresh, id: releaseId });
         const releaseDate = fresh.releaseDate || fresh.createdAt || new Date().toISOString();
+        // vinyl_stock is a real column (listings and the Google Shopping feed
+        // read it), so the JSON blob alone is not enough to reflect a change.
         await db.prepare(
-          `UPDATE releases_v2 SET data = ?, release_date = ? WHERE id = ?`
-        ).bind(dataJson, releaseDate, releaseId).run();
+          `UPDATE releases_v2 SET data = ?, release_date = ?, vinyl_stock = ? WHERE id = ?`
+        ).bind(dataJson, releaseDate, Number(fresh.vinylStock ?? 0), releaseId).run();
       }
     } catch (e: unknown) {
       log.error('D1 sync failed (continuing)', e instanceof Error ? e.message : e);
@@ -109,5 +132,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       vinylShippingIntl: vinylShippingIntl !== undefined ? vinylShippingIntl : (release.vinylShippingIntl ?? null),
       vinylShippingAdditional: vinylShippingAdditional !== undefined ? vinylShippingAdditional : (release.vinylShippingAdditional ?? null),
     },
+    vinylStock: updateData.vinylStock !== undefined ? updateData.vinylStock : (release.vinylStock ?? null),
   });
 };
