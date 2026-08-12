@@ -408,6 +408,10 @@ export async function handleProductOrder(
       customerName: metadata.customer_displayName || metadata.customer_firstName || null,
       grossTotal: session.amount_total! / 100,
       shipping: shippingAmount,
+      // Same breakdown the payout uses, so the ledger's artistPayout matches
+      // what the artist is actually paid instead of under-stating it by the
+      // postage on every physical sale.
+      artistShippingBreakdown,
       stripeFee: Math.round(stripeFee * 100) / 100,
       freshWaxFee,
       paymentMethod: 'stripe',

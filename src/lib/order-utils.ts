@@ -24,7 +24,7 @@ export { updateMerchStock } from './order/merch-processing';
 export { refundOrderStock } from './order/refund';
 
 // Email sending
-export { sendOrderConfirmationEmail, sendVinylFulfillmentEmail, sendDigitalSaleEmails, sendMerchSaleEmails } from './order/emails';
+export { sendOrderConfirmationEmail, sendVinylFulfillmentEmail, sendReleaseVinylSellerEmails, sendDigitalSaleEmails, sendMerchSaleEmails } from './order/emails';
 
 // Customer tracking
 export { updateCustomerOrderCount } from './order/customer';

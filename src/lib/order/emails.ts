@@ -4,8 +4,11 @@
 import { formatPrice } from '../format-utils';
 import { SITE_URL } from '../constants';
 import { sendResendEmail } from '../email';
+import { getDocument } from '../firebase-rest';
+import { sendVinylOrderSellerEmail } from '../vinyl-order-emails';
 import { log } from './types';
 import type { CartItem } from './types';
+import type { D1Database } from '@cloudflare/workers-types';
 import { getShortOrderNumber } from './utils';
 import {
   buildOrderConfirmationEmail,
@@ -88,6 +91,67 @@ export async function sendVinylFulfillmentEmail(
     }
   } catch (stockistError: unknown) {
     log.error('[order-utils] Stockist email error:', stockistError);
+  }
+}
+
+/**
+ * Tell each label that one of THEIR records sold, so they can post it.
+ *
+ * `sendVinylFulfillmentEmail` above only notifies the single stockist address,
+ * and the per-seller notice in vinyl-processing only fires for crates items
+ * (`sellerId && !releaseId`). A label that presses and ships its own release
+ * vinyl therefore got no email at all — the order sat waiting on someone who
+ * didn't know it existed.
+ *
+ * Owner resolution mirrors the payout: artistId first, then the legacy
+ * submitterId/userId fallbacks. An item with no resolvable owner is skipped
+ * (the stockist mail still went out, so the sale is not lost).
+ */
+export async function sendReleaseVinylSellerEmails(
+  order: Record<string, unknown>,
+  orderNumber: string,
+  vinylItems: CartItem[],
+  env: Record<string, unknown>
+): Promise<void> {
+  // Crates items are handled by vinyl-processing; these are label releases.
+  const releaseItems = vinylItems.filter(i => (i.releaseId || i.productId) && !(i.sellerId && !i.releaseId));
+  if (releaseItems.length === 0) return;
+
+  const customer = (order.customer || {}) as Record<string, string>;
+  const shipping = (order.shipping || null) as Record<string, string> | null;
+
+  for (const item of releaseItems) {
+    const ownerId = String(item.artistId || item.submitterId || item.userId || '');
+    if (!ownerId) {
+      log.warn('[order-utils] Vinyl item has no owner — no seller email sent:', item.title || item.name);
+      continue;
+    }
+    try {
+      const artist = await getDocument('artists', ownerId);
+      const sellerEmail = String(artist?.email || '');
+      if (!sellerEmail) {
+        log.warn('[order-utils] No email on artists/' + ownerId + ' — no seller email sent');
+        continue;
+      }
+      await sendVinylOrderSellerEmail(
+        sellerEmail,
+        String(artist?.artistName || artist?.name || item.artist || 'Seller'),
+        {
+          orderNumber,
+          itemTitle: String(item.title || item.name || 'Vinyl'),
+          itemArtist: String(item.artist || item.artistName || ''),
+          price: Number(item.price) || 0,
+          buyerName: `${customer.firstName || ''} ${customer.lastName || ''}`.trim(),
+          buyerEmail: customer.email || '',
+          shippingAddress: shipping,
+        },
+        env as { RESEND_API_KEY?: string; DB?: D1Database }
+      );
+      log.info('[order-utils] Vinyl seller email sent to', sellerEmail);
+    } catch (e: unknown) {
+      // Never fail the order on a notification.
+      log.error('[order-utils] Vinyl seller email failed for', ownerId, e instanceof Error ? e.message : e);
+    }
   }
 }
 

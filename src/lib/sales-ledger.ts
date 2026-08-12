@@ -312,6 +312,15 @@ export async function recordMultiSellerSale(params: {
   currency?: string;
   hasPhysical?: boolean;
   hasDigital?: boolean;
+  /**
+   * Per-artist release-vinyl postage, keyed by artistId — the same breakdown
+   * that drives the payout. Without it the ledger recorded `shipping: 0` on
+   * every physical sale, so its `artistPayout` under-stated what was actually
+   * paid out by exactly the postage (a £12 record with £4.99 postage logged an
+   * £11.36 payout while the artist was correctly paid £16.35). The artist ships
+   * the record, so the postage the customer paid is theirs.
+   */
+  artistShippingBreakdown?: Record<string, { artistId: string; artistName: string; amount: number }> | null;
   // Items with seller info - each item should have submitterId from release lookup
   items: Array<{
     id?: string;
@@ -396,7 +405,16 @@ export async function recordMultiSellerSale(params: {
       const sellerPaypalFee = distributedPaypalFees.get(sellerId) || 0;
       const sellerFreshWaxFee = distributedFreshWaxFees.get(sellerId) || 0;
       const sellerTotalFees = sellerStripeFee + sellerPaypalFee + sellerFreshWaxFee;
-      const sellerNetRevenue = sellerSubtotal - sellerTotalFees;
+
+      // This seller's postage. Fees are charged on the whole transaction (the
+      // Stripe fee is the actual fee on subtotal+postage), so postage is added
+      // to gross and net rather than being fee-free — which is what makes this
+      // match the payout figure exactly.
+      const sellerShipping = Math.round(
+        ((params.artistShippingBreakdown?.[sellerId]?.amount) || 0) * 100
+      ) / 100;
+      const sellerGrossTotal = Math.round((sellerSubtotal + sellerShipping) * 100) / 100;
+      const sellerNetRevenue = sellerGrossTotal - sellerTotalFees;
 
       // Get seller info from first item
       const firstItem = sellerItems[0];
@@ -437,9 +455,9 @@ export async function recordMultiSellerSale(params: {
         submitterEmail: submitterEmail,
         // Revenue (this seller's portion)
         subtotal: sellerSubtotal,
-        shipping: 0, // Shipping handled separately or by platform
+        shipping: sellerShipping,
         discount: 0,
-        grossTotal: sellerSubtotal, // Seller's gross is their item total
+        grossTotal: sellerGrossTotal, // items + this seller's postage
         stripeFee: sellerStripeFee,
         paypalFee: sellerPaypalFee,
         freshWaxFee: sellerFreshWaxFee,

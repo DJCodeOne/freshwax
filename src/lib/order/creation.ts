@@ -8,7 +8,7 @@ import { generateOrderNumber } from './utils';
 import { processItemsWithDownloads } from './stock-validation';
 import { updateVinylStock, processVinylCratesOrders } from './vinyl-processing';
 import { updateMerchStock } from './merch-processing';
-import { sendOrderConfirmationEmail, sendVinylFulfillmentEmail, sendDigitalSaleEmails, sendMerchSaleEmails } from './emails';
+import { sendOrderConfirmationEmail, sendVinylFulfillmentEmail, sendReleaseVinylSellerEmails, sendDigitalSaleEmails, sendMerchSaleEmails } from './emails';
 import { updateCustomerOrderCount } from './customer';
 
 // Main function to create a complete order
@@ -137,6 +137,9 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
     const vinylItems = order.items.filter((item: CartItem) => item.type === 'vinyl');
     if (vinylItems.length > 0) {
       await sendVinylFulfillmentEmail(order, orderRef.id, orderNumber, vinylItems, env);
+      // Labels ship their own release vinyl, so tell the owner too — the
+      // stockist address above is not who posts these.
+      await sendReleaseVinylSellerEmails(order, orderNumber, vinylItems, env);
     }
 
     // Send digital sale emails
