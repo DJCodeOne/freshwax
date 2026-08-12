@@ -31,8 +31,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <div class="flex items-center gap-2">
         <span id="workerStatus" class="badge badge-pending">Checking...</span>
         <span id="workerUrl" class="text-muted" style="font-size: 0.85rem;">Local API</span>
-        <span id="audioStatus" class="badge badge-pending" title="Local audio processor — WAV→MP3 conversion">Audio: checking…</span>
+        <span id="audioStatus" class="badge badge-pending" title="WAV→MP3 conversion. On the live site this is done by the conversion agent, which polls for releases still on raw masters and publishes them once converted.">Audio: checking…</span>
       </div>
+      <p id="audioAgentNote" class="text-muted" style="font-size: 0.85rem; margin: 0.6rem 0 0;" hidden>
+        Processing here saves the original masters. The conversion agent on the studio PC
+        converts them to 320k MP3 (usually within ~5&nbsp;minutes) and publishes the release
+        automatically. A release is never made live while its audio is unconverted, so there is
+        nothing to chase — to convert instantly instead, run this page from a local dev server.
+      </p>
     </div>
   </div>
 
@@ -87,9 +93,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         const audioStatus = document.getElementById('audioStatus');
         const ready = await checkAudioProcessor();
         if (audioStatus) {
-          if (ready) { audioStatus.textContent = 'Audio: ready'; audioStatus.className = 'badge badge-live'; }
+          if (ready) { audioStatus.textContent = 'Audio: converts now'; audioStatus.className = 'badge badge-live'; }
           else if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-            audioStatus.textContent = 'Audio: localhost only'; audioStatus.className = 'badge badge-pending';
+            // Not a fault: off localhost the browser can't reach the local
+            // processor, so the conversion agent picks the release up instead.
+            audioStatus.textContent = 'Audio: auto-converts via agent'; audioStatus.className = 'badge badge-live';
+            document.getElementById('audioAgentNote')?.removeAttribute('hidden');
           } else { audioStatus.textContent = 'Audio: offline (start scripts/audio-processor.cjs)'; audioStatus.className = 'badge badge-danger'; }
         }
       }
@@ -286,16 +295,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                     log('No tracks were converted (all failed or skipped).');
                     showToast('Processed but audio conversion failed — check log', 'error');
                   }
+                } else if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                  // Expected on the live site — the browser can't reach the
+                  // operator's machine. The conversion agent polls for this
+                  // release and converts it, then publishes it if the label is
+                  // established. Not an error.
+                  log('Saved with the original masters. The audio conversion agent will pick this up.');
+                  log('It converts to 320k MP3 (usually within ~5 minutes) and publishes the release automatically.');
+                  log('Until then the release stays pending — it will not go live with unconverted audio.');
+                  showToast('Processed — audio queued for automatic conversion');
                 } else {
-                  log('Audio processor not running on localhost:8089.');
-                  log('Release saved in WAV-only format. Start scripts/audio-processor.cjs and re-run, or convert later.');
-                  showToast('Saved as WAV-only — audio processor not running', 'error');
+                  log('Audio processor not reachable on localhost:8089.');
+                  log('Start scripts/audio-processor.cjs, or leave it — the conversion agent will pick this release up.');
+                  showToast('Processed — audio queued for conversion', 'error');
                 }
               }
             } catch (convErr) {
               const cmsg = convErr instanceof Error ? convErr.message : String(convErr);
               log(`Audio conversion error: ${cmsg}`);
-              showToast('Audio conversion failed — release is in WAV-only state', 'error');
+              log('The conversion agent will retry this release on its next pass.');
+              showToast('Processed — audio conversion deferred to the agent', 'error');
             }
 
             // Remove row with animation

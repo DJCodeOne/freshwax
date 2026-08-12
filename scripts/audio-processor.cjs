@@ -618,6 +618,112 @@ server.listen(PORT, () => {
   console.log(`[Startup] Temp directory: ${TEMP_DIR}`);
 });
 
+// ---------------------------------------------------------------------------
+// Conversion agent
+//
+// The admin pages can only reach this service from localhost (they hard-return
+// false off localhost), so processing a submission from the live site always
+// produced a WAV-only release. Instead of waiting to be called, poll the site
+// for releases whose audio is still a raw master, convert them, and hand the
+// URLs back. The server then publishes anything that was only being held back
+// by its audio.
+//
+// Safe to run alongside the HTTP server: one release at a time, and the queue
+// is derived from live data each pass, so a converted release simply stops
+// being returned.
+// ---------------------------------------------------------------------------
+
+const SITE_URL = (process.env.SITE_URL || 'https://freshwax.co.uk').replace(/\/$/, '');
+const ADMIN_KEY = process.env.ADMIN_KEY || '';
+const AGENT_ENABLED = process.env.AUDIO_AGENT_ENABLED !== 'false' && !!ADMIN_KEY;
+const AGENT_INTERVAL_MS = Math.max(60, parseInt(process.env.AUDIO_AGENT_INTERVAL_SEC || '300', 10)) * 1000;
+let agentBusy = false;
+
+function agentFetch(path, options = {}) {
+  return fetch(`${SITE_URL}${path}`, {
+    ...options,
+    headers: { 'X-Admin-Key': ADMIN_KEY, 'Content-Type': 'application/json', ...(options.headers || {}) },
+  });
+}
+
+async function runAgentPass() {
+  if (agentBusy) return;
+  agentBusy = true;
+  try {
+    const res = await agentFetch('/api/admin/audio-queue/');
+    if (!res.ok) {
+      console.warn(`[Agent] Queue fetch failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
+      return;
+    }
+    const body = await res.json();
+    const queue = body?.queue || body?.data?.queue || [];
+    if (!queue.length) return;
+
+    console.log(`[Agent] ${queue.length} release(s) need conversion`);
+
+    for (const release of queue) {
+      console.log(`[Agent] Converting "${release.title}" (${release.tracks.length} track(s))`);
+      const converted = [];
+
+      for (const track of release.tracks) {
+        try {
+          const result = await processTrack(
+            track.sourceKey,
+            release.releaseFolder,
+            track.trackNumber,
+            track.title,
+            track.sourceUrl.match(/\.(wav|aiff?|flac|alac)(\?|$)/i) ? track.sourceUrl : undefined
+          );
+          if (result?.mp3Url) {
+            converted.push({
+              trackNumber: track.trackNumber,
+              mp3Url: result.mp3Url,
+              previewUrl: result.previewUrl || result.mp3Url,
+              wavUrl: result.wavUrl,
+              duration: result.duration || undefined,
+            });
+          }
+        } catch (e) {
+          // One bad track must not strand the rest of the release.
+          console.error(`[Agent] Track "${track.title}" failed: ${e.message}`);
+        }
+      }
+
+      if (!converted.length) {
+        console.warn(`[Agent] Nothing converted for "${release.title}" — leaving it queued`);
+        continue;
+      }
+
+      const post = await agentFetch('/api/admin/audio-queue/', {
+        method: 'POST',
+        body: JSON.stringify({ releaseId: release.releaseId, tracks: converted }),
+      });
+      const out = await post.json().catch(() => ({}));
+      if (!post.ok) {
+        console.error(`[Agent] Submit failed for "${release.title}": ${post.status} ${JSON.stringify(out).slice(0, 200)}`);
+        continue;
+      }
+      const d = out.data || out;
+      console.log(`[Agent] "${release.title}": ${d.tracksUpdated} track(s) updated${d.published ? ' — PUBLISHED' : ''}`);
+      if (!d.published && d.blocking?.length) {
+        console.log(`[Agent]   still held: ${d.blocking.join(' | ')}`);
+      }
+    }
+  } catch (e) {
+    console.error(`[Agent] Pass failed: ${e.message}`);
+  } finally {
+    agentBusy = false;
+  }
+}
+
+if (AGENT_ENABLED) {
+  console.log(`[Agent] Enabled — polling ${SITE_URL} every ${AGENT_INTERVAL_MS / 1000}s`);
+  setTimeout(runAgentPass, 10000).unref?.();
+  setInterval(runAgentPass, AGENT_INTERVAL_MS);
+} else {
+  console.log(`[Agent] Disabled (${ADMIN_KEY ? 'AUDIO_AGENT_ENABLED=false' : 'no ADMIN_KEY in .env'})`);
+}
+
 // Handle errors
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {

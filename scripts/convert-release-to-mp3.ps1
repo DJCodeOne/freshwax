@@ -65,6 +65,7 @@ if (-not $tracks) {
 Write-Host "Found $($tracks.Count) tracks" -ForegroundColor Green
 
 $updatedTracks = @()
+$failedUploads = 0
 
 foreach ($track in $tracks) {
     $trackFields = $track.mapValue.fields
@@ -128,19 +129,21 @@ foreach ($track in $tracks) {
 
     Write-Host "  Uploading to R2: $r2Mp3Key" -ForegroundColor Yellow
 
-    # Use wrangler r2 object put
-    $wranglerArgs = @(
-        "r2", "object", "put",
-        "$R2_BUCKET/$r2Mp3Key",
-        "--file", $mp3Path,
-        "--content-type", "audio/mpeg"
-    )
-
+    # Use wrangler r2 object put. Invoke npx via the call operator rather than
+    # Start-Process: npx is a .cmd shim, and Start-Process -FilePath "npx"
+    # fails with "%1 is not a valid Win32 application" — which this script
+    # then swallowed as a warning while still reporting success at the end.
+    # --remote is required or the object lands in the local dev bucket.
     $env:CLOUDFLARE_ACCOUNT_ID = $R2_ACCOUNT_ID
+    $repoRoot = Join-Path $PSScriptRoot ".."
 
     try {
-        $wranglerProcess = Start-Process -FilePath "npx" -ArgumentList (@("wrangler") + $wranglerArgs) -NoNewWindow -Wait -PassThru -WorkingDirectory (Join-Path $PSScriptRoot "..")
-        if ($wranglerProcess.ExitCode -eq 0) {
+        Push-Location $repoRoot
+        & npx wrangler r2 object put "$R2_BUCKET/$r2Mp3Key" --file $mp3Path --content-type "audio/mpeg" --remote 2>&1 | Write-Host
+        $uploadExitCode = $LASTEXITCODE
+        Pop-Location
+
+        if ($uploadExitCode -eq 0) {
             Write-Host "  Uploaded successfully" -ForegroundColor Green
 
             # Update track with new MP3 URL
@@ -165,11 +168,13 @@ foreach ($track in $tracks) {
             }
             $updatedTracks += $newTrack
         } else {
-            Write-Warning "  Upload failed"
+            Write-Warning "  Upload failed (wrangler exit $uploadExitCode)"
+            $script:failedUploads++
             $updatedTracks += $track
         }
     } catch {
         Write-Warning "  Upload error: $_"
+        $script:failedUploads++
         $updatedTracks += $track
     }
 
@@ -206,5 +211,11 @@ try {
     Write-Warning "Firebase update failed: $_"
 }
 
-Write-Host "`nConversion complete!" -ForegroundColor Green
 Write-Host "Temp files cleaned from: $TempDir" -ForegroundColor Gray
+
+if ($failedUploads -gt 0) {
+    Write-Host "`n$failedUploads upload(s) FAILED - release still points at WAVs." -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "`nConversion complete!" -ForegroundColor Green

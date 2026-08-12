@@ -74,6 +74,10 @@ const CSRF_SKIP = new Set([
   '/api/admin/send-bypass-approval-email/',
   '/api/admin/mark-royalties-paid/',
   '/api/admin/royalty-ledger/',
+  // Audio-conversion agent — runs on the operator's machine, server-to-server.
+  // Authenticated by the X-Admin-Key header ONLY (it does not accept the
+  // __session cookie), so no cross-site request can ever authenticate it.
+  '/api/admin/audio-queue/',
   // Cron — authenticated via CRON_SECRET / requireAdminAuth
   '/api/cron/weekly-digest/',
   '/api/cron/backup-d1/',

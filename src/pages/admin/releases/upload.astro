@@ -618,10 +618,18 @@ async function processAudioTracks(releaseId, baseFolder, tracks) {
 
   const isAvailable = await checkAudioProcessor();
   if (!isAvailable) {
-    debug("Audio processor not running - skipping audio conversion");
+    // Off localhost the browser can never reach the processor. That's fine —
+    // the conversion agent polls /api/admin/audio-queue and converts anything
+    // still on raw masters, then publishes it if the label is established.
+    const remote = location.hostname !== 'localhost' && location.hostname !== '127.0.0.1';
+    debug(remote
+      ? "Audio processor not reachable from the live site - the conversion agent will convert this release"
+      : "Audio processor not running - skipping audio conversion");
     return {
       processed: false,
-      message: "Audio processor not running. Run the local processor to generate MP3+WAV formats."
+      message: remote
+        ? "Saved with the original masters. The conversion agent generates the MP3s automatically (usually within ~5 minutes)."
+        : "Audio processor not running. Start it locally, or leave it — the conversion agent will pick this release up."
     };
   }
 

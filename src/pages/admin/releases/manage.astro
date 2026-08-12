@@ -527,10 +527,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           const name = btn.dataset.name || 'this release';
           const alreadyProcessed = btn.dataset.processed === 'true';
 
-          // Check if audio processor is available
+          // Check if audio processor is reachable from this browser. Off
+          // localhost it never is — but that no longer means the audio won't
+          // get converted: the conversion agent polls /api/admin/audio-queue
+          // and handles anything still on raw masters.
           const isAvailable = await checkAudioProcessor();
           if (!isAvailable) {
-            showToast('Audio processor not running. Start it with: node scripts/audio-processor.cjs', 'error');
+            if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+              showToast('Handled automatically — the conversion agent converts unprocessed audio within ~5 min. Use a local dev server to convert right now.');
+            } else {
+              showToast('Audio processor not reachable. Start it with: node scripts/audio-processor.cjs (or let the conversion agent pick it up)', 'error');
+            }
             return;
           }
 
