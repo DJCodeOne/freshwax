@@ -197,6 +197,27 @@ const securityHeaders: Record<string, string> = {
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
 };
 
+/**
+ * Keep a background task alive past the response.
+ *
+ * Cloudflare kills bare un-awaited promises when the isolate tears down, so
+ * `doSomething().catch(() => {})` can silently never complete — which for error
+ * logging means the D1 row is simply lost. waitUntil is the supported way to
+ * finish work after responding. Where it is unavailable (dev server, tests) we
+ * await instead, so the write still happens; that only ever costs latency on a
+ * request that is already failing.
+ */
+async function keepAlive(
+  locals: { runtime?: { ctx?: { waitUntil?: (p: Promise<unknown>) => void } } },
+  task: Promise<unknown>
+): Promise<void> {
+  // Error logging must never break the response it is reporting on.
+  const safe = task.catch(() => { /* non-critical: error logging */ });
+  const ctx = locals?.runtime?.ctx;
+  if (typeof ctx?.waitUntil === 'function') ctx.waitUntil(safe);
+  else await safe;
+}
+
 export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   // Get Cloudflare runtime env and initialize Firebase
   const runtime = locals.runtime;
@@ -363,18 +384,38 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     // Unhandled exception in API handler
     if (isApiRoute) {
       const env = locals.runtime?.env;
-      logServerError(err, request, env, { endpoint: pathname, statusCode: 500 }).catch(() => { /* non-critical: error logging */ });
+      // waitUntil, not fire-and-forget: a bare promise is killed when the
+      // isolate tears down, so the D1 write may never land.
+      await keepAlive(locals, logServerError(err, request, env, { endpoint: pathname, statusCode: 500 }));
     }
     throw err; // Re-throw to let Astro handle the error page
   }
 
-  // Log 5xx API responses
+  // Log 5xx API responses.
+  //
+  // Most endpoints catch their own errors and return ApiErrors.serverError(),
+  // which puts the cause in the JSON body as `error` and leaves statusText
+  // empty. Logging statusText alone recorded EVERY such failure as the
+  // identical string "500 Server Error" with a null stack — same message and
+  // same fingerprint for all 500s across all 321 routes, so /admin/errors
+  // showed a wall of indistinguishable rows and the endpoint column was the
+  // only usable signal. Read the body back to recover the real message.
   if (isApiRoute && response.status >= 500) {
     const env = locals.runtime?.env;
-    logServerError(new Error(`${response.status} ${response.statusText || 'Server Error'}`), request, env, {
-      endpoint: pathname,
-      statusCode: response.status,
-    }).catch(() => { /* non-critical: error logging */ });
+    // Clone first: reading the body must not consume the response we return.
+    const clone = response.clone();
+    const task = (async () => {
+      let detail = response.statusText || 'Server Error';
+      try {
+        const parsed = JSON.parse(await clone.text());
+        if (parsed?.error) detail = String(parsed.error);
+      } catch { /* non-JSON body (e.g. an HTML error page) — keep the status text */ }
+      await logServerError(new Error(`${response.status} ${detail}`), request, env, {
+        endpoint: pathname,
+        statusCode: response.status,
+      });
+    })();
+    await keepAlive(locals, task);
   }
 
   // Clone headers for modification
