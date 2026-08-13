@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import { saGetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { resolvePendingRoleRequests } from '../../../lib/roles/pending-requests';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
 
@@ -95,11 +96,24 @@ export const GET: APIRoute = async ({ request, locals }) => {
       roles: updatedRoles
     });
 
+    // Granting a role here is a second approval path: if the user applied for
+    // this role, their pendingRoleRequests doc must be closed out too, or it
+    // sits "pending" forever and clutters the Approvals tab with people who are
+    // already live. Only on grant — revoking a role should not retroactively
+    // resolve anything, and must never re-open a settled request. The helper
+    // re-checks updatedRoles itself, so a request whose role is not actually
+    // held stays pending.
+    let resolvedRequests = 0;
+    if (newValue) {
+      resolvedRequests = await resolvePendingRoleRequests(userId, updatedRoles);
+    }
+
     return successResponse({ message: `Updated ${role} role to ${newValue}`,
       userId,
       email: user.email,
       previousValue: currentRoles[role],
-      newValue });
+      newValue,
+      resolvedRequests });
   } catch (error: unknown) {
     return ApiErrors.serverError('Unknown error');
   }
