@@ -8,6 +8,11 @@ const mockQueryCollection = vi.fn();
 const mockUpdateDocument = vi.fn();
 const mockSaGetDocument = vi.fn();
 const mockSaUpdateDocument = vi.fn();
+const mockLogError = vi.fn();
+
+vi.mock('../lib/error-logger', () => ({
+  logError: (...a: unknown[]) => mockLogError(...a),
+}));
 
 vi.mock('../lib/firebase-rest', () => ({
   queryCollection: (...a: unknown[]) => mockQueryCollection(...a),
@@ -45,6 +50,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockSaGetDocument.mockResolvedValue({ email: 'p@example.com', displayName: 'Partner', roles: {} });
   mockSaUpdateDocument.mockResolvedValue(undefined);
+  mockLogError.mockResolvedValue(undefined);
   mockUpdateDocument.mockResolvedValue(undefined);
   mockQueryCollection.mockResolvedValue([
     { id: `${UID}_artist`, userId: UID, roleType: 'artist', status: 'pending' },
@@ -101,6 +107,31 @@ describe('update-user-role resolves pending requests', () => {
     expect(body.message).toMatch(/preview/i);
     expect(mockSaUpdateDocument).not.toHaveBeenCalled();
     expect(mockUpdateDocument).not.toHaveBeenCalled();
+  });
+
+  // The catch block used to return a bare 'Unknown error' and discard the cause.
+  it('records the real cause when the role write fails', async () => {
+    mockSaUpdateDocument.mockRejectedValue(new Error('firestore exploded'));
+    const res = await call('artist', 'true');
+    const body = await res.json() as Record<string, unknown>;
+
+    expect(res.status).toBe(500);
+    expect(body.error).toBe('Failed to update user role'); // not 'Unknown error'
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'server',
+        message: expect.stringContaining('firestore exploded'),
+        endpoint: '/api/admin/update-user-role',
+        metadata: expect.objectContaining({ role: 'artist', value: true }),
+      }),
+      expect.anything()
+    );
+  });
+
+  it('does not leak the internal error message to the caller', async () => {
+    mockSaUpdateDocument.mockRejectedValue(new Error('private key PEM invalid'));
+    const res = await call('artist', 'true');
+    expect(JSON.stringify(await res.json())).not.toContain('private key');
   });
 
   // Bookkeeping must never fail the grant that already succeeded.

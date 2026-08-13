@@ -8,7 +8,10 @@ import { saGetDocument, saUpdateDocument } from '../../../lib/firebase-service-a
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { resolvePendingRoleRequests } from '../../../lib/roles/pending-requests';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
+import { ApiErrors, successResponse, jsonResponse, createLogger } from '../../../lib/api-utils';
+import { logError } from '../../../lib/error-logger';
+
+const log = createLogger('admin/update-user-role');
 
 const updateUserRoleParamsSchema = z.object({
   userId: z.string().min(1),
@@ -63,6 +66,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     token_uri: 'https://oauth2.googleapis.com/token'
   });
 
+  // Derived from `value` alone, and declared out here so the catch block can
+  // report what was actually attempted.
+  const newValue = value === 'true' || value === '1';
+
   try {
     // Get current user document
     const user = await saGetDocument(serviceAccountKey, projectId, 'users', userId);
@@ -72,7 +79,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     const currentRoles = user.roles || {};
-    const newValue = value === 'true' || value === '1';
 
     if (confirm !== 'yes') {
       return jsonResponse({
@@ -115,6 +121,29 @@ export const GET: APIRoute = async ({ request, locals }) => {
       newValue,
       resolvedRequests });
   } catch (error: unknown) {
-    return ApiErrors.serverError('Unknown error');
+    // This used to return a bare 'Unknown error' and discard the cause entirely,
+    // so a failed role change was indistinguishable from any other 500 and left
+    // no trace anywhere. Role changes are exactly the operation you need a
+    // record of when a partner reports they cannot upload or get paid.
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+
+    log.error(`Failed to set role "${role}"=${newValue} on user ${userId}:`, message);
+
+    // Also record to D1 so it surfaces in /admin/errors rather than only in
+    // `wrangler tail`. Awaited deliberately: a bare un-awaited promise is killed
+    // when the Worker isolate is torn down. logError swallows its own failures.
+    await logError({
+      source: 'server',
+      level: 'error',
+      message: `update-user-role failed: ${message}`,
+      stack,
+      endpoint: '/api/admin/update-user-role',
+      statusCode: 500,
+      userId,
+      metadata: { role, value: newValue, targetUserId: userId },
+    }, env);
+
+    return ApiErrors.serverError('Failed to update user role');
   }
 };
