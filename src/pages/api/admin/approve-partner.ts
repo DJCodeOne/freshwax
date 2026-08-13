@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { updateDocument, getDocument, setDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
+import { resolvePendingRoleRequests } from '../../../lib/roles/pending-requests';
 import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/approve-partner');
@@ -55,19 +56,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const userDoc = await getDocument('users', partnerId);
     if (userDoc) {
       const existingRoles = userDoc.roles || {};
+      const newRoles = {
+        ...existingRoles,
+        artist: existingRoles.artist || artistDoc?.isArtist || true,
+        merchSupplier: existingRoles.merchSupplier || artistDoc?.isMerchSupplier || false
+      };
       await updateDocument('users', partnerId, {
         approved: true,
-        roles: {
-          ...existingRoles,
-          artist: existingRoles.artist || artistDoc?.isArtist || true,
-          merchSupplier: existingRoles.merchSupplier || artistDoc?.isMerchSupplier || false
-        },
+        roles: newRoles,
         partnerInfo: {
           ...(userDoc.partnerInfo || {}),
           approved: true,
           approvedAt: now
         }
       });
+
+      // Record the grant against their pending request(s). Without this the
+      // request doc stays "pending" forever and the Approvals tab fills up with
+      // partners who are already live — which is exactly how 13 accumulated
+      // unnoticed. Only requests this grant actually satisfies are resolved;
+      // anything else (e.g. a vinylSeller request, which this endpoint does not
+      // grant) deliberately stays pending.
+      const resolved = await resolvePendingRoleRequests(partnerId, newRoles);
+      if (resolved > 0) log.info(`Resolved ${resolved} pending role request(s) for`, partnerId);
     }
 
     // Create partners document — any approved role (artist, label, merch, vinyl) becomes a partner
