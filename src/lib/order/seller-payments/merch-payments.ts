@@ -43,6 +43,7 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
       paypalEmail: string | null;
       payoutMethod: string | null;
       amount: number;
+      costDeducted: number;
       items: string[];
     }> = {};
 
@@ -95,13 +96,23 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
       if (!supplier) continue;
 
       const itemPrice = item.price || 0;
-      const itemTotal = itemPrice * (item.quantity || 1);
+      const qty = item.quantity || 1;
+      const itemTotal = itemPrice * qty;
       // 1% Fresh Wax platform fee — same rate as artists and crate sellers
       const freshWaxFee = itemTotal * 0.01;
+      // costPrice is the per-unit amount Fresh Wax pays to produce the item
+      // (print-on-demand: Streetshirts/Vistaprint), so it stays with the platform
+      // and only the margin above it is paid out. Products with no costPrice are
+      // true consignment (the supplier provided the stock) and pay out in full.
+      const costRaw = product.costPrice;
+      const parsedCost = typeof costRaw === 'number' ? costRaw : parseFloat(String(costRaw ?? ''));
+      const unitCost = Number.isFinite(parsedCost) && parsedCost > 0 ? parsedCost : 0;
+      const costTotal = unitCost * qty;
       // Processing fee: payment-method-aware (Stripe 1.4%+20p / PayPal 2.9%+30p),
       // computed once for the order then split equally per item.
       const processingFeePerSeller = totalProcessingFeeForOrder / totalItemCount;
-      const supplierShare = itemTotal - freshWaxFee - processingFeePerSeller;
+      // Clamped at zero — a costPrice at or above retail must never produce a negative payout
+      const supplierShare = Math.max(0, itemTotal - costTotal - freshWaxFee - processingFeePerSeller);
 
       if (!supplierPayments[supplierId]) {
         supplierPayments[supplierId] = {
@@ -112,11 +123,13 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
           paypalEmail: supplier.paypalEmail || null,
           payoutMethod: supplier.payoutMethod || null,
           amount: 0,
+          costDeducted: 0,
           items: []
         };
       }
 
       supplierPayments[supplierId].amount += supplierShare;
+      supplierPayments[supplierId].costDeducted += costTotal;
       supplierPayments[supplierId].items.push(item.name || item.title || 'Item');
     }
 
@@ -161,6 +174,7 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
               orderId,
               orderNumber,
               amount: paypalAmount,
+              costDeducted: payment.costDeducted,
               paypalPayoutFee: paypalPayoutFee,
               currency: 'gbp',
               status: 'completed',
@@ -193,6 +207,7 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
             orderId,
             orderNumber,
             amount: paypalAmount,
+            costDeducted: payment.costDeducted,
             paypalPayoutFee: paypalPayoutFee,
             currency: 'gbp',
             status: 'retry_pending',
@@ -232,6 +247,7 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
             orderId,
             orderNumber,
             amount: payment.amount,
+            costDeducted: payment.costDeducted,
             currency: 'gbp',
             status: 'completed',
             items: payment.items,
@@ -257,6 +273,7 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
             orderId,
             orderNumber,
             amount: payment.amount,
+            costDeducted: payment.costDeducted,
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
@@ -275,6 +292,7 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
           orderId,
           orderNumber,
           amount: payment.amount,
+          costDeducted: payment.costDeducted,
           currency: 'gbp',
           status: 'awaiting_connect',
           items: payment.items,

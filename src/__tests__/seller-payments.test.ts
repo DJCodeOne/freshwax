@@ -378,6 +378,70 @@ describe('processMerchSupplierPayments', () => {
     expect(transferArgs.destination).toBe('acct_test_123');
   });
 
+  it('keeps costPrice with the platform: supplier is paid the margin only', async () => {
+    const items = [
+      { id: 'merch_1', name: 'Tee', type: 'merch', price: 25, quantity: 1, productId: 'prod_1' },
+    ];
+
+    mockGetDocument.mockImplementation(async (collection: string, id: string) => {
+      if (collection === 'merch' && id === 'prod_1') {
+        // Print-on-demand product: Fresh Wax pays £15 to produce it
+        return { supplierId: 'supplier_1', name: 'Tee', costPrice: 15 };
+      }
+      if (collection === 'merch-suppliers' && id === 'supplier_1') {
+        return {
+          name: 'Test Supplier',
+          email: 'supplier@test.com',
+          stripeConnectId: 'acct_test_123',
+          payoutMethod: 'stripe',
+        };
+      }
+      return null;
+    });
+
+    mockTransfersCreate.mockResolvedValue({ id: 'tr_test_123' });
+
+    await processMerchSupplierPayments(makeBaseParams({
+      items,
+      totalItemCount: 1,
+      orderSubtotal: 25,
+    }));
+
+    // itemTotal = 25, costPrice = 15, freshWaxFee = 0.25
+    // processing = (25 * 0.014) + 0.20 = 0.55
+    // supplierShare = 25 - 15 - 0.25 - 0.55 = 9.20
+    expect(mockTransfersCreate).toHaveBeenCalledTimes(1);
+    expect(mockTransfersCreate.mock.calls[0][0].amount).toBe(Math.round(9.20 * 100));
+    // The payout record carries the deducted production cost for statements
+    expect(mockAddDocument).toHaveBeenCalledWith('supplierPayouts', expect.objectContaining({
+      costDeducted: 15,
+    }));
+  });
+
+  it('never pays a negative share when costPrice is at or above the retail price', async () => {
+    const items = [
+      { id: 'merch_1', name: 'Mispriced Mug', type: 'merch', price: 8, quantity: 1, productId: 'prod_1' },
+    ];
+
+    mockGetDocument.mockImplementation(async (collection: string) => {
+      if (collection === 'merch') return { supplierId: 'supplier_1', costPrice: 10 };
+      if (collection === 'merch-suppliers') {
+        return { name: 'Supplier', email: 's@test.com', stripeConnectId: 'acct_1', payoutMethod: 'stripe' };
+      }
+      return null;
+    });
+
+    await processMerchSupplierPayments(makeBaseParams({
+      items,
+      totalItemCount: 1,
+      orderSubtotal: 8,
+    }));
+
+    // Share clamps to 0 → no transfer, no payout records of any kind
+    expect(mockTransfersCreate).not.toHaveBeenCalled();
+    expect(mockAddDocument).not.toHaveBeenCalled();
+  });
+
   it('uses skipStripeTransfers to prevent actual transfers', async () => {
     const items = [
       { id: 'merch_1', name: 'Cap', type: 'merch', price: 20, quantity: 1, productId: 'prod_1' },

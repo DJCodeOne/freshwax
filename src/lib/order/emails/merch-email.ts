@@ -10,13 +10,6 @@ import type { OrderItem } from './types';
 export function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>, merchItems: OrderItem[]): string {
   const merchTotal = merchItems.reduce((sum: number, item: OrderItem) => sum + (item.price * item.quantity), 0);
 
-  // Calculate fees - use passed values or calculate from subtotal
-  const subtotal = order.totals?.subtotal || merchTotal;
-  const freshWaxFee = order.totals?.freshWaxFee || (subtotal * 0.01);
-  const baseAmount = subtotal + (order.totals?.shipping || 0) + freshWaxFee;
-  const stripeFee = order.totals?.stripeFee || (((baseAmount * 0.014) + 0.20) / 0.986);
-  const customerPaid = order.totals?.total || (subtotal + freshWaxFee + stripeFee);
-
   let itemsHtml = '';
   for (const item of merchItems) {
     const details = [item.size ? 'Size: ' + escapeHtml(item.size) : '', escapeHtml(item.color) || ''].filter(Boolean).join(' &bull; ');
@@ -69,24 +62,18 @@ export function buildMerchSaleEmail(orderNumber: string, order: Record<string, u
     '</tr>' +
     itemsHtml +
     '<tr style="background: #dc2626;">' +
-    '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Your Earnings</td>' +
+    '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Sale Total</td>' +
     '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">' + formatPrice(merchTotal) + '</td>' +
     '</tr>' +
     '</table>' +
     '</td></tr>' +
 
-    // Payment breakdown
+    // Payout note — the actual figure is computed at payout time (sale total
+    // minus production cost, the 1% Fresh Wax fee and payment processing).
     '<tr><td style="padding-top: 20px;">' +
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
-    '<div style="font-weight: 700; font-size: 12px; color: #d1d5db; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
-    '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
-    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">' + formatPrice(merchTotal) + '</td></tr>' +
-    '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">' + formatPrice(stripeFee) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">' + formatPrice(freshWaxFee) + '</td></tr>' +
-    '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
-    '</table>' +
+    '<div style="font-weight: 700; font-size: 12px; color: #d1d5db; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Your Payout</div>' +
+    `<div style="font-size: 14px; color: #d1d5db; line-height: 1.5;">Your payout is the sale total minus production costs, the 1% Fresh Wax fee and payment processing. The exact amount appears in your <a href="${SITE_URL}/artist/dashboard" style="color: #dc2626;">Artist Dashboard</a>.</div>` +
     '</div>' +
     '</td></tr>' +
 
