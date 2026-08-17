@@ -359,6 +359,7 @@
 
   .badge.sale { background: #dc2626; color: #fff; }
   .badge.featured { background: #f59e0b; color: #000; }
+  .badge.free-del { background: #16a34a; color: #fff; }
   .badge.sold-out { background: #666; color: #fff; }
 
   /* Card Info (10% larger) */
@@ -580,6 +581,13 @@
     font-size: 0.75rem;
     font-weight: 700;
     padding: 0.25rem 0.5rem;
+  }
+
+  .free-delivery-note {
+    flex-basis: 100%;
+    color: #16a34a;
+    font-size: 0.85rem;
+    font-weight: 700;
   }
 
   /* Options */

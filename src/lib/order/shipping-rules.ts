@@ -248,8 +248,27 @@ export async function computeMerchShipping(items: CartItem[]): Promise<number> {
   const merchItems = items.filter(i => i.type === 'merch');
   if (merchItems.length === 0) return 0;
 
-  const bySupplier = new Map<string, CartItem[]>();
+  // Product-level free delivery (merch doc `freeShipping: true` — e.g. mugs,
+  // where the Vistaprint postage is baked into the retail price): those items
+  // never trigger the flat charge. Read from the product doc so the quote and
+  // every checkout endpoint agree without trusting the client cart. Items we
+  // can't resolve stay chargeable — the safe default.
+  const chargeable: CartItem[] = [];
   for (const item of merchItems) {
+    const productId = (item.productId || item.merchId || item.id) as string | undefined;
+    let freeShipping = false;
+    if (productId) {
+      try {
+        const product = await getDocument('merch', productId);
+        freeShipping = product?.freeShipping === true;
+      } catch { /* stays chargeable — the safe default */ }
+    }
+    if (!freeShipping) chargeable.push(item);
+  }
+  if (chargeable.length === 0) return 0;
+
+  const bySupplier = new Map<string, CartItem[]>();
+  for (const item of chargeable) {
     const key = (item.supplierId as string) || '__platform__';
     if (!bySupplier.has(key)) bySupplier.set(key, []);
     bySupplier.get(key)!.push(item);

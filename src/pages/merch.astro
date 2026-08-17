@@ -350,6 +350,7 @@ const merchItemList = {
                   <div class="badges">
                     {product.onSale && <span class="badge sale">SALE</span>}
                     {product.featured && <span class="badge featured">★</span>}
+                    {product.freeShipping && <span class="badge free-del">FREE DELIVERY</span>}
                     {product.stockStatus === 'out-of-stock' && <span class="badge sold-out">SOLD OUT</span>}
                   </div>
                 </div>
@@ -1056,6 +1057,9 @@ const merchItemList = {
             '<span class="save-badge">SAVE £' + (product.retailPrice - product.salePrice).toFixed(2) + '</span>';
         } else {
           priceBox.innerHTML = '<span class="current-price">£' + product.retailPrice.toFixed(2) + '</span>';
+        }
+        if (product.freeShipping === true) {
+          priceBox.innerHTML += '<span class="free-delivery-note">✓ FREE delivery — allow up to 2 weeks</span>';
         }
       }
 

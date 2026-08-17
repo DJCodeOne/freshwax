@@ -49,6 +49,7 @@ const UpdateMerchJsonSchema = z.object({
   costPrice: z.union([z.number(), z.string()]).optional(),
   salePrice: z.union([z.number(), z.string(), z.null()]).optional(),
   onSale: z.boolean().optional(),
+  freeShipping: z.boolean().optional(),
 }).strip();
 
 const log = createLogger('update-merch');
@@ -149,6 +150,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (data.onSale !== undefined) {
         updates.onSale = !!data.onSale;
+      }
+
+      // Product-level free delivery (postage baked into the retail price —
+      // e.g. Vistaprint mugs). Read by computeMerchShipping in shipping-rules.
+      if (data.freeShipping !== undefined) {
+        updates.freeShipping = !!data.freeShipping;
       }
 
       // Use service account for authorized write
