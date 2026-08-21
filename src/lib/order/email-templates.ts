@@ -119,10 +119,15 @@ export function buildStockistFulfillmentEmail(orderId: string, orderNumber: stri
   const paymentStatusText = order.paymentStatus === 'completed' ? 'PAID' : 'PENDING';
   const paymentMethodText = isTestMode ? 'Test Mode' : (order.paymentMethod === 'stripe' ? 'Stripe' : order.paymentMethod === 'paypal' ? 'PayPal' : order.paymentMethod || 'Card');
 
-  const artistPayment = order.totals.subtotal;
-  const stripeFee = order.totals.stripeFee || 0;
-  const freshWaxFee = order.totals.freshWaxFee || 0;
-  const customerPaid = order.totals.total;
+  // Only this recipient's vinyl — order.totals spans the whole basket, which
+  // can include other sellers' items they must not see. Fees are pro-rated by
+  // this recipient's share of the order subtotal.
+  const orderSubtotal = Number(order.totals?.subtotal) || vinylTotal;
+  const feeShare = orderSubtotal > 0 ? Math.min(1, vinylTotal / orderSubtotal) : 1;
+  const artistPayment = vinylTotal;
+  const stripeFee = (Number(order.totals?.stripeFee) || 0) * feeShare;
+  const freshWaxFee = (Number(order.totals?.freshWaxFee) || 0) * feeShare;
+  const customerPaid = vinylTotal + (Number(order.totals?.shipping) || 0) + stripeFee + freshWaxFee;
 
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
     '<body style="margin: 0; padding: 0; background: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">' +
@@ -149,7 +154,7 @@ export function buildStockistFulfillmentEmail(orderId: string, orderNumber: stri
     '<tr><td colspan="2" style="padding: 4px 0 4px 0; border-top: 1px dashed #ccc;"></td></tr>' +
     '<tr><td style="padding: 4px 0; color: #9ca3af; font-size: 12px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #9ca3af; font-size: 12px;">' + formatPrice(stripeFee) + '</td></tr>' +
     '<tr><td style="padding: 4px 0; color: #9ca3af; font-size: 12px;">Fresh Wax 1% (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #9ca3af; font-size: 12px;">' + formatPrice(freshWaxFee) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Customer Paid:</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(customerPaid) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Customer Paid (your items):</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table></div>' +
     (isTestMode ? '<div style="margin-top: 12px; padding: 8px; background: #fef3c7; border-radius: 4px; font-size: 12px; color: #92400e;">⚠️ This is a test order - no real payment was processed</div>' : '') +
     '</td></tr></table></td></tr>' +
@@ -205,11 +210,12 @@ export function buildStockistFulfillmentEmail(orderId: string, orderNumber: stri
 
 export function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknown>, digitalItems: CartItem[]): string {
   const digitalTotal = digitalItems.reduce((sum: number, item: CartItem) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
-  const subtotal = order.totals?.subtotal || digitalTotal;
   const freshWaxFee = digitalTotal * 0.01;
   const processingFee = (digitalTotal * 0.014) + (0.20 / Math.max(1, digitalItems.length));
   const artistNetEarnings = digitalTotal - freshWaxFee - processingFee;
-  const customerPaid = order.totals?.total || subtotal;
+  // Only this recipient's items — order.totals spans the whole basket, which
+  // can include other sellers' items they must not see.
+  const customerPaid = digitalTotal;
 
   let itemsHtml = '';
   for (const item of digitalItems) {
@@ -261,7 +267,7 @@ export function buildDigitalSaleEmail(orderNumber: string, order: Record<string,
     '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;">Processing Fee:</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">-' + formatPrice(processingFee) + '</td></tr>' +
     '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Fee (1%):</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">-' + formatPrice(freshWaxFee) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid (your items):</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table></div></td></tr>' +
     '</table></td></tr>' +
     '<tr><td align="center" style="padding: 24px 0;">' +
@@ -273,10 +279,11 @@ export function buildDigitalSaleEmail(orderNumber: string, order: Record<string,
 
 export function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>, merchItems: CartItem[]): string {
   const merchTotal = merchItems.reduce((sum: number, item: CartItem) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
-  const subtotal = order.totals?.subtotal || merchTotal;
   const brandRoyalty = Math.round(merchTotal * 0.10 * 100) / 100;
   const freshWaxShare = Math.round((merchTotal - brandRoyalty) * 100) / 100;
-  const customerPaid = order.totals?.total || subtotal;
+  // Only this recipient's items — order.totals spans the whole basket, which
+  // can include other sellers' items they must not see.
+  const customerPaid = merchTotal;
 
   let itemsHtml = '';
   for (const item of merchItems) {
@@ -342,7 +349,7 @@ export function buildMerchSaleEmail(orderNumber: string, order: Record<string, u
     '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;">Sale Total:</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">' + formatPrice(merchTotal) + '</td></tr>' +
     '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Share (90%):</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">' + formatPrice(freshWaxShare) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid (your items):</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table></div></td></tr>' +
     '<tr><td style="padding-top: 16px;">' +
     '<div style="font-size: 12px; color: #d1d5db;">Customer email: <strong style="color: #fff;">' + escapeHtml(order.customer.email) + '</strong></div>' +

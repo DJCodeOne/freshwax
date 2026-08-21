@@ -44,12 +44,17 @@ export function buildStockistFulfillmentEmail(orderId: string, orderNumber: stri
   // src/lib/stripe-webhook/payments.ts). 100% of vinyl shipping passes through
   // to the artist to fund the actual postage. Net payment = vinyl revenue +
   // shipping − FreshWax fee − Stripe fee.
-  const vinylRevenue = order.totals.subtotal;
-  const shippingPassThrough = order.totals.shipping || 0;
-  const stripeFee = order.totals.stripeFee || 0;
-  const freshWaxFee = order.totals.freshWaxFee || 0;
+  // Only this recipient's vinyl — order.totals spans the whole basket, which
+  // can include other sellers' items they must not see. Fees are pro-rated by
+  // this recipient's share of the order subtotal.
+  const orderSubtotal = Number(order.totals?.subtotal) || vinylTotal;
+  const feeShare = orderSubtotal > 0 ? Math.min(1, vinylTotal / orderSubtotal) : 1;
+  const vinylRevenue = vinylTotal;
+  const shippingPassThrough = Number(order.totals?.shipping) || 0;
+  const stripeFee = (Number(order.totals?.stripeFee) || 0) * feeShare;
+  const freshWaxFee = (Number(order.totals?.freshWaxFee) || 0) * feeShare;
   const artistPayment = vinylRevenue + shippingPassThrough - stripeFee - freshWaxFee;
-  const customerPaid = order.totals.total;
+  const customerPaid = vinylRevenue + shippingPassThrough;
 
   // Payment confirmation section with breakdown
   const paymentSection = '<tr><td style="padding-bottom: 24px;">' +

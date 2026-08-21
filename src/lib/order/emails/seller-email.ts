@@ -10,12 +10,12 @@ import type { OrderItem } from './types';
 export function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknown>, digitalItems: OrderItem[]): string {
   const digitalTotal = digitalItems.reduce((sum: number, item: OrderItem) => sum + (item.price * item.quantity), 0);
 
-  // Calculate fees - use passed values or calculate from subtotal
-  const subtotal = order.totals?.subtotal || digitalTotal;
-  const freshWaxFee = order.totals?.freshWaxFee || (subtotal * 0.01);
-  const baseAmount = subtotal + (order.totals?.shipping || 0) + freshWaxFee;
-  const stripeFee = order.totals?.stripeFee || (((baseAmount * 0.014) + 0.20) / 0.986);
-  const customerPaid = order.totals?.total || (subtotal + freshWaxFee + stripeFee);
+  // Only this artist's items — order.totals spans the whole basket, which can
+  // include other sellers' items they must not see. Fees shown are estimates
+  // scoped to this artist's share (this template's model: fees on top).
+  const freshWaxFee = digitalTotal * 0.01;
+  const stripeFee = (((digitalTotal + freshWaxFee) * 0.014) + 0.20) / 0.986;
+  const customerPaid = digitalTotal + freshWaxFee + stripeFee;
 
   let itemsHtml = '';
   for (const item of digitalItems) {
@@ -81,7 +81,7 @@ export function buildDigitalSaleEmail(orderNumber: string, order: Record<string,
     '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">' + formatPrice(stripeFee) + '</td></tr>' +
     '<tr><td style="padding: 4px 0; color: #d1d5db; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #d1d5db; font-size: 13px;">' + formatPrice(freshWaxFee) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid (your items):</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table>' +
     '</div>' +
     '</td></tr>' +

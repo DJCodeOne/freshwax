@@ -5,6 +5,9 @@
 // hear nothing about their sales.
 import { describe, it, expect, vi } from 'vitest';
 import { groupDigitalItemsByArtistEmail } from '../lib/order/emails';
+import { buildDigitalSaleEmail, buildMerchSaleEmail, buildStockistFulfillmentEmail } from '../lib/order/email-templates';
+import { buildDigitalSaleEmail as buildLegacyDigitalSaleEmail } from '../lib/order/emails/seller-email';
+import { buildStockistFulfillmentEmail as buildLegacyStockistEmail } from '../lib/order/emails/vinyl-email';
 import type { CartItem } from '../lib/order/types';
 
 type Doc = Record<string, unknown> | null;
@@ -129,5 +132,54 @@ describe('groupDigitalItemsByArtistEmail', () => {
     ];
     const grouped = await groupDigitalItemsByArtistEmail(items, failing);
     expect(Object.keys(grouped)).toEqual(['g@example.com']);
+  });
+});
+
+// Seller-facing emails must never reveal the whole basket — a label seeing
+// "Customer Paid £40.48" when their item was £14 learns what other labels
+// sold. Every money figure must be scoped to the recipient's own items.
+describe('seller email privacy (whole-order totals must not leak)', () => {
+  // Multi-seller order: recipient's part is 14.00, whole basket is 40.48.
+  const order = {
+    customer: { firstName: 'Mark', lastName: 'Quick', email: 'buyer@test.com' },
+    totals: { subtotal: 40.48, total: 40.48, shipping: 0, stripeFee: 1.47, freshWaxFee: 0.4 },
+    paymentMethod: 'paypal',
+    paymentStatus: 'completed',
+    shipping: { address1: '1 St', city: 'London', postcode: 'E1', country: 'UK' },
+  } as unknown as Record<string, unknown>;
+  const items = [{ name: 'Embrace The Darkness', type: 'digital', price: 14, quantity: 1 }] as CartItem[];
+
+  it('digital sale email shows only the recipient part', () => {
+    const html = buildDigitalSaleEmail('FW-TEST', order, items);
+    expect(html).not.toContain('40.48');
+    expect(html).toContain('Customer Paid (your items)');
+    expect(html).toContain('£14.00');
+  });
+
+  it('legacy digital sale email shows only the recipient part', () => {
+    const html = buildLegacyDigitalSaleEmail('FW-TEST', order, items as never);
+    expect(html).not.toContain('40.48');
+    expect(html).toContain('Customer Paid (your items)');
+  });
+
+  it('merch sale email shows only the recipient part', () => {
+    const html = buildMerchSaleEmail('FW-TEST', order, [{ name: 'Tee', type: 'merch', price: 20, quantity: 1 }] as CartItem[]);
+    expect(html).not.toContain('40.48');
+    expect(html).toContain('Customer Paid (your items)');
+    expect(html).toContain('£20.00');
+  });
+
+  it('stockist fulfillment email shows only the recipient part', () => {
+    const vinyl = [{ name: 'EP', type: 'vinyl', price: 19.99, quantity: 1 }] as CartItem[];
+    const html = buildStockistFulfillmentEmail('oid', 'FW-TEST', order, vinyl);
+    expect(html).not.toContain('40.48');
+    expect(html).toContain('£19.99');
+  });
+
+  it('legacy stockist fulfillment email shows only the recipient part', () => {
+    const vinyl = [{ name: 'EP', type: 'vinyl', price: 19.99, quantity: 1 }];
+    const html = buildLegacyStockistEmail('oid', 'FW-TEST', order, vinyl as never);
+    expect(html).not.toContain('40.48');
+    expect(html).toContain('£19.99');
   });
 });
