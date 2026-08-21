@@ -155,6 +155,66 @@ export async function sendReleaseVinylSellerEmails(
   }
 }
 
+// Resolve which artist/label emails should be notified for each digital item.
+// Cart items never carry artistEmail in practice, so this mirrors the payout
+// path's payee resolution: item.artistId || release.artistId || release.userId,
+// fanned out across release.payoutSplits when present (both owners of a split
+// EP get notified). An item with a cart-provided artistEmail keeps it.
+export async function groupDigitalItemsByArtistEmail(
+  digitalItems: CartItem[],
+  fetchDoc: (collection: string, id: string) => Promise<Record<string, unknown> | null> = getDocument
+): Promise<{ [email: string]: CartItem[] }> {
+  const itemsByArtist: { [email: string]: CartItem[] } = {};
+  const add = (email: string, item: CartItem) => {
+    (itemsByArtist[email] ||= []).push(item);
+  };
+
+  const releaseCache: Record<string, Record<string, unknown> | null> = {};
+  const artistEmailCache: Record<string, string | null> = {};
+
+  for (const item of digitalItems) {
+    if (item.artistEmail) {
+      add(String(item.artistEmail), item);
+      continue;
+    }
+
+    const releaseId = (item.releaseId || item.id) as string | undefined;
+    if (!releaseId) continue;
+    if (!(releaseId in releaseCache)) {
+      releaseCache[releaseId] = await fetchDoc('releases', releaseId).catch(() => null);
+    }
+    const release = releaseCache[releaseId];
+
+    // Same uid resolution as seller-payments; splits fan out to every listed owner.
+    const splits = Array.isArray(release?.payoutSplits)
+      ? (release!.payoutSplits as Array<{ artistId?: unknown }>).map((s) => s?.artistId).filter((a): a is string => typeof a === 'string' && a.length > 0)
+      : [];
+    const uids = splits.length > 0
+      ? [...new Set(splits)]
+      : [item.artistId || release?.artistId || release?.userId].filter((a): a is string => typeof a === 'string' && a.length > 0);
+
+    if (uids.length === 0) {
+      log.warn('[order-utils] Digital sale email skipped - no artist resolves for item:', item.name || item.title);
+      continue;
+    }
+
+    for (const uid of uids) {
+      if (!(uid in artistEmailCache)) {
+        const artist = await fetchDoc('artists', uid).catch(() => null);
+        artistEmailCache[uid] = typeof artist?.email === 'string' && artist.email.length > 0 ? artist.email : null;
+      }
+      const email = artistEmailCache[uid];
+      if (email) {
+        add(email, item);
+      } else {
+        log.warn('[order-utils] Digital sale email skipped - artist doc has no email:', uid);
+      }
+    }
+  }
+
+  return itemsByArtist;
+}
+
 // Send digital sale notification to artists
 export async function sendDigitalSaleEmails(
   order: Record<string, unknown>,
@@ -165,17 +225,7 @@ export async function sendDigitalSaleEmails(
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) return;
 
-  // Group items by artist email
-  const itemsByArtist: { [email: string]: CartItem[] } = {};
-  for (const item of digitalItems) {
-    const artistEmail = item.artistEmail;
-    if (artistEmail) {
-      if (!itemsByArtist[artistEmail]) {
-        itemsByArtist[artistEmail] = [];
-      }
-      itemsByArtist[artistEmail].push(item);
-    }
-  }
+  const itemsByArtist = await groupDigitalItemsByArtistEmail(digitalItems);
 
   // Send email to each artist
   for (const [artistEmail, items] of Object.entries(itemsByArtist)) {
