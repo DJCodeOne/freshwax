@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { groupDigitalItemsByArtistEmail } from '../lib/order/emails';
 import { buildDigitalSaleEmail, buildMerchSaleEmail, buildStockistFulfillmentEmail } from '../lib/order/email-templates';
 import { buildDigitalSaleEmail as buildLegacyDigitalSaleEmail } from '../lib/order/emails/seller-email';
+import { buildMerchSaleEmail as buildLegacyMerchSaleEmail } from '../lib/order/emails/merch-email';
 import { buildStockistFulfillmentEmail as buildLegacyStockistEmail } from '../lib/order/emails/vinyl-email';
 import type { CartItem } from '../lib/order/types';
 
@@ -149,31 +150,53 @@ describe('seller email privacy (whole-order totals must not leak)', () => {
   } as unknown as Record<string, unknown>;
   const items = [{ name: 'Embrace The Darkness', type: 'digital', price: 14, quantity: 1 }] as CartItem[];
 
-  it('digital sale email shows only the recipient part', () => {
+  it('digital sale email shows only the recipient part and no customer identity', () => {
     const html = buildDigitalSaleEmail('FW-TEST', order, items);
     expect(html).not.toContain('40.48');
     expect(html).toContain('Customer Paid (your items)');
     expect(html).toContain('£14.00');
+    expect(html).not.toContain('Mark');
+    expect(html).not.toContain('Quick');
   });
 
-  it('legacy digital sale email shows only the recipient part', () => {
+  it('legacy digital sale email shows only the recipient part and no customer identity', () => {
     const html = buildLegacyDigitalSaleEmail('FW-TEST', order, items as never);
     expect(html).not.toContain('40.48');
     expect(html).toContain('Customer Paid (your items)');
+    expect(html).not.toContain('Mark');
   });
 
-  it('merch sale email shows only the recipient part', () => {
+  it('merch sale email hides all customer details by default (Fresh Wax fulfils)', () => {
     const html = buildMerchSaleEmail('FW-TEST', order, [{ name: 'Tee', type: 'merch', price: 20, quantity: 1 }] as CartItem[]);
     expect(html).not.toContain('40.48');
     expect(html).toContain('Customer Paid (your items)');
     expect(html).toContain('£20.00');
+    expect(html).not.toContain('Mark');
+    expect(html).not.toContain('buyer@test.com');
+    expect(html).not.toContain('1 St');
+    expect(html).toContain('No Action Required');
   });
 
-  it('stockist fulfillment email shows only the recipient part', () => {
+  it('merch sale email includes customer details only for self-fulfilling suppliers', () => {
+    const html = buildMerchSaleEmail('FW-TEST', order, [{ name: 'Tee', type: 'merch', price: 20, quantity: 1 }] as CartItem[], true);
+    expect(html).toContain('Mark');
+    expect(html).toContain('buyer@test.com');
+    expect(html).toContain('1 St');
+    expect(html).not.toContain('40.48');
+  });
+
+  it('legacy merch sale email carries no customer identity', () => {
+    const html = buildLegacyMerchSaleEmail('FW-TEST', order, [{ name: 'Tee', type: 'merch', price: 20, quantity: 1 }] as never);
+    expect(html).not.toContain('Mark');
+  });
+
+  it('stockist fulfillment email keeps customer details (label dispatches it) but only their part', () => {
     const vinyl = [{ name: 'EP', type: 'vinyl', price: 19.99, quantity: 1 }] as CartItem[];
     const html = buildStockistFulfillmentEmail('oid', 'FW-TEST', order, vinyl);
     expect(html).not.toContain('40.48');
     expect(html).toContain('£19.99');
+    expect(html).toContain('Mark');
+    expect(html).toContain('1 St');
   });
 
   it('legacy stockist fulfillment email shows only the recipient part', () => {

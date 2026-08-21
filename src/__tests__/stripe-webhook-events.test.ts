@@ -777,7 +777,8 @@ describe('Email Template Builders', () => {
       expect(html).toContain('DIGITAL SALE');
       expect(html).toContain('FW-010');
       expect(html).toContain('Jungle Track');
-      expect(html).toContain('Buyer Test');
+      // GDPR data minimisation: artists don't need buyer identity for digital sales
+      expect(html).not.toContain('Buyer Test');
       expect(html).toContain('Your Earnings');
       expect(html).toContain('Payment Breakdown');
     });

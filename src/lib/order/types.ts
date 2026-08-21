@@ -35,6 +35,7 @@ export interface CartItem {
   sellerEmail?: string;
   stockistEmail?: string;
   artistEmail?: string;
+  supplierId?: string;
   brandAccountId?: string;
   brandName?: string;
   discountPercent?: number;

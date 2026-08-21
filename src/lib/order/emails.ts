@@ -276,7 +276,17 @@ export async function sendMerchSaleEmails(
   for (const [sellerEmail, items] of Object.entries(itemsBySeller)) {
     try {
       log.info('[order-utils] Sending merch sale email to seller:', sellerEmail);
-      const merchHtml = buildMerchSaleEmail(orderNumber, order, items);
+      // GDPR data minimisation: the buyer's name/email/address go to the
+      // supplier ONLY when they dispatch their own stock (merch-suppliers
+      // doc has selfFulfils: true). Fresh Wax fulfils by default, so the
+      // default email carries no customer personal data.
+      const supplierId = items.map((i) => i.supplierId || i.brandAccountId || i.sellerId).find(Boolean);
+      let includeCustomerDetails = false;
+      if (supplierId) {
+        const supplier = await getDocument('merch-suppliers', supplierId as string).catch(() => null);
+        includeCustomerDetails = (supplier as { selfFulfils?: unknown } | null)?.selfFulfils === true;
+      }
+      const merchHtml = buildMerchSaleEmail(orderNumber, order, items, includeCustomerDetails);
 
       await sendResendEmail({
         apiKey: RESEND_API_KEY,

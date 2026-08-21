@@ -243,7 +243,6 @@ export function buildDigitalSaleEmail(orderNumber: string, order: Record<string,
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding-bottom: 20px; text-align: center;">' +
     '<div style="font-size: 18px; font-weight: 700; color: #16a34a;">Someone bought your music!</div>' +
-    '<div style="font-size: 14px; color: #d1d5db; margin-top: 4px;">Customer: ' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</div>' +
     '</td></tr>' +
     '<tr><td>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #374151; border-radius: 8px; overflow: hidden; background: #1f2937;">' +
@@ -277,7 +276,11 @@ export function buildDigitalSaleEmail(orderNumber: string, order: Record<string,
     '</table></td></tr></table></body></html>';
 }
 
-export function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>, merchItems: CartItem[]): string {
+// includeCustomerDetails: GDPR data minimisation — the buyer's name, email and
+// address appear ONLY when this supplier dispatches their own stock
+// (merch-suppliers.selfFulfils). Fresh Wax fulfils by default, so the default
+// email carries no customer personal data.
+export function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>, merchItems: CartItem[], includeCustomerDetails = false): string {
   const merchTotal = merchItems.reduce((sum: number, item: CartItem) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
   const brandRoyalty = Math.round(merchTotal * 0.10 * 100) / 100;
   const freshWaxShare = Math.round((merchTotal - brandRoyalty) * 100) / 100;
@@ -297,7 +300,7 @@ export function buildMerchSaleEmail(orderNumber: string, order: Record<string, u
       '</tr>';
   }
 
-  const shippingHtml = order.shipping ?
+  const shippingHtml = (includeCustomerDetails && order.shipping) ?
     '<tr><td style="padding-top: 20px;">' +
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
     '<div style="font-weight: 700; color: #d1d5db; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;">Ship To</div>' +
@@ -325,7 +328,7 @@ export function buildMerchSaleEmail(orderNumber: string, order: Record<string, u
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding-bottom: 20px; text-align: center;">' +
     '<div style="font-size: 18px; font-weight: 700; color: #16a34a;">Someone bought your merch!</div>' +
-    '<div style="font-size: 14px; color: #d1d5db; margin-top: 4px;">Customer: ' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</div>' +
+    (includeCustomerDetails ? '<div style="font-size: 14px; color: #d1d5db; margin-top: 4px;">Customer: ' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</div>' : '') +
     '</td></tr>' +
     '<tr><td>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #374151; border-radius: 8px; overflow: hidden; background: #1f2937;">' +
@@ -351,9 +354,15 @@ export function buildMerchSaleEmail(orderNumber: string, order: Record<string, u
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
     '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid (your items):</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table></div></td></tr>' +
-    '<tr><td style="padding-top: 16px;">' +
-    '<div style="font-size: 12px; color: #d1d5db;">Customer email: <strong style="color: #fff;">' + escapeHtml(order.customer.email) + '</strong></div>' +
-    '</td></tr>' +
+    (includeCustomerDetails
+      ? '<tr><td style="padding-top: 16px;">' +
+        '<div style="font-size: 12px; color: #d1d5db;">Customer email: <strong style="color: #fff;">' + escapeHtml(order.customer.email) + '</strong></div>' +
+        '</td></tr>'
+      : '<tr><td style="padding-top: 20px;">' +
+        '<div style="padding: 16px; background: #1f2937; border-left: 4px solid #16a34a; border-radius: 0 8px 8px 0;">' +
+        '<div style="font-weight: 700; color: #16a34a; margin-bottom: 4px;">✅ No Action Required</div>' +
+        '<div style="font-size: 14px; color: #d1d5db; line-height: 1.5;">Fresh Wax handles shipping and fulfilment for this order.</div>' +
+        '</div></td></tr>') +
     '</table></td></tr>' +
     '<tr><td align="center" style="padding: 24px 0;">' +
     '<div style="color: #d1d5db; font-size: 13px;">Automated notification from Fresh Wax</div>' +

@@ -49,7 +49,6 @@ export function buildMerchSaleEmail(orderNumber: string, order: Record<string, u
     // Success message
     '<tr><td style="padding-bottom: 20px; text-align: center;">' +
     '<div style="font-size: 18px; font-weight: 700; color: #16a34a;">Someone bought your merch!</div>' +
-    '<div style="font-size: 14px; color: #d1d5db; margin-top: 4px;">Customer: ' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</div>' +
     '</td></tr>' +
 
     // Items table
