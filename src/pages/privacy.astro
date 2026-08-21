@@ -13,7 +13,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600,
     <div class="legal-container">
       <div class="legal-header">
         <h1>Privacy Policy</h1>
-        <p class="last-updated">Last updated: February 2026</p>
+        <p class="last-updated">Last updated: August 2026</p>
       </div>
 
       <div class="legal-content">
@@ -23,7 +23,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600,
           <ul>
             <li><strong>Account information:</strong> Email address, display name, and password</li>
             <li><strong>Profile information:</strong> Artist name, bio, and links (if applicable)</li>
-            <li><strong>Purchase history:</strong> Records of your transactions including items, amounts, and shipping details</li>
+            <li><strong>Purchase history:</strong> Records of your transactions including items, amounts, delivery address, and phone number (for physical orders)</li>
             <li><strong>Content:</strong> DJ mixes, comments, ratings, and vinyl listings you submit</li>
             <li><strong>Payment information:</strong> Card details are processed directly by Stripe/PayPal and never stored on our servers</li>
             <li><strong>Usage data:</strong> Pages visited, features used, and technical information (browser, IP address)</li>
@@ -48,6 +48,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600,
         <section>
           <h2>3. Third-Party Services</h2>
           <p>We do not sell your personal information. We share data with the following processors to operate our service:</p>
+
+          <h3>Physical Order Fulfilment</h3>
+          <ul>
+            <li><strong>Labels and sellers</strong> — When you buy vinyl or self-fulfilled merch, we share your name, delivery address, phone number, and email with the label or seller who dispatches your order, solely for delivery purposes. Digital purchases share nothing about you with the artist or label.</li>
+          </ul>
 
           <h3>Payment Processing</h3>
           <ul>
@@ -92,7 +97,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600,
             <li><strong>DJ mixes and vinyl listings:</strong> Until you delete your account or remove the content</li>
             <li><strong>Newsletter subscription:</strong> Until you unsubscribe or delete your account</li>
             <li><strong>Analytics data:</strong> 14 months (Google Analytics default retention)</li>
-            <li><strong>Error logs:</strong> 90 days</li>
+            <li><strong>Error logs:</strong> 30 days</li>
             <li><strong>Session cookies:</strong> Expire when you close your browser or after 14 days</li>
           </ul>
         </section>
@@ -105,6 +110,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600,
             <li>Passwords are hashed and never stored in plain text</li>
             <li>Payment card data is processed directly by Stripe/PayPal and never touches our servers</li>
             <li>Infrastructure is hosted on Cloudflare (global edge network) and Google Cloud (Firebase)</li>
+            <li>Daily backups are encrypted before leaving our systems; the off-site copy cannot be read by the storage provider</li>
             <li>Server-side authentication uses service account credentials with least-privilege access</li>
           </ul>
         </section>
