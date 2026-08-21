@@ -3,10 +3,35 @@
 
 import { getDocument, addDocument, updateDocument, atomicIncrement } from '../../firebase-rest';
 import { createLogger } from '../../api-utils';
+import { logError } from '../../error-logger';
 import { getProcessingFee } from './types';
 import type { SellerPaymentParams } from './types';
 
 const log = createLogger('[seller-payments]');
+
+// A paid item that produces no payout is lost money for a partner, and the
+// middleware can't see it (nothing throws) — surface it in /admin/errors.
+// Message stays stable per release so repeat occurrences group by fingerprint.
+async function logPayoutSkip(
+  reason: string,
+  releaseId: unknown,
+  item: Record<string, unknown>,
+  ctx: { orderId: string; orderNumber: string; env: unknown }
+): Promise<void> {
+  await logError({
+    source: 'server',
+    level: 'error',
+    message: `Payout skipped: ${reason} (release ${releaseId})`,
+    endpoint: 'lib/order/seller-payments/artist-payments',
+    metadata: {
+      orderId: ctx.orderId,
+      orderNumber: ctx.orderNumber,
+      releaseId,
+      item: item.name || item.title || '(unnamed)',
+      itemTotal: (Number(item.price) || 0) * (Number(item.quantity) || 1),
+    },
+  }, ctx.env as Parameters<typeof logError>[1]);
+}
 
 // Process artist payments - creates pending payouts for manual review
 // NOTE: Automatic payouts disabled - all payouts are manual for now
@@ -108,7 +133,12 @@ export async function processArtistPayments(params: SellerPaymentParams) {
       if (!releaseId) continue;
 
       const release = releaseMap.get(releaseId as string);
-      if (!release) continue;
+      if (!release) {
+        if ((Number(item.price) || 0) > 0) {
+          await logPayoutSkip('release doc not found for paid item', releaseId, item, { orderId, orderNumber, env: params.env });
+        }
+        continue;
+      }
 
       const itemTotal = (item.price || 0) * (item.quantity || 1);
 
@@ -130,7 +160,12 @@ export async function processArtistPayments(params: SellerPaymentParams) {
             return aid ? [{ artistId: aid, share: artistShare }] : [];
           })();
 
-      if (recipients.length === 0) continue;
+      if (recipients.length === 0) {
+        if (itemTotal > 0) {
+          await logPayoutSkip('no payee — release has no artistId/userId and no payoutSplits', releaseId, item, { orderId, orderNumber, env: params.env });
+        }
+        continue;
+      }
 
       const itemLabel = item.name || item.title || 'Item';
 

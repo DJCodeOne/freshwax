@@ -4,8 +4,33 @@
 import { getDocument, queryCollection, addDocument, updateDocument, atomicIncrement } from '../firebase-rest';
 import { formatPrice } from '../format-utils';
 import { createLogger, fetchWithTimeout } from '../api-utils';
+import { logError } from '../error-logger';
 
 const log = createLogger('stripe-webhook-payments');
+
+// A paid item that produces no payout is lost money for a partner, and the
+// middleware can't see it (nothing throws) — surface it in /admin/errors.
+// Message stays stable per release so repeat occurrences group by fingerprint.
+async function logPayoutSkip(
+  reason: string,
+  releaseId: unknown,
+  item: Record<string, unknown>,
+  ctx: { orderId: string; orderNumber: string; env: unknown }
+): Promise<void> {
+  await logError({
+    source: 'server',
+    level: 'error',
+    message: `Payout skipped: ${reason} (release ${releaseId})`,
+    endpoint: 'lib/stripe-webhook/payments',
+    metadata: {
+      orderId: ctx.orderId,
+      orderNumber: ctx.orderNumber,
+      releaseId,
+      item: item.name || item.title || '(unnamed)',
+      itemTotal: (Number(item.price) || 0) * (Number(item.quantity) || 1),
+    },
+  }, ctx.env as Parameters<typeof logError>[1]);
+}
 
 // Fetch the ACTUAL Stripe fee for a captured payment from its balance
 // transaction. Artists receive their item price minus the real fee (plus
@@ -109,7 +134,12 @@ export async function processArtistPayments(params: {
         if (release) releaseCache[releaseId] = release;
       }
 
-      if (!release) continue;
+      if (!release) {
+        if ((Number(item.price) || 0) > 0) {
+          await logPayoutSkip('release doc not found for paid item', releaseId, item, { orderId, orderNumber, env });
+        }
+        continue;
+      }
 
       const itemTotal = (item.price || 0) * (item.quantity || 1);
 
@@ -131,7 +161,12 @@ export async function processArtistPayments(params: {
             const aid = (item.artistId || release.artistId || release.userId) as string | undefined;
             return aid ? [{ artistId: aid, share: artistShare }] : [];
           })();
-      if (recipients.length === 0) continue;
+      if (recipients.length === 0) {
+        if (itemTotal > 0) {
+          await logPayoutSkip('no payee — release has no artistId/userId and no payoutSplits', releaseId, item, { orderId, orderNumber, env });
+        }
+        continue;
+      }
       const itemLabel = item.name || item.title || 'Item';
 
       for (const recipient of recipients) {
