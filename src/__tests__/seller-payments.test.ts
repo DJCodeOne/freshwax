@@ -46,6 +46,12 @@ vi.mock('../lib/paypal-payouts', () => ({
   getPayPalConfig: (...args: unknown[]) => mockGetPayPalConfig(...args),
 }));
 
+// Mock payout completion email (sent by sale-time instant transfers)
+const mockSendPayoutCompletedEmail = vi.fn(async () => ({ success: true }));
+vi.mock('../lib/payout-emails', () => ({
+  sendPayoutCompletedEmail: (...args: unknown[]) => mockSendPayoutCompletedEmail(...args),
+}));
+
 // ---------------------------------------------------------------------------
 // Import modules under test AFTER mocks
 // ---------------------------------------------------------------------------
@@ -570,5 +576,86 @@ describe('processMerchSupplierPayments', () => {
       payoutMethod: 'paypal',
       status: 'completed',
     }));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests: sale-time Stripe Connect transfers for artists
+// ---------------------------------------------------------------------------
+describe('processArtistPayments - sale-time Connect transfers', () => {
+  const items = [
+    { id: 'release_1', name: 'Jungle EP', type: 'digital', price: 10, quantity: 1 },
+  ];
+
+  function mockDocs(artistDoc: Record<string, unknown>) {
+    mockGetDocument.mockImplementation(async (collection: string, id: string) => {
+      if (collection === 'releases' && id === 'release_1') {
+        return { artistId: 'artist_1', artistName: 'DJ Test' };
+      }
+      if (collection === 'artists' && id === 'artist_1') return artistDoc;
+      return null;
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAddDocument.mockResolvedValue({ id: 'doc_1' });
+    mockUpdateDocument.mockResolvedValue(undefined);
+    mockAtomicIncrement.mockResolvedValue(undefined);
+  });
+
+  it('transfers at sale time for an ACTIVE Connect artist - no pending row', async () => {
+    mockDocs({ artistName: 'DJ Test', email: 'dj@test.com', stripeConnectId: 'acct_live1', stripeConnectStatus: 'active' });
+    mockTransfersCreate.mockResolvedValue({ id: 'tr_instant_1' });
+
+    await processArtistPayments(makeBaseParams({ items, totalItemCount: 1, orderSubtotal: 10 }));
+
+    expect(mockTransfersCreate).toHaveBeenCalledTimes(1);
+    const transferArg = mockTransfersCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(transferArg.amount).toBe(956); // 10 - 0.10 FW - 0.34 processing = 9.56
+    expect(transferArg.destination).toBe('acct_live1');
+
+    const collections = mockAddDocument.mock.calls.map((c) => c[0]);
+    expect(collections).toContain('payouts');
+    expect(collections).not.toContain('pendingPayouts');
+    const payoutDoc = mockAddDocument.mock.calls.find((c) => c[0] === 'payouts')![1] as Record<string, unknown>;
+    expect(payoutDoc.status).toBe('completed');
+    expect(payoutDoc.stripeTransferId).toBe('tr_instant_1');
+
+    const incrementFields = mockAtomicIncrement.mock.calls.map((c) => c[2] as Record<string, unknown>);
+    expect(incrementFields.some((f) => f && 'totalEarnings' in f)).toBe(true);
+    expect(incrementFields.some((f) => f && 'pendingBalance' in f)).toBe(false);
+    expect(mockSendPayoutCompletedEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('unfinished onboarding still accrues a pending payout - no transfer', async () => {
+    mockDocs({ artistName: 'DJ Test', email: 'dj@test.com', stripeConnectId: 'acct_onb1', stripeConnectStatus: 'onboarding' });
+
+    await processArtistPayments(makeBaseParams({ items, totalItemCount: 1, orderSubtotal: 10 }));
+
+    expect(mockTransfersCreate).not.toHaveBeenCalled();
+    const collections = mockAddDocument.mock.calls.map((c) => c[0]);
+    expect(collections).toContain('pendingPayouts');
+    expect(collections).not.toContain('payouts');
+    const incrementFields = mockAtomicIncrement.mock.calls.map((c) => c[2] as Record<string, unknown>);
+    expect(incrementFields.some((f) => f && 'pendingBalance' in f)).toBe(true);
+  });
+
+  it('failed transfer falls back to a pending payout - artist never loses the record', async () => {
+    mockDocs({ artistName: 'DJ Test', email: 'dj@test.com', stripeConnectId: 'acct_live2', stripeConnectStatus: 'active' });
+    mockTransfersCreate.mockRejectedValue(new Error('Insufficient funds in platform balance'));
+
+    await processArtistPayments(makeBaseParams({ items, totalItemCount: 1, orderSubtotal: 10 }));
+
+    expect(mockTransfersCreate).toHaveBeenCalledTimes(1);
+    const collections = mockAddDocument.mock.calls.map((c) => c[0]);
+    expect(collections).toContain('pendingPayouts');
+    expect(collections).not.toContain('payouts');
+    const pendingDoc = mockAddDocument.mock.calls.find((c) => c[0] === 'pendingPayouts')![1] as Record<string, unknown>;
+    expect(pendingDoc.status).toBe('pending');
+    expect(pendingDoc.amount).toBeCloseTo(9.56, 2);
+    const incrementFields = mockAtomicIncrement.mock.calls.map((c) => c[2] as Record<string, unknown>);
+    expect(incrementFields.some((f) => f && 'pendingBalance' in f)).toBe(true);
+    expect(incrementFields.some((f) => f && 'totalEarnings' in f)).toBe(false);
   });
 });

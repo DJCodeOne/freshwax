@@ -4,6 +4,7 @@
 import { getDocument, addDocument, updateDocument, atomicIncrement } from '../../firebase-rest';
 import { createLogger } from '../../api-utils';
 import { logError } from '../../error-logger';
+import { attemptInstantArtistTransfer } from './instant-transfer';
 import { getProcessingFee } from './types';
 import type { SellerPaymentParams } from './types';
 
@@ -201,6 +202,25 @@ export async function processArtistPayments(params: SellerPaymentParams) {
     for (const artistId of Object.keys(artistPayments)) {
       const payment = artistPayments[artistId];
       if (payment.amount <= 0) continue;
+
+      // Artists with an ACTIVE Stripe Connect account are paid at sale time.
+      // On any failure this returns false and we fall through to the normal
+      // pending payout, which the activation hook / manual flow picks up.
+      const transferred = await attemptInstantArtistTransfer({
+        artist: artistMap.get(artistId) ?? null,
+        artistId: payment.artistId,
+        artistName: payment.artistName,
+        artistEmail: payment.artistEmail,
+        amount: payment.amount,
+        itemAmount: payment.amount - (payment.shippingAmount || 0),
+        shippingAmount: payment.shippingAmount || 0,
+        orderId,
+        orderNumber,
+        customerPaymentMethod: paymentMethod || 'paypal',
+        stripeSecretKey: params.stripeSecretKey,
+        env: params.env,
+      });
+      if (transferred) continue;
 
       // Creating pending payout
 

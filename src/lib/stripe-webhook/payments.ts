@@ -5,6 +5,7 @@ import { getDocument, queryCollection, addDocument, updateDocument, atomicIncrem
 import { formatPrice } from '../format-utils';
 import { createLogger, fetchWithTimeout } from '../api-utils';
 import { logError } from '../error-logger';
+import { attemptInstantArtistTransfer } from '../order/seller-payments/instant-transfer';
 
 const log = createLogger('stripe-webhook-payments');
 
@@ -208,6 +209,25 @@ export async function processArtistPayments(params: {
       if (payment.amount <= 0) continue;
 
       const itemAmount = payment.amount - (payment.shippingAmount || 0);
+
+      // Artists with an ACTIVE Stripe Connect account are paid at sale time.
+      // On any failure this returns false and we fall through to the normal
+      // pending payout, which the activation hook / manual flow picks up.
+      const transferred = await attemptInstantArtistTransfer({
+        artist: artistCache[artistId] ?? null,
+        artistId: payment.artistId,
+        artistName: payment.artistName,
+        artistEmail: payment.artistEmail,
+        amount: payment.amount,
+        itemAmount,
+        shippingAmount: payment.shippingAmount || 0,
+        orderId,
+        orderNumber,
+        customerPaymentMethod: 'stripe',
+        stripeSecretKey: params.stripeSecretKey,
+        env: params.env as unknown as Record<string, unknown>,
+      });
+      if (transferred) continue;
 
       // Always create pending payout for manual processing
       await addDocument('pendingPayouts', {
