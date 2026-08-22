@@ -207,6 +207,12 @@ const getStatusLabel = (status: string) => {
   return 'Pending';
 };
 
+// Pending total + what each withdrawal method would deliver. The 2% PayPal
+// payout fee matches the payout-methods section at the bottom of this page.
+const pendingRowsTotal = pendingPayouts.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+const paypalPayoutFee = Math.round(pendingRowsTotal * 0.02 * 100) / 100;
+const paypalPayoutNet = Math.round((pendingRowsTotal - paypalPayoutFee) * 100) / 100;
+
 export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
@@ -339,18 +345,27 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               </p>
 
               {!summary.stripeConnected && (
-                openPayoutRequest ? (
-                  <div class="request-status" role="status">
-                    ✅ Payout requested {formatDate(openPayoutRequest.createdAt)} — Fresh Wax has been notified and will arrange your payment.
+                <>
+                  {openPayoutRequest ? (
+                    <div class="request-status" role="status">
+                      ✅ Payout requested {formatDate(openPayoutRequest.createdAt)} — Fresh Wax has been notified and will arrange your payment.
+                    </div>
+                  ) : (
+                    <div class="request-row" id="requestPayoutRow">
+                      <button id="requestPayoutBtn" class="request-payout-btn" type="button">
+                        Request Payout — {formatPrice(pendingRowsTotal)}
+                      </button>
+                    </div>
+                  )}
+                  <div class="method-note">
+                    <div class="method-line">
+                      ⚡ <strong>Stripe (recommended):</strong> free, and automatic — <a href="/artist/account/#stripe-connect-section">connect your bank once</a> and payouts are sent without needing to request. You'd receive <strong>{formatPrice(pendingRowsTotal)}</strong>.
+                    </div>
+                    <div class="method-line">
+                      💳 <strong>PayPal:</strong> PayPal charges a 2% payout fee — <strong>−{formatPrice(paypalPayoutFee)}</strong> on your current balance, so you'd receive <strong>{formatPrice(paypalPayoutNet)}</strong>.
+                    </div>
                   </div>
-                ) : (
-                  <div class="request-row" id="requestPayoutRow">
-                    <button id="requestPayoutBtn" class="request-payout-btn" type="button">
-                      Request Payout — {formatPrice(pendingPayouts.reduce((s, p) => s + (Number(p.amount) || 0), 0))}
-                    </button>
-                    <span class="request-hint">We'll arrange payment by bank transfer or PayPal and mark these as paid.</span>
-                  </div>
-                )
+                </>
               )}
 
               <div class="payouts-table-wrap">
@@ -584,9 +599,34 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     cursor: default;
   }
 
-  .request-hint {
-    color: var(--text-muted, #666);
+  .method-note {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: var(--bg-secondary, #141414);
+    border: 1px solid var(--border-color, #262626);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    margin: 0 0 1.25rem;
+  }
+
+  .method-line {
+    color: var(--text-secondary, #a3a3a3);
     font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .method-line strong {
+    color: var(--text-primary, #fff);
+  }
+
+  .method-line a {
+    color: #ef4444;
+    text-decoration: none;
+  }
+
+  .method-line a:hover {
+    text-decoration: underline;
   }
 
   .request-status {
