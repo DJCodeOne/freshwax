@@ -207,10 +207,11 @@ const getStatusLabel = (status: string) => {
   return 'Pending';
 };
 
-// Pending total + what each withdrawal method would deliver. The 2% PayPal
-// payout fee matches the payout-methods section at the bottom of this page.
+// Pending total + what each withdrawal method would deliver. PayPal Payouts
+// UK domestic fee per PayPal's merchant fee schedule (verified Aug 2026):
+// 2% of the amount, capped at £10.00 per payment.
 const pendingRowsTotal = pendingPayouts.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-const paypalPayoutFee = Math.round(pendingRowsTotal * 0.02 * 100) / 100;
+const paypalPayoutFee = Math.round(Math.min(pendingRowsTotal * 0.02, 10) * 100) / 100;
 const paypalPayoutNet = Math.round((pendingRowsTotal - paypalPayoutFee) * 100) / 100;
 
 export const prerender = false;
@@ -362,7 +363,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                       ⚡ <strong>Stripe (recommended):</strong> free, and automatic — <a href="/artist/account/#stripe-connect-section">connect your bank once</a> and payouts are sent without needing to request. You'd receive <strong>{formatPrice(pendingRowsTotal)}</strong>.
                     </div>
                     <div class="method-line">
-                      💳 <strong>PayPal:</strong> PayPal charges a 2% payout fee — <strong>−{formatPrice(paypalPayoutFee)}</strong> on your current balance, so you'd receive <strong>{formatPrice(paypalPayoutNet)}</strong>.
+                      💳 <strong>PayPal:</strong> PayPal charges a 2% payout fee (capped at £10) — <strong>−{formatPrice(paypalPayoutFee)}</strong> on your current balance, so you'd receive <strong>{formatPrice(paypalPayoutNet)}</strong>.
                     </div>
                   </div>
                 </>
@@ -507,11 +508,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   <span class="method-icon">🅿️</span>
                   <div class="method-details">
                     <strong>PayPal</strong>
-                    <p>Instant to PayPal. Global coverage. <span class="fee-warning">+2% payout fee</span></p>
+                    <p>Instant to PayPal. Global coverage. <span class="fee-warning">+2% payout fee (max £10)</span></p>
                   </div>
                 </div>
               </div>
-              <p class="fee-note">Fresh Wax takes just 1% platform fee. Stripe payouts are free - PayPal charges an additional 2% per payout.</p>
+              <p class="fee-note">Fresh Wax takes just 1% platform fee. Stripe payouts are free - PayPal charges an additional 2% per payout, capped at £10.</p>
             </div>
           </section>
         </>
