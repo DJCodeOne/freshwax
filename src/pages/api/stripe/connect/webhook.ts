@@ -271,11 +271,15 @@ async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user',
                   entityType === 'supplier' ? 'supplierId' :
                   'sellerId';
 
-  // Also check for generic entityType/entityId fields
+  // Process 'pending' as well as 'awaiting_connect': the artist payout
+  // writers (order-flow and Stripe-webhook processArtistPayments) only ever
+  // write status 'pending', so matching solely on 'awaiting_connect' made
+  // activation silently transfer nothing — the backlog stayed pending forever.
+  const PAYABLE_STATUSES = ['awaiting_connect', 'pending'];
   const pendingPayouts = await queryCollection('pendingPayouts', {
     filters: [
       { field: idField, op: 'EQUAL', value: entityId },
-      { field: 'status', op: 'EQUAL', value: 'awaiting_connect' }
+      { field: 'status', op: 'IN', value: PAYABLE_STATUSES }
     ],
     limit: MAX_PENDING_PAYOUTS
   });
@@ -285,7 +289,7 @@ async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user',
     filters: [
       { field: 'entityId', op: 'EQUAL', value: entityId },
       { field: 'entityType', op: 'EQUAL', value: entityType },
-      { field: 'status', op: 'EQUAL', value: 'awaiting_connect' }
+      { field: 'status', op: 'IN', value: PAYABLE_STATUSES }
     ],
     limit: MAX_PENDING_PAYOUTS
   });
