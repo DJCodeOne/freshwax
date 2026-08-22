@@ -37,7 +37,7 @@ const serviceAccountKey = (clientEmail && privateKey) ? JSON.stringify({
 const saQuery = (c: string, o: Record<string, unknown>) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
 
 // Fetch all initial data in parallel (6 independent queries instead of sequential)
-const [disputes, refunds, pendingPayouts, manualPendingPayoutsResult, pendingSupplierPayoutsResult, pendingSellerPayoutsResult] = await Promise.all([
+const [disputes, refunds, pendingPayouts, manualPendingPayoutsResult, pendingSupplierPayoutsResult, pendingSellerPayoutsResult, payoutRequestsResult] = await Promise.all([
   // Disputes
   saQuery('disputes', {
     orderBy: { field: 'createdAt', direction: 'DESCENDING' },
@@ -76,11 +76,19 @@ const [disputes, refunds, pendingPayouts, manualPendingPayoutsResult, pendingSup
         limit: 100
       }).catch(() => [] as Record<string, unknown>[])
     : Promise.resolve([] as Record<string, unknown>[]),
+  // Open payout requests from partners (Request Payout button on /artist/payouts)
+  serviceAccountKey
+    ? saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'payoutRequests', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'open' }],
+        limit: 50
+      }).catch(() => [] as Record<string, unknown>[])
+    : Promise.resolve([] as Record<string, unknown>[]),
 ]);
 
 const manualPendingPayouts = manualPendingPayoutsResult;
 const pendingSupplierPayouts = pendingSupplierPayoutsResult;
 const pendingSellerPayouts = pendingSellerPayoutsResult;
+const openPayoutRequests = payoutRequestsResult;
 
 if (!serviceAccountKey) {
   log.warn('No service account key - cannot fetch pending payouts');
@@ -410,6 +418,52 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
   <!-- Trigger Payouts Tab -->
   <div class="tab-content" id="trigger-tab">
+    {openPayoutRequests.length > 0 && (
+      <div class="card">
+        <div class="card-header">
+          <h2>💸 Payout Requests</h2>
+          <span class="text-muted">{openPayoutRequests.length} open</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table" aria-label="Open payout requests">
+            <caption class="sr-only">Open payout requests</caption>
+            <thead>
+              <tr>
+                <th scope="col">Requested</th>
+                <th scope="col">Partner</th>
+                <th scope="col">Amount at request</th>
+                <th scope="col">Orders</th>
+                <th scope="col">Contact</th>
+                <th scope="col" class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {openPayoutRequests.map(req => (
+                <tr data-request-id={req.id}>
+                  <td>{formatDate(req.createdAt)}</td>
+                  <td><strong>{req.artistName}</strong></td>
+                  <td><span style="color: #16a34a; font-weight: 700;">{formatCurrency(req.amount)}</span></td>
+                  <td>{req.rowCount}</td>
+                  <td>{req.artistEmail || '-'}</td>
+                  <td class="text-right">
+                    <button
+                      class="btn btn-outline btn-sm close-request-btn"
+                      data-request-id={req.id}
+                      data-artist-name={req.artistName}
+                    >
+                      ✓ Done
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="text-muted" style="padding: 0.75rem 1.25rem; font-size: 0.85rem;">
+          Pay the partner, use "Mark as Paid" on their orders below, then close the request here.
+        </p>
+      </div>
+    )}
     <div class="card">
       <div class="card-header">
         <h2>Orders Needing Artist Payouts</h2>
@@ -1419,6 +1473,49 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       document.querySelectorAll('.mark-paid-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           markAsPaid(btn.dataset.orderId, btn.dataset.orderNumber, btn);
+        });
+      });
+
+      // Close a partner's payout request (after paying them)
+      document.querySelectorAll('.close-request-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(`Close the payout request from ${btn.dataset.artistName}?\n\nDo this after you've paid them and marked their orders as paid.`)) return;
+
+          const originalText = btn.innerHTML;
+          btn.disabled = true;
+          btn.innerHTML = '⏳...';
+
+          try {
+            const adminKey = window.ADMIN_KEY;
+            if (!adminKey) {
+              showToast('Not authenticated - please refresh the page', 'error');
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+              return;
+            }
+
+            const response = await fetch('/api/admin/close-payout-request/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ requestId: btn.dataset.requestId, adminKey })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+              showToast(`Request from ${btn.dataset.artistName} closed`);
+              const row = btn.closest('tr');
+              if (row) row.remove();
+            } else {
+              showToast(result.error || 'Failed to close request', 'error');
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+            }
+          } catch (error) {
+            console.error(error);
+            showToast('Failed to close request', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
         });
       });
 
