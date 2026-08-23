@@ -67,6 +67,9 @@ export async function sendPayoutCompletedEmail(
       apiKey: RESEND_API_KEY,
       from: 'Fresh Wax <noreply@freshwax.co.uk>',
       to: artistEmail,
+      // Operator copy — automatic Stripe transfers move real money with no
+      // human in the loop, so the inbox record matches the sale-email BCCs.
+      bcc: ['freshwaxonline@gmail.com'],
       subject,
       html: emailHtml,
       template: 'payout-completed',
