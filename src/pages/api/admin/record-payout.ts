@@ -1,21 +1,28 @@
 // src/pages/api/admin/record-payout.ts
-// Admin endpoint to record a manual payout (when artist has already been paid outside the system)
+// "Mark as Paid": records that the operator already paid a partner outside
+// the system (PayPal/bank). Rebuilt Aug 2026 to settle the actual
+// pendingPayouts rows (exact ids and amounts, postage included) instead of
+// recomputing shares from order items — the old version cleared every
+// payee's rows order-wide, never decremented pendingBalance, and filed
+// history under artist NAMES because item.artistId is null on real orders.
+// Pass artistId to mark just one partner paid on a multi-payee order.
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
-import { getDocument } from '../../../lib/firebase-rest';
-import { saSetDocument, saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
-import { getAdminFirebaseContext } from '../../../lib/firebase/admin-context';
+import { getDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
+import { settlePendingArtistRows } from '../../../lib/payout-settlement';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
-import { formatPrice } from '../../../lib/format-utils';
 
 const log = createLogger('[record-payout]');
 
 const recordPayoutSchema = z.object({
   orderId: z.string().min(1),
-  notes: z.string().optional(),
+  artistId: z.string().min(1).max(200).optional(),
+  notes: z.string().max(1000).optional(),
+  adminKey: z.string().max(500).optional(),
+  idToken: z.string().max(5000).optional(),
 }).strip();
 
 export const prerender = false;
@@ -26,13 +33,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
   try {
-    const fbCtx = getAdminFirebaseContext(locals);
-    if (fbCtx instanceof Response) return fbCtx;
-    const { projectId, saKey: serviceAccountKey } = fbCtx;
-
     const bodyData = await request.json();
 
-    // Admin auth required
     const authError = await requireAdminAuth(request, locals, bodyData);
     if (authError) return authError;
 
@@ -40,156 +42,82 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!parsed.success) {
       return ApiErrors.badRequest('Invalid request');
     }
+    const { orderId, artistId, notes } = parsed.data;
 
-    const { orderId, notes } = parsed.data;
-
-    // Get order
     const order = await getDocument('orders', orderId);
     if (!order) {
       return ApiErrors.notFound('Order not found');
     }
 
-    log.info('[admin] Recording manual payout for order:', order.orderNumber || orderId);
+    log.info(`[admin] Marking paid: order ${order.orderNumber || orderId}${artistId ? ` artist ${artistId}` : ' (all payees)'}`);
 
-    // Calculate artist payments from order items
-    const items = order.items || [];
-    const artistPayments: Record<string, {
-      artistId: string;
-      artistName: string;
-      amount: number;
-      items: string[];
-    }> = {};
+    const settlement = await settlePendingArtistRows({
+      orderId,
+      artistId,
+      method: 'manual',
+      notes: notes || 'Manual payout - already paid outside system',
+      triggeredBy: 'admin_manual',
+    });
 
-    for (const item of items) {
-      // Skip merch items
-      if (item.type === 'merch') continue;
-
-      const releaseId = item.releaseId || item.id;
-      const artistId = item.artistId || item.artist || 'unknown';
-      const artistName = item.artist || item.artistName || 'Unknown Artist';
-      const itemTotal = (item.price || 0) * (item.quantity || 1);
-
-      // Calculate artist share (subtract platform fees)
-      const freshWaxFee = itemTotal * 0.01;
-      const processorFeePercent = 0.014;
-      const processorFixedFee = 0.20 / items.length;
-      const processorFee = (itemTotal * processorFeePercent) + processorFixedFee;
-      const artistShare = itemTotal - freshWaxFee - processorFee;
-
-      if (!artistPayments[artistId]) {
-        artistPayments[artistId] = {
-          artistId,
-          artistName,
-          amount: 0,
-          items: []
-        };
-      }
-
-      artistPayments[artistId].amount += artistShare;
-      artistPayments[artistId].items.push(item.name || 'Item');
-    }
-
-    const results: Record<string, unknown>[] = [];
-
-    for (const payment of Object.values(artistPayments)) {
-      // Skip payments with zero or negative amounts (fees exceed item price)
-      if (payment.amount <= 0) continue;
-
-      // Record the payout as completed (manual) using service account auth
-      const payoutId = `manual_${orderId}_${Date.now()}`;
-      await saSetDocument(
-        serviceAccountKey,
-        projectId,
-        'payouts',
-        payoutId,
-        {
-          artistId: payment.artistId,
-          artistName: payment.artistName,
-          orderId,
-          orderNumber: order.orderNumber,
-          amount: payment.amount,
-          currency: 'gbp',
-          status: 'completed',
-          payoutMethod: 'manual',
-          triggeredBy: 'admin',
-          notes: notes || 'Manual payout recorded by admin',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          completedAt: new Date().toISOString()
-        }
-      );
-
-      results.push({
-        artistId: payment.artistId,
-        artistName: payment.artistName,
-        amount: payment.amount,
-        status: 'recorded'
+    // Legacy orders (before pendingPayouts existed) have no rows but still sit
+    // in the needs-payout queue — write a zero-amount "cleared" record so they
+    // leave it. Never do this when scoped to one artist, and never duplicate
+    // it when the order already has payout history.
+    if (settlement.settled === 0 && !artistId) {
+      const existing = await queryCollection('payouts', {
+        filters: [{ field: 'orderId', op: 'EQUAL', value: orderId }],
+        limit: 1,
       });
-
-      log.info('[admin] ✓ Recorded manual payout for', payment.artistName, formatPrice(payment.amount));
-    }
-
-    // If no artist payouts were created (e.g., all items are low-value/merch),
-    // create a "cleared" record to mark the order as handled
-    if (results.length === 0) {
-      const clearedPayoutId = `cleared_${orderId}_${Date.now()}`;
-      await saSetDocument(
-        serviceAccountKey,
-        projectId,
-        'payouts',
-        clearedPayoutId,
-        {
-          artistId: 'none',
-          artistName: 'Order Cleared',
+      if (existing.length > 0) {
+        return successResponse({
           orderId,
           orderNumber: order.orderNumber,
-          amount: 0,
-          currency: 'gbp',
-          status: 'completed',
-          payoutMethod: 'cleared',
-          triggeredBy: 'admin',
-          notes: notes || 'Order cleared by admin - no artist payout required',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          completedAt: new Date().toISOString()
-        }
-      );
-      results.push({
+          settled: 0,
+          message: 'Nothing payable — this order is already settled',
+        });
+      }
+      const now = new Date().toISOString();
+      await addDocument('payouts', {
         artistId: 'none',
         artistName: 'Order Cleared',
+        orderId,
+        orderNumber: order.orderNumber,
         amount: 0,
-        status: 'cleared'
+        currency: 'gbp',
+        status: 'completed',
+        payoutMethod: 'cleared',
+        triggeredBy: 'admin',
+        notes: notes || 'Order cleared by admin - no artist payout required',
+        createdAt: now,
+        updatedAt: now,
+        completedAt: now
       });
-      log.info('[admin] ✓ Created cleared record for order', order.orderNumber);
+      return successResponse({
+        orderId,
+        orderNumber: order.orderNumber,
+        settled: 0,
+        message: 'Order cleared — no payable rows existed',
+      });
     }
 
-    // Also remove/update any pending payout records for this order
-    // This prevents the order from reappearing in the queue
-    try {
-      const pendingPayouts = await saQueryCollection(serviceAccountKey, projectId, 'pendingPayouts', {
-        filters: [{ field: 'orderId', op: 'EQUAL', value: orderId }],
-        limit: 50
+    if (settlement.settled === 0) {
+      return successResponse({
+        orderId,
+        orderNumber: order.orderNumber,
+        settled: 0,
+        message: 'Nothing payable for this partner on this order',
       });
-
-      for (const pending of pendingPayouts) {
-        // Update the pending payout to mark it as completed (or delete it)
-        await saUpdateDocument(serviceAccountKey, projectId, 'pendingPayouts', pending.id, {
-          status: 'completed',
-          completedAt: new Date().toISOString(),
-          completedBy: 'admin_manual',
-          notes: notes || 'Marked as paid by admin'
-        });
-        log.info('[admin] ✓ Updated pending payout', pending.id, 'to completed');
-      }
-    } catch (err: unknown) {
-      log.error('[admin] Error updating pending payouts:', err);
-      // Don't fail the request - the payout record was still created
     }
 
-    return successResponse({ orderId,
+    return successResponse({
+      orderId,
       orderNumber: order.orderNumber,
-      payouts: results,
-      message: `Recorded ${results.length} payout(s)` });
+      settled: settlement.settled,
+      totalAmount: Math.round(settlement.totalAmount * 100) / 100,
+      skipped: settlement.skipped,
+      payouts: settlement.artists,
+      message: `Marked ${settlement.settled} payout(s) paid — £${settlement.totalAmount.toFixed(2)}${settlement.skipped ? ` (${settlement.skipped} row(s) skipped, see logs)` : ''}`,
+    });
 
   } catch (error: unknown) {
     log.error('[admin] Record payout error:', error);

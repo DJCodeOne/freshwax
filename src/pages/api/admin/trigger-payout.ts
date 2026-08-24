@@ -1,29 +1,36 @@
 // src/pages/api/admin/trigger-payout.ts
-// Admin endpoint to manually trigger artist payouts for an order
-// Used for: manual orders, failed auto-payouts, retries
-// Supports both Stripe Connect and PayPal based on artist preference
+// Admin-triggered PayPal payout for ONE payee of one order. Rebuilt Aug
+// 2026: for artists the payable pendingPayouts row is the authority for the
+// amount (the old version trusted the client and recomputed shares from
+// order items), the PayPal email must be explicit (the old version fell
+// back to the payee's ACCOUNT email — money sent to an address with no
+// PayPal account floats unclaimed for 30 days), and settlement runs through
+// lib/payout-settlement so history records and balances stay exact. The
+// artist bears the 2% PayPal payout fee, as advertised on their payouts
+// page. Stripe payouts have their own button (send-stripe-payout).
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import Stripe from 'stripe';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { getDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
+import { getDocument, addDocument, queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
+import { settlePendingArtistRows } from '../../../lib/payout-settlement';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/trigger-payout');
 
 const triggerPayoutSchema = z.object({
   orderId: z.string().min(1),
-  artistId: z.string().optional(),
-  payeeType: z.enum(['artist', 'supplier', 'seller']).optional(),
-  payeeId: z.string().optional(),
-  payeeName: z.string().optional(),
-  payeeEmail: z.string().email().optional(),
-  amount: z.number().positive().optional(),
-  adminKey: z.string().optional(),
-});
+  payeeType: z.enum(['artist', 'supplier', 'seller']),
+  payeeId: z.string().min(1),
+  payeeName: z.string().max(200).optional(),
+  paypalEmail: z.string().email(),
+  adminKey: z.string().max(500).optional(),
+  idToken: z.string().max(5000).optional(),
+}).strip();
+
+const PAYABLE_STATUSES = ['pending', 'awaiting_connect', 'retry_pending'];
 
 export const prerender = false;
 
@@ -32,411 +39,170 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const env = locals.runtime.env;
     const bodyData = await request.json();
 
-    // Admin auth required
     const authError = await requireAdminAuth(request, locals, bodyData);
     if (authError) return authError;
 
-    // Rate limit
     const clientId = getClientId(request);
     const rateLimit = checkRateLimit(`admin-payout:${clientId}`, RateLimiters.write);
     if (!rateLimit.allowed) {
       return rateLimitResponse(rateLimit.retryAfter!);
     }
 
-    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
-    const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-
     const parsed = triggerPayoutSchema.safeParse(bodyData);
     if (!parsed.success) {
-      return ApiErrors.badRequest('Invalid request');
+      return ApiErrors.badRequest('orderId, payeeType, payeeId and paypalEmail are required');
     }
+    const { orderId, payeeType, payeeId, payeeName, paypalEmail } = parsed.data;
 
-    const { orderId, artistId, payeeType, payeeId, payeeName, payeeEmail, amount } = parsed.data;
-
-    // Get order
     const order = await getDocument('orders', orderId);
     if (!order) {
       return ApiErrors.notFound('Order not found');
     }
 
-    // Get PayPal config
     const paypalConfig = getPayPalConfig(env);
+    if (!paypalConfig) {
+      return ApiErrors.serverError('PayPal not configured');
+    }
 
-    // Handle individual payee payment (new method)
-    if (payeeType && payeeEmail && amount) {
-      // Deduct 2% PayPal payout fee
-      const paypalPayoutFee = amount * 0.02;
-      const paypalAmount = amount - paypalPayoutFee;
-
-      if (!paypalConfig) {
-        return ApiErrors.serverError('PayPal not configured');
+    // ------------------------------------------------------------------
+    // Artists: the pendingPayouts row is the authority for the amount.
+    // ------------------------------------------------------------------
+    if (payeeType === 'artist') {
+      const rows = await queryCollection('pendingPayouts', {
+        filters: [
+          { field: 'orderId', op: 'EQUAL', value: orderId },
+          { field: 'artistId', op: 'EQUAL', value: payeeId },
+          { field: 'status', op: 'IN', value: PAYABLE_STATUSES },
+        ],
+        limit: 5,
+      });
+      const grossAmount = rows.reduce((s: number, r: Record<string, unknown>) => s + (Number(r.amount) || 0), 0);
+      if (rows.length === 0 || grossAmount <= 0) {
+        return ApiErrors.badRequest('Nothing payable for this artist on this order');
       }
 
-      try {
-        const payoutResult = await createPayout(paypalConfig, {
-          email: payeeEmail,
-          amount: paypalAmount,
-          currency: 'GBP',
-          note: `Fresh Wax ${payeeType} payout for order ${order.orderNumber}`,
-          reference: `${orderId}-${payeeType}-${payeeId}`
-        });
+      // Artist bears the 2% PayPal payout fee (as shown on their payouts page)
+      const paypalPayoutFee = Math.round(grossAmount * 0.02 * 100) / 100;
+      const paypalNetAmount = Math.round((grossAmount - paypalPayoutFee) * 100) / 100;
 
-        if (payoutResult.success) {
-          // Record the payout
-          await addDocument('payouts', {
-            payeeType,
-            payeeId,
-            payeeName,
-            paypalEmail: payeeEmail,
-            paypalBatchId: payoutResult.batchId,
-            paypalPayoutItemId: payoutResult.payoutItemId,
-            orderId,
-            orderNumber: order.orderNumber,
-            amount: paypalAmount,
-            paypalPayoutFee: paypalPayoutFee,
-            currency: 'gbp',
-            status: 'completed',
-            payoutMethod: 'paypal',
-            triggeredBy: 'admin',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            completedAt: new Date().toISOString()
-          });
+      const payoutResult = await createPayout(paypalConfig, {
+        email: paypalEmail,
+        amount: paypalNetAmount,
+        currency: 'GBP',
+        note: `Fresh Wax payout for order ${order.orderNumber}`,
+        reference: `${orderId}-artist-${payeeId}`
+      });
 
-          // Update pending payout status based on type
-          const pendingCollection = payeeType === 'artist' ? 'pendingPayouts' :
-                                    payeeType === 'supplier' ? 'pendingSupplierPayouts' :
-                                    'pendingCrateSellerPayouts';
-
-          // Try to find and update the pending payout record
-          try {
-            const { saQueryCollection, saUpdateDocument } = await import('../../../lib/firebase-service-account');
-            const serviceAccountKey = JSON.stringify({
-              type: 'service_account',
-              project_id: projectId,
-              private_key_id: 'auto',
-              private_key: (env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY)?.replace(/\\n/g, '\n'),
-              client_email: env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL,
-              client_id: '',
-              auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-              token_uri: 'https://oauth2.googleapis.com/token'
-            });
-
-            const idField = payeeType === 'artist' ? 'artistId' :
-                           payeeType === 'supplier' ? 'supplierId' : 'sellerId';
-
-            const pendingRecords = await saQueryCollection(serviceAccountKey, projectId, pendingCollection, {
-              filters: [
-                { field: 'orderId', op: 'EQUAL', value: orderId },
-                { field: idField, op: 'EQUAL', value: payeeId }
-              ],
-              limit: 1
-            });
-
-            if (pendingRecords.length > 0) {
-              await saUpdateDocument(serviceAccountKey, projectId, pendingCollection, pendingRecords[0].id, {
-                status: 'paid',
-                paidAt: new Date().toISOString(),
-                paypalBatchId: payoutResult.batchId
-              });
-            }
-          } catch (updateErr: unknown) {
-            log.warn('Could not update pending payout record:', updateErr);
-          }
-
-          return successResponse({ payee: payeeName,
-            amount: paypalAmount,
-            batchId: payoutResult.batchId });
-        } else {
-          return ApiErrors.serverError(payoutResult.error || 'PayPal payout failed');
-        }
-      } catch (err: unknown) {
-        log.error('PayPal payout error:', err);
-        return ApiErrors.serverError('Payout error');
+      if (!payoutResult.success) {
+        return ApiErrors.serverError(payoutResult.error || 'PayPal payout failed');
       }
-    }
 
-    // Legacy: full order payout (existing behavior)
-
-    // Get Stripe config
-    const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
-    const stripe = stripeSecretKey ? new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' }) : null;
-
-    // Calculate artist payments from order items
-    const items = order.items || [];
-    const artistPayments: Record<string, {
-      artistId: string;
-      artistName: string;
-      paypalEmail: string | null;
-      stripeConnectId: string | null;
-      stripeConnectStatus: string | null;
-      payoutMethod: string | null;
-      amount: number;
-      items: string[];
-    }> = {};
-
-    // Collect unique release IDs to batch-fetch (avoid N+1)
-    const releaseIds = new Set<string>();
-    for (const item of items) {
-      if (item.type === 'merch') continue;
-      const releaseId = item.releaseId || item.id;
-      if (releaseId) releaseIds.add(releaseId);
-    }
-
-    // Batch-fetch all releases in parallel
-    const releaseEntries = await Promise.all(
-      [...releaseIds].map(async (id) => {
-        const doc = await getDocument('releases', id).catch(() => null);
-        return [id, doc] as const;
-      })
-    );
-    const releaseMap = new Map(releaseEntries.filter(([, doc]) => doc));
-
-    // Collect unique artist IDs from resolved releases
-    const artistIds = new Set<string>();
-    for (const item of items) {
-      if (item.type === 'merch') continue;
-      const releaseId = item.releaseId || item.id;
-      if (!releaseId) continue;
-      const release = releaseMap.get(releaseId);
-      if (!release) continue;
-      const itemArtistId = item.artistId || release.artistId || release.userId;
-      if (itemArtistId) artistIds.add(itemArtistId);
-    }
-
-    // Batch-fetch all artists in parallel
-    const artistEntries = await Promise.all(
-      [...artistIds].map(async (id) => {
-        const doc = await getDocument('artists', id).catch(() => null);
-        return [id, doc] as const;
-      })
-    );
-    const artistMap = new Map(artistEntries.filter(([, doc]) => doc));
-
-    for (const item of items) {
-      // Skip merch items
-      if (item.type === 'merch') continue;
-
-      const releaseId = item.releaseId || item.id;
-      if (!releaseId) continue;
-
-      const release = releaseMap.get(releaseId);
-      if (!release) continue;
-
-      const itemArtistId = item.artistId || release.artistId || release.userId;
-      if (!itemArtistId) continue;
-
-      // Filter by specific artist if provided
-      if (artistId && itemArtistId !== artistId) continue;
-
-      // Get artist for payment details (from pre-fetched map)
-      const artist = artistMap.get(itemArtistId) || null;
-      const paypalEmail = artist?.paypalEmail || null;
-      const stripeConnectId = artist?.stripeConnectId || null;
-      const stripeConnectStatus = artist?.stripeConnectStatus || null;
-      const payoutMethod = artist?.payoutMethod || null;
-
-      const itemTotal = (item.price || 0) * (item.quantity || 1);
-
-      // Calculate artist share (subtract platform fees - Bandcamp style)
-      // 1% Fresh Wax fee
-      const freshWaxFee = itemTotal * 0.01;
-      // Payment processor fee: 1.4% + £0.20 (split across items)
-      const processorFeePercent = 0.014;
-      const processorFixedFee = 0.20 / items.length;
-      const processorFee = (itemTotal * processorFeePercent) + processorFixedFee;
-      const artistShare = itemTotal - freshWaxFee - processorFee;
-
-      if (!artistPayments[itemArtistId]) {
-        artistPayments[itemArtistId] = {
-          artistId: itemArtistId,
-          artistName: artist?.artistName || release.artistName || 'Unknown Artist',
+      // Settle the rows — history record from the row, balances kept in sync.
+      const settlement = await settlePendingArtistRows({
+        orderId,
+        artistId: payeeId,
+        method: 'paypal',
+        notes: `PayPal payout to ${paypalEmail}`,
+        triggeredBy: 'admin',
+        extra: {
           paypalEmail,
-          stripeConnectId,
-          stripeConnectStatus,
-          payoutMethod,
-          amount: 0,
-          items: []
-        };
-      }
+          paypalBatchId: payoutResult.batchId,
+          paypalPayoutItemId: payoutResult.payoutItemId,
+          paypalPayoutFee,
+          paypalNetAmount,
+        },
+      });
 
-      artistPayments[itemArtistId].amount += artistShare;
-      artistPayments[itemArtistId].items.push(item.name || 'Item');
+      log.info(`PayPal payout: £${paypalNetAmount} (gross £${grossAmount}) → ${payeeName || payeeId} [${payoutResult.batchId}]`);
+
+      return successResponse({
+        payee: payeeName || payeeId,
+        grossAmount,
+        paypalPayoutFee,
+        amount: paypalNetAmount,
+        settled: settlement.settled,
+        batchId: payoutResult.batchId,
+        message: `Sent £${paypalNetAmount.toFixed(2)} via PayPal (£${paypalPayoutFee.toFixed(2)} PayPal fee)`,
+      });
     }
 
-    const results: Record<string, unknown>[] = [];
+    // ------------------------------------------------------------------
+    // Suppliers / crate sellers: their pending rows live in separate
+    // collections with the same amount semantics.
+    // ------------------------------------------------------------------
+    const pendingCollection = payeeType === 'supplier' ? 'pendingSupplierPayouts' : 'pendingCrateSellerPayouts';
+    const idField = payeeType === 'supplier' ? 'supplierId' : 'sellerId';
 
-    for (const payment of Object.values(artistPayments)) {
-      if (payment.amount <= 0) continue;
-
-      // Determine which payout method to use based on artist preference
-      const hasStripe = payment.stripeConnectId && payment.stripeConnectStatus === 'active' && stripe;
-      const hasPayPal = payment.paypalEmail && paypalConfig;
-
-      // Check preference: explicit preference > available method
-      const usePayPal = payment.payoutMethod === 'paypal' && hasPayPal;
-      const useStripe = payment.payoutMethod === 'stripe' && hasStripe;
-      // If no preference set, default to Stripe if available, else PayPal
-      const defaultToStripe = !payment.payoutMethod && hasStripe;
-      const defaultToPayPal = !payment.payoutMethod && !hasStripe && hasPayPal;
-
-      if (!usePayPal && !useStripe && !defaultToStripe && !defaultToPayPal) {
-        results.push({
-          artistId: payment.artistId,
-          artistName: payment.artistName,
-          amount: payment.amount,
-          status: 'skipped',
-          reason: 'No payment method configured'
-        });
-        continue;
-      }
-
-      // Use PayPal
-      if (usePayPal || defaultToPayPal) {
-        // Deduct 2% PayPal payout fee from artist share
-        const paypalPayoutFee = payment.amount * 0.02;
-        const paypalAmount = payment.amount - paypalPayoutFee;
-
-        try {
-          const payoutResult = await createPayout(paypalConfig!, {
-            email: payment.paypalEmail!,
-            amount: paypalAmount,
-            currency: 'GBP',
-            note: `Fresh Wax payout for order ${order.orderNumber}`,
-            reference: `${orderId}-${payment.artistId}`
-          });
-
-          if (payoutResult.success) {
-            // Record the payout
-            await addDocument('payouts', {
-              artistId: payment.artistId,
-              artistName: payment.artistName,
-              paypalEmail: payment.paypalEmail,
-              paypalBatchId: payoutResult.batchId,
-              paypalPayoutItemId: payoutResult.payoutItemId,
-              orderId,
-              orderNumber: order.orderNumber,
-              amount: paypalAmount,
-              paypalPayoutFee: paypalPayoutFee,
-              currency: 'gbp',
-              status: 'completed',
-              payoutMethod: 'paypal',
-              triggeredBy: 'admin',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              completedAt: new Date().toISOString()
-            });
-
-            // Update artist earnings
-            const artist = await getDocument('artists', payment.artistId);
-            if (artist) {
-              await updateDocument('artists', payment.artistId, {
-                totalEarnings: (artist.totalEarnings || 0) + paypalAmount,
-                lastPayoutAt: new Date().toISOString()
-              });
-            }
-
-            results.push({
-              artistId: payment.artistId,
-              artistName: payment.artistName,
-              amount: paypalAmount,
-              paypalFee: paypalPayoutFee,
-              status: 'success',
-              method: 'paypal',
-              batchId: payoutResult.batchId
-            });
-
-          } else {
-            results.push({
-              artistId: payment.artistId,
-              artistName: payment.artistName,
-              amount: paypalAmount,
-              status: 'failed',
-              method: 'paypal',
-              error: payoutResult.error
-            });
-          }
-        } catch (err: unknown) {
-          results.push({
-            artistId: payment.artistId,
-            artistName: payment.artistName,
-            amount: paypalAmount,
-            status: 'error',
-            method: 'paypal',
-            error: 'Payout error'
-          });
-        }
-      }
-      // Use Stripe
-      else if (useStripe || defaultToStripe) {
-        try {
-          const transfer = await stripe!.transfers.create({
-            amount: Math.round(payment.amount * 100), // Convert to pence
-            currency: 'gbp',
-            destination: payment.stripeConnectId!,
-            transfer_group: orderId,
-            metadata: {
-              orderId,
-              orderNumber: order.orderNumber,
-              artistId: payment.artistId,
-              artistName: payment.artistName,
-              platform: 'freshwax',
-              triggeredBy: 'admin'
-            }
-          });
-
-          // Record the payout
-          await addDocument('payouts', {
-            artistId: payment.artistId,
-            artistName: payment.artistName,
-            stripeTransferId: transfer.id,
-            stripeConnectId: payment.stripeConnectId,
-            orderId,
-            orderNumber: order.orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'completed',
-            payoutMethod: 'stripe',
-            triggeredBy: 'admin',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            completedAt: new Date().toISOString()
-          });
-
-          // Update artist earnings
-          const artist = await getDocument('artists', payment.artistId);
-          if (artist) {
-            await updateDocument('artists', payment.artistId, {
-              totalEarnings: (artist.totalEarnings || 0) + payment.amount,
-              lastPayoutAt: new Date().toISOString()
-            });
-          }
-
-          results.push({
-            artistId: payment.artistId,
-            artistName: payment.artistName,
-            amount: payment.amount,
-            status: 'success',
-            method: 'stripe',
-            transferId: transfer.id
-          });
-
-        } catch (err: unknown) {
-          results.push({
-            artistId: payment.artistId,
-            artistName: payment.artistName,
-            amount: payment.amount,
-            status: 'error',
-            method: 'stripe',
-            error: 'Payout error'
-          });
-        }
-      }
+    const rows = await queryCollection(pendingCollection, {
+      filters: [
+        { field: 'orderId', op: 'EQUAL', value: orderId },
+        { field: idField, op: 'EQUAL', value: payeeId },
+        { field: 'status', op: 'IN', value: PAYABLE_STATUSES },
+      ],
+      limit: 5,
+    });
+    const grossAmount = rows.reduce((s: number, r: Record<string, unknown>) => s + (Number(r.amount) || 0), 0);
+    if (rows.length === 0 || grossAmount <= 0) {
+      return ApiErrors.badRequest('Nothing payable for this payee on this order');
     }
 
-    return successResponse({ orderId,
+    const paypalPayoutFee = Math.round(grossAmount * 0.02 * 100) / 100;
+    const paypalNetAmount = Math.round((grossAmount - paypalPayoutFee) * 100) / 100;
+
+    const payoutResult = await createPayout(paypalConfig, {
+      email: paypalEmail,
+      amount: paypalNetAmount,
+      currency: 'GBP',
+      note: `Fresh Wax ${payeeType} payout for order ${order.orderNumber}`,
+      reference: `${orderId}-${payeeType}-${payeeId}`
+    });
+
+    if (!payoutResult.success) {
+      return ApiErrors.serverError(payoutResult.error || 'PayPal payout failed');
+    }
+
+    const now = new Date().toISOString();
+    const payoutCollection = payeeType === 'supplier' ? 'supplierPayouts' : 'crateSellerPayouts';
+    await addDocument(payoutCollection, {
+      ...(payeeType === 'supplier'
+        ? { supplierId: payeeId, supplierName: payeeName || '' }
+        : { sellerId: payeeId, sellerName: payeeName || '' }),
+      entityType: payeeType,
+      paypalEmail,
+      paypalBatchId: payoutResult.batchId,
+      paypalPayoutItemId: payoutResult.payoutItemId,
+      orderId,
       orderNumber: order.orderNumber,
-      payouts: results });
+      amount: grossAmount,
+      paypalPayoutFee,
+      paypalNetAmount,
+      currency: 'gbp',
+      status: 'completed',
+      payoutMethod: 'paypal',
+      triggeredBy: 'admin',
+      createdAt: now,
+      updatedAt: now,
+      completedAt: now
+    });
+    for (const row of rows) {
+      await updateDocument(pendingCollection, row.id as string, {
+        status: 'completed',
+        payoutMethod: 'paypal',
+        paypalBatchId: payoutResult.batchId,
+        completedBy: 'admin',
+        completedAt: now,
+        updatedAt: now
+      });
+    }
+
+    return successResponse({
+      payee: payeeName || payeeId,
+      grossAmount,
+      paypalPayoutFee,
+      amount: paypalNetAmount,
+      batchId: payoutResult.batchId,
+      message: `Sent £${paypalNetAmount.toFixed(2)} via PayPal (£${paypalPayoutFee.toFixed(2)} PayPal fee)`,
+    });
 
   } catch (error: unknown) {
     log.error('Trigger payout error:', error);

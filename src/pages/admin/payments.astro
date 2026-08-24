@@ -646,29 +646,42 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
                                     ? { text: 'Stripe', color: '#635bff', bg: '#f0efff' }
                                     : { text: 'Not Set', color: '#9ca3af', bg: '#f3f4f6' };
 
-                            // Update payee email with artist's PayPal if not set
-                            const payeeEmail = payee.email || payee.paypalEmail || artistPrefs?.paypalEmail || '';
+                            // Only offer a PayPal send when a REAL PayPal email exists —
+                            // paying to a bare account email floats unclaimed for 30 days.
+                            const payeePaypal = artistPrefs?.paypalEmail || payee.paypalEmail || '';
                             return (
                               <div style={`display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.5rem; background: ${style.bg}; border-radius: 4px; font-size: 0.8rem;`}>
                                 <span style="font-size: 0.75rem;">{style.icon}</span>
                                 <span style={`color: ${style.color}; font-weight: 600; flex: 1;`}>{payee.name}</span>
                                 <span style={`background: ${methodBadge.bg}; color: ${methodBadge.color}; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.65rem; font-weight: 600;`}>{methodBadge.text}</span>
                                 <span style={`color: #16a34a; font-weight: 700;`}>{formatCurrency(payee.amount)}</span>
-                                <button
-                                  class="btn btn-primary btn-xs trigger-payee-btn"
-                                  style="padding: 0.15rem 0.5rem; font-size: 0.7rem; margin-left: 0.25rem;"
-                                  data-order-id={order.id}
-                                  data-order-number={order.orderNumber}
-                                  data-payee-type={payee.type}
-                                  data-payee-id={payee.id}
-                                  data-payee-name={payee.name}
-                                  data-payee-email={payeeEmail}
-                                  data-payee-amount={payee.amount}
-                                  data-payout-method={preferredMethod}
-                                  data-stripe-connect-id={hasStripe}
-                                >
-                                  💸 Pay
-                                </button>
+                                {payeePaypal && payee.id && (
+                                  <button
+                                    class="btn btn-primary btn-xs trigger-payee-btn"
+                                    style="padding: 0.15rem 0.5rem; font-size: 0.7rem; margin-left: 0.25rem;"
+                                    data-order-id={order.id}
+                                    data-order-number={order.orderNumber}
+                                    data-payee-type={payee.type}
+                                    data-payee-id={payee.id}
+                                    data-payee-name={payee.name}
+                                    data-paypal-email={payeePaypal}
+                                    data-payee-amount={payee.amount}
+                                  >
+                                    💸 PayPal
+                                  </button>
+                                )}
+                                {payee.type === 'artist' && payee.id && (
+                                  <button
+                                    class="btn btn-outline btn-xs mark-payee-paid-btn"
+                                    style="padding: 0.15rem 0.5rem; font-size: 0.7rem;"
+                                    data-order-id={order.id}
+                                    data-order-number={order.orderNumber}
+                                    data-artist-id={payee.id}
+                                    data-payee-name={payee.name}
+                                  >
+                                    ✓ Paid
+                                  </button>
+                                )}
                               </div>
                             );
                           })}
@@ -1392,7 +1405,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
       window.retryPayout = retryPayout;
 
-      // Trigger payout for individual payee
+      // Send a PayPal payout to an individual payee (2% PayPal fee deducted)
       document.querySelectorAll('.trigger-payee-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           triggerPayeePayout(
@@ -1401,16 +1414,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             btn.dataset.payeeType,
             btn.dataset.payeeId,
             btn.dataset.payeeName,
-            btn.dataset.payeeEmail,
+            btn.dataset.paypalEmail,
             parseFloat(btn.dataset.payeeAmount),
             btn
           );
         });
       });
 
-      async function triggerPayeePayout(orderId, orderNumber, payeeType, payeeId, payeeName, payeeEmail, amount, btn) {
+      async function triggerPayeePayout(orderId, orderNumber, payeeType, payeeId, payeeName, paypalEmail, amount, btn) {
         const typeLabel = payeeType === 'artist' ? 'Artist' : payeeType === 'supplier' ? 'Supplier' : 'Seller';
-        if (!confirm(`Pay ${payeeName} (${typeLabel})?\n\nAmount: £${amount.toFixed(2)}\nEmail: ${payeeEmail}\nOrder: ${orderNumber}`)) return;
+        if (!confirm(`Send a REAL PayPal payout to ${payeeName} (${typeLabel})?\n\nOwed: £${amount.toFixed(2)} — PayPal's 2% payout fee is deducted from this.\nPayPal: ${paypalEmail}\nOrder: ${orderNumber}\n\nMake sure the PayPal balance covers it.`)) return;
 
         const originalText = btn.innerHTML;
         btn.disabled = true;
@@ -1434,8 +1447,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               payeeType,
               payeeId,
               payeeName,
-              payeeEmail,
-              amount
+              paypalEmail
             })
           });
 
@@ -1447,7 +1459,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             btn.classList.add('btn-success');
             btn.style.background = '#16a34a';
             btn.style.borderColor = '#16a34a';
-            showToast(`Paid £${amount.toFixed(2)} to ${payeeName}`);
+            showToast(result.message || `Paid ${payeeName} via PayPal`);
 
             // Remove just this payee row after short delay
             setTimeout(() => {
@@ -1547,6 +1559,53 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         });
       });
 
+      // Mark ONE payee paid on a multi-payee order (records without sending money)
+      document.querySelectorAll('.mark-payee-paid-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(`Mark ${btn.dataset.payeeName} as already paid on order ${btn.dataset.orderNumber}?\n\nOnly this partner's payout is recorded — no money is sent.`)) return;
+
+          const originalText = btn.innerHTML;
+          btn.disabled = true;
+          btn.innerHTML = '⏳';
+
+          try {
+            const adminKey = window.ADMIN_KEY;
+            if (!adminKey) {
+              showToast('Not authenticated - please refresh the page', 'error');
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+              return;
+            }
+
+            const response = await fetch('/api/admin/record-payout/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId: btn.dataset.orderId, artistId: btn.dataset.artistId, adminKey, notes: 'Manual payout - already paid outside system' })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+              showToast(result.message || 'Marked as paid');
+              const payeeRow = btn.closest('div[style*="background"]');
+              if (payeeRow) {
+                payeeRow.style.opacity = '0.5';
+                payeeRow.style.textDecoration = 'line-through';
+              }
+              btn.remove();
+            } else {
+              showToast(result.error || 'Failed to record', 'error');
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+            }
+          } catch (error) {
+            console.error(error);
+            showToast('Failed to record payout', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
+        });
+      });
+
       // Pay a connected partner's full payable balance via Stripe
       document.querySelectorAll('.pay-stripe-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -1633,7 +1692,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       });
 
       async function markAsPaid(orderId, orderNumber, btn) {
-        if (!confirm(`Mark order ${orderNumber} as already paid?\n\nThis records the payout without sending money.`)) return;
+        if (!confirm(`Mark order ${orderNumber} as already paid?\n\nThis marks EVERY payee on this order as paid without sending money. To mark just one partner, use the ✓ Paid button next to their name.`)) return;
 
         const originalText = btn.innerHTML;
         btn.disabled = true;
