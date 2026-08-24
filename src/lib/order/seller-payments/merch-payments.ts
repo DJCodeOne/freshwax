@@ -146,8 +146,12 @@ export async function processMerchSupplierPayments(params: SellerPaymentParams &
 
       // Processing supplier payment
 
-      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && paypalConfig;
-      const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
+      // Operator policy: automatic payouts are opt-in via PAYOUTS_AUTO_TRANSFER
+      // so the platform balance can be checked before money moves; when off,
+      // everything falls through to the pending/awaiting rows below.
+      const autoPayoutsEnabled = (env as Record<string, unknown> | undefined)?.PAYOUTS_AUTO_TRANSFER === 'true';
+      const usePayPal = autoPayoutsEnabled && payment.payoutMethod === 'paypal' && payment.paypalEmail && paypalConfig;
+      const useStripe = autoPayoutsEnabled && payment.stripeConnectId && payment.payoutMethod !== 'paypal';
 
       if (usePayPal && paypalConfig && payment.paypalEmail) {
         const paypalPayoutFee = payment.amount * 0.02;

@@ -45,6 +45,12 @@ export async function attemptInstantArtistTransfer(params: InstantTransferParams
     orderId, orderNumber, customerPaymentMethod, stripeSecretKey, env
   } = params;
 
+  // Operator policy (Aug 2026): ALL payouts are manual so the platform
+  // balance can be checked before money moves — sale-time transfers are
+  // opt-in via PAYOUTS_AUTO_TRANSFER=true. The operator pays connected
+  // partners on demand from /admin/payments ("Pay via Stripe").
+  if (env?.PAYOUTS_AUTO_TRANSFER !== 'true') return false;
+
   if (!isConnectActive(artist) || !stripeSecretKey) return false;
   const pence = Math.round(amount * 100);
   if (pence < 1) return false;

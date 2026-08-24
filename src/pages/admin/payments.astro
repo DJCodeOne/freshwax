@@ -13,7 +13,7 @@ if (authResult) return Astro.redirect('/login');
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
-import { saQueryCollection } from '../../lib/firebase-service-account';
+import { saQueryCollection, saGetDocument } from '../../lib/firebase-service-account';
 import { d1GetLedgerEntries } from '../../lib/d1-catalog';
 
 // Get service account config for payouts collection (requires auth)
@@ -89,6 +89,32 @@ const manualPendingPayouts = manualPendingPayoutsResult;
 const pendingSupplierPayouts = pendingSupplierPayoutsResult;
 const pendingSellerPayouts = pendingSellerPayoutsResult;
 const openPayoutRequests = payoutRequestsResult;
+
+// Stripe-connected partners with payable balances — payouts are manual by
+// operator policy, so the operator triggers transfers here after checking
+// the platform balance. Payable = pending + retry_pending + awaiting_connect
+// ('processing' is excluded: a crashed run may already have transferred).
+const payableByArtist: Record<string, { name: string; email: string; total: number; rows: number }> = {};
+const payableSources = [
+  ...manualPendingPayouts,
+  ...pendingPayouts.filter((p) => p.status === 'retry_pending' || p.status === 'awaiting_connect'),
+];
+for (const p of payableSources) {
+  const aid = (p.artistId as string) || '';
+  if (!aid) continue;
+  const entry = (payableByArtist[aid] ||= { name: (p.artistName as string) || aid, email: (p.artistEmail as string) || '', total: 0, rows: 0 });
+  entry.total += Number(p.amount) || 0;
+  entry.rows += 1;
+}
+const stripeConnectedPartners: Array<{ artistId: string; name: string; email: string; total: number; rows: number }> = [];
+if (serviceAccountKey) {
+  for (const [aid, info] of Object.entries(payableByArtist)) {
+    const artistDoc = await saGetDocument(serviceAccountKey, projectId || 'freshwax-store', 'artists', aid).catch(() => null);
+    if (artistDoc && artistDoc.stripeConnectStatus === 'active' && artistDoc.stripeConnectId) {
+      stripeConnectedPartners.push({ artistId: aid, ...info });
+    }
+  }
+}
 
 if (!serviceAccountKey) {
   log.warn('No service account key - cannot fetch pending payouts');
@@ -461,6 +487,51 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         </div>
         <p class="text-muted" style="padding: 0.75rem 1.25rem; font-size: 0.85rem;">
           Pay the partner, use "Mark as Paid" on their orders below, then close the request here.
+        </p>
+      </div>
+    )}
+    {stripeConnectedPartners.length > 0 && (
+      <div class="card">
+        <div class="card-header">
+          <h2>⚡ Stripe-Connected Partners</h2>
+          <span class="text-muted">{stripeConnectedPartners.length} payable via Stripe</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table" aria-label="Stripe-connected partners with payable balances">
+            <caption class="sr-only">Stripe-connected partners with payable balances</caption>
+            <thead>
+              <tr>
+                <th scope="col">Partner</th>
+                <th scope="col">Payable</th>
+                <th scope="col">Rows</th>
+                <th scope="col">Contact</th>
+                <th scope="col" class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stripeConnectedPartners.map(p => (
+                <tr>
+                  <td><strong>{p.name}</strong></td>
+                  <td><span style="color: #16a34a; font-weight: 700;">{formatCurrency(p.total)}</span></td>
+                  <td>{p.rows}</td>
+                  <td>{p.email || '-'}</td>
+                  <td class="text-right">
+                    <button
+                      class="btn btn-outline btn-sm pay-stripe-btn"
+                      data-artist-id={p.artistId}
+                      data-artist-name={p.name}
+                      data-amount={p.total.toFixed(2)}
+                    >
+                      ⚡ Pay {formatCurrency(p.total)} via Stripe
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="text-muted" style="padding: 0.75rem 1.25rem; font-size: 0.85rem;">
+          Sends real Stripe transfers from the platform balance — check Stripe holds enough before paying. Failures mark rows for retry; pay again after topping up.
         </p>
       </div>
     )}
@@ -1473,6 +1544,48 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       document.querySelectorAll('.mark-paid-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           markAsPaid(btn.dataset.orderId, btn.dataset.orderNumber, btn);
+        });
+      });
+
+      // Pay a connected partner's full payable balance via Stripe
+      document.querySelectorAll('.pay-stripe-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm(`Send £${btn.dataset.amount} to ${btn.dataset.artistName} via Stripe?\n\nThis creates REAL Stripe transfers from the platform balance. Make sure Stripe holds enough first.`)) return;
+
+          const originalText = btn.innerHTML;
+          btn.disabled = true;
+          btn.innerHTML = '⏳ Sending…';
+
+          try {
+            const adminKey = window.ADMIN_KEY;
+            if (!adminKey) {
+              showToast('Not authenticated - please refresh the page', 'error');
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+              return;
+            }
+
+            const response = await fetch('/api/admin/send-stripe-payout/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ entityType: 'artist', entityId: btn.dataset.artistId, adminKey })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+              showToast(result.message || 'Payout sent');
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              showToast(result.error || 'Payout failed', 'error');
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+            }
+          } catch (error) {
+            console.error(error);
+            showToast('Payout failed', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
         });
       });
 

@@ -149,7 +149,7 @@ describe('payout accounting — full multi-seller order conservation', () => {
     const baseParams = {
       orderId: 'order_verify', orderNumber: 'FW-VERIFY-1',
       items, totalItemCount, orderSubtotal: itemsSubtotal,
-      stripeSecretKey: 'sk_test', env: {} as never,
+      stripeSecretKey: 'sk_test', env: { PAYOUTS_AUTO_TRANSFER: 'true' } as never,
       paymentMethod: 'stripe' as const,
     };
 
@@ -244,7 +244,7 @@ describe('payout accounting — full multi-seller order conservation', () => {
     const baseParams = {
       orderId: 'order_sync', orderNumber: 'FW-SYNC-1',
       items, totalItemCount: items.length, orderSubtotal: 43,
-      stripeSecretKey: 'sk_test', env: {} as never, paymentMethod: 'stripe' as const,
+      stripeSecretKey: 'sk_test', env: { PAYOUTS_AUTO_TRANSFER: 'true' } as never, paymentMethod: 'stripe' as const,
     };
 
     await processArtistPayments(baseParams);
@@ -279,7 +279,7 @@ describe('payout accounting — full multi-seller order conservation', () => {
     ];
     await processMerchRoyalties({
       orderId: 'order_dp', orderNumber: 'FW-DP-1', items,
-      totalItemCount: 1, orderSubtotal: 25, stripeSecretKey: 'sk', env: {} as never,
+      totalItemCount: 1, orderSubtotal: 25, stripeSecretKey: 'sk', env: { PAYOUTS_AUTO_TRANSFER: 'true' } as never,
     } as never);
 
     // The royalty path is gated off by the supplierId guard → no brand balance

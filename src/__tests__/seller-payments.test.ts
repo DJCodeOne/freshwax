@@ -332,7 +332,7 @@ describe('processMerchSupplierPayments', () => {
       { id: 'release_1', name: 'Digital Track', type: 'digital', price: 10, quantity: 1 },
     ];
 
-    await processMerchSupplierPayments(makeBaseParams({
+    await processMerchSupplierPayments(makeBaseParams({ env: { PAYOUTS_AUTO_TRANSFER: 'true' },
       items,
       totalItemCount: 1,
       orderSubtotal: 10,
@@ -364,7 +364,7 @@ describe('processMerchSupplierPayments', () => {
 
     mockTransfersCreate.mockResolvedValue({ id: 'tr_test_123' });
 
-    await processMerchSupplierPayments(makeBaseParams({
+    await processMerchSupplierPayments(makeBaseParams({ env: { PAYOUTS_AUTO_TRANSFER: 'true' },
       items,
       totalItemCount: 1,
       orderSubtotal: 40,
@@ -407,7 +407,7 @@ describe('processMerchSupplierPayments', () => {
 
     mockTransfersCreate.mockResolvedValue({ id: 'tr_test_123' });
 
-    await processMerchSupplierPayments(makeBaseParams({
+    await processMerchSupplierPayments(makeBaseParams({ env: { PAYOUTS_AUTO_TRANSFER: 'true' },
       items,
       totalItemCount: 1,
       orderSubtotal: 25,
@@ -437,7 +437,7 @@ describe('processMerchSupplierPayments', () => {
       return null;
     });
 
-    await processMerchSupplierPayments(makeBaseParams({
+    await processMerchSupplierPayments(makeBaseParams({ env: { PAYOUTS_AUTO_TRANSFER: 'true' },
       items,
       totalItemCount: 1,
       orderSubtotal: 8,
@@ -488,7 +488,7 @@ describe('processMerchSupplierPayments', () => {
       return null;
     });
 
-    await processMerchSupplierPayments(makeBaseParams({
+    await processMerchSupplierPayments(makeBaseParams({ env: { PAYOUTS_AUTO_TRANSFER: 'true' },
       items,
       totalItemCount: 1,
       orderSubtotal: 15,
@@ -521,7 +521,7 @@ describe('processMerchSupplierPayments', () => {
 
     mockTransfersCreate.mockRejectedValue(new Error('Stripe Connect error'));
 
-    await processMerchSupplierPayments(makeBaseParams({
+    await processMerchSupplierPayments(makeBaseParams({ env: { PAYOUTS_AUTO_TRANSFER: 'true' },
       items,
       totalItemCount: 1,
       orderSubtotal: 40,
@@ -556,7 +556,7 @@ describe('processMerchSupplierPayments', () => {
 
     mockCreatePayout.mockResolvedValue({ success: true, batchId: 'batch_123' });
 
-    await processMerchSupplierPayments(makeBaseParams({
+    await processMerchSupplierPayments(makeBaseParams({ env: { PAYOUTS_AUTO_TRANSFER: 'true' },
       items,
       totalItemCount: 1,
       orderSubtotal: 20,
@@ -604,11 +604,23 @@ describe('processArtistPayments - sale-time Connect transfers', () => {
     mockAtomicIncrement.mockResolvedValue(undefined);
   });
 
-  it('transfers at sale time for an ACTIVE Connect artist - no pending row', async () => {
+  it('OPERATOR POLICY: auto transfers are OFF by default - ACTIVE artist still accrues pending', async () => {
+    mockDocs({ artistName: 'DJ Test', email: 'dj@test.com', stripeConnectId: 'acct_live0', stripeConnectStatus: 'active' });
+
+    // env WITHOUT PAYOUTS_AUTO_TRANSFER — the production default
+    await processArtistPayments(makeBaseParams({ items, totalItemCount: 1, orderSubtotal: 10 }));
+
+    expect(mockTransfersCreate).not.toHaveBeenCalled();
+    const collections = mockAddDocument.mock.calls.map((c) => c[0]);
+    expect(collections).toContain('pendingPayouts');
+    expect(collections).not.toContain('payouts');
+  });
+
+  it('transfers at sale time for an ACTIVE Connect artist when PAYOUTS_AUTO_TRANSFER=true', async () => {
     mockDocs({ artistName: 'DJ Test', email: 'dj@test.com', stripeConnectId: 'acct_live1', stripeConnectStatus: 'active' });
     mockTransfersCreate.mockResolvedValue({ id: 'tr_instant_1' });
 
-    await processArtistPayments(makeBaseParams({ items, totalItemCount: 1, orderSubtotal: 10 }));
+    await processArtistPayments(makeBaseParams({ items, totalItemCount: 1, orderSubtotal: 10, env: { PAYOUTS_AUTO_TRANSFER: 'true' } }));
 
     expect(mockTransfersCreate).toHaveBeenCalledTimes(1);
     const transferArg = mockTransfersCreate.mock.calls[0][0] as Record<string, unknown>;
@@ -645,7 +657,7 @@ describe('processArtistPayments - sale-time Connect transfers', () => {
     mockDocs({ artistName: 'DJ Test', email: 'dj@test.com', stripeConnectId: 'acct_live2', stripeConnectStatus: 'active' });
     mockTransfersCreate.mockRejectedValue(new Error('Insufficient funds in platform balance'));
 
-    await processArtistPayments(makeBaseParams({ items, totalItemCount: 1, orderSubtotal: 10 }));
+    await processArtistPayments(makeBaseParams({ items, totalItemCount: 1, orderSubtotal: 10, env: { PAYOUTS_AUTO_TRANSFER: 'true' } }));
 
     expect(mockTransfersCreate).toHaveBeenCalledTimes(1);
     const collections = mockAddDocument.mock.calls.map((c) => c[0]);

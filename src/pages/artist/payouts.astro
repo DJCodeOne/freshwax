@@ -245,7 +245,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="banner-icon">🏦</div>
               <div class="banner-content">
                 <h3>Complete Your Payment Setup</h3>
-                <p>Connect your bank account via Stripe to receive automatic payouts when customers buy your music.</p>
+                <p>Connect your bank account via Stripe to receive free bank payouts of your earnings.</p>
                 {summary.pendingBalance > 0 && (
                   <p class="pending-amount">You have {formatPrice(summary.pendingBalance)} waiting to be paid out!</p>
                 )}
@@ -341,26 +341,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <h2>Pending Payouts</h2>
               <p class="section-desc">
                 {summary.stripeConnected
-                  ? 'These payouts are being processed and will arrive in your bank account soon.'
-                  : 'Complete your Stripe setup to receive these payouts automatically — or request a manual payout below.'}
+                  ? 'Fresh Wax sends these to your connected Stripe account — you’ll get an email as each payout is sent.'
+                  : 'Complete your Stripe setup to receive these payouts by free bank transfer — or request a payout below.'}
               </p>
 
+              {openPayoutRequest ? (
+                <div class="request-status" role="status">
+                  ✅ Payout requested {formatDate(openPayoutRequest.createdAt)} — Fresh Wax has been notified and will arrange your payment.
+                </div>
+              ) : (
+                <div class="request-row" id="requestPayoutRow">
+                  <button id="requestPayoutBtn" class="request-payout-btn" type="button">
+                    Request Payout — {formatPrice(pendingRowsTotal)}
+                  </button>
+                </div>
+              )}
               {!summary.stripeConnected && (
                 <>
-                  {openPayoutRequest ? (
-                    <div class="request-status" role="status">
-                      ✅ Payout requested {formatDate(openPayoutRequest.createdAt)} — Fresh Wax has been notified and will arrange your payment.
-                    </div>
-                  ) : (
-                    <div class="request-row" id="requestPayoutRow">
-                      <button id="requestPayoutBtn" class="request-payout-btn" type="button">
-                        Request Payout — {formatPrice(pendingRowsTotal)}
-                      </button>
-                    </div>
-                  )}
                   <div class="method-note">
                     <div class="method-line">
-                      ⚡ <strong>Stripe (recommended):</strong> free, and automatic — <a href="/artist/account/#stripe-connect-section">connect your bank once</a> and payouts are sent without needing to request. You'd receive <strong>{formatPrice(pendingRowsTotal)}</strong>.
+                      ⚡ <strong>Stripe (recommended):</strong> free — <a href="/artist/account/#stripe-connect-section">connect your bank once</a> and Fresh Wax sends payouts straight to your account with no fees. You'd receive <strong>{formatPrice(pendingRowsTotal)}</strong>.
                     </div>
                     <div class="method-line">
                       💳 <strong>PayPal:</strong> PayPal charges a 2% payout fee (capped at £10) — <strong>−{formatPrice(paypalPayoutFee)}</strong> on your current balance, so you'd receive <strong>{formatPrice(paypalPayoutNet)}</strong>.

@@ -8,14 +8,18 @@ import { queryCollection, updateDocument, addDocument, getDocument, atomicIncrem
 import { sendPayoutCompletedEmail } from '@lib/payout-emails';
 import { logConnectEvent } from '@lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '@lib/paypal-payouts';
+import { processPendingPayouts } from '@lib/stripe-connect-payouts';
 import { createLogger, jsonResponse } from '@lib/api-utils';
 
 const log = createLogger('[connect-webhook]');
 
 export const prerender = false;
 
-// Safety limits
-const MAX_PENDING_PAYOUTS = 50; // Max pending payouts to process at once
+// Operator policy (Aug 2026): ALL payouts are manual — the operator checks
+// the platform balance and triggers transfers via /api/admin/send-stripe-payout.
+// Set PAYOUTS_AUTO_TRANSFER=true to re-enable automatic payout of the pending
+// backlog when an account completes Connect onboarding.
+const autoTransfersEnabled = (env: Record<string, unknown> | undefined) => env?.PAYOUTS_AUTO_TRANSFER === 'true';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
@@ -201,8 +205,9 @@ async function updateArtistConnectStatus(artistId: string, account: Stripe.Accou
     ...(status === 'active' ? { stripeConnectedAt: new Date().toISOString() } : {})
   });
 
-  // If account became active, process any pending payouts
-  if (status === 'active') {
+  // If account became active, process any pending payouts (opt-in — see
+  // autoTransfersEnabled; payouts are manual by operator policy)
+  if (status === 'active' && autoTransfersEnabled(env)) {
     await processPendingPayouts('artist', artistId, account.id, stripeSecretKey, env);
   }
 }
@@ -229,8 +234,9 @@ async function handleSupplierAccountUpdated(supplierId: string, account: Stripe.
     ...(status === 'active' ? { stripeConnectedAt: new Date().toISOString() } : {})
   });
 
-  // If account became active, process any pending payouts
-  if (status === 'active') {
+  // If account became active, process any pending payouts (opt-in — see
+  // autoTransfersEnabled; payouts are manual by operator policy)
+  if (status === 'active' && autoTransfersEnabled(env)) {
     await processPendingPayouts('supplier', supplierId, account.id, stripeSecretKey, env);
   }
 }
@@ -257,175 +263,14 @@ async function handleUserAccountUpdated(userId: string, account: Stripe.Account,
     ...(status === 'active' ? { stripeConnectedAt: new Date().toISOString() } : {})
   });
 
-  // If account became active, process any pending payouts
-  if (status === 'active') {
+  // If account became active, process any pending payouts (opt-in — see
+  // autoTransfersEnabled; payouts are manual by operator policy)
+  if (status === 'active' && autoTransfersEnabled(env)) {
     await processPendingPayouts('user', userId, account.id, stripeSecretKey, env);
   }
 }
 
-// Process pending payouts when entity completes onboarding
-// Supports artists, suppliers, and users (crate sellers)
-async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user', entityId: string, stripeConnectId: string, stripeSecretKey: string, env: Record<string, unknown>) {
-  // Determine field name for query
-  const idField = entityType === 'artist' ? 'artistId' :
-                  entityType === 'supplier' ? 'supplierId' :
-                  'sellerId';
-
-  // Process 'pending' as well as 'awaiting_connect': the artist payout
-  // writers (order-flow and Stripe-webhook processArtistPayments) only ever
-  // write status 'pending', so matching solely on 'awaiting_connect' made
-  // activation silently transfer nothing — the backlog stayed pending forever.
-  const PAYABLE_STATUSES = ['awaiting_connect', 'pending'];
-  const pendingPayouts = await queryCollection('pendingPayouts', {
-    filters: [
-      { field: idField, op: 'EQUAL', value: entityId },
-      { field: 'status', op: 'IN', value: PAYABLE_STATUSES }
-    ],
-    limit: MAX_PENDING_PAYOUTS
-  });
-
-  // Also get any with entityId field
-  const pendingByEntityId = await queryCollection('pendingPayouts', {
-    filters: [
-      { field: 'entityId', op: 'EQUAL', value: entityId },
-      { field: 'entityType', op: 'EQUAL', value: entityType },
-      { field: 'status', op: 'IN', value: PAYABLE_STATUSES }
-    ],
-    limit: MAX_PENDING_PAYOUTS
-  });
-
-  // Merge and dedupe
-  const allPending = [...pendingPayouts];
-  for (const p of pendingByEntityId) {
-    if (!allPending.find(existing => existing.id === p.id)) {
-      allPending.push(p);
-    }
-  }
-
-  if (allPending.length === 0) return;
-
-  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
-
-  // Get entity for email and name
-  let entity: Record<string, unknown> | null = null;
-  let collection: string;
-
-  switch (entityType) {
-    case 'supplier':
-      collection = 'merch-suppliers';
-      entity = await getDocument('merch-suppliers', entityId);
-      break;
-    case 'user':
-      collection = 'users';
-      entity = await getDocument('users', entityId);
-      break;
-    case 'artist':
-    default:
-      collection = 'artists';
-      entity = await getDocument('artists', entityId);
-      break;
-  }
-
-  // Determine payout collection
-  const payoutCollection = entityType === 'supplier' ? 'supplierPayouts' :
-                           entityType === 'user' ? 'crateSellerPayouts' :
-                           'payouts';
-
-  // Process each pending payout
-  for (const pending of allPending) {
-    const entityName = pending.artistName || pending.supplierName || pending.sellerName ||
-                       entity?.artistName || entity?.name || entity?.displayName || 'Entity';
-    const entityEmail = pending.artistEmail || pending.supplierEmail || pending.sellerEmail ||
-                        entity?.email || '';
-
-    try {
-      // Mark as processing
-      await updateDocument('pendingPayouts', pending.id, {
-        status: 'processing',
-        stripeConnectId,
-        updatedAt: new Date().toISOString()
-      });
-
-      // Create transfer
-      const transfer = await stripe.transfers.create({
-        amount: Math.round((pending.amount || 0) * 100), // Convert to pence
-        currency: pending.currency || 'gbp',
-        destination: stripeConnectId,
-        transfer_group: pending.orderId,
-        metadata: {
-          pendingPayoutId: pending.id,
-          orderId: pending.orderId,
-          orderNumber: pending.orderNumber,
-          entityType,
-          entityId,
-          entityName,
-          platform: 'freshwax'
-        }
-      });
-
-      // Create payout record
-      await addDocument(payoutCollection, {
-        ...(entityType === 'artist' ? { artistId: entityId, artistName: entityName, artistEmail: entityEmail } : {}),
-        ...(entityType === 'supplier' ? { supplierId: entityId, supplierName: entityName, supplierEmail: entityEmail } : {}),
-        ...(entityType === 'user' ? { sellerId: entityId, sellerName: entityName, sellerEmail: entityEmail } : {}),
-        entityType,
-        stripeConnectId: stripeConnectId,
-        stripeTransferId: transfer.id,
-        payoutMethod: 'stripe',
-        orderId: pending.orderId,
-        orderNumber: pending.orderNumber,
-        amount: pending.amount,
-        currency: pending.currency || 'gbp',
-        status: 'completed',
-        fromPendingPayout: pending.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        completedAt: new Date().toISOString()
-      });
-
-      // Update entity's total earnings atomically
-      await atomicIncrement(collection, entityId, {
-        totalEarnings: pending.amount || 0,
-        pendingBalance: -(pending.amount || 0),
-      });
-      await updateDocument(collection, entityId, {
-        lastPayoutAt: new Date().toISOString()
-      });
-
-      // Mark pending payout as completed
-      await updateDocument('pendingPayouts', pending.id, {
-        status: 'completed',
-        stripeTransferId: transfer.id,
-        payoutMethod: 'stripe',
-        completedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-
-      // Send payout completed email notification
-      if (entityEmail) {
-        sendPayoutCompletedEmail(
-          entityEmail,
-          entityName,
-          pending.amount,
-          pending.orderNumber || pending.orderId?.slice(-6).toUpperCase(),
-          env
-        ).catch(err => log.error('Failed to send payout email:', err));
-      }
-
-    } catch (transferError: unknown) {
-      const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
-      log.error('Failed to process pending payout:', pending.id, transferMessage);
-
-      // Mark as failed for retry
-      await updateDocument('pendingPayouts', pending.id, {
-        status: 'retry_pending',
-        failureReason: transferMessage,
-        updatedAt: new Date().toISOString()
-      });
-    }
-  }
-}
-
+// (moved to @lib/stripe-connect-payouts so the admin "Pay via Stripe" action
 // Handle transfer created
 async function handleTransferCreated(transfer: Stripe.Transfer) {
   const payoutId = transfer.metadata?.payoutId;
