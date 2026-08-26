@@ -441,7 +441,7 @@ function handleConnectionLost(token, whipUrl, timerEl, onStats) {
 
   // Too many retries — force end stream
   if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
-    alert('Connection lost after ' + MAX_RECONNECT_ATTEMPTS + ' attempts. Ending stream.');
+    (window.showToast?window.showToast('Connection lost after ' + MAX_RECONNECT_ATTEMPTS + ' attempts. Ending stream.',"error"):alert('Connection lost after ' + MAX_RECONNECT_ATTEMPTS + ' attempts. Ending stream.'));
     endStream(token, true);
     return;
   }

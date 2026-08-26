@@ -537,7 +537,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     onAuthStateChanged(auth, (user) => { currentUser = user; });
 
     btn.addEventListener('click', async () => {
-      if (!currentUser) { alert('Please log in again to request a payout.'); return; }
+      if (!currentUser) { window.showToast ? window.showToast('Please log in again to request a payout.', 'info') : alert('Please log in again to request a payout.'); return; }
       if (!confirm('Request payout of your pending balance?\n\nFresh Wax will be notified and arrange your payment.')) return;
 
       btn.disabled = true;
@@ -562,7 +562,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           : '✅ Payout requested — Fresh Wax has been notified and will arrange your payment.';
         row.replaceWith(note);
       } catch (error) {
-        alert('Error: ' + (error instanceof Error ? error.message : String(error)));
+        const msg = 'Error: ' + (error instanceof Error ? error.message : String(error));
+        window.showToast ? window.showToast(msg, 'error') : alert(msg);
         btn.disabled = false;
         btn.textContent = originalText;
       }

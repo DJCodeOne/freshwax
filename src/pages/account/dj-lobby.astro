@@ -1380,7 +1380,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     sendDm,
     cleanup as cleanupPusher,
     getOnlineDjs
-  } from '/dj-lobby-pusher.js?v=20260612a';
+  } from '/dj-lobby-pusher.js?v=20260827';
 
   // Extracted modules (DJ lobby code split)
   // NOTE: ?v= bumped 2026-06-12 — several modules were edited on May 2 without a
@@ -1391,13 +1391,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260613c';
   import * as lobbyChat from '/dj-lobby/chat.js?v=20260612a';
   import * as lobbyDm from '/dj-lobby/dm.js?v=20260612a';
-  import * as scheduling from '/dj-lobby/scheduling.js?v=20260616a';
-  import * as shareModule from '/dj-lobby/share.js?v=20260612a';
+  import * as scheduling from '/dj-lobby/scheduling.js?v=20260827';
+  import * as shareModule from '/dj-lobby/share.js?v=20260827';
   import * as videoPlayer from '/dj-lobby/video-player.js?v=20260613a';
-  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260612d';
-  import * as relayModule from '/dj-lobby/relay.js?v=20260616a';
+  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260827';
+  import * as relayModule from '/dj-lobby/relay.js?v=20260827';
   import * as initModalModule from '/dj-lobby/init-modal.js?v=20260614a';
-  import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260612a';
+  import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260827';
   import * as stereoMetersModule from '/dj-lobby/stereo-meters.js?v=20260612a';
 
   // Silence the per-second [LiveMeter]/[OutputGain]/[setupAudioMeter] diagnostic

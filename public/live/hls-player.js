@@ -788,16 +788,16 @@ async function startRecordingFn(mediaEl) {
   if (!mediaEl) { console.error('[Recording] No media element'); return; }
 
   await loadLameEncoder();
-  if (!lameEncoder) { alert('Failed to load MP3 encoder. Recording not available.'); return; }
+  if (!lameEncoder) { (window.showToast?window.showToast('Failed to load MP3 encoder. Recording not available.',"info"):alert('Failed to load MP3 encoder. Recording not available.')); return; }
 
   try {
     var stream;
     if (mediaEl.captureStream) { stream = mediaEl.captureStream(); }
     else if (mediaEl.mozCaptureStream) { stream = mediaEl.mozCaptureStream(); }
-    else { alert('Recording not supported in your browser.'); return; }
+    else { (window.showToast?window.showToast('Recording not supported in your browser.',"error"):alert('Recording not supported in your browser.')); return; }
 
     var audioTracks = stream.getAudioTracks();
-    if (audioTracks.length === 0) { alert('No audio track available.'); return; }
+    if (audioTracks.length === 0) { (window.showToast?window.showToast('No audio track available.',"info"):alert('No audio track available.')); return; }
 
     var audioStream = new MediaStream(audioTracks);
     recordingAudioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -831,7 +831,7 @@ async function startRecordingFn(mediaEl) {
     }, 1000);
   } catch (e) {
     console.error('[Recording] Failed:', e);
-    alert('Failed to start recording.');
+    (window.showToast?window.showToast('Failed to start recording.',"error"):alert('Failed to start recording.'));
   }
 }
 
@@ -909,7 +909,7 @@ function encodeAndDownloadMp3() {
     setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
   } catch (e) {
     console.error('[Recording] Encoding failed:', e);
-    alert('Failed to encode recording. Please try again.');
+    (window.showToast?window.showToast('Failed to encode recording. Please try again.',"error"):alert('Failed to encode recording. Please try again.'));
   }
   recordingLeftChannel = [];
   recordingRightChannel = [];

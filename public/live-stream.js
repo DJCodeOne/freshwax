@@ -13,7 +13,7 @@ import {
   setupHlsPlayer, setupTwitchPlayer, setupAudioPlayer, setupRecording,
   destroyHlsPlayer, cleanupHlsAbort, getGlobalAudioContext,
   getIsRecording, stopRecording
-} from '/live/hls-player.js?v=20260614a';
+} from '/live/hls-player.js?v=20260827';
 
 import {
   getPusherConfig, loadPusherScript, setupLiveStatusPusher
@@ -23,7 +23,7 @@ import {
   initChatHandler, setChatCurrentUser, setChatCurrentStream,
   getChatChannel, getChatMessages, resetChatMessages,
   setupChat, sendGiphyMessage, setChatEnabled, setReactionButtonsEnabled
-} from '/live/chat-handler.js?v=20260612a';
+} from '/live/chat-handler.js?v=20260827';
 
 import {
   initUiControls, detectMobileDevice, setupVolumeSlider,

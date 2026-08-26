@@ -498,7 +498,7 @@ function setupChatInput(streamId) {
       clearTimeout(timer5);
       if (!resp5.ok) { console.error('[Chat] Send request failed:', resp5.status); return; }
       var result5 = await resp5.json();
-      if (!result5.success) alert(result5.error || 'Failed to send');
+      if (!result5.success) (window.showToast?window.showToast(result5.error || 'Failed to send',"error"):alert(result5.error || 'Failed to send'));
     } catch (e) {
       console.error('[Chat] Send error:', e);
     }

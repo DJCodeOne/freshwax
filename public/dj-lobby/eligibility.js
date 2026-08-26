@@ -174,7 +174,7 @@ export function setupEligibilityEventListeners() {
     var info = userInfo();
 
     if (!info || !info.uid) {
-      alert('Please sign in first');
+      (window.showToast?window.showToast('Please sign in first',"info"):alert('Please sign in first'));
       return;
     }
 
@@ -206,13 +206,13 @@ export function setupEligibilityEventListeners() {
       if (result.success) {
         await checkBypassStatus(currentBypassStatus || {});
       } else {
-        alert(result.error || 'Failed to submit request');
+        (window.showToast?window.showToast(result.error || 'Failed to submit request',"error"):alert(result.error || 'Failed to submit request'));
         btn.disabled = false;
         btn.textContent = '\uD83C\uDFAB Request Bypass Access';
       }
     } catch (error) {
       console.error('[Bypass] Submit error:', error);
-      alert('Failed to submit request. Please try again.');
+      (window.showToast?window.showToast('Failed to submit request. Please try again.',"error"):alert('Failed to submit request. Please try again.'));
       btn.disabled = false;
       btn.textContent = '\uD83C\uDFAB Request Bypass Access';
     }
@@ -243,7 +243,7 @@ export function setupEligibilityEventListeners() {
       if (result.success) {
         await checkBypassStatus(currentBypassStatus || {});
       } else {
-        alert(result.error || 'Failed to cancel request');
+        (window.showToast?window.showToast(result.error || 'Failed to cancel request',"error"):alert(result.error || 'Failed to cancel request'));
       }
     } catch (error) {
       console.error('[Bypass] Cancel error:', error);

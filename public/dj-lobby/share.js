@@ -22,7 +22,7 @@ export function captureVideoThumbnail() {
   var facebookBtn = document.getElementById('shareFacebookBtn');
 
   if (!video || video.paused || !video.videoWidth) {
-    alert('No video playing to capture');
+    (window.showToast?window.showToast('No video playing to capture',"info"):alert('No video playing to capture'));
     return;
   }
 
@@ -62,7 +62,7 @@ export function captureVideoThumbnail() {
     }, 'image/jpeg', 0.9);
   } catch (e) {
     console.error('Thumbnail capture failed:', e);
-    alert('Failed to capture thumbnail');
+    (window.showToast?window.showToast('Failed to capture thumbnail',"error"):alert('Failed to capture thumbnail'));
   }
 }
 
@@ -138,7 +138,7 @@ export function captureShareThumbnail() {
   var clearBtn = document.getElementById('shareClearThumbBtn');
 
   if (!video || video.paused || !video.videoWidth) {
-    alert('No video stream available to capture');
+    (window.showToast?window.showToast('No video stream available to capture',"info"):alert('No video stream available to capture'));
     return;
   }
 
@@ -151,7 +151,7 @@ export function captureShareThumbnail() {
 
     canvas.toBlob(function(blob) {
       if (!blob) {
-        alert('Failed to capture thumbnail');
+        (window.showToast?window.showToast('Failed to capture thumbnail',"error"):alert('Failed to capture thumbnail'));
         return;
       }
 
@@ -180,7 +180,7 @@ export function captureShareThumbnail() {
     }, 'image/jpeg', 0.9);
   } catch (e) {
     console.error('Share thumbnail capture failed:', e);
-    alert('Failed to capture thumbnail');
+    (window.showToast?window.showToast('Failed to capture thumbnail',"error"):alert('Failed to capture thumbnail'));
   }
 }
 
@@ -241,6 +241,6 @@ export function copyStreamLink() {
     }
   }).catch(function(err) {
     console.error('Failed to copy:', err);
-    alert('Failed to copy link');
+    (window.showToast?window.showToast('Failed to copy link',"error"):alert('Failed to copy link'));
   });
 }

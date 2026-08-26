@@ -111,7 +111,7 @@ export function renderRelaySources() {
     item.addEventListener('click', function() {
       var canPlay = item.dataset.canPlay === 'true';
       if (!canPlay) {
-        alert('This station requires an HTTPS relay to be configured. The stream is HTTP-only and cannot be played on HTTPS pages.');
+        (window.showToast?window.showToast('This station requires an HTTPS relay to be configured. The stream is HTTP-only and cannot be played on HTTPS pages.',"error"):alert('This station requires an HTTPS relay to be configured. The stream is HTTP-only and cannot be played on HTTPS pages.'));
         return;
       }
       container.querySelectorAll('.relay-source-item').forEach(function(i) { i.classList.remove('selected'); });
@@ -350,7 +350,7 @@ export function renderInlineRelayStations() {
     card.addEventListener('click', function() {
       var canPlay = card.dataset.canPlay === 'true';
       if (!canPlay) {
-        alert('This station requires an HTTPS relay to be configured. The stream is HTTP-only and cannot be played on HTTPS pages.');
+        (window.showToast?window.showToast('This station requires an HTTPS relay to be configured. The stream is HTTP-only and cannot be played on HTTPS pages.',"error"):alert('This station requires an HTTPS relay to be configured. The stream is HTTP-only and cannot be played on HTTPS pages.'));
         return;
       }
       container.querySelectorAll('.relay-station-card').forEach(function(c) { c.classList.remove('selected'); });

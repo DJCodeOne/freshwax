@@ -480,7 +480,7 @@ export async function openGoLiveInline() {
   var currentStream = ctx ? ctx.getCurrentStream() : null;
 
   if (currentStream && currentStream.djId !== (currentUser ? currentUser.uid : null)) {
-    alert('Someone is already live. Wait until their session ends or has been booked over.');
+    (window.showToast?window.showToast('Someone is already live. Wait until their session ends or has been booked over.',"info"):alert('Someone is already live. Wait until their session ends or has been booked over.'));
     return;
   }
 
