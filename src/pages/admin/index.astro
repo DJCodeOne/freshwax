@@ -334,6 +334,68 @@ const lifetimeArtistPayoutTotal = paypalLedger.reduce((s, e) => s + Number(e.art
 const lifetimeNetPosition = paypalCustomerRevenue - paypalMerchantFees - lifetimeArtistPayoutTotal;
 const treasuryUpdatedAt = treasuryDoc?.recordedAt as string | undefined;
 
+// Treasury — Stripe. Unlike PayPal (manual snapshot via
+// record-treasury-balance.cjs), the balance is fetched LIVE from Stripe's
+// API on each dashboard load. Reconciliation mirrors the PayPal card:
+// expected = received from Stripe-paid orders − paid out via the Stripe
+// rail (Connect transfers draw on this same balance).
+const stripeTreasuryKey = runtimeEnv?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
+let stripeAvailable: number | null = null;
+let stripeSettling = 0;
+if (stripeTreasuryKey) {
+  try {
+    const balRes = await fetch('https://api.stripe.com/v1/balance', {
+      headers: { Authorization: `Bearer ${stripeTreasuryKey}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (balRes.ok) {
+      const bal = await balRes.json() as { available?: Array<{ currency: string; amount: number }>; pending?: Array<{ currency: string; amount: number }> };
+      stripeAvailable = (bal.available || []).filter(b => b.currency === 'gbp').reduce((s, b) => s + b.amount, 0) / 100;
+      stripeSettling = (bal.pending || []).filter(b => b.currency === 'gbp').reduce((s, b) => s + b.amount, 0) / 100;
+    } else {
+      log.warn('Stripe balance fetch returned', balRes.status);
+    }
+  } catch (stripeBalErr: unknown) {
+    log.warn('Stripe balance fetch failed:', stripeBalErr);
+  }
+}
+
+// Stripe-flow order economics — actual recorded fee when present, else the
+// 1.4% + 20p domestic estimate.
+const stripeOrdersForRecon = realOrders.filter(o => o.paymentMethod === 'stripe');
+let stripeCustomerRevenue = 0;
+let stripeMerchantFees = 0;
+for (const o of stripeOrdersForRecon) {
+  const totals = (o.totals as Record<string, unknown>) || {};
+  const t = Number(totals.total ?? o.total ?? 0);
+  stripeCustomerRevenue += t;
+  const actualFee = Number(totals.stripeFee ?? (o as Record<string, unknown>).actualStripeFee ?? 0);
+  stripeMerchantFees += actualFee > 0 ? actualFee : (t * 0.014) + 0.20;
+}
+const fwReceivedFromStripe = stripeCustomerRevenue - stripeMerchantFees;
+
+// Paid out through the Stripe rail (Connect transfers + admin Pay-via-Stripe)
+const stripePaidOut = payoutsData
+  .filter((p: Record<string, unknown>) => p.payoutMethod === 'stripe' && p.status === 'completed')
+  .reduce((s: number, p: Record<string, unknown>) => s + (Number(p.amount) || 0), 0);
+const stripeExpectedBalance = fwReceivedFromStripe - stripePaidOut;
+const stripeActualTotal = stripeAvailable != null ? stripeAvailable + stripeSettling : null;
+const stripeReconciliationGap = stripeActualTotal != null ? stripeActualTotal - stripeExpectedBalance : null;
+
+// Total payable partner liability (every payable pendingPayouts row) — the
+// Stripe balance funds Pay-via-Stripe regardless of which processor the
+// customer paid with, so this is the float check for the manual payout flow.
+let payablePendingRows: Record<string, unknown>[] = [];
+try {
+  const allPendingRows = await saQuery('pendingPayouts', { limit: 300 }) as Record<string, unknown>[];
+  payablePendingRows = allPendingRows.filter(r => ['pending', 'awaiting_connect', 'retry_pending'].includes(String(r.status)));
+} catch (ppErr: unknown) {
+  log.warn('pendingPayouts fetch for treasury failed:', ppErr);
+}
+const totalPendingLiability = payablePendingRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+const stripeAfterAllPending = stripeAvailable != null ? stripeAvailable - totalPendingLiability : null;
+const stripeFetchedAt = stripeAvailable != null ? new Date() : null;
+
 // Format helpers
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
@@ -619,6 +681,98 @@ Astro.response.headers.set('Pragma', 'no-cache');
       ) : (
         <p style="color: #888; padding: 1rem 0;">
           No PayPal balance recorded yet. Run <code>node scripts/record-treasury-balance.cjs &lt;amount&gt;</code> to record the current balance and a reconciliation summary will appear here.
+        </p>
+      )}
+    </div>
+  </div>
+
+  <!-- Treasury / Stripe (live balance) -->
+  <div class="card mb-4 earnings-card">
+    <div class="card-header">
+      <h2>🏦 Treasury — Stripe</h2>
+      <span style="color: #888; font-size: 0.8rem;">
+        {stripeAvailable != null
+          ? `Live from Stripe API — ${stripeFetchedAt!.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+          : 'Balance unavailable — Stripe API not reachable'}
+      </span>
+    </div>
+    <div class="card-body">
+      {stripeAvailable != null ? (
+        <>
+        <div class="earnings-grid">
+          <div class={`earning-stat ${stripeAfterAllPending != null && stripeAfterAllPending >= 0 ? 'success' : 'danger'}`}>
+            <div class="earning-icon">💷</div>
+            <div class="earning-info">
+              <span class="earning-label">Available Balance</span>
+              <span class="earning-value">{formatCurrency(stripeAvailable)}</span>
+              <span class="earning-detail">Spendable now (funds Pay-via-Stripe)</span>
+            </div>
+          </div>
+          <div class="earning-stat info">
+            <div class="earning-icon">🕐</div>
+            <div class="earning-info">
+              <span class="earning-label">Settling</span>
+              <span class="earning-value">{formatCurrency(stripeSettling)}</span>
+              <span class="earning-detail">Card money on its way (days)</span>
+            </div>
+          </div>
+          <div class="earning-stat warning">
+            <div class="earning-icon">⏳</div>
+            <div class="earning-info">
+              <span class="earning-label">All Pending Payouts</span>
+              <span class="earning-value">{formatCurrency(totalPendingLiability)}</span>
+              <span class="earning-detail">Every partner, all funding sources</span>
+            </div>
+          </div>
+          <div class={`earning-stat ${stripeAfterAllPending != null && stripeAfterAllPending >= 0 ? 'success' : 'danger'}`}>
+            <div class="earning-icon">{stripeAfterAllPending != null && stripeAfterAllPending >= 0 ? '✓' : '⚠'}</div>
+            <div class="earning-info">
+              <span class="earning-label">After Paying Everyone via Stripe</span>
+              <span class="earning-value">{formatCurrency(stripeAfterAllPending)}</span>
+              <span class="earning-detail">{stripeAfterAllPending != null && stripeAfterAllPending >= 0 ? 'Covered' : 'Shortfall — top up from PayPal first'}</span>
+            </div>
+          </div>
+          <div class="earning-stat info">
+            <div class="earning-icon">🔍</div>
+            <div class="earning-info">
+              <span class="earning-label">Reconciliation Gap</span>
+              <span class="earning-value">{formatCurrency(stripeReconciliationGap)}</span>
+              <span class="earning-detail">{stripeReconciliationGap != null && stripeReconciliationGap >= 0 ? 'Balance > expected' : 'Balance < expected (find missing)'}</span>
+            </div>
+          </div>
+          <div class="earning-stat muted">
+            <div class="earning-icon">📊</div>
+            <div class="earning-info">
+              <span class="earning-label">Paid via Stripe Rail</span>
+              <span class="earning-value">{formatCurrency(stripePaidOut)}</span>
+              <span class="earning-detail">Lifetime Connect transfers</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trace -->
+        <div class="month-comparison" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="month-stat">
+            <span class="month-label">Stripe Customer Revenue</span>
+            <span class="month-value">{formatCurrency(stripeCustomerRevenue)}</span>
+          </div>
+          <div class="month-stat">
+            <span class="month-label">Stripe Merchant Fees</span>
+            <span class="month-value" style="color:#f87171">−{formatCurrency(stripeMerchantFees)}</span>
+          </div>
+          <div class="month-stat">
+            <span class="month-label">FW Received</span>
+            <span class="month-value">{formatCurrency(fwReceivedFromStripe)}</span>
+          </div>
+          <div class="month-stat">
+            <span class="month-label">Expected Balance</span>
+            <span class="month-value">{formatCurrency(stripeExpectedBalance)}</span>
+          </div>
+        </div>
+        </>
+      ) : (
+        <p style="color: #888; padding: 1rem 0;">
+          Couldn't fetch the live Stripe balance (missing key or API error) — check the <a href="https://dashboard.stripe.com/balance/overview" target="_blank" rel="noopener" style="color:#635bff">Stripe Dashboard</a> directly.
         </p>
       )}
     </div>
