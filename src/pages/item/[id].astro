@@ -439,12 +439,26 @@ if (release) {
     const norm = (s: unknown) => String(s || '').toLowerCase().trim();
     const myLabel = norm(labelName);
     const myArtist = norm(artistName);
+    // Label match must check labelName too — most release docs store the label
+    // there, not in `label`, so the old exact-`label` check matched nothing.
+    const matchesLabel = (r: Record<string, unknown>) =>
+      !!myLabel && (norm(r.label) === myLabel || norm(r.labelName) === myLabel);
+    // Artist match covers joint credits ("CODE ONE & BAKKUS") and compilation
+    // features, where the artist is only credited per-track ("Code One - Play").
+    const artistFeatures = (r: Record<string, unknown>) => {
+      if (!myArtist || myArtist.length < 4) return false;
+      const a = norm(r.artistName || r.artist);
+      if (a === myArtist || a.includes(myArtist)) return true;
+      const relTracks = Array.isArray(r.tracks) ? (r.tracks as Record<string, unknown>[]) : [];
+      return relTracks.some((t) => norm(t.trackName || t.title).includes(myArtist));
+    };
     moreFromLabel = (allReleases as Record<string, unknown>[])
       .filter((r) => String(r.id) !== String(id))
-      .filter((r) =>
-        (myLabel && norm(r.label) === myLabel) ||
-        (myArtist && norm(r.artistName || r.artist) === myArtist))
-      .slice(0, 4);
+      .map((r) => ({ r, feat: artistFeatures(r), lab: matchesLabel(r) }))
+      .filter((x) => x.feat || x.lab)
+      .sort((a, b) => Number(b.feat) - Number(a.feat))
+      .map((x) => x.r)
+      .slice(0, 8);
     artistMixes = (allMixes as Record<string, unknown>[])
       .filter((m) => myArtist && norm(m.djName || m.artist) === myArtist)
       .slice(0, 3);
