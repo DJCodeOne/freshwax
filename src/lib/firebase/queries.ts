@@ -56,14 +56,24 @@ export async function queryCollection(
     from: [{ collectionId: collection }],
   };
 
-  // Add filters
+  // Add filters. Operator strings are normalised the same way the service-
+  // account helper does it (crud.ts) — callers have shipped '==' style ops
+  // before, and Firestore rejects them as invalid enums, making the query
+  // silently return nothing (this broke auto-publish for every partner
+  // upload until Sep 2026). An unmapped op passes through and fails loudly.
+  const OP_MAP: Record<string, string> = {
+    '==': 'EQUAL', '!=': 'NOT_EQUAL',
+    '<': 'LESS_THAN', '<=': 'LESS_THAN_OR_EQUAL',
+    '>': 'GREATER_THAN', '>=': 'GREATER_THAN_OR_EQUAL',
+  };
+  const mapOp = (op: string) => OP_MAP[op] || op;
   if (options.filters && options.filters.length > 0) {
     if (options.filters.length === 1) {
       const f = options.filters[0];
       structuredQuery.where = {
         fieldFilter: {
           field: { fieldPath: f.field },
-          op: f.op,
+          op: mapOp(f.op),
           value: toFirestoreValue(f.value)
         }
       };
@@ -74,7 +84,7 @@ export async function queryCollection(
           filters: options.filters.map(f => ({
             fieldFilter: {
               field: { fieldPath: f.field },
-              op: f.op,
+              op: mapOp(f.op),
               value: toFirestoreValue(f.value)
             }
           }))

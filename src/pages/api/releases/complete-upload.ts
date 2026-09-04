@@ -236,7 +236,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       ? false
       : await isEstablishedPartner(
           releaseOwnerId,
-          (field, value) => queryCollection('releases', { filters: [{ field, op: '==', value }], skipCache: true }),
+          (field, value) => queryCollection('releases', { filters: [{ field, op: 'EQUAL', value }], skipCache: true }),
           releaseId
         );
 
