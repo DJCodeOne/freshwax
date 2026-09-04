@@ -102,7 +102,9 @@ export function assessReleaseReadiness(release: Record<string, unknown>): Releas
   if (albumPrice <= 0 && trackPrice <= 0) {
     warnings.push('No digital price set — the release would be free');
   }
-  if (release.vinylRelease === true && !(Number(release.vinylPrice) > 0)) {
+  // vinylTBA = vinyl announced but not yet purchasable (no buy button), so a
+  // missing price is deliberate, not broken.
+  if (release.vinylRelease === true && release.vinylTBA !== true && !(Number(release.vinylPrice) > 0)) {
     blocking.push('Marked as a vinyl release but has no vinyl price');
   }
 
