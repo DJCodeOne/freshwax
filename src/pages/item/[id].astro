@@ -439,10 +439,13 @@ if (release) {
     const norm = (s: unknown) => String(s || '').toLowerCase().trim();
     const myLabel = norm(labelName);
     const myArtist = norm(artistName);
-    // Label match must check labelName too — most release docs store the label
-    // there, not in `label`, so the old exact-`label` check matched nothing.
+    // Label match: labelName (where most docs store it), legacy `label`, or —
+    // the robust signal — shared ownership: label-routed releases all carry the
+    // label account's artistId even when the labelName field was left empty.
+    const myOwner = norm(artistId);
     const matchesLabel = (r: Record<string, unknown>) =>
-      !!myLabel && (norm(r.label) === myLabel || norm(r.labelName) === myLabel);
+      (!!myLabel && (norm(r.label) === myLabel || norm(r.labelName) === myLabel)) ||
+      (!!myOwner && (norm(r.artistId) === myOwner || norm(r.submitterId) === myOwner));
     // Artist match covers joint credits ("CODE ONE & BAKKUS") and compilation
     // features, where the artist is only credited per-track ("Code One - Play").
     const artistFeatures = (r: Record<string, unknown>) => {
