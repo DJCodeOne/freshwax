@@ -56,6 +56,7 @@ interface Props {
   pricePerSale?: number;
   trackPrice?: number;
   vinylRelease?: boolean;
+  vinylTBA?: boolean;
   vinylRecordCount?: string;
   vinylPrice?: number;
   hasLimitedEdition?: boolean;
@@ -124,6 +125,7 @@ const {
   pricePerSale = 0,
   trackPrice = 1.00,
   vinylRelease = false,
+  vinylTBA = false,
   vinylRecordCount = '',
   vinylPrice = 0,
   hasLimitedEdition = false,
@@ -430,7 +432,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           class={`vinyl-btn add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors font-bold text-sm flex-1 shadow-sm font-body ${
             vinylAvailable
               ? (isPreOrder ? 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white')
-              : 'bg-sky-600/40 text-sky-200/70 cursor-not-allowed'
+              : (vinylTBA ? 'bg-amber-700/50 text-amber-100/90 cursor-not-allowed' : 'bg-sky-600/40 text-sky-200/70 cursor-not-allowed')
           }`}
         >
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -450,7 +452,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
                   <Fragment> £{finalVinylPrice?.toFixed(2)}</Fragment>
                 )}
               </Fragment>
-            ) : 'Vinyl Sold Out'}
+            ) : (vinylTBA ? 'Vinyl TBA' : 'Vinyl Sold Out')}
           </span>
         </button>
         )}
