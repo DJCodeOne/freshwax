@@ -182,7 +182,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       liveSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
         limit: 5,
-        cacheTime: 30000 // 30 second cache - Pusher handles real-time updates
+        cacheTTL: 30000 // 30 second cache - Pusher handles real-time updates
       });
     }
 
@@ -253,7 +253,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const legacyStreams = await queryCollection('livestreams', {
         filters: [{ field: 'isLive', op: 'EQUAL', value: true }],
         limit: 5,
-        cacheTime: 30000 // 30 second cache
+        cacheTTL: 30000 // 30 second cache
       });
       // Strip publish credentials — legacy livestreams docs store streamKey/
       // rtmpUrl (manage.ts), and this is the UNAUTHENTICATED status GET. The
@@ -277,7 +277,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         scheduledSlots = await queryCollection('livestreamSlots', {
           filters: [{ field: 'status', op: 'EQUAL', value: 'scheduled' }],
           limit: 10,
-          cacheTime: 300000 // 5 minute cache - scheduled streams don't change often
+          cacheTTL: 300000 // 5 minute cache - scheduled streams don't change often
         });
       }
 

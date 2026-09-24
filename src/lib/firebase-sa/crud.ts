@@ -4,6 +4,8 @@
 import { createLogger, fetchWithTimeout } from '../api-utils';
 import { getServiceAccountToken } from './auth';
 import { toFirestoreValue, fromFirestoreValue } from './serialization';
+import { normalizeOrderBy } from '../firebase/order-by';
+import type { OrderBySpec } from '../firebase/order-by';
 
 const log = createLogger('firebase-service-account');
 
@@ -247,7 +249,7 @@ export async function saQueryCollection(
   collection: string,
   options?: {
     filters?: Array<{ field: string; op: string; value: unknown }>;
-    orderBy?: { field: string; direction?: 'ASCENDING' | 'DESCENDING' };
+    orderBy?: OrderBySpec;
     limit?: number;
   }
 ): Promise<Record<string, unknown>[]> {
@@ -303,11 +305,16 @@ export async function saQueryCollection(
       where
     };
 
-    if (options?.orderBy) {
+    // Accept the object or the REST-style array — the array used to send an
+    // empty field path, 400 and come back [] (see lib/firebase/order-by.ts).
+    const orderBy = options?.orderBy ? normalizeOrderBy(options.orderBy) : null;
+    if (orderBy) {
       structuredQuery.orderBy = [{
-        field: { fieldPath: options.orderBy.field },
-        direction: options.orderBy.direction || 'ASCENDING'
+        field: { fieldPath: orderBy.field },
+        direction: orderBy.direction || 'ASCENDING'
       }];
+    } else if (options?.orderBy) {
+      log.error(`[saQueryCollection] ${collection}: unusable orderBy ignored: ${JSON.stringify(options.orderBy)}`);
     }
 
     if (options?.limit) {
@@ -349,8 +356,11 @@ export async function saQueryCollection(
   let url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}`;
   const params: string[] = [];
 
-  if (options?.orderBy) {
-    params.push(`orderBy=${options.orderBy.field}${options.orderBy.direction === 'DESCENDING' ? ' desc' : ''}`);
+  const listOrderBy = options?.orderBy ? normalizeOrderBy(options.orderBy) : null;
+  if (listOrderBy) {
+    params.push(`orderBy=${encodeURIComponent(listOrderBy.field + (listOrderBy.direction === 'DESCENDING' ? ' desc' : ''))}`);
+  } else if (options?.orderBy) {
+    log.error(`[saQueryCollection] ${collection}: unusable orderBy ignored: ${JSON.stringify(options.orderBy)}`);
   }
   if (options?.limit) {
     params.push(`pageSize=${options.limit}`);

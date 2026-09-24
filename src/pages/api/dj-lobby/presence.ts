@@ -141,7 +141,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Query all presence documents and filter client-side
     // (timestamp filters in REST API can be unreliable)
     const allDjs = await queryCollection('djLobbyPresence', {
-      cacheTime: 15000, // 15 second cache - presence doesn't need to be instant
+      cacheTTL: 15000, // 15 second cache - presence doesn't need to be instant
       limit: 100
     });
 

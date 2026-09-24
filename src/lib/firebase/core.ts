@@ -3,6 +3,7 @@
 
 import { createLogger, fetchWithTimeout } from '../api-utils';
 import { FIREBASE_API_KEY } from '../constants';
+import type { OrderBySpec } from './order-by';
 export const log = createLogger('[firebase-rest]');
 
 export const PROJECT_ID = 'freshwax-store';
@@ -306,7 +307,9 @@ export interface QueryFilter {
 
 export interface QueryOptions {
   filters?: QueryFilter[];
-  orderBy?: { field: string; direction?: 'ASCENDING' | 'DESCENDING' };
+  // ONE { field, direction } object. The REST-style array form sends an empty
+  // field path — Firestore 400s and queryCollection returns a silent [].
+  orderBy?: OrderBySpec;
   limit?: number;
   cacheKey?: string;
   cacheTTL?: number;

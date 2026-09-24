@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
+import { sortRowsByField } from '../../../lib/firebase/order-by';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 import { formatPrice } from '../../../lib/format-utils';
@@ -229,11 +230,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
       filters.push({ field: 'status', op: 'EQUAL', value: status });
     }
 
-    const returns = await queryCollection('returns', {
+    // Sorted in memory: a status filter + createdAt orderBy needs a composite
+    // index that doesn't exist, and the old array-shaped orderBy made this
+    // query 400 and return [] (admin returns list always empty).
+    const returns = sortRowsByField(await queryCollection('returns', {
       filters,
-      orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
-      limit
-    });
+      limit: 500
+    }), 'createdAt', 'DESCENDING').slice(0, limit);
 
     // Get counts by status using parallel filtered queries
     const [pendingReturns, approvedReturns, receivedReturns, refundedReturns, rejectedReturns] = await Promise.all([

@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection } from '@lib/firebase-rest';
+import { sortRowsByField } from '@lib/firebase/order-by';
 import { ApiErrors, createLogger, successResponse } from '@lib/api-utils';
 
 const log = createLogger('stripe/connect/supplier/payouts');
@@ -55,12 +56,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Supplier not found');
     }
 
-    // Get payouts
-    const payouts = await queryCollection('supplierPayouts', {
+    // Get payouts. No orderBy/limit in the query: supplierId + createdAt needs
+    // a composite index that doesn't exist (Firestore 400 → silent []), and an
+    // unordered limit would return an arbitrary subset. Fetch this supplier's
+    // rows, sort newest first in memory, then apply the limit.
+    const payouts = sortRowsByField(await queryCollection('supplierPayouts', {
       filters: [{ field: 'supplierId', op: 'EQUAL', value: supplierDocId }],
-      orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
-      limit
-    });
+      limit: 500
+    }), 'createdAt', 'DESCENDING').slice(0, limit);
 
     // Calculate totals
     let totalPaid = 0;

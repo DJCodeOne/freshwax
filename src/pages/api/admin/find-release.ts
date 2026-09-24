@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     // Get all releases and filter by name (case-insensitive)
-    const releases = await queryCollection('releases', { limit: 500, cacheTime: 60000 });
+    const releases = await queryCollection('releases', { limit: 500, cacheTTL: 60000 });
     
     const searchTerm = name.toLowerCase();
     const matches = releases.filter((r: Record<string, unknown>) => {

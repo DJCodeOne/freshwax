@@ -244,14 +244,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // SECURITY: Idempotency check - prevent duplicate free orders
     const orderKey = `${verifiedUserId}:${validatedItems.map((i: Record<string, unknown>) => `${i.id || i.productId}:${i.quantity}`).join(',')}`;
+    // No orderBy/limit: the old `orderBy: 'createdAt'` string sent an empty
+    // field path, Firestore 400'd and this check always saw [] — so it never
+    // caught a duplicate. The loop below scans every returned order for one
+    // in the last 5 minutes, so order doesn't matter; an unordered limit of 5
+    // could miss the newest. skipCache: an idempotency check must see live data.
     const recentOrders = await queryCollection('orders', {
       filters: [
         { field: 'customer.userId', op: 'EQUAL', value: verifiedUserId },
         { field: 'paymentMethod', op: 'IN', value: ['free', 'credit'] }
       ],
-      orderBy: 'createdAt',
-      orderDirection: 'DESCENDING',
-      limit: 5
+      limit: 200,
+      skipCache: true
     });
     if (recentOrders && recentOrders.length > 0) {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();

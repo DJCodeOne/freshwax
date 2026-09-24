@@ -123,8 +123,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (type === 'analytics') {
       // Get analytics data with 5-min cache for dashboard (not real-time)
       const [giftCards, userCredits] = await Promise.all([
-        queryCollection('giftCards', { cacheTime: 300000, limit: 1000 }),
-        queryCollection('userCredits', { cacheTime: 300000, limit: 500 })
+        queryCollection('giftCards', { cacheTTL: 300000, limit: 1000 }),
+        queryCollection('userCredits', { cacheTTL: 300000, limit: 500 })
       ]);
 
       let totalIssued = 0;

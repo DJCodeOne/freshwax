@@ -7,6 +7,7 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
+import { sortRowsByField } from '../../lib/firebase/order-by';
 import { saQueryCollection } from '../../lib/firebase-service-account';
 import { d1GetLedgerEntriesByArtist } from '../../lib/d1-catalog';
 import { verifySessionMatch } from '../../lib/session-verify';
@@ -111,23 +112,27 @@ if (partnerId) {
         summary.totalEarnings = partnerDoc.totalEarnings || 0;
       }
 
-      // Fetch payouts history and pending payouts in parallel
+      // Fetch payouts history and pending payouts in parallel.
+      // orderBy must be ONE { field, direction } object — the array form sent an
+      // empty field path, Firestore 400'd and both lists came back [] (so the
+      // Request Payout block never rendered). pendingPayouts has no orderBy:
+      // artistId + status IN + createdAt needs a composite index that doesn't
+      // exist, so it is sorted in memory instead.
       const [payoutsResult, pendingPayoutsResult] = await Promise.all([
         queryCollection('payouts', {
           filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }],
-          orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
+          orderBy: { field: 'createdAt', direction: 'DESCENDING' },
           limit: 50
         }),
         queryCollection('pendingPayouts', {
           filters: [
             { field: 'artistId', op: 'EQUAL', value: partnerId },
             { field: 'status', op: 'IN', value: ['pending', 'awaiting_connect', 'retry_pending', 'processing'] }
-          ],
-          orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }]
+          ]
         })
       ]);
       payouts = payoutsResult;
-      pendingPayouts = pendingPayoutsResult;
+      pendingPayouts = sortRowsByField(pendingPayoutsResult, 'createdAt', 'DESCENDING');
 
       summary.stripeConnected = !!partner.stripeConnectId && partner.stripeConnectStatus === 'active';
 

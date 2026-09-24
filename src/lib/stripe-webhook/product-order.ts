@@ -41,11 +41,15 @@ export async function handleGiftCardPurchase(
   // Idempotency check for gift cards
   if (paymentIntentId) {
     try {
+      // throwOnError is queryCollection's THIRD argument — as an option key it
+      // was ignored, so a Firestore failure read as "no card yet" and a webhook
+      // retry could mint a duplicate gift card. skipCache: idempotency checks
+      // must never answer from the in-memory query cache.
       const existingCards = await queryCollection('giftCards', {
         filters: [{ field: 'paymentIntentId', op: 'EQUAL', value: paymentIntentId }],
         limit: 1,
-        throwOnError: true
-      });
+        skipCache: true
+      }, true);
 
       if (existingCards.length > 0) {
         log.debug('[Stripe Webhook] Gift card already exists for this payment:', existingCards[0].code);

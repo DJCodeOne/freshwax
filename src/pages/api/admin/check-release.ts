@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const search = url.searchParams.get('search') || 'ultron';
 
   try {
-    const releases = await queryCollection('releases', { limit: 100, cacheTime: 60000 });
+    const releases = await queryCollection('releases', { limit: 100, cacheTTL: 60000 });
 
     // Find releases matching search
     const matches = releases.filter((r: Record<string, unknown>) =>

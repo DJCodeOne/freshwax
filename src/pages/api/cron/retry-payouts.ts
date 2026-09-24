@@ -10,6 +10,7 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { queryCollection, updateDocument, addDocument, getDocument, updateDocumentConditional, clearCache, atomicIncrement } from '../../../lib/firebase-rest';
+import { sortRowsByField } from '../../../lib/firebase/order-by';
 import { sendPayoutCompletedEmail } from '../../../lib/payout-emails';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { verifyAdminKey } from '../../../lib/admin';
@@ -46,6 +47,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.unauthorized('Unauthorized');
   }
 
+  // Operator policy (Aug 2026): ALL payouts are manual unless
+  // PAYOUTS_AUTO_TRANSFER=true — the operator checks the platform balance and
+  // pays from /admin/payments (see lib/stripe-connect-payouts.ts). This cron
+  // was missed when that gate went in; it only stayed dormant because its
+  // query was malformed (orderBy array -> Firestore 400 -> []). Gate it
+  // explicitly so fixing the query can never start moving money on its own.
+  if (env?.PAYOUTS_AUTO_TRANSFER !== 'true') {
+    log.info('Skipped: automatic payouts are disabled (PAYOUTS_AUTO_TRANSFER not set)');
+    return successResponse({
+      skipped: true,
+      reason: 'Automatic payouts are disabled (PAYOUTS_AUTO_TRANSFER not set). Pay partners from /admin/payments.'
+    });
+  }
+
   const db = env?.DB;
   if (db) {
     const locked = await acquireCronLock(db, 'retry-payouts');
@@ -74,14 +89,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - MAX_RETRY_AGE_DAYS);
 
-    // Query pending payouts that need retry (all entity types)
-    const pendingPayouts = await queryCollection('pendingPayouts', {
+    // Query pending payouts that need retry (all entity types), oldest first.
+    // Sorted in memory: the (status, createdAt DESC) index can't serve an
+    // ASCENDING orderBy, and the old array-shaped orderBy made this query 400
+    // and return [] — which is the only reason this cron never paid anything.
+    const pendingPayouts = sortRowsByField(await queryCollection('pendingPayouts', {
       filters: [
         { field: 'status', op: 'IN', value: ['retry_pending', 'awaiting_connect'] }
       ],
-      orderBy: [{ field: 'createdAt', direction: 'ASCENDING' }],
-      limit: MAX_RETRIES_PER_RUN * 2 // Fetch more to filter
-    });
+      limit: 500,
+      skipCache: true
+    }), 'createdAt', 'ASCENDING').slice(0, MAX_RETRIES_PER_RUN * 2); // Fetch more to filter
 
     const results = {
       checked: 0,

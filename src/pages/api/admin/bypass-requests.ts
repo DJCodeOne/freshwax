@@ -126,7 +126,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         // Fetch all artists at once
         Promise.all(userIds.map(id => getDocument('artists', id).catch(() => null /* Document fetch — non-critical */))),
         // Fetch all mixes - single query with cache
-        queryCollection('dj-mixes', { limit: 500, cacheTime: 60000 }).catch(() => [])
+        queryCollection('dj-mixes', { limit: 500, cacheTTL: 60000 }).catch(() => [])
       ]);
 
       // Build lookup maps for O(1) access

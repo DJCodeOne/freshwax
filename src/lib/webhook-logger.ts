@@ -2,6 +2,7 @@
 // Webhook event logging for debugging and monitoring
 
 import { addDocument, queryCollection } from './firebase-rest';
+import { sortRowsByField } from './firebase/order-by';
 import { createLogger } from './api-utils';
 
 const log = createLogger('webhook-logger');
@@ -115,18 +116,23 @@ export async function getRecentWebhookEvents(
   source?: 'stripe' | 'stripe_connect' | 'other'
 ): Promise<WebhookEvent[]> {
   try {
-    const filters: Array<{ field: string; op: string; value: unknown }> = [];
-    if (source) {
-      filters.push({ field: 'source', op: 'EQUAL', value: source });
+    // Unfiltered: timestamp DESC is served by the automatic single-field index.
+    // Filtered by source: source + timestamp needs a composite index that
+    // doesn't exist, so fetch a bounded set and sort in memory. (The old
+    // array-shaped orderBy made both variants 400 and return [].)
+    if (!source) {
+      return await queryCollection('webhookLogs', {
+        orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+        limit
+      }) as unknown as WebhookEvent[];
     }
 
     const events = await queryCollection('webhookLogs', {
-      filters,
-      orderBy: [{ field: 'timestamp', direction: 'DESCENDING' }],
-      limit
+      filters: [{ field: 'source', op: 'EQUAL', value: source }],
+      limit: MAX_DAILY_EVENTS
     });
 
-    return events;
+    return sortRowsByField(events, 'timestamp', 'DESCENDING').slice(0, limit) as unknown as WebhookEvent[];
   } catch (error: unknown) {
     log.error('[Webhook Logger] Failed to get events:', error);
     return [];
@@ -136,13 +142,14 @@ export async function getRecentWebhookEvents(
 // Get failed webhook events (for debugging)
 export async function getFailedWebhookEvents(limit: number = 50): Promise<WebhookEvent[]> {
   try {
+    // success + timestamp needs a composite index that doesn't exist — fetch a
+    // bounded set and sort in memory (the old array-shaped orderBy 400'd → []).
     const events = await queryCollection('webhookLogs', {
       filters: [{ field: 'success', op: 'EQUAL', value: false }],
-      orderBy: [{ field: 'timestamp', direction: 'DESCENDING' }],
-      limit
+      limit: MAX_DAILY_EVENTS
     });
 
-    return events;
+    return sortRowsByField(events, 'timestamp', 'DESCENDING').slice(0, limit) as unknown as WebhookEvent[];
   } catch (error: unknown) {
     log.error('[Webhook Logger] Failed to get failed events:', error);
     return [];

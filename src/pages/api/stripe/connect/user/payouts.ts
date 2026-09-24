@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '@lib/firebase-rest';
+import { sortRowsByField } from '@lib/firebase/order-by';
 import { ApiErrors, createLogger, successResponse } from '@lib/api-utils';
 
 const log = createLogger('stripe/connect/user/payouts');
@@ -46,12 +47,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('User not found');
     }
 
-    // Get crate seller payouts
-    const payouts = await queryCollection('crateSellerPayouts', {
+    // Get crate seller payouts. No orderBy/limit in the query: sellerId +
+    // createdAt needs a composite index that doesn't exist (Firestore 400 →
+    // silent []), and an unordered limit would return an arbitrary subset.
+    // Fetch this seller's rows, sort newest first in memory, then apply limit.
+    const payouts = sortRowsByField(await queryCollection('crateSellerPayouts', {
       filters: [{ field: 'sellerId', op: 'EQUAL', value: userId }],
-      orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
-      limit
-    });
+      limit: 500
+    }), 'createdAt', 'DESCENDING').slice(0, limit);
 
     // Calculate totals
     let totalPaid = 0;

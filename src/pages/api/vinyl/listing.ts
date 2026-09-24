@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, verifyRequestUser, queryCollection } from '../../../lib/firebase-rest';
+import { sortRowsByField } from '../../../lib/firebase/order-by';
 import { d1GetVinylSeller } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
@@ -136,14 +137,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Seller ID or Listing ID required');
     }
 
-    // Query listings by sellerId using shared firebase-rest queryCollection
-    const listings = await queryCollection('vinylListings', {
+    // Query listings by sellerId, newest first. Sorted in memory: the old
+    // `orderBy: 'createdAt'` string (plus an `orderDirection` option that
+    // doesn't exist) sent an empty field path, Firestore 400'd and every
+    // seller's own listing view came back empty. sellerId + createdAt would
+    // also need a composite index that doesn't exist.
+    const listings = sortRowsByField(await queryCollection('vinylListings', {
       filters: [{ field: 'sellerId', op: 'EQUAL', value: sellerId }],
-      orderBy: 'createdAt',
-      orderDirection: 'DESCENDING',
-      limit: 100,
+      limit: 500,
       skipCache: true
-    });
+    }), 'createdAt', 'DESCENDING').slice(0, 100);
 
     return successResponse({ listings, count: listings.length });
 

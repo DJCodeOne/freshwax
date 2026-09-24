@@ -44,7 +44,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       case 'orders': {
         const orders = await saQuery('orders', {
           filters: [{ field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startDateStr }],
-          orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
+          orderBy: { field: 'createdAt', direction: 'DESCENDING' },
           limit: 1000
         });
 
@@ -156,7 +156,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       case 'payouts': {
         const payouts = await saQuery('payouts', {
           filters: [{ field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startDateStr }],
-          orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
+          orderBy: { field: 'createdAt', direction: 'DESCENDING' },
           limit: 1000
         });
 
@@ -180,7 +180,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       case 'refunds': {
         const refunds = await saQuery('refunds', {
           filters: [{ field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startDateStr }],
-          orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
+          orderBy: { field: 'createdAt', direction: 'DESCENDING' },
           limit: 500
         });
 

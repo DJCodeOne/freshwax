@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '@lib/firebase-rest';
+import { sortRowsByField } from '@lib/firebase/order-by';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '@lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '@lib/api-utils';
 
@@ -42,21 +43,22 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     const limit = parseInt(url.searchParams.get('limit') || '50');
     const offset = parseInt(url.searchParams.get('offset') || '0');
 
-    // Fetch completed payouts
+    // Fetch completed payouts (artistId + createdAt DESC has a composite index)
     const payouts = await queryCollection('payouts', {
       filters: [{ field: 'artistId', op: 'EQUAL', value: artistId }],
-      orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
+      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
       limit: limit + 1  // Fetch one extra to check if there are more
     });
 
-    // Fetch pending payouts
-    const pendingPayouts = await queryCollection('pendingPayouts', {
+    // Fetch pending payouts. No orderBy: artistId + status IN + createdAt needs
+    // a composite index that doesn't exist (Firestore 400 → silent []), so
+    // sort in memory instead.
+    const pendingPayouts = sortRowsByField(await queryCollection('pendingPayouts', {
       filters: [
         { field: 'artistId', op: 'EQUAL', value: artistId },
         { field: 'status', op: 'IN', value: ['awaiting_connect', 'retry_pending'] }
-      ],
-      orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }]
-    });
+      ]
+    }), 'createdAt', 'DESCENDING');
 
     // Calculate totals
     const totalEarnings = artist.totalEarnings || 0;

@@ -20,6 +20,7 @@ import {
   validatePath,
 } from './core';
 import type { QueryOptions } from './core';
+import { normalizeOrderBy, unsupportedQueryOptions } from './order-by';
 
 // ==========================================
 // CORE QUERY FUNCTIONS
@@ -31,6 +32,14 @@ export async function queryCollection(
   throwOnError = false
 ): Promise<Record<string, unknown>[]> {
   validatePath(collection, 'collection');
+
+  // Unknown option keys are silently dropped by the query builder below — a
+  // `where` key made the live embed page's "live slot" query match every slot.
+  const unknownOptions = unsupportedQueryOptions(options);
+  if (unknownOptions.length > 0) {
+    log.error(`queryCollection(${collection}): unsupported option(s) ignored: ${unknownOptions.join(', ')} (use filters / orderBy / limit)`);
+  }
+
   // Generate cache key
   const cacheKey = options.cacheKey || `query:${collection}:${JSON.stringify(options)}`;
 
@@ -93,12 +102,20 @@ export async function queryCollection(
     }
   }
 
-  // Add ordering
+  // Add ordering. orderBy is ONE { field, direction } object, but callers have
+  // shipped the REST-style array — that sent an empty field path, Firestore
+  // 400'd and this function returned a silent []. normalizeOrderBy accepts
+  // both, and an unusable spec is dropped with a log instead of sent.
   if (options.orderBy) {
-    structuredQuery.orderBy = [{
-      field: { fieldPath: options.orderBy.field },
-      direction: options.orderBy.direction || 'DESCENDING'
-    }];
+    const orderBy = normalizeOrderBy(options.orderBy);
+    if (orderBy) {
+      structuredQuery.orderBy = [{
+        field: { fieldPath: orderBy.field },
+        direction: orderBy.direction || 'DESCENDING'
+      }];
+    } else {
+      log.error(`queryCollection(${collection}): unusable orderBy ignored: ${JSON.stringify(options.orderBy)}`);
+    }
   }
 
   // Add limit
