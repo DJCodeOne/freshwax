@@ -166,17 +166,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 </VinylDashboardLayout>
 
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  // type="module" makes Astro ship this script unprocessed, so '@lib/...'
+  // aliases never resolve in the browser (that import used to abort the whole
+  // script: form never loaded, Save/Delete dead). Same pattern as the sibling
+  // vinyl pages: reuse the app and read the config from window.FIREBASE_CONFIG.
+  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { FIREBASE_API_KEY } from '@lib/constants';
 
-  const firebaseConfig = {
-    apiKey: FIREBASE_API_KEY,
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store"
-  };
-
-  const app = initializeApp(firebaseConfig);
+  const app = getApps()[0] || initializeApp(window.FIREBASE_CONFIG);
   const auth = getAuth(app);
 
   let currentUser = null;
