@@ -196,7 +196,7 @@ export async function handleGoLive(
             status: 'completed',
             updatedAt: nowISO
           });
-          syncSlotStatusToD1(db, oldSlot.id, 'completed', { updatedAt: nowISO });
+          await syncSlotStatusToD1(db, oldSlot.id, 'completed', { updatedAt: nowISO });
         }
       }
     } catch (cleanupErr: unknown) {
@@ -205,8 +205,10 @@ export async function handleGoLive(
 
     invalidateCache();
 
-    // Sync to D1 (non-blocking)
-    syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
+    // Sync to D1 — awaited: /api/livestream/status reads D1 first, and a bare
+    // promise is dropped when the Worker returns (stale live state). The
+    // helper swallows its own errors, so this can't fail the request.
+    await syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
 
     // Invalidate Cloudflare Cache API cache so status returns fresh data
     await invalidateStatusCacheFn();
@@ -327,8 +329,8 @@ export async function handleGoLiveNow(
   await setDocument('livestreamSlots', slotId, newSlot, idToken);
   invalidateCache();
 
-  // Sync to D1 (non-blocking)
-  syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
+  // Sync to D1 — awaited so the Worker can't drop it (status reads D1 first)
+  await syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
 
   // Invalidate Cloudflare Cache API cache so status returns fresh data
   await invalidateStatusCacheFn();
@@ -448,8 +450,8 @@ export async function handleEarlyStart(
 
   invalidateCache();
 
-  // Sync early start to D1 (non-blocking)
-  syncSlotToD1(db, upcomingSlot.id, {
+  // Sync early start to D1 — awaited so the Worker can't drop it
+  await syncSlotToD1(db, upcomingSlot.id, {
     ...upcomingSlot,
     id: upcomingSlot.id,
     startTime: newStartTime.toISOString(),

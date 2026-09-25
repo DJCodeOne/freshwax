@@ -116,21 +116,21 @@ export async function activateSubscription(params: SubscriptionActivationParams)
       });
 
       // Log successful subscription
-      logStripeEvent(eventType, eventId, true, {
+      await logStripeEvent(eventType, eventId, true, {
         message: `Plus subscription activated for ${userId}`,
         metadata: { userId, plusId, promoCode: promoCode || null },
         processingTimeMs: Date.now() - startTime
       }).catch(e => log.error('[subscription] Log error:', e));
     } else {
       log.error('[subscription] Failed to update user subscription');
-      logStripeEvent(eventType, eventId, false, {
+      await logStripeEvent(eventType, eventId, false, {
         message: 'Failed to update user subscription',
         error: 'Firestore update failed'
       }).catch(e => log.error('[subscription] Log error:', e));
     }
   } catch (updateError: unknown) {
     log.error('[subscription] Error updating subscription:', updateError);
-    logStripeEvent(eventType, eventId, false, {
+    await logStripeEvent(eventType, eventId, false, {
       message: 'Error updating subscription',
       error: updateError instanceof Error ? updateError.message : 'Unknown error'
     }).catch(e => log.error('[subscription] Log error:', e));

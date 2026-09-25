@@ -266,10 +266,11 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
     invalidateCache();
 
-    // Sync cancellation to D1 (non-blocking)
+    // Sync cancellation to D1 — awaited: returning straight after a bare
+    // promise dropped it, leaving the cancelled slot on the D1-first schedule.
     const env = locals.runtime.env;
     const db = env?.DB;
-    syncSlotStatusToD1(db, slotId, 'cancelled', { cancelledAt });
+    await syncSlotStatusToD1(db, slotId, 'cancelled', { cancelledAt });
 
     return successResponse({ message: 'Slot cancelled' });
 

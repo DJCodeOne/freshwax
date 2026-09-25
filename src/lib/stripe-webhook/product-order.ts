@@ -317,7 +317,7 @@ export async function handleProductOrder(
     log.error('[Stripe Webhook] ORDER CREATION FAILED');
     log.error('[Stripe Webhook] Error:', result.error);
 
-    logStripeEvent(eventType, eventId, false, {
+    await logStripeEvent(eventType, eventId, false, {
       message: 'Order creation failed',
       error: result.error || 'Unknown error',
       processingTimeMs: Date.now() - startTime
@@ -511,8 +511,10 @@ export async function handleProductOrder(
     });
   }
 
-  // Log successful order
-  logStripeEvent(eventType, eventId, true, {
+  // Log successful order. Awaited: a bare promise is dropped when the Worker
+  // returns (webhookLogs stayed empty); the .catch keeps a logging failure
+  // from affecting the response.
+  await logStripeEvent(eventType, eventId, true, {
     message: `Order ${result.orderNumber} created successfully`,
     metadata: { orderId: result.orderId, orderNumber: result.orderNumber, amount: session.amount_total! / 100 },
     processingTimeMs: Date.now() - startTime

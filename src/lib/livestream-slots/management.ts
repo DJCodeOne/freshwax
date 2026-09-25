@@ -91,8 +91,9 @@ export async function handleEndStream(
   }
   await updateDocument('livestreamSlots', targetSlotId, endStreamUpdates);
 
-  // Sync status change to D1 (non-blocking)
-  syncSlotStatusToD1(db, targetSlotId, 'completed', { endedAt: nowISO, ...(endStreamUpdates.endTime ? { endTime: nowISO } : {}) });
+  // Sync status change to D1 — awaited: status reads D1 first, so a dropped
+  // write left the DJ showing live after they ended the stream.
+  await syncSlotStatusToD1(db, targetSlotId, 'completed', { endedAt: nowISO, ...(endStreamUpdates.endTime ? { endTime: nowISO } : {}) });
 
   // Record streaming time for usage tracking
   try {
@@ -267,8 +268,8 @@ export async function handleHeartbeat(
     lastHeartbeat: nowISO
   });
 
-  // Also update D1 (non-blocking)
-  syncSlotStatusToD1(db, slotId, 'live', { lastHeartbeat: nowISO });
+  // Also update D1 — awaited so the Worker can't drop the heartbeat
+  await syncSlotStatusToD1(db, slotId, 'live', { lastHeartbeat: nowISO });
 
   return successResponse({ ok: true });
 }

@@ -158,8 +158,8 @@ export async function handleStartRelay(
   await setDocument('livestreamSlots', relaySlotId, newSlot, idToken);
   invalidateCache();
 
-  // Sync to D1 (non-blocking)
-  syncSlotToD1(db, relaySlotId, { id: relaySlotId, ...newSlot });
+  // Sync to D1 — awaited so the Worker can't drop it (status reads D1 first)
+  await syncSlotToD1(db, relaySlotId, { id: relaySlotId, ...newSlot });
 
   // Invalidate Cloudflare Cache API cache so status returns fresh data
   await invalidateStatusCacheFn();

@@ -264,7 +264,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await handleDisputeCreated(dispute, stripeSecretKey);
 
-      logStripeEvent(event.type, event.id, true, {
+      await logStripeEvent(event.type, event.id, true, {
         message: `Dispute created: ${dispute.reason}`,
         metadata: { disputeId: dispute.id, chargeId: dispute.charge, amount: dispute.amount / 100 },
         processingTimeMs: Date.now() - startTime
@@ -278,7 +278,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await handleDisputeClosed(dispute, stripeSecretKey);
 
-      logStripeEvent(event.type, event.id, true, {
+      await logStripeEvent(event.type, event.id, true, {
         message: `Dispute closed: ${dispute.status}`,
         metadata: { disputeId: dispute.id, status: dispute.status },
         processingTimeMs: Date.now() - startTime
@@ -298,7 +298,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await handleRefund(charge, stripeSecretKey, env);
 
-      logStripeEvent(event.type, event.id, true, {
+      await logStripeEvent(event.type, event.id, true, {
         message: `Refund processed: ${formatPrice(charge.amount_refunded / 100)}`,
         metadata: { chargeId: charge.id, amountRefunded: charge.amount_refunded / 100 },
         processingTimeMs: Date.now() - startTime
@@ -311,8 +311,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     log.error('[Stripe Webhook] Error:', errorMessage);
 
-    // Log error
-    logStripeEvent('webhook_error', 'unknown', false, {
+    // Log error. Every logStripeEvent is awaited: a bare promise is dropped
+    // when the Worker returns, which is why webhookLogs stayed empty.
+    await logStripeEvent('webhook_error', 'unknown', false, {
       message: 'Webhook processing error',
       error: errorMessage
     }).catch(e => log.error('[Stripe Webhook] Log error:', e));
