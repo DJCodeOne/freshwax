@@ -185,6 +185,13 @@ function apiRateLimit(pathname: string, request: Request): Response | null {
   return result.allowed ? null : rateLimitResponse(result.retryAfter!);
 }
 
+// frame-ancestors for the embeddable live player (/live/embed/), the og:video /
+// twitter:player iframe that /live/ advertises. It is the ONLY page that may be
+// framed, and only by the site itself and the platforms that render that card.
+// (A <meta> CSP cannot set frame-ancestors — browsers ignore it there.)
+const EMBED_PLAYER_PATH = '/live/embed/';
+const EMBED_FRAME_ANCESTORS = "'self' https://facebook.com https://*.facebook.com https://x.com https://*.x.com https://twitter.com https://*.twitter.com";
+
 // Security headers to apply to all responses (CSP is added dynamically per-request)
 const securityHeaders: Record<string, string> = {
   'X-Frame-Options': 'DENY',
@@ -448,6 +455,10 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     for (const [key, value] of Object.entries(securityHeaders)) {
       newHeaders.set(key, value);
     }
+    // The live player card must be frameable by Facebook/X; X-Frame-Options has
+    // no allow-list, so drop it there and rely on CSP frame-ancestors below.
+    const isEmbedPlayer = pathname === EMBED_PLAYER_PATH;
+    if (isEmbedPlayer) newHeaders.delete('X-Frame-Options');
     // CSP script-src uses 'unsafe-inline' because Astro's renderScript, define:vars,
     // and is:inline blocks cannot reliably receive nonce attributes. Nonce-based CSP
     // causes browsers to ignore 'unsafe-inline', breaking inline scripts site-wide.
@@ -455,7 +466,7 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     if (!newHeaders.has('Cache-Control')) {
       newHeaders.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     }
-    const csp = `default-src 'self'; script-src 'self' 'unsafe-inline' https: data:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://translate.googleapis.com https://www.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' blob: https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.pusher.com wss://*.pusher.com https://api.stripe.com https://*.stripe.com https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.gstatic.com https://www.google.com https://cdn.jsdelivr.net https://unpkg.com https://*.trycloudflare.com https://stream.freshwax.co.uk https://stream.freshwax.co.uk:8889 https://stream.freshwax.co.uk:9997 https://rtmp.freshwax.co.uk https://icecast.freshwax.co.uk https://playlist.freshwax.co.uk https://cdn.freshwax.co.uk https://noembed.com https://api.giphy.com https://www.paypal.com https://*.paypal.com https://www.youtube.com https://vinyl-api.davidhagon.workers.dev https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://freshwax-uploader-9ge.pages.dev https://www.twitch.tv https://player.twitch.tv https://embed.twitch.tv https://www.paypal.com https://*.paypal.com https://www.google.com https://accounts.google.com https://freshwax-store.firebaseapp.com; media-src 'self' https: blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none';`;
+    const csp = `default-src 'self'; script-src 'self' 'unsafe-inline' https: data:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://translate.googleapis.com https://www.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' blob: https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.pusher.com wss://*.pusher.com https://api.stripe.com https://*.stripe.com https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.gstatic.com https://www.google.com https://cdn.jsdelivr.net https://unpkg.com https://*.trycloudflare.com https://stream.freshwax.co.uk https://stream.freshwax.co.uk:8889 https://stream.freshwax.co.uk:9997 https://rtmp.freshwax.co.uk https://icecast.freshwax.co.uk https://playlist.freshwax.co.uk https://cdn.freshwax.co.uk https://noembed.com https://api.giphy.com https://www.paypal.com https://*.paypal.com https://www.youtube.com https://vinyl-api.davidhagon.workers.dev https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://freshwax-uploader-9ge.pages.dev https://www.twitch.tv https://player.twitch.tv https://embed.twitch.tv https://www.paypal.com https://*.paypal.com https://www.google.com https://accounts.google.com https://freshwax-store.firebaseapp.com; media-src 'self' https: blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors ${isEmbedPlayer ? EMBED_FRAME_ANCESTORS : "'none'"};`;
     newHeaders.set('Content-Security-Policy', csp);
   }
 

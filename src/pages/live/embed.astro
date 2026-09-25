@@ -7,6 +7,7 @@ export const prerender = false;
 
 // Get current stream info for meta tags
 import { queryCollection } from '../../lib/firebase-rest';
+import { d1GetLiveSlots } from '../../lib/d1-catalog';
 import { SITE_URL } from '../../lib/constants';
 
 let currentStream: Record<string, unknown> | null = null;
@@ -15,11 +16,22 @@ let thumbnailUrl = `${SITE_URL}/og-image.webp`;
 let streamTitle = 'Fresh Wax Live';
 let djName = 'Fresh Wax';
 
+// Same source order as /api/livestream/status: D1 first, cross-check Firestore
+// when a D1 slot's endTime has passed (the D1 sync can be stale), Firestore
+// when D1 has nothing. This used to pass `where` (not a queryCollection option),
+// so the filter was dropped and an arbitrary old slot was always shown as
+// "LIVE NOW" to Facebook/X.
 try {
-  const liveSlots = await queryCollection('livestreamSlots', {
-    where: [{ field: 'status', op: '==', value: 'live' }],
-    limit: 1
-  });
+  const db = Astro.locals.runtime?.env?.DB;
+  const liveFilter = [{ field: 'status', op: 'EQUAL' as const, value: 'live' }];
+  let liveSlots: Record<string, unknown>[] = db ? await d1GetLiveSlots(db) : [];
+
+  if (liveSlots.some(s => s.endTime && new Date(s.endTime as string).getTime() < Date.now())) {
+    liveSlots = await queryCollection('livestreamSlots', { filters: liveFilter, limit: 5, skipCache: true });
+  }
+  if (liveSlots.length === 0) {
+    liveSlots = await queryCollection('livestreamSlots', { filters: liveFilter, limit: 5, cacheTTL: 30000 });
+  }
 
   if (liveSlots.length > 0) {
     currentStream = liveSlots[0];
@@ -34,7 +46,9 @@ try {
 
 const isLive = !!currentStream;
 const nonce = Astro.locals.nonce || '';
-Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800, stale-while-revalidate=3600');
+// Live state changes by the minute — a 30-minute edge cache kept serving
+// "LIVE NOW" long after a set ended.
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=120');
 ---
 
 <!DOCTYPE html>
@@ -77,9 +91,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   <meta name="twitter:player:width" content="1280" />
   <meta name="twitter:player:height" content="720" />
 
-  <!-- Allow embedding -->
-  <!-- Embed page: allow framing from known social/embed platforms only via CSP -->
-  <meta http-equiv="Content-Security-Policy" content={`frame-ancestors 'self' ${SITE_URL} ${SITE_URL.replace('https://', 'https://www.')} https://*.facebook.com https://*.twitter.com https://*.x.com`} />
+  <!-- Framing policy for this page is set by src/middleware.ts (EMBED_FRAME_ANCESTORS):
+       browsers ignore frame-ancestors in a <meta> CSP, and the site-wide
+       X-Frame-Options: DENY header used to block every social player card. -->
 
   <style>
     * {
