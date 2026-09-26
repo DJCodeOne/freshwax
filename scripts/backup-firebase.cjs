@@ -2,11 +2,18 @@
 // Downloads key Firestore collections to local JSON files
 // Uses service account for protected collections
 
-require('dotenv').config();
 const https = require('https');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+
+// Load .env from the repo root with Node's native loader — works from any cwd
+// and has no dependency that can vanish from node_modules (dotenv did, Feb 2026).
+try {
+  process.loadEnvFile(path.join(__dirname, '..', '.env'));
+} catch (e) {
+  console.log(`Warning: could not load .env: ${e.message}`);
+}
 
 const API_KEY = process.env.FIREBASE_API_KEY || process.env.PUBLIC_FIREBASE_API_KEY;
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -29,7 +36,9 @@ const COLLECTIONS = [
   'giftCards',
   'blog',
   'role-requests',
-  'newsletter-subscribers'
+  'newsletter-subscribers',
+  'subscribers',
+  'admins'
 ];
 
 // Generate JWT for service account auth
