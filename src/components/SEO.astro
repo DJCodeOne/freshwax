@@ -4,6 +4,7 @@
 // Based on analysis of high-ranking music and e-commerce sites
 
 import { SITE_URL } from '../lib/constants';
+import { truncateSerpTitle } from '../lib/serp-title';
 
 interface Props {
   title: string;
@@ -170,12 +171,13 @@ const fullTitle = title === 'Home'
 // ~50-char one-line link card and ends up wrapping mid-phrase.
 const socialTitle = ogTitle ?? fullTitle;
 
-// SERP title: truncate to 60 chars max to avoid Google truncation
+// SERP title: fit 60 chars to avoid Google truncation. Cuts at a word boundary
+// and keeps a trailing number ("... T-Shirt 3") so numbered products stay distinct.
 const SERP_MAX = 60;
 const SUFFIX = ` | ${TITLE_BRAND}`; // " | FreshWax"
 const serpTitle = fullTitle.length <= SERP_MAX
   ? fullTitle
-  : title.substring(0, SERP_MAX - SUFFIX.length - 3) + `...${SUFFIX}`;
+  : truncateSerpTitle(title, SERP_MAX - SUFFIX.length) + SUFFIX;
 
 // Normalize pathname: ensure trailing slash to match Cloudflare's canonical URL
 const normalizedPath = Astro.url.pathname === '/'
