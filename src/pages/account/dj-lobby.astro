@@ -4610,6 +4610,50 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     showChooser();
   }
 
+  // Book a fresh 60-minute slot starting now for a phone go-live and adopt it
+  // as mySlot.
+  async function bookPhoneSlot() {
+    var token = await currentUser.getIdToken();
+    var now = new Date();
+    now.setSeconds(0, 0);
+    var bookResponse = await fetch('/api/livestream/slots/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        action: 'book',
+        djId: currentUser.uid,
+        djName: (userInfo ? userInfo.name : null) || (currentUser.displayName) || 'DJ',
+        djAvatar: (userInfo ? userInfo.avatar : null) || (currentUser.photoURL) || '/place-holder.webp',
+        startTime: now.toISOString(),
+        duration: 60,
+        title: 'Live Session',
+        genre: '',
+        description: ''
+      })
+    });
+    // Parse the body even on 4xx: it carries the reason the booking failed.
+    var bookResult = await bookResponse.json().catch(function() { return {}; });
+    if (!bookResponse.ok || !bookResult.success) {
+      throw new Error(bookResult.error || ('Book slot failed: ' + bookResponse.status));
+    }
+    mySlot = bookResult.slot;
+    currentStreamKey = mySlot.streamKey;
+    scheduling.setMySlot(mySlot);
+    scheduling.setCurrentStreamKey(currentStreamKey);
+    return mySlot;
+  }
+
+  // Drop the booking held in memory (it was used up by a go-live, or ended).
+  function forgetMySlot() {
+    mySlot = null;
+    currentStreamKey = null;
+    scheduling.setMySlot(null);
+    scheduling.setCurrentStreamKey(null);
+  }
+
   // Mobile Ready button
   document.getElementById('mobileReadyBtn')?.addEventListener('click', async () => {
     if (!currentUser) return;
@@ -4628,46 +4672,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     btnText.textContent = 'Booking slot...';
 
     try {
-      // Ensure a slot is booked. This previously also required !currentStream,
-      // which skipped booking whenever a (sometimes stale/orphaned) live stream
-      // was showing — leaving mySlot null so the GO LIVE button appeared but did
-      // nothing when pressed. handleBook rejects with a clear conflict message if
-      // someone is genuinely live, so booking unconditionally here is safe.
-      if (!mySlot) {
-        var token = await currentUser.getIdToken();
-        var now = new Date();
-        now.setSeconds(0, 0);
-
-        var bookResponse = await fetch('/api/livestream/slots/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify({
-            action: 'book',
-            djId: currentUser.uid,
-            djName: (userInfo ? userInfo.name : null) || (currentUser.displayName) || 'DJ',
-            djAvatar: (userInfo ? userInfo.avatar : null) || (currentUser.photoURL) || '/place-holder.webp',
-            startTime: now.toISOString(),
-            duration: 60,
-            title: 'Live Session',
-            genre: '',
-            description: ''
-          })
-        });
-
-        // Parse the body even on 4xx: it carries the reason the booking failed.
-        var bookResult = await bookResponse.json().catch(function() { return {}; });
-        if (!bookResponse.ok || !bookResult.success) {
-          throw new Error(bookResult.error || ('Book slot failed: ' + bookResponse.status));
-        }
-
-        mySlot = bookResult.slot;
-        currentStreamKey = mySlot.streamKey;
-        scheduling.setMySlot(mySlot);
-        scheduling.setCurrentStreamKey(currentStreamKey);
-      }
+      // Ensure an ACTIVE booking. Re-check every time rather than trusting the
+      // slot held in memory: going live completes the booking it covers, and a
+      // booking can end while the lobby sits open — reusing either failed with
+      // "Slot is not in an active state". (handleBook rejects with a clear
+      // conflict message if someone is genuinely live.)
+      await loadMySlot();
+      if (!mySlot) await bookPhoneSlot();
 
       // Set presence ready
       var idToken = await currentUser.getIdToken();
@@ -4721,13 +4732,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // Mobile Go Live button — camera already running from Ready step
   document.getElementById('mobileGoLiveBtn')?.addEventListener('click', async () => {
     if (!currentUser) return;
-    // Don't silently do nothing if there's no slot (e.g. the Ready step skipped
-    // booking) — tell the DJ so the button never feels dead.
-    if (!mySlot) {
-      var noSlotEl = document.getElementById('mobileStatusText');
-      if (noSlotEl) noSlotEl.textContent = 'No slot booked yet — tap "I\'m Ready" again.';
-      return;
-    }
 
     var btn = document.getElementById('mobileGoLiveBtn');
     var btnText = document.getElementById('mobileGoLiveBtnText');
@@ -4747,15 +4751,31 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     try {
       // Go live via WHIP (camera already started in Ready step)
       var token = await currentUser.getIdToken();
-      await mobileBroadcast.goLive(
-        token,
-        mySlot.id,
-        mySlot.streamKey || currentStreamKey,
-        currentUser.uid,
-        (userInfo ? userInfo.name : null) || currentUser.displayName || 'DJ',
-        (userInfo ? userInfo.avatar : null) || currentUser.photoURL || '/place-holder.webp',
-        timerEl
-      );
+      if (!mySlot) await bookPhoneSlot();
+      var goLiveNow = function() {
+        return mobileBroadcast.goLive(
+          token,
+          mySlot.id,
+          mySlot.streamKey || currentStreamKey,
+          currentUser.uid,
+          (userInfo ? userInfo.name : null) || currentUser.displayName || 'DJ',
+          (userInfo ? userInfo.avatar : null) || currentUser.photoURL || '/place-holder.webp',
+          timerEl
+        );
+      };
+      try {
+        await goLiveNow();
+      } catch (firstErr) {
+        // The booking went stale between Ready and Go Live (used up by an
+        // earlier go-live, or it ended): book a fresh slot and retry once.
+        // These errors come from /api/livestream/whip-url before any stream
+        // connection is made, so retrying is safe.
+        var firstMsg = firstErr instanceof Error ? firstErr.message : '';
+        if (!/not in an active state|has expired|Slot not found|does not match slot/i.test(firstMsg)) throw firstErr;
+        forgetMySlot();
+        await bookPhoneSlot();
+        await goLiveNow();
+      }
 
       // Success - switch to live UI
       btn.style.display = 'none';
@@ -4888,6 +4908,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     var readyBtn = document.getElementById('mobileReadyBtn');
     var readyBtnText = document.getElementById('mobileReadyBtnText');
     var goLiveBtn = document.getElementById('mobileGoLiveBtn');
+
+    // The stream that just ended used up its booking (go-live marks it
+    // completed), so drop it and reload: the next go-live books afresh or picks
+    // up a later booking instead of failing "Slot is not in an active state".
+    try { forgetMySlot(); loadMySlot().catch(function() {}); } catch (e) { /* non-critical */ }
 
     if (offlineState) offlineState.style.display = '';
     if (videoEl) { videoEl.classList.remove('active'); videoEl.srcObject = null; }
