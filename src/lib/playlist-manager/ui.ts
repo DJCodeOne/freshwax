@@ -420,6 +420,10 @@ export function hidePlaylistLoadingOverlay(): void {
  * Show offline overlay
  */
 export function showOfflineOverlay(): void {
+  // #videoPlayer also holds the live stream. The playlist calls this when its
+  // queue empties or a sync fails, which can happen mid-stream; hiding the box
+  // then left listeners hearing the DJ with no picture.
+  if (window.isLiveStreamActive) return;
   const offlineOverlay = document.getElementById('offlineOverlay');
   const videoPlayer = document.getElementById('videoPlayer');
 

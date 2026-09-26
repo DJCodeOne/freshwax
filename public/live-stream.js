@@ -13,7 +13,7 @@ import {
   setupHlsPlayer, setupTwitchPlayer, setupAudioPlayer, setupRecording,
   destroyHlsPlayer, cleanupHlsAbort, getGlobalAudioContext,
   getIsRecording, stopRecording
-} from '/live/hls-player.js?v=20260926c';
+} from '/live/hls-player.js?v=20260926d';
 
 import {
   getPusherConfig, loadPusherScript, setupLiveStatusPusher
@@ -580,7 +580,8 @@ async function checkLiveStatus(forceRefresh) {
       }
       var vp = document.getElementById('videoPlayer'); var hlsVid = document.getElementById('hlsVideoElement'); var pp = document.getElementById('playlistPlayer');
       if (canResumePlaylist && playlistManager && playlistManager.queue && playlistManager.queue.length > 0) { if (hlsVid) hlsVid.classList.add('hidden'); if (pp) pp.classList.remove('hidden'); if (vp) { vp.classList.remove('hidden'); vp.style.opacity = '1'; } }
-      else if (canResumePlaylist) { if (vp) { vp.style.opacity = '0'; setTimeout(function() { vp.classList.add('hidden'); }, 300); } }
+      // (The delayed hide must not land on a stream that started meanwhile.)
+      else if (canResumePlaylist) { if (vp) { vp.style.opacity = '0'; setTimeout(function() { if (!window.isLiveStreamActive) vp.classList.add('hidden'); }, 300); } }
       else { if (hlsVid) hlsVid.classList.remove('hidden'); if (pp) pp.classList.add('hidden'); }
       showOfflineState(data.scheduled || []);
     }

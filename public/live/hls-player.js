@@ -48,19 +48,45 @@ export function getHlsPlayer() {
   return hlsPlayer;
 }
 
+// Same file on two CDNs (identical bytes). live.astro loads hls.js with a script
+// tag; this is the fallback when that failed. A CDN request that stalls — no
+// load, no error — must not hold the player up: after 8 s the next is tried.
+var HLS_JS_SOURCES = [
+  'https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.4.12/hls.min.js'
+];
+
 export function loadHlsLibrary() {
   if (window.Hls) return Promise.resolve();
   if (_hlsLoadPromise) return _hlsLoadPromise;
   _hlsLoadPromise = new Promise(function(resolve, reject) {
-    var s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js';
-    s.crossOrigin = 'anonymous';
-    s.onload = function() { resolve(); };
-    s.onerror = function() {
-      _hlsLoadPromise = null;
-      reject(new Error('Failed to load HLS.js'));
-    };
-    document.head.appendChild(s);
+    var attempt = -1;
+    var settled = false;
+    var timer = null;
+    function tryNext() {
+      clearTimeout(timer);
+      attempt++;
+      if (attempt >= HLS_JS_SOURCES.length) {
+        settled = true;
+        _hlsLoadPromise = null;
+        reject(new Error('Failed to load HLS.js'));
+        return;
+      }
+      var mine = attempt;
+      var s = document.createElement('script');
+      s.src = HLS_JS_SOURCES[mine];
+      s.crossOrigin = 'anonymous';
+      s.onload = function() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      };
+      s.onerror = function() { if (!settled && mine === attempt) tryNext(); };
+      timer = setTimeout(function() { if (!settled && mine === attempt) tryNext(); }, 8000);
+      document.head.appendChild(s);
+    }
+    tryNext();
   });
   return _hlsLoadPromise;
 }
@@ -276,14 +302,15 @@ export async function setupHlsPlayer(streamData, deps) {
   var rememberAutoplay = deps.rememberAutoplay;
   var setLiveStreamPlaying = deps.setLiveStreamPlaying;
 
-  await loadHlsLibrary().catch(function(err) {
-    /* HLS library load failed */
-  });
-
+  // Show the black video box and its "Video loading…" notice straight away,
+  // before anything async. Reset opacity too: checkLiveStatus's offline branch
+  // fades the box to 0 when there's no playlist, and removing "hidden" alone
+  // left the stream playing — audible — in an invisible box (viewers saw the
+  // empty gradient under ON AIR until they refreshed).
   var audioPlayer = document.getElementById('audioPlayer');
   var videoPlayer = document.getElementById('videoPlayer');
   if (audioPlayer) { audioPlayer.classList.add('hidden'); audioPlayer.style.display = 'none'; }
-  if (videoPlayer) { videoPlayer.classList.remove('hidden'); videoPlayer.style.display = ''; videoPlayer.style.background = '#000'; videoPlayer.style.zIndex = '2'; }
+  if (videoPlayer) { videoPlayer.classList.remove('hidden'); videoPlayer.style.display = ''; videoPlayer.style.opacity = '1'; videoPlayer.style.background = '#000'; videoPlayer.style.zIndex = '2'; }
 
   var video = document.getElementById('hlsVideoElement');
   var twitchEmbed = document.getElementById('twitchEmbed');
@@ -324,6 +351,15 @@ export async function setupHlsPlayer(streamData, deps) {
   if (durationBox) durationBox.style.display = 'none';
   var branding = document.getElementById('videoPlayerBranding');
   if (branding) branding.classList.remove('hidden');
+
+  resetLiveVideoDiag();
+  var hlsLoadStart = Date.now();
+  await loadHlsLibrary().catch(function(err) {
+    /* HLS library load failed */
+  });
+  liveVideoDiag.hlsLoadMs = Date.now() - hlsLoadStart;
+  // The stream may have ended while hls.js was loading.
+  if (!window.isLiveStreamActive) return;
 
   var hlsUrl = normalizeHlsUrl(
     streamData.hlsUrl || streamData.videoStreamUrl || streamData.audioStreamUrl || (streamData.relaySource && streamData.relaySource.url)
@@ -427,6 +463,11 @@ export async function setupHlsPlayer(streamData, deps) {
       console.error('[HLS] Not supported - Hls exists:', !!window.Hls, 'isSupported:', !!window.Hls && Hls.isSupported());
       showStreamError('Your browser does not support HLS playback.');
     }
+    liveVideoDiag.path = (nativeHls === 'probably' || (nativeHls && !hlsJsOk)) ? 'native' : (hlsJsOk ? 'hls.js' : 'none');
+    liveVideoDiag.nativeHls = nativeHls;
+    liveVideoDiag.broadcastMode = streamData.broadcastMode || null;
+    liveVideoDiag.streamId = streamData.id || null;
+    scheduleLiveVideoReport(video);
 
     function createHlsJsPlayer() {
       if (hlsPlayer) hlsPlayer.destroy();
@@ -592,6 +633,7 @@ export async function setupHlsPlayer(streamData, deps) {
 }
 
 export function setupTwitchPlayer(streamData) {
+  stopLiveVideoChecks(); // no HLS video box to guard here
   var audioPlayer = document.getElementById('audioPlayer');
   var videoPlayer = document.getElementById('videoPlayer');
   if (audioPlayer) audioPlayer.classList.add('hidden');
@@ -617,6 +659,8 @@ export async function setupAudioPlayer(streamData, deps) {
   // Audio-only / placeholder / relay streams have no video feed, so make sure
   // the "Video loading…" notice is never showing here.
   ['fsVideoLoading', 'videoLoadingNotice'].forEach(function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); });
+  // This path hides the video box on purpose — stop the live-video checks.
+  stopLiveVideoChecks();
   var shouldAutoplay = deps.shouldAutoplay;
   var wasLiveStreamPlaying = deps.wasLiveStreamPlaying;
   var setLiveStreamPlaying = deps.setLiveStreamPlaying;
@@ -953,6 +997,13 @@ function stopVideoWatchdog() {
   if (videoWatchdogTimer) { clearInterval(videoWatchdogTimer); videoWatchdogTimer = null; }
 }
 
+// True when the hls.js manifest lists no video codec (an audio-only stream).
+function isAudioOnlyHls(hls) {
+  return !!(hls && hls.levels && hls.levels.length && !hls.levels.some(function(l) {
+    return l.videoCodec || /avc1|hvc1|hev1|av01|vp09/i.test((l.attrs && l.attrs.CODECS) || '');
+  }));
+}
+
 function decodedVideoFrames(video) {
   try {
     if (typeof video.getVideoPlaybackQuality === 'function') return video.getVideoPlaybackQuality().totalVideoFrames;
@@ -973,6 +1024,7 @@ function startVideoWatchdog(video, getHls, rebuild) {
   var lastRebuildAt = Date.now();
   videoWatchdogTimer = setInterval(function() {
     if (!video.isConnected) { stopVideoWatchdog(); return; }
+    keepLiveVideoVisible(video);
     var t = video.currentTime;
     var f = decodedVideoFrames(video);
     var paused = video.paused || window.liveUserPaused || document.hidden;
@@ -983,14 +1035,14 @@ function startVideoWatchdog(video, getHls, rebuild) {
     if (paused || !audioAdvancing || videoAdvancing) { stalledSince = null; return; }
 
     // Audio-only rendition? Then there's no video to wait for.
-    var hls = getHls ? getHls() : null;
-    if (hls && hls.levels && hls.levels.length && !hls.levels.some(function(l) { return l.videoCodec || /avc1|hvc1|hev1|av01|vp09/i.test((l.attrs && l.attrs.CODECS) || ''); })) return;
+    if (isAudioOnlyHls(getHls ? getHls() : null)) return;
 
     if (!stalledSince) stalledSince = Date.now();
     var waitMs = 6000 + rebuilds * 4000; // a keyframe may be on its way; back off each time
     if (Date.now() - stalledSince < waitMs || Date.now() - lastRebuildAt < waitMs) return;
-    if (rebuilds >= MAX_REBUILDS) { stopVideoWatchdog(); return; }
+    if (rebuilds >= MAX_REBUILDS) return; // give up rebuilding, keep the visibility check
     rebuilds++;
+    liveVideoDiag.rebuilds = rebuilds;
     lastRebuildAt = Date.now();
     stalledSince = null;
     console.warn('[HLS] Audio is playing but no video frames arrived; rebuilding the player (attempt ' + rebuilds + ')');
@@ -998,8 +1050,80 @@ function startVideoWatchdog(video, getHls, rebuild) {
   }, 2000);
 }
 
-export function destroyHlsPlayer() {
+// #videoPlayer is shared with the offline playlist, and several playlist /
+// offline code paths hide it (class "hidden", opacity 0). If one of them runs
+// while a DJ is live, the stream carries on — you can hear it — inside an
+// invisible box. While the live video player runs, keep the box on screen.
+function keepLiveVideoVisible(video) {
+  if (!window.isLiveStreamActive) return;
+  var vp = document.getElementById('videoPlayer');
+  var fixed = [];
+  if (vp) {
+    if (vp.classList.contains('hidden')) { vp.classList.remove('hidden'); fixed.push('box hidden'); }
+    if (vp.style.display === 'none') { vp.style.display = ''; fixed.push('box display:none'); }
+    if (vp.style.opacity === '0') { vp.style.opacity = '1'; fixed.push('box opacity:0'); }
+  }
+  if (video.classList.contains('hidden')) { video.classList.remove('hidden'); fixed.push('video hidden'); }
+  if (!fixed.length) return;
+  console.warn('[HLS] Live video was hidden (' + fixed.join(', ') + '); showing it again');
+  if (liveVideoDiag.unhid.length < 10) liveVideoDiag.unhid.push(Math.round((Date.now() - liveVideoDiag.startedAt) / 1000) + 's ' + fixed.join('+'));
+}
+
+// Field report: if a viewer still can't SEE the live video 20 s after the
+// player started (box hidden, or playing with no picture), log what the player
+// looked like to /admin/errors (level warn) — once per stream start.
+var liveVideoDiag = { startedAt: Date.now(), unhid: [], rebuilds: 0 };
+var liveVideoReportTimer = null;
+
+function resetLiveVideoDiag() {
+  if (liveVideoReportTimer) { clearTimeout(liveVideoReportTimer); liveVideoReportTimer = null; }
+  liveVideoDiag = { startedAt: Date.now(), unhid: [], rebuilds: 0, hlsLoadMs: null, path: null, nativeHls: null, broadcastMode: null, streamId: null };
+}
+
+function stopLiveVideoChecks() {
   stopVideoWatchdog();
+  if (liveVideoReportTimer) { clearTimeout(liveVideoReportTimer); liveVideoReportTimer = null; }
+}
+
+function scheduleLiveVideoReport(video) {
+  if (liveVideoReportTimer) clearTimeout(liveVideoReportTimer);
+  liveVideoReportTimer = setTimeout(function() {
+    liveVideoReportTimer = null;
+    try {
+      if (!window.isLiveStreamActive || document.hidden || !video.isConnected) return;
+      var vp = document.getElementById('videoPlayer');
+      var cs = vp ? getComputedStyle(vp) : null;
+      var boxVisible = !!(cs && cs.display !== 'none' && cs.visibility !== 'hidden' && parseFloat(cs.opacity) > 0.05)
+        && getComputedStyle(video).display !== 'none';
+      var frames = decodedVideoFrames(video);
+      var picture = video.videoWidth > 0 && frames !== 0;
+      // Paused (autoplay blocked, or the listener paused) isn't a fault, and an
+      // audio-only stream has no picture to show.
+      var hls = hlsPlayer;
+      if (boxVisible && (picture || video.paused || isAudioOnlyHls(hls))) return;
+      var buffered = [];
+      for (var i = 0; i < video.buffered.length && i < 4; i++) buffered.push(video.buffered.start(i).toFixed(1) + '-' + video.buffered.end(i).toFixed(1));
+      var meta = {
+        path: liveVideoDiag.path, nativeHls: liveVideoDiag.nativeHls, hlsLoadMs: liveVideoDiag.hlsLoadMs,
+        broadcastMode: liveVideoDiag.broadcastMode, streamId: liveVideoDiag.streamId,
+        boxVisible: boxVisible, box: vp ? (vp.className + ' | ' + cs.display + ' | opacity ' + cs.opacity) : 'missing',
+        unhid: liveVideoDiag.unhid.join('; '), rebuilds: liveVideoDiag.rebuilds,
+        video: video.videoWidth + 'x' + video.videoHeight, frames: frames, currentTime: Math.round(video.currentTime * 10) / 10,
+        paused: video.paused, muted: video.muted, readyState: video.readyState, networkState: video.networkState,
+        mediaError: video.error ? video.error.code : null, buffered: buffered.join(' '),
+        levels: hls && hls.levels ? hls.levels.map(function(l) { return (l.videoCodec || '-') + '/' + (l.audioCodec || '-') + ' ' + (l.width || 0) + 'x' + (l.height || 0); }).join('; ') : null,
+        audioTracks: hls && hls.audioTracks ? hls.audioTracks.length : null
+      };
+      var x = new XMLHttpRequest();
+      x.open('POST', '/api/log-error/', true);
+      x.setRequestHeader('Content-Type', 'application/json');
+      x.send(JSON.stringify({ message: '[live-player] no visible video 20s after the stream started', level: 'warn', url: location.href, metadata: meta }));
+    } catch (e) { /* diagnostics only */ }
+  }, 20000);
+}
+
+export function destroyHlsPlayer() {
+  stopLiveVideoChecks();
   if (hlsPlayer) {
     try { hlsPlayer.destroy(); } catch (e) {
       console.error('[LiveStream] Error destroying HLS player:', e);
