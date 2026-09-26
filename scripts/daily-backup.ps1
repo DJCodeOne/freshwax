@@ -118,30 +118,63 @@ if ((Test-Path $rclone) -and (Test-Path $rcloneConf)) {
         Log "Starting cloud backup to Google Drive..."
         $zip = Join-Path $env:TEMP "freshwax-backup-$timestamp.zip"
         try {
-            $tarArgs = @('-a', '-cf', $zip, '-C', $srcDir, '.')
+            # Build the zip with .NET, not tar.exe. Windows' bsdtar (libarchive
+            # 3.8.8, shipped in a Sep 2026 update) crashes with 0xC0000005 on
+            # names containing the U+F03A colon substitute that MSYS tools create
+            # (mangled "C:..." entries in the repo root). Its 10 KB stub was
+            # uploaded and logged as a success from 2026-09-12, and pruning then
+            # deleted the real backups.
+            Add-Type -AssemblyName System.IO.Compression
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            Remove-Item $zip -Force -ErrorAction SilentlyContinue
+            [System.IO.Compression.ZipFile]::CreateFromDirectory($srcDir, $zip, [System.IO.Compression.CompressionLevel]::Optimal, $false)
             $fbJson = "E:\FreshWax-Backups\firebase-data\firebase-backup-$(Get-Date -Format 'yyyy-MM-dd').json"
-            if (Test-Path $fbJson) { $tarArgs += @('-C', (Split-Path $fbJson), (Split-Path $fbJson -Leaf)) }
-            & "$env:SystemRoot\System32\tar.exe" @tarArgs 2>&1 | Out-Null
-            & $rclone copyto $zip "gcrypt:freshwax-backup-$timestamp.zip" --config $rcloneConf 2>&1 | Out-Null
-            if ($LASTEXITCODE -ne 0) {
-                Log "Cloud backup FAILED (rclone exit $LASTEXITCODE)"
+            if (Test-Path $fbJson) {
+                $archive = [System.IO.Compression.ZipFile]::Open($zip, [System.IO.Compression.ZipArchiveMode]::Update)
+                try {
+                    [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $fbJson, (Split-Path $fbJson -Leaf), [System.IO.Compression.CompressionLevel]::Optimal)
+                } finally {
+                    $archive.Dispose()
+                }
+            }
+
+            # Never upload (or prune for) an archive that is obviously broken.
+            # A real backup is tens of MB.
+            $zipBytes = (Get-Item $zip).Length
+            if ($zipBytes -lt 10MB) {
+                Log "Cloud backup FAILED: archive is only $zipBytes bytes - not uploaded, cloud copies left untouched"
             } else {
-                Log "Cloud backup uploaded: freshwax-backup-$timestamp.zip ($([math]::Round((Get-Item $zip).Length/1MB,1)) MB)"
-                # Prune cloud copies: keep last 7 + the first of each month (same policy as the drives)
-                $names = @(& $rclone lsf "gcrypt:" --config $rcloneConf 2>$null) |
-                    Where-Object { $_ -match '^freshwax-backup-\d{4}-\d{2}-\d{2}-\d{4}\.zip$' } | Sort-Object
-                if ($names.Count -gt 7) {
-                    $keepLast = $names | Select-Object -Last 7
-                    $monthlyFirst = $names | Group-Object { $_.Substring(16, 7) } | ForEach-Object { ($_.Group | Sort-Object)[0] }
-                    $keepNames = @($keepLast) + @($monthlyFirst) | Sort-Object -Unique
-                    foreach ($n in $names) {
-                        if ($keepNames -notcontains $n) {
-                            & $rclone deletefile "gcrypt:$n" --config $rcloneConf 2>&1 | Out-Null
-                            Log "Pruned cloud backup: $n"
+                $rcloneOut = & $rclone copyto $zip "gcrypt:freshwax-backup-$timestamp.zip" --config $rcloneConf 2>&1
+                if ($LASTEXITCODE -ne 0) {
+                    Log "Cloud backup FAILED (rclone exit $LASTEXITCODE): $(@($rcloneOut)[-1])"
+                } else {
+                    Log "Cloud backup uploaded: freshwax-backup-$timestamp.zip ($([math]::Round($zipBytes/1MB,1)) MB)"
+                    # Prune cloud copies: keep last 7 + the first of each month (same policy as the drives).
+                    # Size-aware: sub-1 MB files are broken stubs (see above), never backups - remove
+                    # them so they can't count towards the 7 and push real backups out.
+                    $entries = @(& $rclone lsf "gcrypt:" --format "sp" --separator ";" --config $rcloneConf 2>$null) |
+                        ForEach-Object { $p = $_ -split ';', 2; [pscustomobject]@{ Size = [int64]$p[0]; Name = $p[1] } } |
+                        Where-Object { $_.Name -match '^freshwax-backup-\d{4}-\d{2}-\d{2}-\d{4}\.zip$' }
+                    foreach ($stub in @($entries | Where-Object { $_.Size -lt 1MB })) {
+                        & $rclone deletefile "gcrypt:$($stub.Name)" --config $rcloneConf 2>&1 | Out-Null
+                        Log "Removed broken cloud backup stub: $($stub.Name) ($($stub.Size) bytes)"
+                    }
+                    $names = @($entries | Where-Object { $_.Size -ge 1MB } | ForEach-Object { $_.Name }) | Sort-Object
+                    if ($names.Count -gt 7) {
+                        $keepLast = $names | Select-Object -Last 7
+                        $monthlyFirst = $names | Group-Object { $_.Substring(16, 7) } | ForEach-Object { ($_.Group | Sort-Object)[0] }
+                        $keepNames = @($keepLast) + @($monthlyFirst) | Sort-Object -Unique
+                        foreach ($n in $names) {
+                            if ($keepNames -notcontains $n) {
+                                & $rclone deletefile "gcrypt:$n" --config $rcloneConf 2>&1 | Out-Null
+                                Log "Pruned cloud backup: $n"
+                            }
                         }
                     }
                 }
             }
+        } catch {
+            Log "Cloud backup FAILED: $($_.Exception.Message)"
         } finally {
             Remove-Item $zip -Force -ErrorAction SilentlyContinue
         }
