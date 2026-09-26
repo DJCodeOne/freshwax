@@ -9,6 +9,8 @@
 #  Every ~4s it figures out the source and converges the relay to match:
 #    - OBS  : an fwx_* path is publishing to MediaMTX  -> Quick Sync consolidate
 #             that stream into freshwax-main.
+#    - Phone: an fwx_* path with Opus audio (phone/browser WHIP go-live) -> read
+#             over RTSP (RTMP drops Opus), fit to 1280x720, same encode.
 #    - BUTT : Icecast /live is up AND a placeholder/audio DJ is live -> Quick
 #             Sync composite (branded placeholder video + Icecast audio) into
 #             freshwax-main.
@@ -91,7 +93,7 @@ function Get-ReadyPaths {
   catch { return @() }
 }
 function MainReady { @(Get-ReadyPaths | Where-Object { $_.name -eq 'live/freshwax-main' }).Count -gt 0 }
-function Get-ObsPath { @(Get-ReadyPaths | Where-Object { $_.name -match '^live/fwx_' } | Select-Object -First 1).name }
+function Get-DjPath { Get-ReadyPaths | Where-Object { $_.name -match '^live/fwx_' } | Select-Object -First 1 }
 
 # --- Source detection -------------------------------------------------------
 function Test-Icecast {
@@ -110,8 +112,15 @@ function Test-ButtDj {
   } catch { $false }
 }
 function Get-Source {
-  $obs = Get-ObsPath
-  if ($obs) { return @{ kind = 'obs'; path = $obs } }
+  $dj = Get-DjPath
+  if ($dj) {
+    # Phone/browser go-lives (WHIP) publish Opus audio, which RTMP can't carry:
+    # MediaMTX drops it ("skipping track 1 (Opus)"), the OBS producer's [0:a] had
+    # nothing to read and ffmpeg died every few seconds, so those sets never
+    # reached Twitch/YouTube. They get their own producer (reads RTSP).
+    if (@($dj.tracks) -contains 'Opus') { return @{ kind = 'opus'; path = $dj.name } }
+    return @{ kind = 'obs'; path = $dj.name }
+  }
   if ((Test-Icecast) -and (Test-ButtDj)) { return @{ kind = 'butt' } }
   return @{ kind = 'none' }
 }
@@ -139,6 +148,19 @@ function Start-Producer($src) {
            '-filter_complex',"[0:v]fade=t=in:st=0:d=2[fg];[fg][1:v]overlay=W-w-16:16[v];[0:a]$LOUDNORM[a]",
            '-map','[v]','-map','[a]') + $venc +
          @('-c:a','aac','-b:a','192k','-ar','44100','-fps_mode','cfr','-f','flv',$LOCAL_MAIN)
+  } elseif ($src.kind -eq 'opus') {
+    # Phone/browser (WHIP) source: read it over RTSP, which carries Opus. Phones
+    # change resolution mid-stream (and may be portrait), so every frame is fitted
+    # into a fixed 1280x720@30 canvas for the encoder. Each resolution change
+    # rebuilds the filter graph, so the bug is fed as a looped image — a one-frame
+    # input is used up by the first graph and the bug vanished after the first
+    # change. shortest=1 ends the output when the DJ's stream ends.
+    $in = "rtsp://localhost:8554/$($src.path)"
+    $a = @('-hide_banner','-loglevel','warning','-rtsp_transport','tcp','-i',$in,
+           '-loop','1','-framerate','2','-i',$BUG,
+           '-filter_complex',"[0:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30,fade=t=in:st=0:d=2[fg];[fg][1:v]overlay=W-w-16:16:shortest=1[v];[0:a]aresample=async=1,$LOUDNORM[a]",
+           '-map','[v]','-map','[a]') + $venc +
+         @('-c:a','aac','-b:a','192k','-ar','44100','-ac','2','-fps_mode','cfr','-f','flv',$LOCAL_MAIN)
   } else {
     # Icecast input needs reconnect flags: on a BUTT drop the HTTP stream EOFs and
     # ffmpeg otherwise keeps encoding the looped video with NO audio (silent zombie
