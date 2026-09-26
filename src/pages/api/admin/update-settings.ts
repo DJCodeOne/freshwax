@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { getDocument, setDocument } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument } from '../../../lib/firebase-rest';
 import { successResponse, ApiErrors, parseJsonBody, createLogger } from '../../../lib/api-utils';
 
 const log = createLogger('admin/update-settings');
@@ -71,6 +71,16 @@ const DEFAULT_SETTINGS = {
     emailOnArtistEdit: false,
     emailOnBypassRequest: true,
     emailOnDJGoLive: false
+  },
+  // Mirrors the admin settings page defaults. Read by /upload-mix (limits).
+  djMixes: {
+    maxWavSizeMB: 2048,
+    maxMp3SizeMB: 500,
+    allowWavUploads: true,
+    mp3Bitrate: 192,
+    requireGenre: true,
+    requireDjName: true,
+    autoPublish: true
   }
 };
 
@@ -111,7 +121,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
           artistEditableFields: { ...DEFAULT_SETTINGS.artistEditableFields, ...(docData.artistEditableFields || {}) },
           livestream: { ...DEFAULT_SETTINGS.livestream, ...(docData.livestream || {}) },
           releaseDefaults: { ...DEFAULT_SETTINGS.releaseDefaults, ...(docData.releaseDefaults || {}) },
-          notifications: { ...DEFAULT_SETTINGS.notifications, ...(docData.notifications || {}) }
+          notifications: { ...DEFAULT_SETTINGS.notifications, ...(docData.notifications || {}) },
+          // Was missing: saved DJ-mix settings never came back, so the admin
+          // page reverted them to defaults on every reload.
+          djMixes: { ...DEFAULT_SETTINGS.djMixes, ...(docData.djMixes || {}) }
         };
       }
 
@@ -159,9 +172,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (authError) return authError;
 
     if (action === 'save') {
-      // If saving a specific section
+      // If saving a specific section — updateDocument merges; setDocument
+      // replaced the whole doc and wiped every other section.
       if (section && sectionData) {
-        await setDocument(SETTINGS_COLLECTION, SETTINGS_DOC_ID, {
+        await updateDocument(SETTINGS_COLLECTION, SETTINGS_DOC_ID, {
           [section]: sectionData,
           updatedAt: new Date().toISOString()
         });
@@ -189,7 +203,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (action === 'reset') {
       // If resetting a specific section
       if (section && DEFAULT_SETTINGS[section as keyof typeof DEFAULT_SETTINGS]) {
-        await setDocument(SETTINGS_COLLECTION, SETTINGS_DOC_ID, {
+        // Merge, don't replace — resetting one section must leave the rest.
+        await updateDocument(SETTINGS_COLLECTION, SETTINGS_DOC_ID, {
           [section]: DEFAULT_SETTINGS[section as keyof typeof DEFAULT_SETTINGS],
           updatedAt: new Date().toISOString()
         });

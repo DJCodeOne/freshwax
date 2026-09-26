@@ -4,8 +4,24 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import { getDocument } from '../lib/firebase-rest';
 const nonce = Astro.locals.nonce || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+
+// DJ-mix upload limits set in /admin/settings (stored in system/admin-settings).
+// Rendered server-side: the page used to fetch them from the admin-only
+// settings API, which 401s for every DJ, so admin changes never reached this
+// form. Only these three typed fields are exposed to the page.
+const djMixUploadSettings: { maxWavSizeMB?: number; maxMp3SizeMB?: number; allowWavUploads?: boolean } = {};
+try {
+  const adminSettings = await getDocument('system', 'admin-settings');
+  const djMixes = (adminSettings?.djMixes ?? null) as Record<string, unknown> | null;
+  if (djMixes) {
+    if (typeof djMixes.maxWavSizeMB === 'number') djMixUploadSettings.maxWavSizeMB = djMixes.maxWavSizeMB;
+    if (typeof djMixes.maxMp3SizeMB === 'number') djMixUploadSettings.maxMp3SizeMB = djMixes.maxMp3SizeMB;
+    if (typeof djMixes.allowWavUploads === 'boolean') djMixUploadSettings.allowWavUploads = djMixes.allowWavUploads;
+  }
+} catch (_e: unknown) { /* defaults in the page script apply */ }
 ---
 
 <Layout title="Upload DJ Mix" description="Upload your jungle and drum & bass DJ mix to Fresh Wax. Share with the community, get plays, likes and downloads." noindex={true}>
@@ -708,6 +724,8 @@ Artist - Track Title
   });
 </script>
 
+<script type="application/json" id="upload-settings-data" set:html={JSON.stringify(djMixUploadSettings)}></script>
+
 <script>
 
   // Auth helper - wait for auth to be ready
@@ -1137,15 +1155,13 @@ Artist - Track Title
     allowWavUploads: true
   };
 
-  // Load upload settings from Firebase
-  async function loadUploadSettings() {
+  // Load the admin-set limits the server rendered into #upload-settings-data.
+  // (Fetching the admin settings API 401'd for every DJ, so they never applied.)
+  function loadUploadSettings() {
     try {
-      const response = await fetch('/api/admin/update-settings/?action=load');
-      if (!response.ok) throw new Error('Settings fetch failed: ' + response.status);
-      const result = await response.json();
-      if (result.success && result.settings?.djMixes) {
-        uploadSettings = { ...uploadSettings, ...result.settings.djMixes };
-      }
+      const el = document.getElementById('upload-settings-data');
+      const saved = el ? JSON.parse(el.textContent || '{}') : {};
+      uploadSettings = { ...uploadSettings, ...saved };
     } catch (err) {
       // Use default settings on error
     }
