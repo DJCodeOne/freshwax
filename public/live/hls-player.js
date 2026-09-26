@@ -411,7 +411,24 @@ export async function setupHlsPlayer(streamData, deps) {
           }
         })();
       });
+      startVideoWatchdog(video, null, function() {
+        // Native HLS: reload the same source in place (what a page refresh does).
+        try { video.pause(); } catch (e) {}
+        video.removeAttribute('src');
+        video.load();
+        video.src = hlsUrl;
+        video.load();
+        video.play().catch(function() {});
+      });
     } else if (hlsJsOk) {
+      createHlsJsPlayer();
+      startVideoWatchdog(video, function() { return hlsPlayer; }, function() { createHlsJsPlayer(); });
+    } else {
+      console.error('[HLS] Not supported - Hls exists:', !!window.Hls, 'isSupported:', !!window.Hls && Hls.isSupported());
+      showStreamError('Your browser does not support HLS playback.');
+    }
+
+    function createHlsJsPlayer() {
       if (hlsPlayer) hlsPlayer.destroy();
       hlsPlayer = new Hls({
         enableWorker: true,
@@ -532,9 +549,6 @@ export async function setupHlsPlayer(streamData, deps) {
           }
         }
       });
-    } else {
-      console.error('[HLS] Not supported - Hls exists:', !!window.Hls, 'isSupported:', !!window.Hls && Hls.isSupported());
-      showStreamError('Your browser does not support HLS playback.');
     }
 
     setupMediaSession(streamData);
@@ -924,7 +938,68 @@ function encodeAndDownloadMp3() {
   recordingRightChannel = [];
 }
 
+// --- "Sound but no video" recovery -----------------------------------------
+// Phone/browser (WHIP) streams can play their audio before any video renders:
+// the player is set up the moment the DJ goes live, while the stream server is
+// still packaging the first video keyframe, and the video then may never attach
+// until the page is refreshed (audio and video are separate HLS renditions).
+// While audio is advancing with no newly decoded video frames, rebuild the
+// player in place — what a refresh does — backing off between attempts. Also
+// recovers a video freeze mid-stream. Skipped in background tabs, where the
+// browser itself stops decoding video.
+var videoWatchdogTimer = null;
+
+function stopVideoWatchdog() {
+  if (videoWatchdogTimer) { clearInterval(videoWatchdogTimer); videoWatchdogTimer = null; }
+}
+
+function decodedVideoFrames(video) {
+  try {
+    if (typeof video.getVideoPlaybackQuality === 'function') return video.getVideoPlaybackQuality().totalVideoFrames;
+    if (typeof video.webkitDecodedFrameCount === 'number') return video.webkitDecodedFrameCount;
+  } catch (e) { /* not available */ }
+  return video.videoWidth > 0 ? -1 : 0; // -1 = unknown, but video is showing
+}
+
+// getHls: returns the hls.js instance (null for native HLS) so an audio-only
+// stream (no video codec in the manifest) isn't rebuilt pointlessly.
+function startVideoWatchdog(video, getHls, rebuild) {
+  stopVideoWatchdog();
+  var MAX_REBUILDS = 6;
+  var rebuilds = 0;
+  var lastTime = video.currentTime;
+  var lastFrames = decodedVideoFrames(video);
+  var stalledSince = null;
+  var lastRebuildAt = Date.now();
+  videoWatchdogTimer = setInterval(function() {
+    if (!video.isConnected) { stopVideoWatchdog(); return; }
+    var t = video.currentTime;
+    var f = decodedVideoFrames(video);
+    var paused = video.paused || window.liveUserPaused || document.hidden;
+    var audioAdvancing = !paused && t > lastTime + 0.5;
+    var videoAdvancing = f === -1 || f > lastFrames;
+    lastTime = t;
+    lastFrames = f;
+    if (paused || !audioAdvancing || videoAdvancing) { stalledSince = null; return; }
+
+    // Audio-only rendition? Then there's no video to wait for.
+    var hls = getHls ? getHls() : null;
+    if (hls && hls.levels && hls.levels.length && !hls.levels.some(function(l) { return l.videoCodec || /avc1|hvc1|hev1|av01|vp09/i.test((l.attrs && l.attrs.CODECS) || ''); })) return;
+
+    if (!stalledSince) stalledSince = Date.now();
+    var waitMs = 6000 + rebuilds * 4000; // a keyframe may be on its way; back off each time
+    if (Date.now() - stalledSince < waitMs || Date.now() - lastRebuildAt < waitMs) return;
+    if (rebuilds >= MAX_REBUILDS) { stopVideoWatchdog(); return; }
+    rebuilds++;
+    lastRebuildAt = Date.now();
+    stalledSince = null;
+    console.warn('[HLS] Audio is playing but no video frames arrived; rebuilding the player (attempt ' + rebuilds + ')');
+    try { rebuild(); } catch (e) { console.warn('[HLS] Player rebuild failed:', e); }
+  }, 2000);
+}
+
 export function destroyHlsPlayer() {
+  stopVideoWatchdog();
   if (hlsPlayer) {
     try { hlsPlayer.destroy(); } catch (e) {
       console.error('[LiveStream] Error destroying HLS player:', e);

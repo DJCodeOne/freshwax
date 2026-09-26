@@ -233,6 +233,12 @@ export async function goLive(token, slotId, streamKey, djId, djName, djAvatar, t
     throw new Error('Could not connect to the stream server. This network may be blocking live video — try mobile data or another Wi-Fi, or stream with OBS.');
   }
 
+  // Step 3b: Wait (up to 20 s) until viewers can actually get VIDEO. Going
+  // live the instant the phone connected sent the "stream started" signal
+  // before the server had packaged a video keyframe: listeners already on
+  // /live started with sound and no picture until they refreshed.
+  await waitForViewerVideo(streamKey, 20000);
+
   // Step 4: Call go_live API
   var goLiveResp;
   try {
@@ -553,6 +559,42 @@ function handleConnectionLost(token, whipUrl, timerEl, onStats) {
     reconnecting = false;
     retryLater();
   });
+}
+
+/**
+ * Resolve true once the stream server is serving video segments for this
+ * stream (the HLS video rendition has at least one segment), false after
+ * timeoutMs. Streams without a video codec count as ready straight away.
+ * @param {string} streamKey
+ * @param {number} timeoutMs
+ * @returns {Promise<boolean>}
+ */
+async function waitForViewerVideo(streamKey, timeoutMs) {
+  var base = (window.HLS_BASE_URL || 'https://stream.freshwax.co.uk').replace(/\/+$/, '');
+  var masterUrl = base + '/live/' + encodeURIComponent(streamKey) + '/index.m3u8';
+  var deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      var res = await fetch(masterUrl + '?_=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) {
+        var master = await res.text();
+        if (!/avc1|hvc1|hev1|av01|vp09/i.test(master)) return true; // no video track
+        // The video rendition is the variant URI (first non-comment line).
+        var lines = master.split('\n');
+        var variant = null;
+        for (var i = 0; i < lines.length; i++) {
+          var l = lines[i].trim();
+          if (l && l.charAt(0) !== '#') { variant = l; break; }
+        }
+        if (variant) {
+          var vres = await fetch(new URL(variant, masterUrl).toString(), { cache: 'no-store' });
+          if (vres.ok && /#EXTINF/.test(await vres.text())) return true;
+        }
+      }
+    } catch (e) { /* not ready yet, or a network blip — keep polling */ }
+    await new Promise(function(r) { setTimeout(r, 1000); });
+  }
+  return false;
 }
 
 /**

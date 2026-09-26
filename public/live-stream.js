@@ -13,7 +13,7 @@ import {
   setupHlsPlayer, setupTwitchPlayer, setupAudioPlayer, setupRecording,
   destroyHlsPlayer, cleanupHlsAbort, getGlobalAudioContext,
   getIsRecording, stopRecording
-} from '/live/hls-player.js?v=20260926b';
+} from '/live/hls-player.js?v=20260926c';
 
 import {
   getPusherConfig, loadPusherScript, setupLiveStatusPusher
