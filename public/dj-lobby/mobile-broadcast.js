@@ -564,7 +564,7 @@ function handleConnectionLost(token, whipUrl, timerEl, onStats) {
 /**
  * Resolve true once the stream server is serving video segments for this
  * stream (the HLS video rendition has at least one segment), false after
- * timeoutMs. Streams without a video codec count as ready straight away.
+ * timeoutMs.
  * @param {string} streamKey
  * @param {number} timeoutMs
  * @returns {Promise<boolean>}
@@ -578,7 +578,10 @@ async function waitForViewerVideo(streamKey, timeoutMs) {
       var res = await fetch(masterUrl + '?_=' + Date.now(), { cache: 'no-store' });
       if (res.ok) {
         var master = await res.text();
-        if (!/avc1|hvc1|hev1|av01|vp09/i.test(master)) return true; // no video track
+        // A phone stream always carries video (the camera). The playlist can
+        // exist before the video codec is known, so don't treat "no video codec
+        // listed yet" as audio-only: that let go-live fire a second after
+        // connecting. Wait for a video segment instead.
         // The video rendition is the variant URI (first non-comment line).
         var lines = master.split('\n');
         var variant = null;

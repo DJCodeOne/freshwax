@@ -1395,7 +1395,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as scheduling from '/dj-lobby/scheduling.js?v=20260926';
   import * as shareModule from '/dj-lobby/share.js?v=20260827';
   import * as videoPlayer from '/dj-lobby/video-player.js?v=20260926';
-  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260926b';
+  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260926c';
   import * as relayModule from '/dj-lobby/relay.js?v=20260827';
   import * as initModalModule from '/dj-lobby/init-modal.js?v=20260926';
   import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260926';
@@ -4646,6 +4646,34 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     return mySlot;
   }
 
+  // The schedule list strips stream keys (it's public data), so a booking
+  // picked up by loadMySlot() arrives WITHOUT its key and going live failed
+  // with "slotId, djId, and streamKey are required". Fetch it: generate_key
+  // returns the slot's existing key (or mints one) for the DJ's own slot.
+  async function ensureSlotKey() {
+    if (!mySlot) return;
+    if (mySlot.streamKey) { currentStreamKey = mySlot.streamKey; return; }
+    var token = await currentUser.getIdToken();
+    var keyRes = await fetch('/api/livestream/slots/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        action: 'generate_key',
+        djId: currentUser.uid,
+        djName: (userInfo ? userInfo.name : null) || currentUser.displayName || 'DJ',
+        slotId: mySlot.id
+      })
+    });
+    var keyData = await keyRes.json().catch(function() { return {}; });
+    if (!keyRes.ok || !keyData.success || !keyData.streamKey) {
+      throw new Error(keyData.error || ('Could not get your stream key (' + keyRes.status + ')'));
+    }
+    mySlot.streamKey = keyData.streamKey;
+    currentStreamKey = keyData.streamKey;
+    scheduling.setMySlot(mySlot);
+    scheduling.setCurrentStreamKey(keyData.streamKey);
+  }
+
   // Drop the booking held in memory (it was used up by a go-live, or ended).
   function forgetMySlot() {
     mySlot = null;
@@ -4679,6 +4707,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       // conflict message if someone is genuinely live.)
       await loadMySlot();
       if (!mySlot) await bookPhoneSlot();
+      await ensureSlotKey();
 
       // Set presence ready
       var idToken = await currentUser.getIdToken();
@@ -4752,6 +4781,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       // Go live via WHIP (camera already started in Ready step)
       var token = await currentUser.getIdToken();
       if (!mySlot) await bookPhoneSlot();
+      await ensureSlotKey();
       var goLiveNow = function() {
         return mobileBroadcast.goLive(
           token,
@@ -4771,9 +4801,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // These errors come from /api/livestream/whip-url before any stream
         // connection is made, so retrying is safe.
         var firstMsg = firstErr instanceof Error ? firstErr.message : '';
-        if (!/not in an active state|has expired|Slot not found|does not match slot/i.test(firstMsg)) throw firstErr;
+        if (!/not in an active state|has expired|Slot not found|does not match slot|streamKey are required/i.test(firstMsg)) throw firstErr;
         forgetMySlot();
         await bookPhoneSlot();
+        await ensureSlotKey();
         await goLiveNow();
       }
 
