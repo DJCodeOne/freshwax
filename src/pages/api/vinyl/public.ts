@@ -85,6 +85,18 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
         }));
       }
 
+      // Only sellers with records to browse. Every seller profile used to be
+      // listed, so a seller with nothing published got an empty filter chip
+      // (e.g. "Fresh Wax" on an empty marketplace).
+      if (collections.length > 0) {
+        const published = await saQueryCollection(serviceAccountKey, projectId, 'vinylListings', {
+          filters: [{ field: 'status', op: 'EQUAL', value: 'published' }],
+          limit: 500
+        });
+        const sellersWithRecords = new Set(published.map((l: Record<string, unknown>) => String(l.sellerId || '')));
+        collections = collections.filter((c: Record<string, unknown>) => sellersWithRecords.has(String(c.id || '')));
+      }
+
       return successResponse({ collections });
     }
 
