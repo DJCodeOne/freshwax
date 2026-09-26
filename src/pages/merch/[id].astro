@@ -6,6 +6,7 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import { getDocument } from '../../lib/firebase-rest';
 import { createLogger } from '../../lib/api-utils';
+import { merchBrand, merchDisplayTitle } from '../../lib/merch-title';
 
 const log = createLogger('merch-page');
 
@@ -73,6 +74,10 @@ try {
       inStock: inStock,
       sku: item.sku || item.id,
       category: item.category || 'general',
+      // Names are generic ("Hoodie") — lead with the label/sound-system brand
+      // so titles are unique and the schema brand isn't always "Fresh Wax".
+      brand: merchBrand(item),
+      displayTitle: merchDisplayTitle(String(item.name || item.title || 'Product'), merchBrand(item)),
       // Merch ids embed the upload epoch-ms (merch_tshirt_1769633512843) —
       // derive the listing date for the schema offer's validFrom.
       listedDate: (() => {
@@ -90,7 +95,7 @@ try {
 }
 
 const fallbackDescription = product
-  ? `Buy ${product.name} from Fresh Wax. Official jungle and drum & bass merchandise.`
+  ? `Buy the ${product.displayTitle} from Fresh Wax. Official jungle and drum & bass merchandise.`
   : 'Product not found';
 const rawDescription = product
   ? (product.description && product.description.length >= 50
@@ -124,7 +129,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 ---
 
 <Layout
-  title={product ? product.name : 'Product Not Found'}
+  title={product ? product.displayTitle : 'Product Not Found'}
   description={pageDescription}
   noindex={!product}
   image={merchShareImage}
@@ -136,7 +141,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     currency: 'GBP',
     availability: product.inStock ? 'InStock' : 'OutOfStock',
     sku: product.sku,
-    brand: 'Fresh Wax',
+    brand: product.brand,
     condition: 'NewCondition',
     category: product.category,
     priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -145,7 +150,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   } : undefined}
   breadcrumbs={product ? [
     { name: 'Merchandise', url: '/merch/' },
-    { name: product.name, url: `/merch/${id}/` }
+    { name: product.displayTitle, url: `/merch/${id}/` }
   ] : undefined}
 >
   <Header />
@@ -160,7 +165,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       <div class="preview-container">
         <button class="back-link js-history-back">← Back to Item</button>
 
-        <h1 class="product-title">{product.name}</h1>
+        <h1 class="product-title">{product.displayTitle}</h1>
 
         <div class="preview-box">
           <!-- Large Zoomable Image -->
@@ -170,7 +175,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                 src={product.imageUrl}
                 srcset={product.imageUrl ? `${product.imageUrl.replace(/ /g, '%20')} 400w, ${product.imageUrl.replace(/ /g, '%20')} 800w` : undefined}
                 sizes="(max-width: 600px) 100vw, 700px"
-                alt={product.name}
+                alt={product.displayTitle}
                 id="mainImage"
                 class="zoomable"
                 width="700"
@@ -193,7 +198,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   class={`thumb ${i === 0 ? 'active' : ''}`}
                   data-image={img}
                 >
-                  <img src={img} alt={`${product.name} - View ${i + 1}`} width="42" height="42" loading="lazy" decoding="async" />
+                  <img src={img} alt={`${product.displayTitle} - View ${i + 1}`} width="42" height="42" loading="lazy" decoding="async" />
                 </button>
               ))}
             </div>

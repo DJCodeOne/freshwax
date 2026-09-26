@@ -11,6 +11,7 @@
 // /api/ and Google's feed fetcher respects it).
 
 import { getLiveReleases, getLiveMerch } from '../../lib/firebase-rest';
+import { merchBrand, merchDisplayTitle } from '../../lib/merch-title';
 import { SITE_URL } from '../../lib/constants';
 
 export const prerender = false;
@@ -167,21 +168,24 @@ export const GET = async () => {
     if (!retail || !primary) continue;
 
     const name = str(m.name || m.title || 'Merchandise');
+    // Names are generic ("Hoodie") and most merch belongs to a label or sound
+    // system, not Fresh Wax — title and brand come from its categoryName.
+    const brand = merchBrand(m);
     const onSale = m.onSale === true && money(m.salePrice);
     const stock = m.stock;
     const inStock = stock === undefined || stock === null || (typeof stock === 'number' && stock > 0);
 
     items.push({
       id: `merch_${str(m.id)}`,
-      title: name,
-      description: cleanDescription(m.description, `Official Fresh Wax merchandise — ${name}.`),
+      title: merchDisplayTitle(name, brand),
+      description: cleanDescription(m.description, `Official ${brand} merchandise — ${name}.`),
       link: `${SITE_URL}/merch/${str(m.id)}/`,
       imageLink: primary,
       additionalImages: imageUrls.filter((u) => u !== primary).slice(0, 10),
       price: retail,
       ...(onSale && { salePrice: money(m.salePrice)! }),
       availability: inStock ? 'in_stock' : 'out_of_stock',
-      brand: str(m.brand) || 'Fresh Wax',
+      brand,
       productType: `Merch > ${str(m.category) || 'General'}`,
     });
   }
