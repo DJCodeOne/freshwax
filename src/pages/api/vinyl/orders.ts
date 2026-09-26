@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saQueryCollection, getServiceAccountKey, saUpdateDocument, saGetDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse, escapeHtml } from '../../../lib/api-utils';
 import { brandedEmail } from '../../../lib/email-templates/branded';
@@ -123,9 +123,6 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
     if (!serviceAccountKey) {
       return ApiErrors.serverError('Service account not configured');
     }
-
-    // Import the update function
-    const { saUpdateDocument, saGetDocument } = await import('../../../lib/firebase-service-account');
 
     // Get the order first to verify ownership
     const order = await saGetDocument(serviceAccountKey, projectId, 'vinylOrders', orderId);
