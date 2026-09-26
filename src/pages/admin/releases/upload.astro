@@ -382,10 +382,10 @@ async function processZip(file) {
 
     // Prompt for missing info
     if (!artistName) {
-      extractedData.artistName = prompt("Enter artist name:") || "Unknown Artist";
+      extractedData.artistName = (window.showPromptToast ? await window.showPromptToast("Enter artist name:", { confirmText: "OK", danger: false }) : prompt("Enter artist name:")) || "Unknown Artist";
     }
     if (!releaseName) {
-      extractedData.releaseName = prompt("Enter release name:") || "Unknown Release";
+      extractedData.releaseName = (window.showPromptToast ? await window.showPromptToast("Enter release name:", { confirmText: "OK", danger: false }) : prompt("Enter release name:")) || "Unknown Release";
     }
 
   } catch (err) {

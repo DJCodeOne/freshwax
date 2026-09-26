@@ -1657,13 +1657,13 @@ Astro.response.headers.set('Pragma', 'no-cache');
       URL.revokeObjectURL(url);
     });
 
-    clearHistoryBtn?.addEventListener('click', () => {
-      if (confirm('Are you sure you want to clear the playlist history? This cannot be undone.')) {
+    clearHistoryBtn?.addEventListener('click', async () => {
+      if (window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to clear the playlist history?', { confirmText: 'Clear', cancelText: 'Cancel', detail: 'This cannot be undone.' }) : confirm('Are you sure you want to clear the playlist history? This cannot be undone.')) {
         localStorage.removeItem(HISTORY_KEY);
         updateHistoryCount();
         historyList.innerHTML = '<p class="text-muted">No history entries yet</p>';
         historyTotal.textContent = '0';
-        alert('History cleared');
+        (window.showToast ? window.showToast('History cleared', 'success') : alert('History cleared'));
       }
     });
   });
@@ -1759,12 +1759,12 @@ Astro.response.headers.set('Pragma', 'no-cache');
         } else {
           btn.disabled = false;
           btn.textContent = '✓ Approve';
-          alert('Failed to approve: ' + result.error);
+          (window.showToast ? window.showToast('Failed to approve: ' + result.error, 'error') : alert('Failed to approve: ' + result.error));
         }
       } catch (e){
         btn.disabled = false;
         btn.textContent = '✓ Approve';
-        alert('Error approving request');
+        (window.showToast ? window.showToast('Error approving request', 'error') : alert('Error approving request'));
       }
     });
   });
@@ -1775,7 +1775,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       const requestId = btn.dataset.id;
       const item = btn.closest('.bypass-request-item');
       
-      if (!confirm('Reject this bypass request?')) return;
+      if (!(window.showConfirmToast ? await window.showConfirmToast('Reject this bypass request?', { confirmText: 'Reject', cancelText: 'Cancel' }) : confirm('Reject this bypass request?'))) return;
       
       btn.disabled = true;
       btn.textContent = 'Rejecting...';
@@ -1804,12 +1804,12 @@ Astro.response.headers.set('Pragma', 'no-cache');
         } else {
           btn.disabled = false;
           btn.textContent = '✕ Reject';
-          alert('Failed to reject: ' + result.error);
+          (window.showToast ? window.showToast('Failed to reject: ' + result.error, 'error') : alert('Failed to reject: ' + result.error));
         }
       } catch (e){
         btn.disabled = false;
         btn.textContent = '✕ Reject';
-        alert('Error rejecting request');
+        (window.showToast ? window.showToast('Error rejecting request', 'error') : alert('Error rejecting request'));
       }
     });
   });
@@ -2082,11 +2082,11 @@ Astro.response.headers.set('Pragma', 'no-cache');
         if (result.success) {
           fetchPlaylistState();
         } else {
-          alert('Failed to remove: ' + (result.error || 'Unknown error'));
+          (window.showToast ? window.showToast('Failed to remove: ' + (result.error || 'Unknown error'), 'error') : alert('Failed to remove: ' + (result.error || 'Unknown error')));
         }
       } catch (error) {
         console.error('Failed to remove from queue:', error);
-        alert('Failed to remove track from queue');
+        (window.showToast ? window.showToast('Failed to remove track from queue', 'error') : alert('Failed to remove track from queue'));
       }
     }
 
@@ -2166,7 +2166,7 @@ C:/cloudflared/cloudflared.exe tunnel run playlist
 
 The tunnel connects playlist.freshwax.co.uk to your local playlist server.`;
 
-      alert(msg);
+      (window.showConfirmToast ? window.showConfirmToast('To restart the Cloudflare tunnel:', { confirmText: 'Got it', cancelText: 'Close', detail: msg.split('\n').slice(1).join('\n').trim(), danger: false }) : alert(msg));
     }
 
     // Event listeners

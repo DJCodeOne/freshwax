@@ -220,7 +220,10 @@ export function setupEligibilityEventListeners() {
 
   // Cancel bypass request
   document.getElementById('cancelBypassRequest')?.addEventListener('click', async function() {
-    if (!confirm('Cancel your bypass request?')) return;
+    var cancelIt = window.showConfirmToast
+      ? await window.showConfirmToast('Cancel your bypass request?', { confirmText: 'Cancel request', cancelText: 'Keep it' })
+      : confirm('Cancel your bypass request?');
+    if (!cancelIt) return;
 
     try {
       var info = userInfo();

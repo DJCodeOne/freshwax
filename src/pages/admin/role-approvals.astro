@@ -20,6 +20,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <meta name="csrf-token" content={csrfToken} />
   <meta name="robots" content="noindex, nofollow" />
   <title>Role Approvals | Admin | Fresh Wax</title>
+  <script is:inline src="/confirm-toast.js?v=20260926" defer></script>
 </head>
 <body>
   <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
@@ -533,7 +534,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     // Global functions for button onclick
     window.approveRequest = async function(uid, roleType) {
-      if (!confirm(`Approve this ${roleType === 'djBypass' ? 'DJ bypass' : roleType} request?`)) return;
+      if (!(window.showConfirmToast ? await window.showConfirmToast(`Approve this ${roleType === 'djBypass' ? 'DJ bypass' : roleType} request?`, { confirmText: 'Approve', cancelText: 'Cancel', danger: false }) : confirm(`Approve this ${roleType === 'djBypass' ? 'DJ bypass' : roleType} request?`))) return;
 
       try {
         const idToken = await window.getAdminToken();
@@ -558,15 +559,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Update count
         await loadRequests();
 
-        alert('Request approved!');
+        (window.showToast ? window.showToast('Request approved!', 'success') : alert('Request approved!'));
       } catch (error) {
         console.error('Error approving request:', error);
-        alert('Error approving request: ' + (error instanceof Error ? error.message : String(error)));
+        (window.showToast ? window.showToast('Error approving request: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error approving request: ' + (error instanceof Error ? error.message : String(error))));
       }
     };
 
     window.denyRequest = async function(uid, roleType) {
-      const reason = prompt('Reason for denial (optional):');
+      const reason = (window.showPromptToast ? await window.showPromptToast('Reason for denial (optional):', { confirmText: 'Deny', cancelText: 'Cancel' }) : prompt('Reason for denial (optional):'));
       if (reason === null) return; // Cancelled
 
       try {
@@ -593,10 +594,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Update count
         await loadRequests();
 
-        alert('Request denied');
+        (window.showToast ? window.showToast('Request denied', 'success') : alert('Request denied'));
       } catch (error) {
         console.error('Error denying request:', error);
-        alert('Error denying request: ' + (error instanceof Error ? error.message : String(error)));
+        (window.showToast ? window.showToast('Error denying request: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error denying request: ' + (error instanceof Error ? error.message : String(error))));
       }
     };
   </script>

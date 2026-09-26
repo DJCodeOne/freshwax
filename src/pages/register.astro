@@ -34,6 +34,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <meta property="og:site_name" content="Fresh Wax" />
   <meta property="og:image" content={`${SITE_URL}/og-image.webp`} />
   <!-- reCAPTCHA v3 - loaded dynamically if site key is configured -->
+  <script is:inline src="/confirm-toast.js?v=20260926" defer></script>
 </head>
 <body>
   <script is:inline nonce={nonce}>

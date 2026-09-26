@@ -422,8 +422,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   });
 
   // Delete function
-  window.deleteProduct = function(id) {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+  window.deleteProduct = async function(id) {
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to delete this product?', { confirmText: 'Delete', cancelText: 'Cancel' }) : confirm('Are you sure you want to delete this product?'))) return;
 
     fetch('/api/delete-merch/', {
       method: 'POST',
@@ -439,11 +439,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         // Force hard refresh by adding cache-busting parameter
         window.location.href = window.location.pathname + '?t=' + Date.now();
       } else {
-        alert('Error: ' + (data.error || 'Failed to delete'));
+        (window.showToast ? window.showToast('Error: ' + (data.error || 'Failed to delete'), 'error') : alert('Error: ' + (data.error || 'Failed to delete')));
       }
     })
     .catch(err => {
-      alert('Error: ' + err.message);
+      (window.showToast ? window.showToast('Error: ' + err.message, 'error') : alert('Error: ' + err.message));
     });
   };
 
@@ -474,13 +474,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           btn.disabled = false;
         }, 2000);
       } else {
-        alert('Sync failed: ' + (data.error || 'Unknown error'));
+        (window.showToast ? window.showToast('Sync failed: ' + (data.error || 'Unknown error'), 'error') : alert('Sync failed: ' + (data.error || 'Unknown error')));
         btn.innerHTML = originalText;
         btn.disabled = false;
       }
     })
     .catch(err => {
-      alert('Sync error: ' + err.message);
+      (window.showToast ? window.showToast('Sync error: ' + err.message, 'error') : alert('Sync error: ' + err.message));
       btn.innerHTML = originalText;
       btn.disabled = false;
     });

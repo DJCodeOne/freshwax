@@ -1224,7 +1224,7 @@ Artist - Track Title
       try {
         const user = window.firebaseAuth?.currentUser || (window.authReady ? await window.authReady : null);
         if (!user) {
-          if (window.showToast) window.showToast('Please log in to like mixes');
+          if (window.showToast) window.showToast('Please log in to like mixes', 'info');
           else alert('Please log in to like mixes');
           return;
         }
@@ -1890,7 +1890,7 @@ Artist - Track Title
     // Check for either Firebase user or cached auth
     const userId = currentUser?.uid || cachedUserId;
     if (!userId) {
-      alert('Please login to post a comment');
+      (window.showToast ? window.showToast('Please login to post a comment', 'info') : alert('Please login to post a comment'));
       return;
     }
 
@@ -1904,13 +1904,13 @@ Artist - Track Title
     const comment = commentText?.value?.trim();
 
     if (!userName) {
-      alert('Please login to comment');
+      (window.showToast ? window.showToast('Please login to comment', 'info') : alert('Please login to comment'));
       return;
     }
 
     // Allow GIF-only or text-only or both
     if (!comment && !selectedGifUrl) {
-      alert('Please enter a comment or select a GIF');
+      (window.showToast ? window.showToast('Please enter a comment or select a GIF', 'error') : alert('Please enter a comment or select a GIF'));
       commentText?.focus();
       return;
     }
@@ -1999,11 +1999,11 @@ Artist - Track Title
         
       } else {
         console.error('[Comments] API error:', data.error);
-        alert(data.error || 'Failed to post comment');
+        (window.showToast ? window.showToast(data.error || 'Failed to post comment', 'error') : alert(data.error || 'Failed to post comment'));
       }
     }).catch(function(error) {
       console.error('[Comments] Fetch error:', error);
-      alert('Failed to post comment. Please try again.');
+      (window.showToast ? window.showToast('Failed to post comment. Please try again.', 'error') : alert('Failed to post comment. Please try again.'));
     }).finally(function() {
       submitCommentBtn.disabled = false;
       submitCommentBtn.textContent = 'Post Comment';
@@ -2167,7 +2167,7 @@ Artist - Track Title
     const newTracklist = editTracklistTextarea?.value || '';
 
     if (!mixId) {
-      alert('Error: Mix ID not found');
+      (window.showToast ? window.showToast('Error: Mix ID not found', 'error') : alert('Error: Mix ID not found'));
       return;
     }
 
@@ -2223,7 +2223,7 @@ Artist - Track Title
 
       if (!response.ok) {
         console.error('Update mix failed:', response.status);
-        alert('Failed to save tracklist. Please try again.');
+        (window.showToast ? window.showToast('Failed to save tracklist. Please try again.', 'error') : alert('Failed to save tracklist. Please try again.'));
         return;
       }
       const data = await response.json();
@@ -2260,13 +2260,13 @@ Artist - Track Title
         }
         
         closeEditModal();
-        alert('Tracklist updated successfully!');
+        (window.showToast ? window.showToast('Tracklist updated successfully!', 'success') : alert('Tracklist updated successfully!'));
       } else {
-        alert(data.error || 'Failed to update tracklist');
+        (window.showToast ? window.showToast(data.error || 'Failed to update tracklist', 'error') : alert(data.error || 'Failed to update tracklist'));
       }
     } catch (error) {
       console.error('[Tracklist] Save error:', error);
-      alert('Failed to save tracklist. Please try again.');
+      (window.showToast ? window.showToast('Failed to save tracklist. Please try again.', 'error') : alert('Failed to save tracklist. Please try again.'));
     } finally {
       editTracklistSave.disabled = false;
       editTracklistSave.textContent = 'Save Changes';
@@ -2291,7 +2291,7 @@ Artist - Track Title
   // Open Giphy modal
   gifPickerBtn?.addEventListener('click', function() {
     if (!currentUser) {
-      alert('Please login to add GIFs');
+      (window.showToast ? window.showToast('Please login to add GIFs', 'info') : alert('Please login to add GIFs'));
       return;
     }
     giphyModal?.classList.remove('hidden');
@@ -2409,14 +2409,14 @@ Artist - Track Title
   // Select a GIF - immediately post it
   async function selectGif(url) {
     if (!currentUser) {
-      alert('Please login to post GIFs');
+      (window.showToast ? window.showToast('Please login to post GIFs', 'info') : alert('Please login to post GIFs'));
       closeGiphyModal();
       return;
     }
 
     const userName = currentUserName || commentUsername?.value?.trim();
     if (!userName) {
-      alert('Please login to post GIFs');
+      (window.showToast ? window.showToast('Please login to post GIFs', 'info') : alert('Please login to post GIFs'));
       closeGiphyModal();
       return;
     }
@@ -2479,11 +2479,11 @@ Artist - Track Title
           commentsTotalCount.textContent = newCount;
         }
       } else {
-        alert(data.error || 'Failed to post GIF');
+        (window.showToast ? window.showToast(data.error || 'Failed to post GIF', 'error') : alert(data.error || 'Failed to post GIF'));
       }
     }).catch(function(error) {
       console.error('[Comments] GIF post error:', error);
-      alert('Failed to post GIF. Please try again.');
+      (window.showToast ? window.showToast('Failed to post GIF. Please try again.', 'error') : alert('Failed to post GIF. Please try again.'));
     }).finally(function() {
       if (submitCommentBtn) {
         submitCommentBtn.disabled = false;

@@ -123,6 +123,7 @@ const nonce = Astro.locals.nonce || '';
       .image-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
+  <script is:inline src="/confirm-toast.js?v=20260926" defer></script>
 </head>
 <body>
   <script is:inline src="/csrf-protect.js" nonce={nonce}></script>

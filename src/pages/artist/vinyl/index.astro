@@ -256,7 +256,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   // Actions
   async function publishListing(id) {
-    if (!confirm('Submit this listing for review?')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Submit this listing for review?', { confirmText: 'Submit', cancelText: 'Cancel', danger: false }) : confirm('Submit this listing for review?'))) return;
 
     try {
       const idToken = await currentUser.getIdToken();
@@ -276,15 +276,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         throw new Error(result.error);
       }
 
-      alert('Listing submitted for review!');
+      (window.showToast ? window.showToast('Listing submitted for review!', 'success') : alert('Listing submitted for review!'));
       loadListings();
     } catch (error) {
-      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error: ' + (error instanceof Error ? error.message : String(error))));
     }
   }
 
   async function unpublishListing(id) {
-    if (!confirm('Unpublish this listing? It will be moved to drafts.')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Unpublish this listing?', { confirmText: 'Unpublish', cancelText: 'Cancel', detail: 'It will be moved to drafts.' }) : confirm('Unpublish this listing? It will be moved to drafts.'))) return;
 
     try {
       const idToken = await currentUser.getIdToken();
@@ -306,12 +306,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       loadListings();
     } catch (error) {
-      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error: ' + (error instanceof Error ? error.message : String(error))));
     }
   }
 
   async function deleteListing(id) {
-    if (!confirm('Delete this listing? This cannot be undone.')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Delete this listing?', { confirmText: 'Delete', cancelText: 'Cancel', detail: 'This cannot be undone.' }) : confirm('Delete this listing? This cannot be undone.'))) return;
 
     try {
       const idToken = await currentUser.getIdToken();
@@ -333,7 +333,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       loadListings();
     } catch (error) {
-      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error: ' + (error instanceof Error ? error.message : String(error))));
     }
   }
 

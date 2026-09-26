@@ -492,7 +492,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     if (!btn) return;
 
     btn.addEventListener('click', async () => {
-      if (!confirm('This will migrate all existing orders to the sales ledger. Continue?')) {
+      if (!(window.showConfirmToast ? await window.showConfirmToast('Migrate all existing orders to the sales ledger?', { confirmText: 'Migrate', cancelText: 'Cancel', danger: false }) : confirm('This will migrate all existing orders to the sales ledger. Continue?'))) {
         return;
       }
 
@@ -505,7 +505,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         if (!dryRunRes.ok) throw new Error('Dry run failed: ' + dryRunRes.status);
         const dryRun = await dryRunRes.json();
 
-        if (!confirm(`Dry run complete:\n- Would migrate: ${dryRun.results?.migrated || 0} orders\n- Skipped (already in ledger): ${dryRun.results?.skipped || 0}\n- Cancelled orders: ${dryRun.results?.cancelled || 0}\n\nProceed with actual migration?`)) {
+        if (!(window.showConfirmToast ? await window.showConfirmToast('Dry run complete', { confirmText: 'Migrate', cancelText: 'Cancel', detail: `- Would migrate: ${dryRun.results?.migrated || 0} orders\n- Skipped (already in ledger): ${dryRun.results?.skipped || 0}\n- Cancelled orders: ${dryRun.results?.cancelled || 0}\n\nProceed with actual migration?`, danger: false }) : confirm(`Dry run complete:\n- Would migrate: ${dryRun.results?.migrated || 0} orders\n- Skipped (already in ledger): ${dryRun.results?.skipped || 0}\n- Cancelled orders: ${dryRun.results?.cancelled || 0}\n\nProceed with actual migration?`))) {
           btn.disabled = false;
           btn.textContent = 'Migrate Orders';
           return;
@@ -517,13 +517,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         const data = await res.json();
 
         if (data.success) {
-          alert(`Migration complete!\n- Migrated: ${data.results?.migrated || 0}\n- Skipped: ${data.results?.skipped || 0}\n- Errors: ${data.results?.errors || 0}`);
-          window.location.reload();
+          (window.showToast ? window.showToast(`Migration complete!\n- Migrated: ${data.results?.migrated || 0}\n- Skipped: ${data.results?.skipped || 0}\n- Errors: ${data.results?.errors || 0}`, 'success') : alert(`Migration complete!\n- Migrated: ${data.results?.migrated || 0}\n- Skipped: ${data.results?.skipped || 0}\n- Errors: ${data.results?.errors || 0}`));
+          setTimeout(() => { window.location.reload(); }, 1200);
         } else {
-          alert('Migration failed: ' + (data.error || 'Unknown error'));
+          (window.showToast ? window.showToast('Migration failed: ' + (data.error || 'Unknown error'), 'error') : alert('Migration failed: ' + (data.error || 'Unknown error')));
         }
       } catch (err) {
-        alert('Migration error: ' + (err instanceof Error ? err.message : 'Unknown'));
+        (window.showToast ? window.showToast('Migration error: ' + (err instanceof Error ? err.message : 'Unknown'), 'error') : alert('Migration error: ' + (err instanceof Error ? err.message : 'Unknown')));
       } finally {
         btn.disabled = false;
         btn.textContent = 'Migrate Orders';

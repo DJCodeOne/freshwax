@@ -749,9 +749,12 @@ export function setupRecording(mediaEl) {
     recordBtn.disabled = true;
     recordBtn.classList.add('pro-locked');
     recordBtn.title = 'Upgrade to Pro to record livestreams';
-    recordBtn.onclick = function(e) {
+    recordBtn.onclick = async function(e) {
       e.preventDefault();
-      if (confirm('Recording is a Pro feature.\n\nUpgrade to Fresh Wax Pro to record livestreams and download them as audio files.\n\nWould you like to upgrade now?')) {
+      var upgrade = window.showConfirmToast
+        ? await window.showConfirmToast('Recording is a Pro feature', { detail: 'Upgrade to Fresh Wax Pro to record livestreams and download them as audio files.', confirmText: 'Upgrade', cancelText: 'Not now', danger: false })
+        : confirm('Recording is a Pro feature.\n\nUpgrade to Fresh Wax Pro to record livestreams and download them as audio files.\n\nWould you like to upgrade now?');
+      if (upgrade) {
         window.location.href = '/account/dashboard#upgrade';
       }
     };

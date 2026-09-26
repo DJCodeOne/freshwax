@@ -1380,7 +1380,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       });
 
       async function retryPayout(payoutId) {
-        if (!confirm('Retry this payout? This will attempt to transfer funds to the artist.')) return;
+        if (!(window.showConfirmToast ? await window.showConfirmToast('Retry this payout?', { confirmText: 'Retry', cancelText: 'Cancel', detail: 'This will attempt to transfer funds to the artist.' }) : confirm('Retry this payout? This will attempt to transfer funds to the artist.'))) return;
 
         try {
           const response = await fetch('/api/admin/retry-payout/', {
@@ -1423,7 +1423,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
       async function triggerPayeePayout(orderId, orderNumber, payeeType, payeeId, payeeName, paypalEmail, amount, btn) {
         const typeLabel = payeeType === 'artist' ? 'Artist' : payeeType === 'supplier' ? 'Supplier' : 'Seller';
-        if (!confirm(`Send a REAL PayPal payout to ${payeeName} (${typeLabel})?\n\nOwed: £${amount.toFixed(2)} — PayPal's 2% payout fee is deducted from this.\nPayPal: ${paypalEmail}\nOrder: ${orderNumber}\n\nMake sure the PayPal balance covers it.`)) return;
+        if (!(window.showConfirmToast ? await window.showConfirmToast(`Send a REAL PayPal payout to ${payeeName} (${typeLabel})?`, { confirmText: 'Send payout', cancelText: 'Cancel', detail: `Owed: £${amount.toFixed(2)} — PayPal's 2% payout fee is deducted from this.\nPayPal: ${paypalEmail}\nOrder: ${orderNumber}\n\nMake sure the PayPal balance covers it.` }) : confirm(`Send a REAL PayPal payout to ${payeeName} (${typeLabel})?\n\nOwed: £${amount.toFixed(2)} — PayPal's 2% payout fee is deducted from this.\nPayPal: ${paypalEmail}\nOrder: ${orderNumber}\n\nMake sure the PayPal balance covers it.`))) return;
 
         const originalText = btn.innerHTML;
         btn.disabled = true;
@@ -1490,7 +1490,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       });
 
       async function triggerPayout(orderId, orderNumber, btn) {
-        if (!confirm(`Trigger payout for order ${orderNumber}?\n\nThis will send money to the artist(s) via PayPal.`)) return;
+        if (!(window.showConfirmToast ? await window.showConfirmToast(`Trigger payout for order ${orderNumber}?`, { confirmText: 'Send payout', cancelText: 'Cancel', detail: 'This will send money to the artist(s) via PayPal.' }) : confirm(`Trigger payout for order ${orderNumber}?\n\nThis will send money to the artist(s) via PayPal.`))) return;
 
         const originalText = btn.innerHTML;
         btn.disabled = true;
@@ -1527,7 +1527,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               if (p.reason) message += ` (${p.reason})`;
             });
 
-            alert(message);
+            (window.showToast ? window.showToast(message, 'info') : alert(message));
 
             if (successful > 0) {
               // Remove row from table
@@ -1562,7 +1562,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       // Mark ONE payee paid on a multi-payee order (records without sending money)
       document.querySelectorAll('.mark-payee-paid-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm(`Mark ${btn.dataset.payeeName} as already paid on order ${btn.dataset.orderNumber}?\n\nOnly this partner's payout is recorded — no money is sent.`)) return;
+          if (!(window.showConfirmToast ? await window.showConfirmToast(`Mark ${btn.dataset.payeeName} as already paid on order ${btn.dataset.orderNumber}?`, { confirmText: 'Mark paid', cancelText: 'Cancel', detail: "Only this partner's payout is recorded — no money is sent.", danger: false }) : confirm(`Mark ${btn.dataset.payeeName} as already paid on order ${btn.dataset.orderNumber}?\n\nOnly this partner's payout is recorded — no money is sent.`))) return;
 
           const originalText = btn.innerHTML;
           btn.disabled = true;
@@ -1609,7 +1609,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       // Pay a connected partner's full payable balance via Stripe
       document.querySelectorAll('.pay-stripe-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm(`Send £${btn.dataset.amount} to ${btn.dataset.artistName} via Stripe?\n\nThis creates REAL Stripe transfers from the platform balance. Make sure Stripe holds enough first.`)) return;
+          if (!(window.showConfirmToast ? await window.showConfirmToast(`Send £${btn.dataset.amount} to ${btn.dataset.artistName} via Stripe?`, { confirmText: 'Send', cancelText: 'Cancel', detail: 'This creates REAL Stripe transfers from the platform balance. Make sure Stripe holds enough first.' }) : confirm(`Send £${btn.dataset.amount} to ${btn.dataset.artistName} via Stripe?\n\nThis creates REAL Stripe transfers from the platform balance. Make sure Stripe holds enough first.`))) return;
 
           const originalText = btn.innerHTML;
           btn.disabled = true;
@@ -1651,7 +1651,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       // Close a partner's payout request (after paying them)
       document.querySelectorAll('.close-request-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-          if (!confirm(`Close the payout request from ${btn.dataset.artistName}?\n\nDo this after you've paid them and marked their orders as paid.`)) return;
+          if (!(window.showConfirmToast ? await window.showConfirmToast(`Close the payout request from ${btn.dataset.artistName}?`, { confirmText: 'Close request', cancelText: 'Cancel', detail: "Do this after you've paid them and marked their orders as paid.", danger: false }) : confirm(`Close the payout request from ${btn.dataset.artistName}?\n\nDo this after you've paid them and marked their orders as paid.`))) return;
 
           const originalText = btn.innerHTML;
           btn.disabled = true;
@@ -1692,7 +1692,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       });
 
       async function markAsPaid(orderId, orderNumber, btn) {
-        if (!confirm(`Mark order ${orderNumber} as already paid?\n\nThis marks EVERY payee on this order as paid without sending money. To mark just one partner, use the ✓ Paid button next to their name.`)) return;
+        if (!(window.showConfirmToast ? await window.showConfirmToast(`Mark order ${orderNumber} as already paid?`, { confirmText: 'Mark paid', cancelText: 'Cancel', detail: 'This marks EVERY payee on this order as paid without sending money. To mark just one partner, use the ✓ Paid button next to their name.' }) : confirm(`Mark order ${orderNumber} as already paid?\n\nThis marks EVERY payee on this order as paid without sending money. To mark just one partner, use the ✓ Paid button next to their name.`))) return;
 
         const originalText = btn.innerHTML;
         btn.disabled = true;

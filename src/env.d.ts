@@ -578,6 +578,9 @@ declare global {
 
     // ---- Admin ----
     showToast?: (message: string, type?: string) => void;
+    // Branded replacements for confirm()/prompt() — public/confirm-toast.js
+    showConfirmToast?: (message: string, opts?: { confirmText?: string; cancelText?: string; detail?: string; danger?: boolean; countdownUntil?: number; countdownLabel?: string; timeoutValue?: unknown }) => Promise<boolean>;
+    showPromptToast?: (message: string, opts?: { defaultValue?: string; placeholder?: string; required?: boolean; confirmText?: string; cancelText?: string; detail?: string; danger?: boolean }) => Promise<string | null>;
     goPage?: (page: number) => void;
 
     // ---- Third-party ----

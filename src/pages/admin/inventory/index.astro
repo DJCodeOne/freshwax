@@ -25,6 +25,7 @@ const nonce = Astro.locals.nonce || '';
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script is:inline src="/confirm-toast.js?v=20260926" defer></script>
 </head>
 </head>
 <body>
@@ -1180,7 +1181,7 @@ const nonce = Astro.locals.nonce || '';
         return;
       }
       
-      if (!confirm(`Save ${changes.length} stock adjustments?`)) return;
+      if (!(window.showConfirmToast ? await window.showConfirmToast(`Save ${changes.length} stock adjustments?`, { confirmText: 'Save', cancelText: 'Cancel', danger: false }) : confirm(`Save ${changes.length} stock adjustments?`))) return;
       
       let success = 0;
       let failed = 0;

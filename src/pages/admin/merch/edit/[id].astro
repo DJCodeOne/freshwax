@@ -652,13 +652,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     const hex = hexInput.value;
 
     if (!name) {
-      alert('Please enter a colour name');
+      (window.showToast ? window.showToast('Please enter a colour name', 'error') : alert('Please enter a colour name'));
       return;
     }
 
     // Check for duplicate
     if (colors.find(c => c.name.toLowerCase() === name.toLowerCase())) {
-      alert('This colour already exists');
+      (window.showToast ? window.showToast('This colour already exists', 'error') : alert('This colour already exists'));
       return;
     }
 
@@ -701,9 +701,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     });
   }
 
-  window.removeColor = function(index) {
+  window.removeColor = async function(index) {
     const color = colors[index];
-    if (!confirm(`Remove ${color.name}? This will also remove any stock data for this colour.`)) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Remove ${color.name}?`, { confirmText: 'Remove', cancelText: 'Cancel', detail: 'This will also remove any stock data for this colour.' }) : confirm(`Remove ${color.name}? This will also remove any stock data for this colour.`))) return;
 
     // Remove variant stock for this color (new format uses size_color)
     const colorLower = color.name.toLowerCase().replace(/\s/g, '-');
@@ -789,7 +789,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     const qty = parseInt(applyInput.value);
 
     if (isNaN(qty) || qty < 0) {
-      alert('Please enter a valid quantity');
+      (window.showToast ? window.showToast('Please enter a valid quantity', 'error') : alert('Please enter a valid quantity'));
       return;
     }
 
@@ -913,17 +913,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
       if (!response.ok) {
         console.error('Failed to save colors/sizes: HTTP ' + response.status);
-        alert('Failed to save: server error ' + response.status);
+        (window.showToast ? window.showToast('Failed to save: server error ' + response.status, 'error') : alert('Failed to save: server error ' + response.status));
         return;
       }
       const result = await response.json();
       if (!result.success) {
         console.error('Failed to save colors/sizes:', result.error);
-        alert('Failed to save: ' + (result.error || 'Unknown error'));
+        (window.showToast ? window.showToast('Failed to save: ' + (result.error || 'Unknown error'), 'error') : alert('Failed to save: ' + (result.error || 'Unknown error')));
       }
     } catch (error) {
       console.error('Error saving colors/sizes:', error);
-      alert('Failed to save changes. Please try again.');
+      (window.showToast ? window.showToast('Failed to save changes. Please try again.', 'error') : alert('Failed to save changes. Please try again.'));
     }
   }
 
@@ -1185,7 +1185,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         });
 
         if (!response.ok) {
-          alert('Upload failed: server error ' + response.status);
+          (window.showToast ? window.showToast('Upload failed: server error ' + response.status, 'error') : alert('Upload failed: server error ' + response.status));
           return;
         }
         const result = await response.json();
@@ -1205,11 +1205,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           renderImages();
           await saveImages();
         } else {
-          alert('Failed to upload: ' + (result.error || result.details || 'Unknown error'));
+          (window.showToast ? window.showToast('Failed to upload: ' + (result.error || result.details || 'Unknown error'), 'error') : alert('Failed to upload: ' + (result.error || result.details || 'Unknown error')));
         }
       } catch (error) {
         console.error('Upload error:', error);
-        alert('Failed to upload cropped image: ' + (error instanceof Error ? error.message : String(error)));
+        (window.showToast ? window.showToast('Failed to upload cropped image: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Failed to upload cropped image: ' + (error instanceof Error ? error.message : String(error))));
       }
 
       uploadProgress.style.display = 'none';
@@ -1221,13 +1221,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     // Use the original image without any cropping
     if (editorState.imageIndex >= 0) {
       // Editing existing image - nothing to change, just close
-      alert('Cannot use original for existing images - they are already uploaded');
+      (window.showToast ? window.showToast('Cannot use original for existing images - they are already uploaded', 'info') : alert('Cannot use original for existing images - they are already uploaded'));
       closeImageEditor();
       return;
     }
 
     if (!editorState.originalFile) {
-      alert('Error: No original file available');
+      (window.showToast ? window.showToast('Error: No original file available', 'error') : alert('Error: No original file available'));
       closeImageEditor();
       return;
     }
@@ -1253,7 +1253,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         });
 
         if (!response.ok) {
-          alert('Upload failed: server error ' + response.status);
+          (window.showToast ? window.showToast('Upload failed: server error ' + response.status, 'error') : alert('Upload failed: server error ' + response.status));
           return;
         }
         const result = await response.json();
@@ -1267,11 +1267,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           await saveImages();
         } else {
           console.error('Upload failed:', result);
-          alert('Failed to upload: ' + (result.error || result.details || 'Unknown error'));
+          (window.showToast ? window.showToast('Failed to upload: ' + (result.error || result.details || 'Unknown error'), 'error') : alert('Failed to upload: ' + (result.error || result.details || 'Unknown error')));
         }
       } catch (error) {
         console.error('Upload error:', error);
-        alert('Failed to upload original image: ' + (error instanceof Error ? error.message : String(error)));
+        (window.showToast ? window.showToast('Failed to upload original image: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Failed to upload original image: ' + (error instanceof Error ? error.message : String(error))));
       }
 
       uploadProgress.style.display = 'none';
@@ -1415,7 +1415,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   
   // Delete image
   async function deleteImage(idx) {
-    if (!confirm('Delete this image?')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Delete this image?', { confirmText: 'Delete', cancelText: 'Cancel' }) : confirm('Delete this image?'))) return;
     
     const img = images[idx];
     
@@ -1483,7 +1483,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     // Check limit
     const remaining = MAX_IMAGES - images.length;
     if (remaining <= 0) {
-      alert('Maximum 10 images allowed');
+      (window.showToast ? window.showToast('Maximum 10 images allowed', 'error') : alert('Maximum 10 images allowed'));
       return;
     }
 
@@ -1496,12 +1496,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     for (const file of filesToUpload) {
       // Validate
       if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
-        alert(`Invalid file type: ${file.name}`);
+        (window.showToast ? window.showToast(`Invalid file type: ${file.name}`, 'error') : alert(`Invalid file type: ${file.name}`));
         continue;
       }
 
       if (file.size > 10 * 1024 * 1024) {
-        alert(`File too large: ${file.name} (max 10MB)`);
+        (window.showToast ? window.showToast(`File too large: ${file.name} (max 10MB)`, 'error') : alert(`File too large: ${file.name} (max 10MB)`));
         continue;
       }
 
@@ -1537,7 +1537,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       });
 
       if (!response.ok) {
-        alert('Upload failed: server error ' + response.status);
+        (window.showToast ? window.showToast('Upload failed: server error ' + response.status, 'error') : alert('Upload failed: server error ' + response.status));
         return;
       }
       const result = await response.json();
@@ -1551,11 +1551,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         renderImages();
         await saveImages();
       } else {
-        alert('Failed to upload ' + file.name + ': ' + result.error);
+        (window.showToast ? window.showToast('Failed to upload ' + file.name + ': ' + result.error, 'error') : alert('Failed to upload ' + file.name + ': ' + result.error));
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert(`Failed to upload ${file.name}`);
+      (window.showToast ? window.showToast(`Failed to upload ${file.name}`, 'error') : alert(`Failed to upload ${file.name}`));
     }
 
     uploadProgress.style.display = 'none';
@@ -1583,24 +1583,24 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       
       if (!response.ok) {
         console.error('Failed to save images: HTTP ' + response.status);
-        alert('Failed to save images: server error ' + response.status);
+        (window.showToast ? window.showToast('Failed to save images: server error ' + response.status, 'error') : alert('Failed to save images: server error ' + response.status));
         return;
       }
       const result = await response.json();
 
       if (!result.success) {
         console.error('Failed to save images:', result.error, result.details);
-        alert('Failed to save images: ' + (result.details || result.error));
+        (window.showToast ? window.showToast('Failed to save images: ' + (result.details || result.error), 'error') : alert('Failed to save images: ' + (result.details || result.error)));
       }
     } catch (error) {
       console.error('Save error:', error);
-      alert('Save error: ' + error);
+      (window.showToast ? window.showToast('Save error: ' + error, 'error') : alert('Save error: ' + error));
     }
   }
   
   // Delete product
-  function deleteProduct() {
-    if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+  async function deleteProduct() {
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to delete this product?', { confirmText: 'Delete', cancelText: 'Cancel', detail: 'This action cannot be undone.' }) : confirm('Are you sure you want to delete this product? This action cannot be undone.'))) {
       return;
     }
 
@@ -1617,11 +1617,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       if (data.success) {
         window.location.href = '/admin/merch/manage/';
       } else {
-        alert('Error: ' + (data.error || 'Failed to delete'));
+        (window.showToast ? window.showToast('Error: ' + (data.error || 'Failed to delete'), 'error') : alert('Error: ' + (data.error || 'Failed to delete')));
       }
     })
     .catch(function(err) {
-      alert('Error: ' + err.message);
+      (window.showToast ? window.showToast('Error: ' + err.message, 'error') : alert('Error: ' + err.message));
     });
   }
   

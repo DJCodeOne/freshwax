@@ -54,6 +54,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <meta name="csrf-token" content={csrfToken} />
   <meta name="robots" content="noindex, nofollow" />
   <title>Edit Release - {release.releaseName} - Fresh Wax Admin</title>
+  <script is:inline src="/confirm-toast.js?v=20260926" defer></script>
 </head>
 <body>
   <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
@@ -832,26 +833,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     });
     
     // Refresh button
-    document.getElementById('refreshBtn').addEventListener('click', function() {
-      if (!confirm('Reload from Firebase? Unsaved changes will be lost.')) return;
+    document.getElementById('refreshBtn').addEventListener('click', async function() {
+      if (!(window.showConfirmToast ? await window.showConfirmToast('Reload from Firebase?', { confirmText: 'Reload', cancelText: 'Cancel', detail: 'Unsaved changes will be lost.' }) : confirm('Reload from Firebase? Unsaved changes will be lost.'))) return;
       var btn = this;
       btn.disabled = true;
       btn.textContent = '🔄 Refreshing...';
-      
+
       fetch('/api/get-release/?id=' + releaseId + '&admin=true')
         .then(function(response) { return response.json(); })
         .then(function(result) {
           if (result.success) {
-            alert('✅ Refreshed! Reloading...');
-            window.location.reload();
+            (window.showToast ? window.showToast('Refreshed! Reloading...', 'success') : alert('✅ Refreshed! Reloading...'));
+            setTimeout(function() { window.location.reload(); }, 1200);
           } else {
-            alert('❌ Failed: ' + (result.error || 'Unknown'));
+            (window.showToast ? window.showToast('Failed: ' + (result.error || 'Unknown'), 'error') : alert('❌ Failed: ' + (result.error || 'Unknown')));
             btn.disabled = false;
             btn.textContent = '🔄 Refresh';
           }
         })
         .catch(function(error) {
-          alert('❌ Error: ' + (error instanceof Error ? error.message : String(error)));
+          (window.showToast ? window.showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('❌ Error: ' + (error instanceof Error ? error.message : String(error))));
           btn.disabled = false;
           btn.textContent = '🔄 Refresh';
         });
@@ -1152,13 +1153,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           saveBtn.textContent = '✓ Save All Changes';
           saveBtn.disabled = false;
         } else {
-          alert('❌ Failed: ' + (result.data.error || 'Unknown error'));
+          (window.showToast ? window.showToast('Failed: ' + (result.data.error || 'Unknown error'), 'error') : alert('❌ Failed: ' + (result.data.error || 'Unknown error')));
           saveBtn.textContent = '✓ Save All Changes';
           saveBtn.disabled = false;
         }
       })
       .catch(function(error) {
-        alert('❌ Error: ' + (error instanceof Error ? error.message : String(error)));
+        (window.showToast ? window.showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('❌ Error: ' + (error instanceof Error ? error.message : String(error))));
         saveBtn.textContent = '✓ Save All Changes';
         saveBtn.disabled = false;
       });

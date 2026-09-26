@@ -78,6 +78,7 @@ const nonce = Astro.locals.nonce || '';
     .summary-row { background: #f0fdf4; font-weight: 700; }
     .summary-row td { border-top: 2px solid #000; }
   </style>
+  <script is:inline src="/confirm-toast.js?v=20260926" defer></script>
 </head>
 <body>
   <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
@@ -294,7 +295,7 @@ const nonce = Astro.locals.nonce || '';
 
       async function markPaid() {
         if (selectedIds.length === 0) return;
-        if (!confirm('Mark ' + selectedIds.length + ' entries as paid?')) return;
+        if (!(window.showConfirmToast ? await window.showConfirmToast('Mark ' + selectedIds.length + ' entries as paid?', { confirmText: 'Mark paid', cancelText: 'Cancel', danger: false }) : confirm('Mark ' + selectedIds.length + ' entries as paid?'))) return;
 
         var btn = document.getElementById('btnMarkPaid');
         btn.disabled = true;
@@ -313,11 +314,11 @@ const nonce = Astro.locals.nonce || '';
           if (!response.ok) throw new Error('Failed to update');
           var data = await response.json();
 
-          alert('Marked ' + (data.updated || selectedIds.length) + ' entries as paid');
+          (window.showToast ? window.showToast('Marked ' + (data.updated || selectedIds.length) + ' entries as paid', 'success') : alert('Marked ' + (data.updated || selectedIds.length) + ' entries as paid'));
           selectedIds = [];
           loadLedger();
         } catch (err) {
-          alert('Error: ' + err.message);
+          (window.showToast ? window.showToast('Error: ' + err.message, 'error') : alert('Error: ' + err.message));
           btn.disabled = false;
           btn.textContent = 'Mark Selected as Paid';
         }

@@ -110,6 +110,7 @@ const nonce = Astro.locals.nonce || '';
       .supplier-stats { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
+  <script is:inline src="/confirm-toast.js?v=20260926" defer></script>
 </head>
 <body>
   <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
@@ -506,7 +507,7 @@ const nonce = Astro.locals.nonce || '';
     });
 
     async function deactivateSupplier(id) {
-      if (!confirm('Are you sure you want to deactivate this supplier? Their products will remain but they won\'t appear in active lists.')) return;
+      if (!(window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to deactivate this supplier?', { confirmText: 'Deactivate', cancelText: 'Cancel', detail: 'Their products will remain but they won\'t appear in active lists.' }) : confirm('Are you sure you want to deactivate this supplier? Their products will remain but they won\'t appear in active lists.'))) return;
       
       try {
         const response = await fetch('/api/suppliers/', {
@@ -545,7 +546,7 @@ const nonce = Astro.locals.nonce || '';
       const supplier = suppliers.find(s => s.id === id);
       if (!supplier) return;
       
-      if (!confirm(`⚠️ DANGER ZONE ⚠️\n\nAre you sure you want to permanently delete "${supplier.name}"?\n\nThis will:\n• Remove the supplier record\n• NOT delete their products (they'll become unassigned)\n\nThis action cannot be undone!`)) return;
+      if (!(window.showConfirmToast ? await window.showConfirmToast(`⚠️ DANGER ZONE ⚠️\nAre you sure you want to permanently delete "${supplier.name}"?`, { confirmText: 'Delete', cancelText: 'Cancel', detail: `This will:\n• Remove the supplier record\n• NOT delete their products (they'll become unassigned)\n\nThis action cannot be undone!` }) : confirm(`⚠️ DANGER ZONE ⚠️\n\nAre you sure you want to permanently delete "${supplier.name}"?\n\nThis will:\n• Remove the supplier record\n• NOT delete their products (they'll become unassigned)\n\nThis action cannot be undone!`))) return;
       
       try {
         const response = await fetch('/api/suppliers/?id=' + id, {

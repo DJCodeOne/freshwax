@@ -546,7 +546,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
             ? `Audio already processed for "${name}". Reprocess all tracks? This will regenerate MP3+WAV formats.`
             : `Process audio for "${name}"? This will generate MP3+WAV formats for all tracks.`;
 
-          if (!confirm(confirmMsg)) return;
+          if (!(window.showConfirmToast ? await window.showConfirmToast(alreadyProcessed ? `Audio already processed for "${name}". Reprocess all tracks?` : `Process audio for "${name}"?`, { confirmText: alreadyProcessed ? 'Reprocess' : 'Process', cancelText: 'Cancel', detail: alreadyProcessed ? 'This will regenerate MP3+WAV formats.' : 'This will generate MP3+WAV formats for all tracks.', danger: false }) : confirm(confirmMsg))) return;
 
           btn.disabled = true;
           btn.textContent = '⏳';
@@ -686,7 +686,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         btn.addEventListener('click', async () => {
           const id = btn.dataset.id;
           
-          if (!confirm('Publish this release and make it live on the store?')) return;
+          if (!(window.showConfirmToast ? await window.showConfirmToast('Publish this release and make it live on the store?', { confirmText: 'Publish', cancelText: 'Cancel', danger: false }) : confirm('Publish this release and make it live on the store?'))) return;
           
           btn.disabled = true;
           btn.textContent = '...';

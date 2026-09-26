@@ -877,7 +877,7 @@ Artist - Track Title
           btn.style.transform = 'scale(1)';
         }, 200);
       } else {
-        alert('Adding this emoji would exceed the 300 character limit!');
+        (window.showToast ? window.showToast('Adding this emoji would exceed the 300 character limit!', 'error') : alert('Adding this emoji would exceed the 300 character limit!'));
       }
     });
   });
@@ -906,7 +906,7 @@ Artist - Track Title
   // Audio file handling with duration calculation
   function handleAudioFile(file) {
     if (!file.type.includes('audio/mpeg') && !file.name.endsWith('.mp3')) {
-      alert('Please select an MP3 file');
+      (window.showToast ? window.showToast('Please select an MP3 file', 'error') : alert('Please select an MP3 file'));
       return;
     }
 
@@ -974,7 +974,7 @@ Artist - Track Title
   // Artwork file handling
   function handleArtworkFile(file) {
     if (!file.type.includes('image/')) {
-      alert('Please select an image file (JPG, PNG, WEBP)');
+      (window.showToast ? window.showToast('Please select an image file (JPG, PNG, WEBP)', 'error') : alert('Please select an image file (JPG, PNG, WEBP)'));
       return;
     }
 
@@ -1174,7 +1174,7 @@ Artist - Track Title
   async function handleQuickDropFile(file) {
     // Check for supported formats
     if (!isMp3File(file) && !isWavFile(file)) {
-      alert('Please upload an MP3 or WAV file.');
+      (window.showToast ? window.showToast('Please upload an MP3 or WAV file.', 'error') : alert('Please upload an MP3 or WAV file.'));
       return;
     }
 
@@ -1184,7 +1184,7 @@ Artist - Track Title
     if (isWavFile(file)) {
       // Check if WAV uploads are enabled
       if (!uploadSettings.allowWavUploads) {
-        alert('WAV uploads are currently disabled. Please upload an MP3 file instead.');
+        (window.showToast ? window.showToast('WAV uploads are currently disabled. Please upload an MP3 file instead.', 'error') : alert('WAV uploads are currently disabled. Please upload an MP3 file instead.'));
         return;
       }
 
@@ -1197,14 +1197,14 @@ Artist - Track Title
           ? `${(fileSizeMB / 1024).toFixed(1)}GB`
           : `${fileSizeMB.toFixed(0)}MB`;
 
-        alert(
+        const wavTooLargeMsg =
           `This WAV file exceeds the maximum size limit.\n\n` +
           `File size: ${fileSizeDisplay}\n` +
           `Maximum allowed: ${limitDisplay}\n\n` +
           `Please convert to MP3 first using:\n` +
           `• Audacity (free): Export as MP3\n` +
-          `• Online: cloudconvert.com`
-        );
+          `• Online: cloudconvert.com`;
+        (window.showToast ? window.showToast(wavTooLargeMsg, 'error') : alert(wavTooLargeMsg));
         return;
       }
 
@@ -1213,23 +1213,30 @@ Artist - Track Title
         ? `${(fileSizeMB / 1024).toFixed(1)}GB`
         : `${fileSizeMB.toFixed(0)}MB`;
 
-      if (!confirm(
-        `WAV files will be converted to MP3.\n\n` +
-        `File: ${file.name}\n` +
-        `Size: ${sizeDisplay}\n\n` +
-        `Click OK to convert, or Cancel to upload an MP3 instead.`
-      )) {
+      if (!(window.showConfirmToast
+        ? await window.showConfirmToast('WAV files will be converted to MP3.', {
+          confirmText: 'Convert',
+          cancelText: 'Cancel',
+          detail: `File: ${file.name}\nSize: ${sizeDisplay}\n\nChoose Convert, or Cancel to upload an MP3 instead.`,
+          danger: false
+        })
+        : confirm(
+          `WAV files will be converted to MP3.\n\n` +
+          `File: ${file.name}\n` +
+          `Size: ${sizeDisplay}\n\n` +
+          `Click OK to convert, or Cancel to upload an MP3 instead.`
+        ))) {
         return;
       }
     }
 
     // MP3 files - check size limit
     if (isMp3File(file) && fileSizeMB > uploadSettings.maxMp3SizeMB) {
-      alert(
+      const mp3TooLargeMsg =
         `This MP3 file exceeds the maximum size limit.\n\n` +
         `File size: ${fileSizeMB.toFixed(0)}MB\n` +
-        `Maximum allowed: ${uploadSettings.maxMp3SizeMB}MB`
-      );
+        `Maximum allowed: ${uploadSettings.maxMp3SizeMB}MB`;
+      (window.showToast ? window.showToast(mp3TooLargeMsg, 'error') : alert(mp3TooLargeMsg));
       return;
     }
 
@@ -1301,7 +1308,7 @@ Artist - Track Title
         }
       } catch (err) {
         console.error('WAV conversion failed:', err);
-        alert('Conversion failed. Please convert to MP3 using Audacity or an online converter.');
+        (window.showToast ? window.showToast('Conversion failed. Please convert to MP3 using Audacity or an online converter.', 'error') : alert('Conversion failed. Please convert to MP3 using Audacity or an online converter.'));
         quickDropModal.classList.add('hidden');
         return;
       }
@@ -1349,8 +1356,8 @@ Artist - Track Title
     // Check auth first
     const user = await getAuthUser();
     if (!user) {
-      alert('Please log in to upload mixes');
-      window.location.href = '/login/?redirect=/upload-mix/';
+      (window.showToast ? window.showToast('Please log in to upload mixes', 'info') : alert('Please log in to upload mixes'));
+      setTimeout(() => { window.location.href = '/login/?redirect=/upload-mix/'; }, 1200);
       return;
     }
 
@@ -1363,8 +1370,8 @@ Artist - Track Title
   quickDropZone.addEventListener('click', async () => {
     const user = await getAuthUser();
     if (!user) {
-      alert('Please log in to upload mixes');
-      window.location.href = '/login/?redirect=/upload-mix/';
+      (window.showToast ? window.showToast('Please log in to upload mixes', 'info') : alert('Please log in to upload mixes'));
+      setTimeout(() => { window.location.href = '/login/?redirect=/upload-mix/'; }, 1200);
       return;
     }
 
@@ -1382,7 +1389,7 @@ Artist - Track Title
   // Modal cancel
   quickDropCancel.addEventListener('click', () => {
     if (isConverting) {
-      alert('Please wait for conversion to complete');
+      (window.showToast ? window.showToast('Please wait for conversion to complete', 'info') : alert('Please wait for conversion to complete'));
       return;
     }
     // If upload is in progress, abort it
@@ -1425,21 +1432,21 @@ Artist - Track Title
     if (quickDropConfirm.disabled) return;
 
     if (!quickDropFile) {
-      alert('No file selected');
+      (window.showToast ? window.showToast('No file selected', 'error') : alert('No file selected'));
       return;
     }
 
     const genre = quickDropGenre.value;
     if (!genre) {
-      alert('Please select a genre');
+      (window.showToast ? window.showToast('Please select a genre', 'error') : alert('Please select a genre'));
       quickDropGenre.focus();
       return;
     }
 
     const user = await getAuthUser();
     if (!user) {
-      alert('Please log in to upload mixes');
-      window.location.href = '/login/?redirect=/upload-mix/';
+      (window.showToast ? window.showToast('Please log in to upload mixes', 'info') : alert('Please log in to upload mixes'));
+      setTimeout(() => { window.location.href = '/login/?redirect=/upload-mix/'; }, 1200);
       return;
     }
 
@@ -1453,9 +1460,11 @@ Artist - Track Title
       const limitResult = await limitCheck.json();
 
       if (!limitResult.allowed) {
-        const upgrade = confirm(
-          `${limitResult.reason}\n\nWould you like to upgrade to Pro for unlimited uploads?`
-        );
+        const upgrade = (window.showConfirmToast
+          ? await window.showConfirmToast(`${limitResult.reason}`, { confirmText: 'Upgrade to Pro', cancelText: 'Not now', detail: 'Would you like to upgrade to Pro for unlimited uploads?', danger: false })
+          : confirm(
+            `${limitResult.reason}\n\nWould you like to upgrade to Pro for unlimited uploads?`
+          ));
         if (upgrade) {
           window.location.href = '/account/dashboard/#upgrade';
         }
@@ -1683,11 +1692,11 @@ Artist - Track Title
           // Non-critical usage tracking failure
         }
 
-        alert(`Mix uploaded successfully!\n\n"${quickDropTitle}" is now LIVE on the DJ Mixes page!`);
+        (window.showToast ? window.showToast(`Mix uploaded successfully!\n\n"${quickDropTitle}" is now LIVE on the DJ Mixes page!`, 'success') : alert(`Mix uploaded successfully!\n\n"${quickDropTitle}" is now LIVE on the DJ Mixes page!`));
 
         setTimeout(() => {
           window.location.href = '/dj-mixes/';
-        }, 1000);
+        }, 1200);
       } else {
         throw new Error(result.error || 'Upload failed');
       }
@@ -1700,7 +1709,7 @@ Artist - Track Title
       const errMessage = error instanceof Error ? error.message : String(error);
       if (errMessage !== 'Upload cancelled') {
         quickDropStatus.textContent = 'Upload failed';
-        alert(`Upload failed: ${errMessage}`);
+        (window.showToast ? window.showToast(`Upload failed: ${errMessage}`, 'error') : alert(`Upload failed: ${errMessage}`));
       }
 
       quickDropConfirm.disabled = false;
@@ -1721,8 +1730,8 @@ Artist - Track Title
     // Wait for auth to be ready
     const user = await getAuthUser();
     if (!user) {
-      alert('Please log in to upload mixes');
-      window.location.href = '/login/?redirect=/upload-mix/';
+      (window.showToast ? window.showToast('Please log in to upload mixes', 'info') : alert('Please log in to upload mixes'));
+      setTimeout(() => { window.location.href = '/login/?redirect=/upload-mix/'; }, 1200);
       return;
     }
 
@@ -1736,9 +1745,11 @@ Artist - Track Title
       const limitResult = await limitCheck.json();
 
       if (!limitResult.allowed) {
-        const upgrade = confirm(
-          `${limitResult.reason}\n\nWould you like to upgrade to Pro for unlimited uploads?`
-        );
+        const upgrade = (window.showConfirmToast
+          ? await window.showConfirmToast(`${limitResult.reason}`, { confirmText: 'Upgrade to Pro', cancelText: 'Not now', detail: 'Would you like to upgrade to Pro for unlimited uploads?', danger: false })
+          : confirm(
+            `${limitResult.reason}\n\nWould you like to upgrade to Pro for unlimited uploads?`
+          ));
         if (upgrade) {
           window.location.href = '/account/dashboard/#upgrade';
         }
@@ -1761,23 +1772,23 @@ Artist - Track Title
       try {
         const u = new URL(sourceUrl);
         if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-          alert('Source link must start with http:// or https://');
+          (window.showToast ? window.showToast('Source link must start with http:// or https://', 'error') : alert('Source link must start with http:// or https://'));
           return;
         }
       } catch {
-        alert('Source link is not a valid URL');
+        (window.showToast ? window.showToast('Source link is not a valid URL', 'error') : alert('Source link is not a valid URL'));
         return;
       }
     }
 
     // Validate required fields
     if (!djName || !mixTitle) {
-      alert('Please fill in DJ Name and Mix Title');
+      (window.showToast ? window.showToast('Please fill in DJ Name and Mix Title', 'error') : alert('Please fill in DJ Name and Mix Title'));
       return;
     }
 
     if (!genreValue) {
-      alert('Please select a genre');
+      (window.showToast ? window.showToast('Please select a genre', 'error') : alert('Please select a genre'));
       return;
     }
 
@@ -1785,14 +1796,14 @@ Artist - Track Title
     if (mixDescription) {
       const validation = validateDescription(mixDescription);
       if (!validation.valid) {
-        alert(validation.error + '\n\nPlease update your shout outs and try again.');
+        (window.showToast ? window.showToast(validation.error + '\n\nPlease update your shout outs and try again.', 'error') : alert(validation.error + '\n\nPlease update your shout outs and try again.'));
         mixDescriptionInput.focus();
         return;
       }
     }
 
     if (!selectedAudioFile) {
-      alert('Please select an audio file');
+      (window.showToast ? window.showToast('Please select an audio file', 'error') : alert('Please select an audio file'));
       return;
     }
 
@@ -2048,7 +2059,7 @@ Artist - Track Title
           // Non-critical usage tracking failure
         }
 
-        alert(`✅ Mix uploaded and published successfully!
+        const uploadSuccessMsg = `✅ Mix uploaded and published successfully!
 
 Mix: ${mixTitle}
 DJ: ${djName}
@@ -2056,8 +2067,9 @@ Genre: ${finalGenre}
 Duration: ${formatDuration(audioDurationSeconds)}
 Status: LIVE
 
-Your mix is now available on the DJ Mixes page!`);
-        
+Your mix is now available on the DJ Mixes page!`;
+        (window.showToast ? window.showToast(uploadSuccessMsg, 'success') : alert(uploadSuccessMsg));
+
         setTimeout(() => {
           window.location.href = '/dj-mixes/';
         }, 2000);
@@ -2070,7 +2082,7 @@ Your mix is now available on the DJ Mixes page!`);
       const uploadErrMsg = error instanceof Error ? error.message : 'Unknown error';
       statusText.textContent = 'Upload failed - ' + uploadErrMsg;
 
-      alert(`Failed to upload mix: ${uploadErrMsg}\n\nPlease check your connection and try again.`);
+      (window.showToast ? window.showToast(`Failed to upload mix: ${uploadErrMsg}\n\nPlease check your connection and try again.`, 'error') : alert(`Failed to upload mix: ${uploadErrMsg}\n\nPlease check your connection and try again.`));
       
       submitBtn.disabled = false;
       submitBtn.textContent = 'Upload Mix';

@@ -2838,11 +2838,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.success) {
         window.location.reload();
       } else {
-        alert(result.error || 'Failed to save');
+        (window.showToast ? window.showToast(result.error || 'Failed to save', 'error') : alert(result.error || 'Failed to save'));
       }
     } catch (e) {
       console.error('Error:', e);
-      alert('Failed to save. Please try again.');
+      (window.showToast ? window.showToast('Failed to save. Please try again.', 'error') : alert('Failed to save. Please try again.'));
     }
     
     saveBtn.textContent = 'Save Bio';
@@ -2923,13 +2923,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.success && result.onboardingUrl) {
         window.location.href = result.onboardingUrl;
       } else {
-        alert(result.error || 'Failed to create Stripe account');
+        (window.showToast ? window.showToast(result.error || 'Failed to create Stripe account', 'error') : alert(result.error || 'Failed to create Stripe account'));
         stripeConnectBtn.textContent = 'Connect with Stripe';
         stripeConnectBtn.disabled = false;
       }
     } catch (e) {
       console.error('Stripe Connect error:', e);
-      alert('Failed to connect with Stripe. Please try again.');
+      (window.showToast ? window.showToast('Failed to connect with Stripe. Please try again.', 'error') : alert('Failed to connect with Stripe. Please try again.'));
       stripeConnectBtn.textContent = 'Connect with Stripe';
       stripeConnectBtn.disabled = false;
     }
@@ -2954,13 +2954,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.success && result.onboardingUrl) {
         window.location.href = result.onboardingUrl;
       } else {
-        alert(result.error || 'Failed to generate onboarding link');
+        (window.showToast ? window.showToast(result.error || 'Failed to generate onboarding link', 'error') : alert(result.error || 'Failed to generate onboarding link'));
         stripeContinueBtn.textContent = 'Continue Setup →';
         stripeContinueBtn.disabled = false;
       }
     } catch (e) {
       console.error('Stripe Continue error:', e);
-      alert('Failed to continue setup. Please try again.');
+      (window.showToast ? window.showToast('Failed to continue setup. Please try again.', 'error') : alert('Failed to continue setup. Please try again.'));
       stripeContinueBtn.textContent = 'Continue Setup →';
       stripeContinueBtn.disabled = false;
     }
@@ -3054,7 +3054,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const email = paypalEmailInput?.value?.trim();
 
     if (!email || !email.includes('@')) {
-      alert('Please enter a valid email address');
+      (window.showToast ? window.showToast('Please enter a valid email address', 'error') : alert('Please enter a valid email address'));
       return;
     }
 
@@ -3078,13 +3078,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.success) {
         window.location.reload();
       } else {
-        alert(result.error || 'Failed to link PayPal');
+        (window.showToast ? window.showToast(result.error || 'Failed to link PayPal', 'error') : alert(result.error || 'Failed to link PayPal'));
         paypalLinkBtn.textContent = 'Link PayPal';
         paypalLinkBtn.disabled = false;
       }
     } catch (e) {
       console.error('PayPal link error:', e);
-      alert('Failed to link PayPal. Please try again.');
+      (window.showToast ? window.showToast('Failed to link PayPal. Please try again.', 'error') : alert('Failed to link PayPal. Please try again.'));
       paypalLinkBtn.textContent = 'Link PayPal';
       paypalLinkBtn.disabled = false;
     }
@@ -3092,10 +3092,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   // PayPal Change Email
   const paypalChangeBtn = document.getElementById('paypal-change-btn');
-  paypalChangeBtn?.addEventListener('click', () => {
-    const newEmail = prompt('Enter your new PayPal email:');
+  paypalChangeBtn?.addEventListener('click', async () => {
+    const newEmail = (window.showPromptToast
+      ? await window.showPromptToast('Enter your new PayPal email:', { placeholder: 'your@paypal-email.com', confirmText: 'Save' })
+      : prompt('Enter your new PayPal email:'));
     if (!newEmail || !newEmail.includes('@')) {
-      if (newEmail !== null) alert('Please enter a valid email address');
+      if (newEmail !== null) (window.showToast ? window.showToast('Please enter a valid email address', 'error') : alert('Please enter a valid email address'));
       return;
     }
 
@@ -3117,14 +3119,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.success) {
         window.location.reload();
       } else {
-        alert(result.error || 'Failed to update PayPal');
+        (window.showToast ? window.showToast(result.error || 'Failed to update PayPal', 'error') : alert(result.error || 'Failed to update PayPal'));
         paypalChangeBtn.textContent = 'Change Email';
         paypalChangeBtn.disabled = false;
       }
     })
     .catch(function(e) {
       console.error('PayPal update error:', e);
-      alert('Failed to update. Please try again.');
+      (window.showToast ? window.showToast('Failed to update. Please try again.', 'error') : alert('Failed to update. Please try again.'));
       paypalChangeBtn.textContent = 'Change Email';
       paypalChangeBtn.disabled = false;
     });
@@ -3156,13 +3158,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (result.success) {
           window.location.reload();
         } else {
-          alert(result.error || 'Failed to set payout method');
+          (window.showToast ? window.showToast(result.error || 'Failed to set payout method', 'error') : alert(result.error || 'Failed to set payout method'));
           btn.textContent = 'Set as Preferred';
           btn.disabled = false;
         }
       } catch (e) {
         console.error('Set payout method error:', e);
-        alert('Failed to update. Please try again.');
+        (window.showToast ? window.showToast('Failed to update. Please try again.', 'error') : alert('Failed to update. Please try again.'));
         btn.textContent = 'Set as Preferred';
         btn.disabled = false;
       }
@@ -3174,7 +3176,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   saveArtistMethodBtn?.addEventListener('click', async () => {
     const selected = document.querySelector('input[name="artistPayoutMethod"]:checked')?.value;
     if (!selected) {
-      alert('Please select a payment method');
+      (window.showToast ? window.showToast('Please select a payment method', 'error') : alert('Please select a payment method'));
       return;
     }
 
@@ -3199,13 +3201,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.success) {
         window.location.reload();
       } else {
-        alert(result.error || 'Failed to set payout method');
+        (window.showToast ? window.showToast(result.error || 'Failed to set payout method', 'error') : alert(result.error || 'Failed to set payout method'));
         saveArtistMethodBtn.textContent = 'Save Preference';
         saveArtistMethodBtn.disabled = false;
       }
     } catch (e) {
       console.error('Set payout method error:', e);
-      alert('Failed to update. Please try again.');
+      (window.showToast ? window.showToast('Failed to update. Please try again.', 'error') : alert('Failed to update. Please try again.'));
       saveArtistMethodBtn.textContent = 'Save Preference';
       saveArtistMethodBtn.disabled = false;
     }
@@ -3241,7 +3243,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error('Error:', e);
-      alert('Failed to download data. Please try again.');
+      (window.showToast ? window.showToast('Failed to download data. Please try again.', 'error') : alert('Failed to download data. Please try again.'));
     }
     
     downloadBtn.textContent = 'Download';

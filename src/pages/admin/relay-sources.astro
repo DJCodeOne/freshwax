@@ -606,10 +606,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         modal.classList.add('hidden');
         loadSources();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
-      alert('Error saving source: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error saving source: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error saving source: ' + (error instanceof Error ? error.message : String(error))));
     }
   });
   
@@ -640,7 +640,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     const source = sources.find(s => s.id === id);
     if (!source) return;
     
-    if (!confirm(`Delete "${source.name}"? This cannot be undone.`)) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Delete "${source.name}"?`, { confirmText: 'Delete', cancelText: 'Cancel', detail: 'This cannot be undone.' }) : confirm(`Delete "${source.name}"? This cannot be undone.`))) return;
     
     try {
       const response = await fetch(`/api/livestream/relay-sources/?id=${id}`, {
@@ -652,10 +652,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       if (result.success) {
         loadSources();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
-      alert('Error deleting source: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error deleting source: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error deleting source: ' + (error instanceof Error ? error.message : String(error))));
     }
   };
   
@@ -674,7 +674,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       
       if (result.success && result.relays.length > 0) {
         const relay = result.relays[0];
-        alert(`Status: ${relay.isLive ? 'Live' : 'Offline'}\n${relay.nowPlaying ? 'Now Playing: ' + relay.nowPlaying : ''}`);
+        (window.showToast ? window.showToast(`Status: ${relay.isLive ? 'Live' : 'Offline'}\n${relay.nowPlaying ? 'Now Playing: ' + relay.nowPlaying : ''}`, 'info') : alert(`Status: ${relay.isLive ? 'Live' : 'Offline'}\n${relay.nowPlaying ? 'Now Playing: ' + relay.nowPlaying : ''}`));
         loadSources(); // Refresh to show updated status
       }
     } catch (error) {

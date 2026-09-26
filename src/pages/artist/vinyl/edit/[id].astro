@@ -219,8 +219,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       // Verify ownership
       if (listing.sellerId !== currentUser.uid) {
-        alert('You do not have permission to edit this listing.');
-        window.location.href = '/artist/vinyl/';
+        (window.showToast ? window.showToast('You do not have permission to edit this listing.', 'error') : alert('You do not have permission to edit this listing.'));
+        setTimeout(() => { window.location.href = '/artist/vinyl/'; }, 1200);
         return;
       }
 
@@ -306,11 +306,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         throw new Error(result.error || 'Failed to update listing');
       }
 
-      alert('Listing updated successfully!');
-      window.location.href = '/artist/vinyl/';
+      (window.showToast ? window.showToast('Listing updated successfully!', 'success') : alert('Listing updated successfully!'));
+      setTimeout(() => { window.location.href = '/artist/vinyl/'; }, 1200);
 
     } catch (error) {
-      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error: ' + (error instanceof Error ? error.message : String(error))));
     } finally {
       saveBtn.textContent = 'Save Changes';
       saveBtn.disabled = false;
@@ -319,7 +319,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   // Delete handler
   document.getElementById('deleteBtn').addEventListener('click', async () => {
-    if (!confirm('Are you sure you want to delete this listing? This cannot be undone.')) {
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to delete this listing?', { confirmText: 'Delete', cancelText: 'Cancel', detail: 'This cannot be undone.' }) : confirm('Are you sure you want to delete this listing? This cannot be undone.'))) {
       return;
     }
 
@@ -344,7 +344,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       window.location.href = '/artist/vinyl/';
 
     } catch (error) {
-      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error: ' + (error instanceof Error ? error.message : String(error))));
     }
   });
 </script>

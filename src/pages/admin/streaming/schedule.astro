@@ -769,7 +769,7 @@ const nonce = Astro.locals.nonce || '';
   }
 
   async function cancelSlot(slotId) {
-    if (!confirm('Are you sure you want to cancel this booking?')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to cancel this booking?', { confirmText: 'Cancel booking', cancelText: 'Keep it' }) : confirm('Are you sure you want to cancel this booking?'))) return;
 
     try {
       const response = await fetch('/api/livestream/slots/', {
@@ -780,13 +780,13 @@ const nonce = Astro.locals.nonce || '';
 
       const data = await response.json();
       if (data.success) {
-        alert('Slot cancelled');
+        (window.showToast ? window.showToast('Slot cancelled', 'success') : alert('Slot cancelled'));
         loadSchedule();
       } else {
-        alert(data.error || 'Failed to cancel');
+        (window.showToast ? window.showToast(data.error || 'Failed to cancel', 'error') : alert(data.error || 'Failed to cancel'));
       }
     } catch (error) {
-      alert('Error cancelling slot');
+      (window.showToast ? window.showToast('Error cancelling slot', 'error') : alert('Error cancelling slot'));
     }
   }
 
@@ -841,7 +841,7 @@ const nonce = Astro.locals.nonce || '';
     const reason = document.getElementById('allowanceReason').value.trim();
 
     if (!djId) {
-      alert('Please enter DJ email or ID');
+      (window.showToast ? window.showToast('Please enter DJ email or ID', 'error') : alert('Please enter DJ email or ID'));
       return;
     }
 
@@ -857,15 +857,15 @@ const nonce = Astro.locals.nonce || '';
         closeAllowanceModal();
         loadAllowances();
       } else {
-        alert(data.error || 'Failed to save');
+        (window.showToast ? window.showToast(data.error || 'Failed to save', 'error') : alert(data.error || 'Failed to save'));
       }
     } catch (error) {
-      alert('Error saving allowance');
+      (window.showToast ? window.showToast('Error saving allowance', 'error') : alert('Error saving allowance'));
     }
   }
 
   window.removeAllowance = async function(djId) {
-    if (!confirm('Remove this DJ\'s override?')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Remove this DJ\'s override?', { confirmText: 'Remove', cancelText: 'Cancel' }) : confirm('Remove this DJ\'s override?'))) return;
 
     try {
       const response = await fetch('/api/livestream/allowances/', {
@@ -879,7 +879,7 @@ const nonce = Astro.locals.nonce || '';
         loadAllowances();
       }
     } catch (error) {
-      alert('Error removing allowance');
+      (window.showToast ? window.showToast('Error removing allowance', 'error') : alert('Error removing allowance'));
     }
   }
 

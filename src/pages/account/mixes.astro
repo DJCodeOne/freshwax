@@ -380,7 +380,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         const mixId = btn.getAttribute('data-mix-id');
         const title = btn.getAttribute('data-title') || 'this mix';
         
-        if (!confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`)) {
+        if (!(window.showConfirmToast ? await window.showConfirmToast(`Are you sure you want to delete "${title}"?`, { confirmText: 'Delete', cancelText: 'Cancel', detail: 'This cannot be undone.' }) : confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`))) {
           return;
         }
         
@@ -405,10 +405,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               location.reload();
             }
           } else {
-            alert('Failed to delete mix: ' + (data.error || 'Unknown error'));
+            (window.showToast ? window.showToast('Failed to delete mix: ' + (data.error || 'Unknown error'), 'error') : alert('Failed to delete mix: ' + (data.error || 'Unknown error')));
           }
         } catch (error) {
-          alert('Error deleting mix');
+          (window.showToast ? window.showToast('Error deleting mix', 'error') : alert('Error deleting mix'));
         }
       });
     });
@@ -533,7 +533,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       changeArtworkBtn.textContent = `✓ New cover (${sizeKB}KB)`;
     } catch (error) {
       console.error('Error processing artwork:', error);
-      alert('Failed to process image. Please try another.');
+      (window.showToast ? window.showToast('Failed to process image. Please try another.', 'error') : alert('Failed to process image. Please try another.'));
       processedArtworkBlob = null;
     } finally {
       artworkProcessing.classList.add('hidden');
@@ -590,13 +590,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       try {
         const u = new URL(sourceUrl);
         if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-          alert('Source link must start with http:// or https://');
+          (window.showToast ? window.showToast('Source link must start with http:// or https://', 'error') : alert('Source link must start with http:// or https://'));
           saveBtn.disabled = false;
           saveBtn.textContent = 'Save Changes';
           return;
         }
       } catch {
-        alert('Source link is not a valid URL');
+        (window.showToast ? window.showToast('Source link is not a valid URL', 'error') : alert('Source link is not a valid URL'));
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Changes';
         return;
@@ -664,7 +664,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to update mix: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Failed to update mix: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Failed to update mix: ' + (error instanceof Error ? error.message : String(error))));
       saveBtn.disabled = false;
       saveBtn.textContent = 'Save Changes';
     }
@@ -716,7 +716,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const mixId = document.getElementById('deleteMixId').value;
 
     if (!currentUserId) {
-      alert('You must be logged in to delete mixes');
+      (window.showToast ? window.showToast('You must be logged in to delete mixes', 'error') : alert('You must be logged in to delete mixes'));
       return;
     }
 
@@ -739,11 +739,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (response.ok && data.success) {
         location.reload();
       } else {
-        alert('Failed to delete mix: ' + (data.error || 'Unknown error'));
+        (window.showToast ? window.showToast('Failed to delete mix: ' + (data.error || 'Unknown error'), 'error') : alert('Failed to delete mix: ' + (data.error || 'Unknown error')));
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to delete mix');
+      (window.showToast ? window.showToast('Failed to delete mix', 'error') : alert('Failed to delete mix'));
     }
   });
 

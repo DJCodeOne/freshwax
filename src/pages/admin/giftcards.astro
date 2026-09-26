@@ -510,11 +510,11 @@ const nonce = Astro.locals.nonce || '';
         document.getElementById('createdCardResult').classList.remove('hidden');
         loadAnalytics();
       } else {
-        alert(result.error || 'Failed to create card');
+        (window.showToast ? window.showToast(result.error || 'Failed to create card', 'error') : alert(result.error || 'Failed to create card'));
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to create card');
+      (window.showToast ? window.showToast('Failed to create card', 'error') : alert('Failed to create card'));
     }
     
     btn.disabled = false;
@@ -554,11 +554,11 @@ const nonce = Astro.locals.nonce || '';
         loadAnalytics();
         loadBalances();
       } else {
-        alert(result.error || 'Failed to adjust balance');
+        (window.showToast ? window.showToast(result.error || 'Failed to adjust balance', 'error') : alert(result.error || 'Failed to adjust balance'));
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to adjust balance');
+      (window.showToast ? window.showToast('Failed to adjust balance', 'error') : alert('Failed to adjust balance'));
     }
     
     btn.disabled = false;
@@ -568,18 +568,18 @@ const nonce = Astro.locals.nonce || '';
   // Copy code
   window.copyCode = function(code) {
     navigator.clipboard.writeText(code);
-    alert('Code copied!');
+    (window.showToast ? window.showToast('Code copied!', 'success') : alert('Code copied!'));
   };
-  
+
   document.getElementById('copyNewCode').addEventListener('click', () => {
     const code = document.getElementById('newCardCode').textContent;
     navigator.clipboard.writeText(code);
-    alert('Code copied!');
+    (window.showToast ? window.showToast('Code copied!', 'success') : alert('Code copied!'));
   });
   
   // Cancel card (was deactivate)
   window.cancelCard = async function(cardId) {
-    if (!confirm('Are you sure you want to cancel this gift card? The code will no longer be redeemable.')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to cancel this gift card?', { confirmText: 'Cancel card', cancelText: 'Keep it', detail: 'The code will no longer be redeemable.' }) : confirm('Are you sure you want to cancel this gift card? The code will no longer be redeemable.'))) return;
     
     try {
       const response = await adminFetch('/api/admin/giftcards/', {
@@ -593,21 +593,21 @@ const nonce = Astro.locals.nonce || '';
       const result = await response.json();
       
       if (result.success) {
-        alert('Gift card cancelled successfully');
+        (window.showToast ? window.showToast('Gift card cancelled successfully', 'success') : alert('Gift card cancelled successfully'));
         loadCards();
         loadAnalytics();
       } else {
-        alert(result.error || 'Failed to cancel card');
+        (window.showToast ? window.showToast(result.error || 'Failed to cancel card', 'error') : alert(result.error || 'Failed to cancel card'));
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to cancel card');
+      (window.showToast ? window.showToast('Failed to cancel card', 'error') : alert('Failed to cancel card'));
     }
   };
   
   // Reactivate card (for lost codes)
   window.reactivateCard = async function(cardId) {
-    if (!confirm('Reactivate this gift card? It will become redeemable again.')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Reactivate this gift card?', { confirmText: 'Reactivate', cancelText: 'Cancel', detail: 'It will become redeemable again.', danger: false }) : confirm('Reactivate this gift card? It will become redeemable again.'))) return;
     
     try {
       const response = await adminFetch('/api/admin/giftcards/', {
@@ -621,15 +621,15 @@ const nonce = Astro.locals.nonce || '';
       const result = await response.json();
       
       if (result.success) {
-        alert('Gift card reactivated successfully');
+        (window.showToast ? window.showToast('Gift card reactivated successfully', 'success') : alert('Gift card reactivated successfully'));
         loadCards();
         loadAnalytics();
       } else {
-        alert(result.error || 'Failed to reactivate card');
+        (window.showToast ? window.showToast(result.error || 'Failed to reactivate card', 'error') : alert(result.error || 'Failed to reactivate card'));
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to reactivate card');
+      (window.showToast ? window.showToast('Failed to reactivate card', 'error') : alert('Failed to reactivate card'));
     }
   };
   

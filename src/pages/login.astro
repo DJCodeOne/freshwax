@@ -45,6 +45,7 @@ const csrfToken = Astro.locals.csrfToken || '';
   <meta property="og:site_name" content="Fresh Wax" />
   <meta property="og:image" content={`${SITE_URL}/og-image.webp`} />
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <script is:inline src="/confirm-toast.js?v=20260926" defer></script>
 </head>
 <body>
   <script is:inline nonce={nonce}>

@@ -882,21 +882,27 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       transform: translateY(100px);
       opacity: 0;
       transition: transform 0.3s ease, opacity 0.3s ease;
-      z-index: 1001;
+      z-index: 10020; /* above modals (10000) and confirm dialogs (10010) */
       max-width: 400px;
+      white-space: pre-line;
+      line-height: 1.45;
     }
-    
+
     .toast.show {
       transform: translateY(0);
       opacity: 1;
     }
-    
+
     .toast.error {
       border-left-color: var(--accent-red);
     }
-    
+
     .toast.warning {
       border-left-color: var(--accent-amber);
+    }
+
+    .toast.info {
+      border-left-color: #3b82f6;
     }
     
     /* =============================================
@@ -1502,6 +1508,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   </style>
 
   <slot name="head" />
+  <script is:inline src="/confirm-toast.js?v=20260926" defer></script>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -1632,18 +1639,23 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   
   <!-- Scripts -->
   <script is:inline nonce={nonce}>
-    // Global toast function
+    // Global toast function. Stays up longer for longer messages (these toasts
+    // replaced alert() popups, some of them multi-line), and a new toast
+    // cancels the previous one's timer so it isn't hidden early.
     window.showToast = function(message, type = 'success') {
       const toast = document.getElementById('toast');
       if (!toast) return;
-      
-      toast.textContent = message;
+      const text = String(message == null ? '' : message);
+
+      toast.textContent = text;
       toast.className = 'toast ' + type;
       toast.classList.add('show');
-      
-      setTimeout(() => {
+
+      if (window.__fwToastHideTimer) clearTimeout(window.__fwToastHideTimer);
+      window.__fwToastHideTimer = setTimeout(() => {
         toast.classList.remove('show');
-      }, 3000);
+        window.__fwToastHideTimer = null;
+      }, Math.min(9000, 3000 + text.length * 40));
     };
     
     // Global modal functions

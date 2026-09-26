@@ -487,12 +487,16 @@ export function renderPersonalPlaylistPage(
   });
 
   grid.querySelectorAll('.personal-delete-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       const button = e.currentTarget as HTMLElement;
       const itemId = button.dataset.id;
       if (!itemId || !state.playlistManager || button.classList.contains('deleting')) return;
 
-      if (!confirm('Remove this track from your playlist?')) return;
+      const w = window as unknown as { showConfirmToast?: (message: string, opts?: Record<string, unknown>) => Promise<boolean> };
+      const remove = w.showConfirmToast
+        ? await w.showConfirmToast('Remove this track from your playlist?', { confirmText: 'Remove', cancelText: 'Keep it' })
+        : confirm('Remove this track from your playlist?');
+      if (!remove) return;
 
       button.classList.add('deleting');
       button.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';

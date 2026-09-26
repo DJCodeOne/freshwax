@@ -574,7 +574,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           return;
         }
 
-        if (!confirm(`Update order to "${nextStatus}"?`)) return;
+        if (!(window.showConfirmToast ? await window.showConfirmToast(`Update order to "${nextStatus}"?`, { confirmText: 'Update', cancelText: 'Cancel', danger: false }) : confirm(`Update order to "${nextStatus}"?`))) return;
 
         await sendStatusUpdate(id, nextStatus);
       }

@@ -669,10 +669,10 @@ const nonce = Astro.locals.nonce || '';
 
           openModal();
         } else {
-          alert('Failed to load listing');
+          (window.showToast ? window.showToast('Failed to load listing', 'error') : alert('Failed to load listing'));
         }
       } catch (error) {
-        alert('Error loading listing');
+        (window.showToast ? window.showToast('Error loading listing', 'error') : alert('Error loading listing'));
       }
     });
   });
@@ -716,17 +716,17 @@ const nonce = Astro.locals.nonce || '';
         closeModal();
         window.location.reload();
       } else {
-        alert('Failed to save: ' + result.error);
+        (window.showToast ? window.showToast('Failed to save: ' + result.error, 'error') : alert('Failed to save: ' + result.error));
       }
     } catch (error) {
-      alert('Error saving listing');
+      (window.showToast ? window.showToast('Error saving listing', 'error') : alert('Error saving listing'));
     }
   });
 
   // Approve listing
   document.querySelectorAll('.approve-listing-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Approve this listing?')) return;
+      if (!(window.showConfirmToast ? await window.showConfirmToast('Approve this listing?', { confirmText: 'Approve', cancelText: 'Cancel', danger: false }) : confirm('Approve this listing?'))) return;
 
       const listingId = btn.getAttribute('data-listing-id');
 
@@ -743,10 +743,10 @@ const nonce = Astro.locals.nonce || '';
         if (result.success) {
           window.location.reload();
         } else {
-          alert('Failed: ' + result.error);
+          (window.showToast ? window.showToast('Failed: ' + result.error, 'error') : alert('Failed: ' + result.error));
         }
       } catch (error) {
-        alert('Error approving listing');
+        (window.showToast ? window.showToast('Error approving listing', 'error') : alert('Error approving listing'));
       }
     });
   });
@@ -754,7 +754,7 @@ const nonce = Astro.locals.nonce || '';
   // Remove listing
   document.querySelectorAll('.remove-listing-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const reason = prompt('Reason for removing this listing:');
+      const reason = (window.showPromptToast ? await window.showPromptToast('Reason for removing this listing:', { confirmText: 'Remove', cancelText: 'Cancel' }) : prompt('Reason for removing this listing:'));
       if (reason === null) return;
 
       const listingId = btn.getAttribute('data-listing-id');
@@ -772,10 +772,10 @@ const nonce = Astro.locals.nonce || '';
         if (result.success) {
           window.location.reload();
         } else {
-          alert('Failed: ' + result.error);
+          (window.showToast ? window.showToast('Failed: ' + result.error, 'error') : alert('Failed: ' + result.error));
         }
       } catch (error) {
-        alert('Error removing listing');
+        (window.showToast ? window.showToast('Error removing listing', 'error') : alert('Error removing listing'));
       }
     });
   });

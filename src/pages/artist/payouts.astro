@@ -543,7 +543,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     btn.addEventListener('click', async () => {
       if (!currentUser) { window.showToast ? window.showToast('Please log in again to request a payout.', 'info') : alert('Please log in again to request a payout.'); return; }
-      if (!confirm('Request payout of your pending balance?\n\nFresh Wax will be notified and arrange your payment.')) return;
+      if (!(window.showConfirmToast ? await window.showConfirmToast('Request payout of your pending balance?', { confirmText: 'Request payout', cancelText: 'Cancel', detail: 'Fresh Wax will be notified and arrange your payment.', danger: false }) : confirm('Request payout of your pending balance?\n\nFresh Wax will be notified and arrange your payment.'))) return;
 
       btn.disabled = true;
       const originalText = btn.textContent;

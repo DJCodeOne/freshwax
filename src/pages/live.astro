@@ -2825,7 +2825,12 @@ try {
   
   // Cancel slot
   window.cancelSlot = async (slotId) => {
-    if (!confirm('Cancel this slot?')) return;
+    // Branded confirm toast (Layout.astro), not the browser's plain confirm().
+    const ok = window.showConfirmToast
+      ? await window.showConfirmToast('Cancel this slot?', { confirmText: 'Cancel slot', cancelText: 'Keep it' })
+      : confirm('Cancel this slot?');
+    if (!ok) return;
+    const notify = (msg, type) => (window.showToast ? window.showToast(msg, type) : alert(msg));
 
     try {
       const idToken = await currentUser.getIdToken();
@@ -2842,16 +2847,16 @@ try {
         })
       });
 
-      if (!response.ok) throw new Error('Cancel slot failed');
-      const result = await response.json();
-      if (result.success) {
+      const result = await response.json().catch(() => ({}));
+      if (response.ok && result.success) {
         scheduleCache = null;
         await loadSchedule(true);
+        notify('Slot cancelled', 'success');
       } else {
-        alert(result.error || 'Failed to cancel');
+        notify(result.error || 'Could not cancel the slot. Please try again.', 'error');
       }
     } catch (err) {
-      alert('Network error');
+      notify('Network error. Please try again.', 'error');
     }
   };
   
@@ -2870,8 +2875,8 @@ try {
 
   // End Stream button handler
   document.getElementById('endStreamBtn')?.addEventListener('click', async () => {
-    if (!confirm('Are you sure you want to end your stream?')) return;
-    
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to end your stream?', { confirmText: 'End stream', cancelText: 'Keep streaming' }) : confirm('Are you sure you want to end your stream?'))) return;
+
     const endBtn = document.getElementById('endStreamBtn');
     if (endBtn) {
       endBtn.disabled = true;
@@ -2881,7 +2886,7 @@ try {
     try {
       const slotId = window.currentLiveSlot?.id;
       if (!slotId) {
-        alert('No active stream found');
+        (window.showToast ? window.showToast('No active stream found', 'error') : alert('No active stream found'));
         return;
       }
       
@@ -2925,10 +2930,10 @@ try {
         // Refresh schedule
         scheduleCache = null;
         await loadSchedule(true);
-        
-        alert('Stream ended successfully!');
+
+        (window.showToast ? window.showToast('Stream ended successfully!', 'success') : alert('Stream ended successfully!'));
       } else {
-        alert(result.error || 'Failed to end stream');
+        (window.showToast ? window.showToast(result.error || 'Failed to end stream', 'error') : alert(result.error || 'Failed to end stream'));
         if (endBtn) {
           endBtn.disabled = false;
           endBtn.textContent = '⏹️ End Stream';
@@ -2936,7 +2941,7 @@ try {
       }
     } catch (err) {
       console.error('Failed to end stream:', err);
-      alert('Network error. Please try again.');
+      (window.showToast ? window.showToast('Network error. Please try again.', 'error') : alert('Network error. Please try again.'));
       if (endBtn) {
         endBtn.disabled = false;
         endBtn.textContent = '⏹️ End Stream';
@@ -3027,7 +3032,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260926"></script>
+<script type="module" src="/live-stream.js?v=20260926b"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page

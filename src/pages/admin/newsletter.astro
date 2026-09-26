@@ -699,7 +699,7 @@ Stay fresh! 🎵
     else if (currentStep === 2) {
       const subj = document.getElementById('emailSubject').value.trim();
       const cont = document.getElementById('emailContent').value.trim();
-      if (!subj || !cont) { alert('Please enter subject and content'); return; }
+      if (!subj || !cont) { (window.showToast ? window.showToast('Please enter subject and content', 'error') : alert('Please enter subject and content')); return; }
       const type = document.querySelector('input[name="recipientType"]:checked').value;
       const count = type === 'all' ? allSubscribers.filter(s => s.status === 'active').length : selectedIds.size;
       document.getElementById('reviewRecipients').textContent = `${count} subscribers`;
@@ -733,7 +733,7 @@ Stay fresh! 🎵
   
   async function processFile(file) {
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['txt', 'pdf', 'docx'].includes(ext)) { alert('Unsupported file. Use .txt, .pdf, or .docx'); return; }
+    if (!['txt', 'pdf', 'docx'].includes(ext)) { (window.showToast ? window.showToast('Unsupported file. Use .txt, .pdf, or .docx', 'error') : alert('Unsupported file. Use .txt, .pdf, or .docx')); return; }
     try {
       let content = '';
       if (ext === 'txt') { content = await file.text(); }
@@ -748,7 +748,7 @@ Stay fresh! 🎵
       document.getElementById('uploadArea').style.display = 'none';
       document.getElementById('uploadStatus').style.display = 'flex';
       document.getElementById('uploadFileName').textContent = file.name;
-    } catch (e) { alert('Error: ' + (e instanceof Error ? e.message : String(e))); }
+    } catch (e) { (window.showToast ? window.showToast('Error: ' + (e instanceof Error ? e.message : String(e)), 'error') : alert('Error: ' + (e instanceof Error ? e.message : String(e)))); }
   }
   
   function clearUpload() {
@@ -794,15 +794,15 @@ Stay fresh! 🎵
     const email = document.getElementById('testEmail').value.trim();
     const subj = document.getElementById('emailSubject').value.trim();
     const cont = document.getElementById('emailContent').value.trim();
-    if (!email) { alert('Enter test email'); return; }
-    if (!subj || !cont) { alert('Enter subject and content'); return; }
+    if (!email) { (window.showToast ? window.showToast('Enter test email', 'error') : alert('Enter test email')); return; }
+    if (!subj || !cont) { (window.showToast ? window.showToast('Enter subject and content', 'error') : alert('Enter subject and content')); return; }
     const btn = document.getElementById('testEmailBtn');
     btn.disabled = true; btn.querySelector('.btn-text').classList.add('hidden'); btn.querySelector('.btn-loading').classList.remove('hidden');
     try {
       const res = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY || '' }, body: JSON.stringify({ subject: subj, content: cont, testEmail: email }) });
       const data = await res.json();
-      alert(data.success ? `Test sent to ${email}` : (data.error || 'Failed'));
-    } catch (e) { console.error('[Newsletter] Send test error:', e); alert('Error'); }
+      (window.showToast ? window.showToast(data.success ? `Test sent to ${email}` : (data.error || 'Failed'), data.success ? 'success' : 'error') : alert(data.success ? `Test sent to ${email}` : (data.error || 'Failed')));
+    } catch (e) { console.error('[Newsletter] Send test error:', e); (window.showToast ? window.showToast('Error', 'error') : alert('Error')); }
     finally { btn.disabled = false; btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-loading').classList.add('hidden'); }
   }
   
@@ -811,20 +811,20 @@ Stay fresh! 🎵
     const cont = document.getElementById('emailContent').value.trim();
     const type = document.querySelector('input[name="recipientType"]:checked').value;
     const ids = type === 'all' ? allSubscribers.filter(s => s.status === 'active').map(s => s.id) : Array.from(selectedIds);
-    if (!ids.length) { alert('No recipients'); return; }
-    if (!confirm(`Send to ${ids.length} subscribers?\n\nSubject: ${subj}`)) return;
+    if (!ids.length) { (window.showToast ? window.showToast('No recipients', 'error') : alert('No recipients')); return; }
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Send to ${ids.length} subscribers?`, { confirmText: 'Send', cancelText: 'Cancel', detail: `Subject: ${subj}` }) : confirm(`Send to ${ids.length} subscribers?\n\nSubject: ${subj}`))) return;
     const btn = document.getElementById('sendBtn');
     btn.disabled = true; btn.querySelector('.btn-text').classList.add('hidden'); btn.querySelector('.btn-loading').classList.remove('hidden');
     try {
       const res = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY || '' }, body: JSON.stringify({ subject: subj, content: cont, subscriberIds: ids }) });
       const data = await res.json();
       if (data.success) {
-        alert(`Sent!\n\nSent: ${data.results?.sent || ids.length}\nFailed: ${data.results?.failed || 0}`);
+        (window.showToast ? window.showToast(`Sent! Sent: ${data.results?.sent || ids.length} · Failed: ${data.results?.failed || 0}`, 'success') : alert(`Sent!\n\nSent: ${data.results?.sent || ids.length}\nFailed: ${data.results?.failed || 0}`));
         closeModal('composeModal');
         document.getElementById('emailSubject').value = ''; document.getElementById('emailContent').value = '';
         clearUpload(); selectedIds.clear(); loadSubscribers();
-      } else alert(data.error || 'Failed');
-    } catch (e) { alert('Error: ' + (e instanceof Error ? e.message : String(e))); }
+      } else (window.showToast ? window.showToast(data.error || 'Failed', 'error') : alert(data.error || 'Failed'));
+    } catch (e) { (window.showToast ? window.showToast('Error: ' + (e instanceof Error ? e.message : String(e)), 'error') : alert('Error: ' + (e instanceof Error ? e.message : String(e)))); }
     finally { btn.disabled = false; btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-loading').classList.add('hidden'); }
   }
   
@@ -832,13 +832,13 @@ Stay fresh! 🎵
     const email = document.getElementById('newSubscriberEmail').value.trim();
     const name = document.getElementById('newSubscriberName').value.trim();
     const source = document.getElementById('newSubscriberSource').value;
-    if (!email) { alert('Enter email'); return; }
+    if (!email) { (window.showToast ? window.showToast('Enter email', 'error') : alert('Enter email')); return; }
     try {
       const res = await fetch('/api/newsletter/subscribers/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY || '' }, body: JSON.stringify({ email, name, source }) });
       const data = await res.json();
       if (data.success) { closeModal('addSubscriberModal'); loadSubscribers(); }
-      else alert(data.error || 'Failed');
-    } catch (e) { console.error('[Newsletter] Add subscriber error:', e); alert('Error'); }
+      else (window.showToast ? window.showToast(data.error || 'Failed', 'error') : alert(data.error || 'Failed'));
+    } catch (e) { console.error('[Newsletter] Add subscriber error:', e); (window.showToast ? window.showToast('Error', 'error') : alert('Error')); }
   }
 
   function editSubscriber(id) {
@@ -863,8 +863,8 @@ Stay fresh! 🎵
         closeModal('editSubscriberModal'); renderSubscribers();
         document.getElementById('activeCount').textContent = allSubscribers.filter(s => s.status === 'active').length;
         document.getElementById('unsubscribedCount').textContent = allSubscribers.filter(s => s.status === 'unsubscribed').length;
-      } else alert(data.error || 'Failed');
-    } catch (e) { console.error('[Newsletter] Save subscriber error:', e); alert('Error'); }
+      } else (window.showToast ? window.showToast(data.error || 'Failed', 'error') : alert(data.error || 'Failed'));
+    } catch (e) { console.error('[Newsletter] Save subscriber error:', e); (window.showToast ? window.showToast('Error', 'error') : alert('Error')); }
   }
 
   function deleteSubscriber(id) {
@@ -887,8 +887,8 @@ Stay fresh! 🎵
         document.getElementById('unsubscribedCount').textContent = allSubscribers.filter(s => s.status === 'unsubscribed').length;
         if (allSubscribers.length === 0) { document.getElementById('subscribersTable').style.display = 'none'; document.getElementById('emptyState').style.display = 'block'; }
         else renderSubscribers();
-      } else alert(data.error || 'Failed');
-    } catch (e) { console.error('[Newsletter] Delete subscriber error:', e); alert('Error'); }
+      } else (window.showToast ? window.showToast(data.error || 'Failed', 'error') : alert(data.error || 'Failed'));
+    } catch (e) { console.error('[Newsletter] Delete subscriber error:', e); (window.showToast ? window.showToast('Error', 'error') : alert('Error')); }
   }
 </script>
 

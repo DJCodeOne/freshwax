@@ -618,7 +618,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         var t=document.createElement('div');
         t.id='fw-toast';
         t.setAttribute('role','status');
-        t.style.cssText='position:fixed;bottom:84px;left:50%;transform:translate(-50%,16px);display:flex;align-items:center;gap:10px;max-width:min(92vw,420px);background:rgba(17,17,17,0.96);color:#fff;padding:12px 18px 12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);border-left:4px solid '+accent+';font-size:14px;font-weight:600;line-height:1.4;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.45);opacity:0;transition:opacity .25s ease,transform .25s ease;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);';
+        t.style.cssText='position:fixed;bottom:84px;left:50%;transform:translate(-50%,16px);display:flex;align-items:center;gap:10px;max-width:min(92vw,420px);background:rgba(17,17,17,0.96);color:#fff;padding:12px 18px 12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);border-left:4px solid '+accent+';font-size:14px;font-weight:600;line-height:1.4;white-space:pre-line;z-index:10020;box-shadow:0 8px 24px rgba(0,0,0,0.45);opacity:0;transition:opacity .25s ease,transform .25s ease;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);';
         var icon=document.createElement('span');
         icon.textContent=ICONS[type];
         icon.setAttribute('aria-hidden','true');
@@ -633,11 +633,14 @@ const csrfToken = Astro.locals.csrfToken || '';
         hideTimer=setTimeout(function(){
           t.style.opacity='0';t.style.transform='translate(-50%,10px)';
           setTimeout(function(){t.remove();if(live)live.textContent='';},260);
-        },3200);
+        },Math.min(9000,3200+String(msg).length*40));
       };
     })();
     </script>
-    
+
+    <!-- Branded confirm dialog (window.showConfirmToast), replacing native confirm() -->
+    <script is:inline src="/confirm-toast.js?v=20260926" defer nonce={nonce}></script>
+
     <!-- Pusher config for real-time features -->
     <script define:vars={{ pusherConfig }} nonce={nonce}>
       window.PUSHER_CONFIG = pusherConfig;

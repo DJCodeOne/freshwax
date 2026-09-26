@@ -38,6 +38,7 @@ const firebaseConfig = {
 <body>
   <a href="#mainContent" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:text-black focus:p-2 focus:rounded">Skip to main content</a>
   <script is:inline src="/csrf-protect.js" nonce={nonce}></script>
+  <script is:inline src="/confirm-toast.js?v=20260926" defer nonce={nonce}></script>
   <!-- Loading -->
   <div id="loadingGate" class="loading-gate">
     <div class="loader"></div>
@@ -1440,7 +1441,11 @@ const firebaseConfig = {
         // Cancel handlers - use API
         container.querySelectorAll('.cancel-btn').forEach(btn => {
           btn.addEventListener('click', async () => {
-            if (confirm('Cancel this booking? The stream key will be invalidated.')) {
+            // Branded confirm toast (Layout.astro), not the browser's plain confirm().
+            const ok = window.showConfirmToast
+              ? await window.showConfirmToast('Cancel this booking?', { detail: 'Its stream key will stop working.', confirmText: 'Cancel booking', cancelText: 'Keep it' })
+              : confirm('Cancel this booking? The stream key will be invalidated.');
+            if (ok) {
               try {
                 const idToken = await currentUser.getIdToken();
                 const cancelResponse = await fetch('/api/livestream/slots/', {

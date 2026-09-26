@@ -13,7 +13,7 @@ import {
   setupHlsPlayer, setupTwitchPlayer, setupAudioPlayer, setupRecording,
   destroyHlsPlayer, cleanupHlsAbort, getGlobalAudioContext,
   getIsRecording, stopRecording
-} from '/live/hls-player.js?v=20260926';
+} from '/live/hls-player.js?v=20260926b';
 
 import {
   getPusherConfig, loadPusherScript, setupLiveStatusPusher
@@ -591,8 +591,8 @@ window.checkLiveStatus = checkLiveStatus;
 
 // --- GIF sending (global) ---
 window.sendGifMessage = async function(url, id) {
-  if (!currentUser) { console.error('[GIF] No current user - not logged in'); if (window.showToast) { window.showToast('Please log in to send GIFs'); } else { alert('Please log in to send GIFs'); } return; }
-  if (!currentStream) { console.error('[GIF] No current stream'); if (window.showToast) { window.showToast('No active stream'); } else { alert('No active stream'); } return; }
+  if (!currentUser) { console.error('[GIF] No current user - not logged in'); if (window.showToast) { window.showToast('Please log in to send GIFs', 'info'); } else { alert('Please log in to send GIFs'); } return; }
+  if (!currentStream) { console.error('[GIF] No current stream'); if (window.showToast) { window.showToast('No active stream', 'error'); } else { alert('No active stream'); } return; }
   await sendGiphyMessage(url, id);
 };
 

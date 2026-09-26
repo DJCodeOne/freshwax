@@ -280,7 +280,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const email = input?.value?.trim();
 
     if (!email || !email.includes('@')) {
-      alert('Please enter a valid email address');
+      (window.showToast ? window.showToast('Please enter a valid email address', 'error') : alert('Please enter a valid email address'));
       return;
     }
 
@@ -299,21 +299,23 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (data.success) {
         window.location.reload();
       } else {
-        alert(data.error || 'Failed to link PayPal');
+        (window.showToast ? window.showToast(data.error || 'Failed to link PayPal', 'error') : alert(data.error || 'Failed to link PayPal'));
         btn.textContent = 'Link PayPal';
         btn.disabled = false;
       }
     } catch (e) {
-      alert('Failed to link PayPal');
+      (window.showToast ? window.showToast('Failed to link PayPal', 'error') : alert('Failed to link PayPal'));
       btn.textContent = 'Link PayPal';
       btn.disabled = false;
     }
   }
 
   async function changePayPalEmail() {
-    const newEmail = prompt('Enter your new PayPal email:');
+    const newEmail = (window.showPromptToast
+      ? await window.showPromptToast('Enter your new PayPal email:', { placeholder: 'your@paypal-email.com', confirmText: 'Save' })
+      : prompt('Enter your new PayPal email:'));
     if (!newEmail || !newEmail.includes('@')) {
-      if (newEmail !== null) alert('Please enter a valid email');
+      if (newEmail !== null) (window.showToast ? window.showToast('Please enter a valid email', 'error') : alert('Please enter a valid email'));
       return;
     }
 
@@ -326,9 +328,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (!res.ok) throw new Error('PayPal update failed: ' + res.status);
       const data = await res.json();
       if (data.success) window.location.reload();
-      else alert(data.error || 'Failed to update');
+      else (window.showToast ? window.showToast(data.error || 'Failed to update', 'error') : alert(data.error || 'Failed to update'));
     } catch (e) {
-      alert('Failed to update');
+      (window.showToast ? window.showToast('Failed to update', 'error') : alert('Failed to update'));
     }
   }
 
@@ -342,9 +344,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (!res.ok) throw new Error('Set payout method failed: ' + res.status);
       const data = await res.json();
       if (data.success) window.location.reload();
-      else alert(data.error || 'Failed to set method');
+      else (window.showToast ? window.showToast(data.error || 'Failed to set method', 'error') : alert(data.error || 'Failed to set method'));
     } catch (e) {
-      alert('Failed to set method');
+      (window.showToast ? window.showToast('Failed to set method', 'error') : alert('Failed to set method'));
     }
   }
 
@@ -470,7 +472,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         throw new Error(data.error || 'Failed to start Connect setup');
       }
     } catch (error) {
-      alert(error instanceof Error ? error.message : String(error));
+      (window.showToast ? window.showToast(error instanceof Error ? error.message : String(error), 'error') : alert(error instanceof Error ? error.message : String(error)));
       btn.disabled = false;
       btn.textContent = 'Try Again';
     }
@@ -541,7 +543,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     var enabled = document.getElementById('free-shipping-enabled').checked;
     var threshold = parseFloat(document.getElementById('free-shipping-threshold').value) || 0;
     if (enabled && threshold <= 0) {
-      alert('Please enter a threshold amount for free shipping');
+      (window.showToast ? window.showToast('Please enter a threshold amount for free shipping', 'error') : alert('Please enter a threshold amount for free shipping'));
       return;
     }
     btn.disabled = true;
@@ -557,7 +559,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       status.style.display = 'inline';
       setTimeout(function() { status.style.display = 'none'; }, 3000);
     } catch (err) {
-      alert('Could not save shipping settings. Please try again.');
+      (window.showToast ? window.showToast('Could not save shipping settings. Please try again.', 'error') : alert('Could not save shipping settings. Please try again.'));
     } finally {
       btn.disabled = false;
       btn.textContent = 'Save Shipping Settings';

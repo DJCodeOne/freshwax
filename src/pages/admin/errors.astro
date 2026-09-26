@@ -227,18 +227,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   document.getElementById('refreshBtn')!.addEventListener('click', loadErrors);
 
   document.getElementById('cleanupBtn')!.addEventListener('click', async () => {
-    if (!confirm('Delete error logs older than 7 days?')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Delete error logs older than 7 days?', { confirmText: 'Delete', cancelText: 'Cancel' }) : confirm('Delete error logs older than 7 days?'))) return;
     const btn = document.getElementById('cleanupBtn') as HTMLButtonElement;
     btn.disabled = true;
     btn.textContent = 'Cleaning...';
     try {
       const res = await fetch('/api/admin/errors/?days=7', { method: 'DELETE' });
       const data = await res.json();
-      alert(`Deleted ${data.deleted} old error logs`);
+      (window.showToast ? window.showToast(`Deleted ${data.deleted} old error logs`, 'success') : alert(`Deleted ${data.deleted} old error logs`));
       loadErrors();
     } catch (_e: unknown) {
       // non-critical: error log cleanup request failed
-      alert('Cleanup failed');
+      (window.showToast ? window.showToast('Cleanup failed', 'error') : alert('Cleanup failed'));
     }
     btn.disabled = false;
     btn.textContent = 'Cleanup 7d+';

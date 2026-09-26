@@ -2194,7 +2194,7 @@ const nonce = Astro.locals.nonce || '';
   }
 
   window.kickStream = async function(pathName) {
-    if (!confirm(`Are you sure you want to kick the stream "${pathName}"?`)) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Are you sure you want to kick the stream "${pathName}"?`, { confirmText: 'Kick', cancelText: 'Cancel' }) : confirm(`Are you sure you want to kick the stream "${pathName}"?`))) return;
 
     try {
       // Close all readers and the source
@@ -2203,18 +2203,18 @@ const nonce = Astro.locals.nonce || '';
       });
 
       if (response.ok) {
-        alert('Stream kicked successfully');
+        (window.showToast ? window.showToast('Stream kicked successfully', 'success') : alert('Stream kicked successfully'));
         await loadActiveStreams();
       } else {
         // MediaMTX has no /v3/paths/kick endpoint, and its real kick endpoints
         // are deliberately not reachable through the tunnel (Sep 2026 lockdown),
         // so this never succeeds. Say so instead of implying it worked.
-        alert(`The stream server did not disconnect "${pathName}" (HTTP ${response.status}). Kicking a publisher has to be done on the streaming PC (MediaMTX API on localhost:9997).`);
+        (window.showToast ? window.showToast(`The stream server did not disconnect "${pathName}" (HTTP ${response.status}). Kicking a publisher has to be done on the streaming PC (MediaMTX API on localhost:9997).`, 'error') : alert(`The stream server did not disconnect "${pathName}" (HTTP ${response.status}). Kicking a publisher has to be done on the streaming PC (MediaMTX API on localhost:9997).`));
         await loadActiveStreams();
       }
     } catch (error) {
       console.error('Failed to kick stream:', error);
-      alert('Failed to kick stream: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Failed to kick stream: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Failed to kick stream: ' + (error instanceof Error ? error.message : String(error))));
     }
   }
 
@@ -2222,35 +2222,35 @@ const nonce = Astro.locals.nonce || '';
     // Server control buttons
     document.getElementById('startServerBtn')?.addEventListener('click', async () => {
       const result = await serverAction('start-server');
-      alert(result.message || result.error);
+      (window.showToast ? window.showToast(result.message || result.error, result.success ? 'success' : 'error') : alert(result.message || result.error));
       await checkServerStatus();
     });
 
     document.getElementById('stopServerBtn')?.addEventListener('click', async () => {
-      if (!confirm('Are you sure you want to stop the server? All streams will be disconnected.')) return;
+      if (!(window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to stop the server?', { confirmText: 'Stop server', cancelText: 'Cancel', detail: 'All streams will be disconnected.' }) : confirm('Are you sure you want to stop the server? All streams will be disconnected.'))) return;
       const result = await serverAction('stop-server');
-      alert(result.message || result.error);
+      (window.showToast ? window.showToast(result.message || result.error, result.success ? 'success' : 'error') : alert(result.message || result.error));
       await checkServerStatus();
     });
 
     document.getElementById('restartServerBtn')?.addEventListener('click', async () => {
-      if (!confirm('Restart the server? All streams will briefly disconnect.')) return;
+      if (!(window.showConfirmToast ? await window.showConfirmToast('Restart the server?', { confirmText: 'Restart', cancelText: 'Cancel', detail: 'All streams will briefly disconnect.' }) : confirm('Restart the server? All streams will briefly disconnect.'))) return;
       const result = await serverAction('restart-server');
-      alert(result.message || result.error);
+      (window.showToast ? window.showToast(result.message || result.error, result.success ? 'success' : 'error') : alert(result.message || result.error));
       setTimeout(checkServerStatus, 3000);
     });
 
     // Quick actions
     document.getElementById('kickAllStreamsBtn')?.addEventListener('click', async () => {
-      if (!confirm('Are you sure you want to end ALL active streams?')) return;
+      if (!(window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to end ALL active streams?', { confirmText: 'End all streams', cancelText: 'Cancel' }) : confirm('Are you sure you want to end ALL active streams?'))) return;
       const result = await serverAction('force-end-streams');
-      alert(result.message || result.error);
+      (window.showToast ? window.showToast(result.message || result.error, result.success ? 'success' : 'error') : alert(result.message || result.error));
       await loadActiveStreams();
     });
 
     document.getElementById('healthCheckBtn')?.addEventListener('click', async () => {
       const result = await serverAction('health-check');
-      alert(result.message || result.error);
+      (window.showToast ? window.showToast(result.message || result.error, result.success ? 'info' : 'error') : alert(result.message || result.error));
     });
 
     document.getElementById('viewLogsBtn')?.addEventListener('click', async () => {
@@ -2329,11 +2329,11 @@ const nonce = Astro.locals.nonce || '';
       const count = parseInt(countEl.textContent || '0', 10);
 
       if (count === 0) {
-        alert('No messages to clear');
+        (window.showToast ? window.showToast('No messages to clear', 'info') : alert('No messages to clear'));
         return;
       }
 
-      if (!confirm(`Are you sure you want to delete all ${count} chat messages? This cannot be undone.`)) {
+      if (!(window.showConfirmToast ? await window.showConfirmToast(`Are you sure you want to delete all ${count} chat messages?`, { confirmText: 'Delete', cancelText: 'Cancel', detail: 'This cannot be undone.' }) : confirm(`Are you sure you want to delete all ${count} chat messages? This cannot be undone.`))) {
         return;
       }
 
@@ -2350,14 +2350,14 @@ const nonce = Astro.locals.nonce || '';
         const result = await response.json();
 
         if (result.success) {
-          alert(`Cleared ${result.deleted} chat messages`);
+          (window.showToast ? window.showToast(`Cleared ${result.deleted} chat messages`, 'success') : alert(`Cleared ${result.deleted} chat messages`));
           loadChatCount();
         } else {
-          alert('Error: ' + result.error);
+          (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
         }
       } catch (error) {
         console.error('Error clearing chat:', error);
-        alert('Failed to clear chat');
+        (window.showToast ? window.showToast('Failed to clear chat', 'error') : alert('Failed to clear chat'));
       } finally {
         clearBtn.disabled = false;
         clearBtn.textContent = '🗑️ Clear All Chat Messages';
@@ -2527,16 +2527,16 @@ const nonce = Astro.locals.nonce || '';
         const result = await response.json();
         
         if (result.success) {
-          alert('Lobby access granted to ' + email);
+          (window.showToast ? window.showToast('Lobby access granted to ' + email, 'success') : alert('Lobby access granted to ' + email));
           document.getElementById('bypassModal').classList.add('hidden');
           document.getElementById('bypassForm').reset();
           loadBypassList();
         } else {
-          alert('Error: ' + result.error);
+          (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
         }
       } catch (error) {
         console.error('Error granting bypass:', error);
-        alert('Failed to grant access');
+        (window.showToast ? window.showToast('Failed to grant access', 'error') : alert('Failed to grant access'));
       }
     });
     
@@ -2563,16 +2563,16 @@ const nonce = Astro.locals.nonce || '';
         const result = await response.json();
 
         if (result.success) {
-          alert('DJ added successfully!\n\nName: ' + result.djName + '\nMount point: ' + (result.mountPoint || 'Check settings'));
+          (window.showToast ? window.showToast('DJ added successfully! Name: ' + result.djName + ' — Mount point: ' + (result.mountPoint || 'Check settings'), 'success') : alert('DJ added successfully!\n\nName: ' + result.djName + '\nMount point: ' + (result.mountPoint || 'Check settings')));
           document.getElementById('addDJModal').classList.add('hidden');
           document.getElementById('addDJForm').reset();
           loadApprovedDJs();
         } else {
-          alert('Error: ' + result.error);
+          (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
         }
       } catch (error) {
         console.error('Error adding DJ:', error);
-        alert('Failed to add DJ');
+        (window.showToast ? window.showToast('Failed to add DJ', 'error') : alert('Failed to add DJ'));
       } finally {
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
@@ -2625,16 +2625,16 @@ const nonce = Astro.locals.nonce || '';
         const result = await response.json();
         
         if (result.success) {
-          alert('DJ has been banned: ' + email);
+          (window.showToast ? window.showToast('DJ has been banned: ' + email, 'success') : alert('DJ has been banned: ' + email));
           document.getElementById('banModal').classList.add('hidden');
           document.getElementById('banForm').reset();
           loadModerationList();
         } else {
-          alert('Error: ' + result.error);
+          (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
         }
       } catch (error) {
         console.error('Error banning DJ:', error);
-        alert('Failed to ban DJ');
+        (window.showToast ? window.showToast('Failed to ban DJ', 'error') : alert('Failed to ban DJ'));
       }
     });
     
@@ -2672,22 +2672,22 @@ const nonce = Astro.locals.nonce || '';
         const result = await response.json();
         
         if (result.success) {
-          alert('DJ has been put on hold: ' + email);
+          (window.showToast ? window.showToast('DJ has been put on hold: ' + email, 'success') : alert('DJ has been put on hold: ' + email));
           document.getElementById('holdModal').classList.add('hidden');
           document.getElementById('holdForm').reset();
           loadModerationList();
         } else {
-          alert('Error: ' + result.error);
+          (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
         }
       } catch (error) {
         console.error('Error putting DJ on hold:', error);
-        alert('Failed to put DJ on hold');
+        (window.showToast ? window.showToast('Failed to put DJ on hold', 'error') : alert('Failed to put DJ on hold'));
       }
     });
   }
   
   window.endStream = async function(streamId, djId) {
-    if (!confirm('Are you sure you want to end this stream?')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Are you sure you want to end this stream?', { confirmText: 'End stream', cancelText: 'Cancel' }) : confirm('Are you sure you want to end this stream?'))) return;
 
     try {
       // Use the slots endpoint which handles admin auth, D1 sync, cache invalidation, and Pusher broadcast
@@ -2699,7 +2699,7 @@ const nonce = Astro.locals.nonce || '';
       const result = await response.json();
 
       if (result.success) {
-        alert('Stream ended successfully');
+        (window.showToast ? window.showToast('Stream ended successfully', 'success') : alert('Stream ended successfully'));
         loadLiveStreams();
         loadRecentStreams();
       } else {
@@ -2708,24 +2708,24 @@ const nonce = Astro.locals.nonce || '';
           /* slots endpoint failed, trying force-end-streams fallback */
           const fallbackResult = await serverAction('force-end-streams');
           if (fallbackResult.success) {
-            alert('Stream force-ended: ' + fallbackResult.message);
+            (window.showToast ? window.showToast('Stream force-ended: ' + fallbackResult.message, 'success') : alert('Stream force-ended: ' + fallbackResult.message));
             loadLiveStreams();
             loadRecentStreams();
           } else {
-            alert('Error ending stream: ' + (fallbackResult.error || result.error));
+            (window.showToast ? window.showToast('Error ending stream: ' + (fallbackResult.error || result.error), 'error') : alert('Error ending stream: ' + (fallbackResult.error || result.error)));
           }
         } else {
-          alert('Error ending stream: ' + result.error);
+          (window.showToast ? window.showToast('Error ending stream: ' + result.error, 'error') : alert('Error ending stream: ' + result.error));
         }
       }
     } catch (error) {
       console.error('Error ending stream:', error);
-      alert('Failed to end stream. Try using "End All Streams" button instead.');
+      (window.showToast ? window.showToast('Failed to end stream. Try using "End All Streams" button instead.', 'error') : alert('Failed to end stream. Try using "End All Streams" button instead.'));
     }
   };
-  
+
   window.revokeDJ = async function(userId, email) {
-    if (!confirm(`Revoke streaming access for ${email || userId}?`)) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Revoke streaming access for ${email || userId}?`, { confirmText: 'Revoke', cancelText: 'Cancel' }) : confirm(`Revoke streaming access for ${email || userId}?`))) return;
     
     try {
       // Revoke from djLobbyBypass collection
@@ -2745,15 +2745,15 @@ const nonce = Astro.locals.nonce || '';
         loadApprovedDJs();
         loadBypassList();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error revoking DJ:', error);
     }
   };
-  
+
   window.viewDJDetails = function(userId) {
-    alert('DJ ID: ' + userId + '\n\nFull details view coming soon.');
+    (window.showToast ? window.showToast('DJ ID: ' + userId + ' — Full details view coming soon.', 'info') : alert('DJ ID: ' + userId + '\n\nFull details view coming soon.'));
   };
   
   async function loadBypassList() {
@@ -2871,7 +2871,7 @@ const nonce = Astro.locals.nonce || '';
   };
 
   window.revokeQuickAccessKey = async function() {
-    if (!confirm('Revoke the quick access key? Users who already redeemed will keep their access.')) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Revoke the quick access key?', { confirmText: 'Revoke', cancelText: 'Cancel', detail: 'Users who already redeemed will keep their access.' }) : confirm('Revoke the quick access key? Users who already redeemed will keep their access.'))) return;
 
     try {
       const response = await fetch('/api/admin/quick-access-key/', {
@@ -2888,16 +2888,16 @@ const nonce = Astro.locals.nonce || '';
       if (result.success) {
         loadQuickAccessKey();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error revoking key:', error);
-      alert('Failed to revoke key');
+      (window.showToast ? window.showToast('Failed to revoke key', 'error') : alert('Failed to revoke key'));
     }
   };
 
-  window.showSetExpiryModal = function() {
-    const expiry = prompt('Set expiry date (YYYY-MM-DD) or leave empty to remove expiry:');
+  window.showSetExpiryModal = async function() {
+    const expiry = (window.showPromptToast ? await window.showPromptToast('Set expiry date (YYYY-MM-DD)', { detail: 'Leave empty to remove expiry.', placeholder: 'YYYY-MM-DD', confirmText: 'Save', cancelText: 'Cancel', danger: false }) : prompt('Set expiry date (YYYY-MM-DD) or leave empty to remove expiry:'));
     if (expiry === null) return; // Cancelled
 
     setKeyExpiry(expiry || null);
@@ -2920,17 +2920,17 @@ const nonce = Astro.locals.nonce || '';
       if (result.success) {
         loadQuickAccessKey();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error setting expiry:', error);
-      alert('Failed to set expiry');
+      (window.showToast ? window.showToast('Failed to set expiry', 'error') : alert('Failed to set expiry'));
     }
   }
 
   document.getElementById('generateKeyBtn')?.addEventListener('click', async () => {
     const confirmMsg = 'Generate a new quick access key? This will replace any existing key.';
-    if (!confirm(confirmMsg)) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast('Generate a new quick access key?', { confirmText: 'Generate', cancelText: 'Cancel', detail: 'This will replace any existing key.' }) : confirm(confirmMsg))) return;
 
     try {
       const response = await fetch('/api/admin/quick-access-key/', {
@@ -2946,13 +2946,13 @@ const nonce = Astro.locals.nonce || '';
 
       if (result.success) {
         loadQuickAccessKey();
-        alert('New key generated: ' + result.key.code);
+        (window.showToast ? window.showToast('New key generated: ' + result.key.code, 'success') : alert('New key generated: ' + result.key.code));
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error generating key:', error);
-      alert('Failed to generate key');
+      (window.showToast ? window.showToast('Failed to generate key', 'error') : alert('Failed to generate key'));
     }
   });
 
@@ -2961,8 +2961,8 @@ const nonce = Astro.locals.nonce || '';
   // ==========================================
 
   window.revokeBypass = async function(userId, email) {
-    if (!confirm(`Revoke lobby access bypass for ${email || userId}?`)) return;
-    
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Revoke lobby access bypass for ${email || userId}?`, { confirmText: 'Revoke', cancelText: 'Cancel' }) : confirm(`Revoke lobby access bypass for ${email || userId}?`))) return;
+
     try {
       const response = await fetch('/api/admin/lobby-bypass/', {
         method: 'POST',
@@ -2973,13 +2973,13 @@ const nonce = Astro.locals.nonce || '';
           adminKey: window.ADMIN_KEY
         })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         loadBypassList();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error revoking bypass:', error);
@@ -3051,8 +3051,8 @@ const nonce = Astro.locals.nonce || '';
   }
   
   window.unbanDJ = async function(userId, email) {
-    if (!confirm(`Unban ${email || userId}? They will be able to go live again.`)) return;
-    
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Unban ${email || userId}?`, { confirmText: 'Unban', cancelText: 'Cancel', detail: 'They will be able to go live again.', danger: false }) : confirm(`Unban ${email || userId}? They will be able to go live again.`))) return;
+
     try {
       const response = await fetch('/api/admin/dj-moderation/', {
         method: 'POST',
@@ -3063,13 +3063,13 @@ const nonce = Astro.locals.nonce || '';
           adminKey: window.ADMIN_KEY
         })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         loadModerationList();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error unbanning DJ:', error);
@@ -3077,8 +3077,8 @@ const nonce = Astro.locals.nonce || '';
   };
   
   window.releaseDJ = async function(userId, email) {
-    if (!confirm(`Release ${email || userId} from hold?`)) return;
-    
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Release ${email || userId} from hold?`, { confirmText: 'Release', cancelText: 'Cancel', danger: false }) : confirm(`Release ${email || userId} from hold?`))) return;
+
     try {
       const response = await fetch('/api/admin/dj-moderation/', {
         method: 'POST',
@@ -3089,13 +3089,13 @@ const nonce = Astro.locals.nonce || '';
           adminKey: window.ADMIN_KEY
         })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         loadModerationList();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error releasing DJ:', error);
@@ -3103,8 +3103,8 @@ const nonce = Astro.locals.nonce || '';
   };
   
   window.kickDJ = async function(userId, djName) {
-    if (!confirm(`Kick ${djName || userId} from the current stream? This will end their stream but they can go live again later.`)) return;
-    
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Kick ${djName || userId} from the current stream?`, { confirmText: 'Kick', cancelText: 'Cancel', detail: 'This will end their stream but they can go live again later.' }) : confirm(`Kick ${djName || userId} from the current stream? This will end their stream but they can go live again later.`))) return;
+
     try {
       const response = await fetch('/api/admin/dj-moderation/', {
         method: 'POST',
@@ -3115,14 +3115,14 @@ const nonce = Astro.locals.nonce || '';
           adminKey: window.ADMIN_KEY
         })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
-        alert('DJ has been kicked from the stream');
+        (window.showToast ? window.showToast('DJ has been kicked from the stream', 'success') : alert('DJ has been kicked from the stream'));
         loadLiveStreams();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error kicking DJ:', error);
@@ -3214,7 +3214,7 @@ const nonce = Astro.locals.nonce || '';
   }
   
   window.approveBypassRequest = async function(requestId, userId, email, djName) {
-    if (!confirm(`Approve bypass request for ${djName || email || userId}? They will be able to go live immediately.`)) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Approve bypass request for ${djName || email || userId}?`, { confirmText: 'Approve', cancelText: 'Cancel', detail: 'They will be able to go live immediately.', danger: false }) : confirm(`Approve bypass request for ${djName || email || userId}? They will be able to go live immediately.`))) return;
     
     try {
       const response = await fetch('/api/admin/bypass-requests/', {
@@ -3245,11 +3245,11 @@ const nonce = Astro.locals.nonce || '';
           }, 2000);
         }
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error approving bypass:', error);
-      alert('Failed to approve request');
+      (window.showToast ? window.showToast('Failed to approve request', 'error') : alert('Failed to approve request'));
     }
   };
   
@@ -3292,11 +3292,11 @@ const nonce = Astro.locals.nonce || '';
         document.getElementById('denyBypassModal').classList.add('hidden');
         loadBypassRequests();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error denying bypass:', error);
-      alert('Failed to deny request');
+      (window.showToast ? window.showToast('Failed to deny request', 'error') : alert('Failed to deny request'));
     }
   });
   
@@ -3366,7 +3366,7 @@ const nonce = Astro.locals.nonce || '';
   }
 
   window.approveEventRequest = async function(requestId, djName, hours) {
-    if (!confirm(`Approve ${hours} hours for ${djName || 'this DJ'}?`)) return;
+    if (!(window.showConfirmToast ? await window.showConfirmToast(`Approve ${hours} hours for ${djName || 'this DJ'}?`, { confirmText: 'Approve', cancelText: 'Cancel', danger: false }) : confirm(`Approve ${hours} hours for ${djName || 'this DJ'}?`))) return;
 
     try {
       const response = await fetch('/api/livestream/event-requests/', {
@@ -3393,16 +3393,16 @@ const nonce = Astro.locals.nonce || '';
           setTimeout(() => loadEventRequests(), 2000);
         }
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error approving event request:', error);
-      alert('Failed to approve request');
+      (window.showToast ? window.showToast('Failed to approve request', 'error') : alert('Failed to approve request'));
     }
   };
 
   window.rejectEventRequest = async function(requestId, djName) {
-    const reason = prompt(`Reason for rejecting ${djName || 'this DJ'}'s event request (optional):`);
+    const reason = (window.showPromptToast ? await window.showPromptToast(`Reason for rejecting ${djName || 'this DJ'}'s event request (optional):`, { confirmText: 'Reject', cancelText: 'Cancel' }) : prompt(`Reason for rejecting ${djName || 'this DJ'}'s event request (optional):`));
     if (reason === null) return; // Cancelled
 
     try {
@@ -3422,11 +3422,11 @@ const nonce = Astro.locals.nonce || '';
       if (result.success) {
         loadEventRequests();
       } else {
-        alert('Error: ' + result.error);
+        (window.showToast ? window.showToast('Error: ' + result.error, 'error') : alert('Error: ' + result.error));
       }
     } catch (error) {
       console.error('Error rejecting event request:', error);
-      alert('Failed to reject request');
+      (window.showToast ? window.showToast('Failed to reject request', 'error') : alert('Failed to reject request'));
     }
   };
 
