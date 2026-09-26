@@ -145,7 +145,13 @@ export function setupDirectMedia(
 
     audio.src = item.url;
     audio.play().catch((err: unknown) => {
-      if (err instanceof Error && err.name !== 'AbortError') {
+      if (!(err instanceof Error) || err.name === 'AbortError') return;
+      // Browsers block autoplay until the visitor interacts — expected on
+      // every fresh /live visit, not a fault (dev-only warning). Anything
+      // else (e.g. NotSupportedError: bad source) is a real error.
+      if (err.name === 'NotAllowedError') {
+        log.warn('Audio autoplay blocked until user interaction');
+      } else {
         log.error('Audio autoplay failed:', err);
       }
     });

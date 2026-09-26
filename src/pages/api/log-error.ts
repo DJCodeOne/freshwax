@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../lib/rate-limit';
 import { logError } from '../../lib/error-logger';
+import { isIgnorableClientError } from '../../lib/client-error-filter';
 import { ApiErrors, successResponse } from '../../lib/api-utils';
 
 const LogErrorSchema = z.object({
@@ -36,6 +37,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Invalid request');
     }
     const { message, stack, url, level, metadata } = parsed.data;
+
+    // Bot/old-engine parse errors and third-party script errors carry no
+    // signal — accept them (so reporters don't retry) but don't store them.
+    if (isIgnorableClientError(message, url)) {
+      return successResponse({ ignored: true } as Record<string, unknown>);
+    }
 
     const env = locals.runtime.env;
 

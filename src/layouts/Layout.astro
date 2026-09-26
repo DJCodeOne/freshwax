@@ -354,10 +354,32 @@ const csrfToken = Astro.locals.csrfToken || '';
         window.addEventListener('error', function(e) {
           report(e.message, e.error && e.error.stack, e.filename, 'error');
         });
+        // A rejected DOM Event (media/WebSocket error etc.) used to be logged as
+        // the useless "[object Event]" — name the event type and its target.
+        function describeEvent(ev) {
+          var t = ev.target || ev.currentTarget;
+          var where = '';
+          if (t) {
+            if (t.tagName) where = String(t.tagName).toLowerCase() + (t.id ? '#' + t.id : '');
+            else if (t.url) where = 'socket ' + String(t.url).slice(0, 120);
+            else if (t.constructor && t.constructor.name) where = t.constructor.name;
+            var src = t.currentSrc || t.src;
+            if (src) where += ' ' + String(src).slice(0, 160);
+          }
+          return 'Unhandled rejection: ' + ev.type + ' event' + (where ? ' on ' + where : '');
+        }
         window.addEventListener('unhandledrejection', function(e) {
           var r = e.reason;
-          var msg = r instanceof Error ? r.message : String(r || 'Unhandled rejection');
-          var stack = r instanceof Error ? r.stack : undefined;
+          var msg;
+          var stack;
+          if (r instanceof Error) {
+            msg = r.message;
+            stack = r.stack;
+          } else if (typeof Event !== 'undefined' && r instanceof Event) {
+            msg = describeEvent(r);
+          } else {
+            msg = String(r || 'Unhandled rejection');
+          }
           report(msg, stack, location.href, 'error');
         });
         window.__reportError = report;
