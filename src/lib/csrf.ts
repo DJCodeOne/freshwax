@@ -64,6 +64,9 @@ const CSRF_SKIP = new Set([
   // authenticated via the x-server-key header (STREAM_SERVER_KEY).
   '/api/livestream/youtube-live-id/',
   '/api/livestream/youtube-broadcast/',
+  // MediaMTX HTTP auth hook — MediaMTX can't send a CSRF token; the endpoint
+  // requires STREAM_SERVER_KEY (Basic auth from the authHTTPAddress userinfo).
+  '/api/livestream/validate-stream/',
   // Admin endpoints — authenticated via X-Admin-Key / requireAdminAuth
   '/api/admin/backfill-followers/',
   '/api/admin/backfill-mix-og/',
