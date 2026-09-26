@@ -44,7 +44,8 @@ export function initShareSystem() {
       const title = button.getAttribute('data-title');
       const artist = button.getAttribute('data-artist');
       const artwork = button.getAttribute('data-artwork') || '/place-holder.webp';
-      const url = window.location.origin + '/item/' + releaseId;
+      // Canonical form (trailing slash) — the bare path 301s, and shares must be clean
+      const url = window.location.origin + '/item/' + releaseId + '/';
 
       window.currentReleaseShareData = { title: title, artist: artist, url: url, artwork: artwork };
 

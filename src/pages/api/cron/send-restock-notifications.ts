@@ -160,7 +160,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const release = await getDocument('releases', productId);
           if (release) {
             productName = String(release.releaseName || release.name || productName);
-            productUrl = `${SITE_URL}/item/${productId}`;
+            productUrl = `${SITE_URL}/item/${productId}/`;
             isInStock = (release.vinylStock || 0) > 0;
           }
         }

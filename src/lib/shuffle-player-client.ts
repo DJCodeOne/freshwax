@@ -289,7 +289,7 @@ const ShufflePlayer = {
     if (this.els.trackTitle) this.els.trackTitle.textContent = track.title;
     if (this.els.trackArtist) this.els.trackArtist.textContent = track.artist;
     if (this.els.releaseTitle) this.els.releaseTitle.textContent = track.releaseTitle;
-    if (this.els.releaseLink) (this.els.releaseLink as HTMLAnchorElement).href = '/item/' + track.releaseId;
+    if (this.els.releaseLink) (this.els.releaseLink as HTMLAnchorElement).href = '/item/' + track.releaseId + '/';
 
     // Reset progress
     if (this.els.progress) (this.els.progress as HTMLElement).style.width = '0%';

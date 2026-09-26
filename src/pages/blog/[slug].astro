@@ -15,6 +15,9 @@ export const prerender = false;
 const { slug } = Astro.params;
 const post = getPostBySlug(slug || '');
 const error = !post ? 'Post not found' : null;
+// Unknown slug = real 404 + noindex. It used to answer 200 "Post Not Found"
+// with index,follow and a canonical, so any typo'd URL was indexable.
+if (!post) Astro.response.status = 404;
 
 // Generate excerpt from content if not provided
 function generateExcerpt(content: string, maxLength: number = 160): string {
@@ -64,7 +67,7 @@ const seoDescription = capDescription(post?.excerpt || (post?.content ? generate
 // ratios vary, and reporting them as 800x800 made FB square-crop). Posts may
 // override with an explicit ogImage. Keep an og-<slug>.jpg in public/ for every
 // post (photos cover-cropped, square art letterboxed on black).
-const seoImage = post?.ogImage || `/og-${slug}.jpg`;
+const seoImage = post ? (post.ogImage || `/og-${slug}.jpg`) : '/og-image.webp';
 const seoImageWidth = post?.ogImageWidth || 1200;
 const seoImageHeight = post?.ogImageHeight || 630;
 const publishedTime = post?.publishedAt || new Date().toISOString();
@@ -77,6 +80,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
   title={seoTitle}
   ogTitle={seoOgTitle}
   description={seoDescription}
+  noindex={!post}
   image={seoImage}
   imageWidth={seoImageWidth}
   imageHeight={seoImageHeight}

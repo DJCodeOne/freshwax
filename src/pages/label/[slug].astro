@@ -120,6 +120,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600, 
 <Layout
   title={pageTitle}
   description={pageDescription}
+  noindex={!labelName}
   itemList={itemList}
   breadcrumbs={labelName ? [
     { name: 'Releases', url: '/releases/' },

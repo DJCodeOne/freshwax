@@ -1429,7 +1429,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
     // Seller
     document.getElementById('sellerLink').textContent = listing.sellerName || 'Unknown Seller';
-    document.getElementById('sellerLink').href = `/crates?collection=${listing.sellerId}`;
+    document.getElementById('sellerLink').href = `/crates/?collection=${listing.sellerId}`;
 
     // Deal description
     if (listing.dealDescription || listing.dealType) {
