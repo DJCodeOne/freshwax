@@ -366,7 +366,7 @@ const nonce = Astro.locals.nonce || '';
 
     } catch (error) {
       console.error('Error saving settings:', error);
-      alert('Error saving settings: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error saving settings: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error saving settings: ' + (error instanceof Error ? error.message : String(error))));
     } finally {
       saveBtn.disabled = false;
       saveBtn.textContent = 'Save Settings';

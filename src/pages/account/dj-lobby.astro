@@ -1808,7 +1808,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         videoEl.play().catch(function() { /* play error */ });
       }
     } else {
-      alert('Video elements not found');
+      (window.showToast ? window.showToast('Video elements not found', 'error') : alert('Video elements not found'));
     }
   }
 
@@ -3806,7 +3806,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           recordStreamEnd();
           setTimeout(() => { window.location.reload(); }, 400);
         } else {
-          alert('Failed to end stream: ' + (result.error || 'Unknown error'));
+          (window.showToast ? window.showToast('Failed to end stream: ' + (result.error || 'Unknown error'), 'error') : alert('Failed to end stream: ' + (result.error || 'Unknown error')));
           btn.innerHTML = '<span class="end-icon">⏹</span><span class="end-text">End Stream</span>';
           btn.classList.remove('ending');
           status.classList.remove('ending');
@@ -3814,7 +3814,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
       } catch (e) {
         console.error('End stream error:', e);
-        alert('Failed to end stream');
+        (window.showToast ? window.showToast('Failed to end stream', 'error') : alert('Failed to end stream'));
         btn.innerHTML = '<span class="end-icon">⏹</span><span class="end-text">End Stream</span>';
         btn.classList.remove('ending');
         status.classList.remove('ending');
@@ -4061,7 +4061,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       // If already have a key displayed, don't spawn again
       if (currentStreamKey) {
-        alert('You already have a stream key!');
+        (window.showToast ? window.showToast('You already have a stream key!', 'info') : alert('You already have a stream key!'));
         return;
       }
 
@@ -4335,7 +4335,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       } catch (e) {
         console.error('Ready error:', e);
-        alert(e instanceof Error ? e.message : 'Failed to set ready status. Please try again.');
+        (window.showToast ? window.showToast(e instanceof Error ? e.message : 'Failed to set ready status. Please try again.', 'error') : alert(e instanceof Error ? e.message : 'Failed to set ready status. Please try again.'));
         // Reset button
         btnText.textContent = 'I\'m Ready!';
         btn.disabled = false;
@@ -4371,7 +4371,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       } catch (e) {
         console.error('Go Live error:', e);
-        alert(e instanceof Error ? e.message : 'Failed to go live. Please check OBS is streaming and try again.');
+        (window.showToast ? window.showToast(e instanceof Error ? e.message : 'Failed to go live. Please check OBS is streaming and try again.', 'error') : alert(e instanceof Error ? e.message : 'Failed to go live. Please check OBS is streaming and try again.'));
         // Reset GO LIVE button
         goLiveBtnText.textContent = 'GO LIVE!';
         goLiveBtn.disabled = false;
@@ -4393,10 +4393,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (!response.ok) throw new Error('End stream failed: ' + response.status);
         const result = await response.json();
         if (result.success) {
-          alert('Stream ended');
+          (window.showToast ? window.showToast('Stream ended', 'success') : alert('Stream ended'));
           loadStreamStatus();
         } else {
-          alert(result.error || 'Failed');
+          (window.showToast ? window.showToast(result.error || 'Failed', 'error') : alert(result.error || 'Failed'));
         }
       } catch (e) {
         console.error('End error:', e);
@@ -4485,7 +4485,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (readyBtnText) readyBtnText.textContent = '\uD83D\uDD34 LIVE';
     } catch (e) {
       console.error('Go Live error:', e);
-      alert(e instanceof Error ? e.message : 'Failed to go live.');
+      (window.showToast ? window.showToast(e instanceof Error ? e.message : 'Failed to go live.', 'error') : alert(e instanceof Error ? e.message : 'Failed to go live.'));
       if (initGoLiveBtnText) initGoLiveBtnText.textContent = 'GO LIVE';
       if (initGoLiveBtn) initGoLiveBtn.disabled = false;
       // Also restore the main Go Live button — it was disabled and relabelled

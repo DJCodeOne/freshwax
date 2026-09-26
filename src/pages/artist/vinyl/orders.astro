@@ -326,7 +326,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       loadOrders();
 
     } catch (error) {
-      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error: ' + (error instanceof Error ? error.message : String(error))));
     }
   }
 

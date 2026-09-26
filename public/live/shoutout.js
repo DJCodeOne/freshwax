@@ -71,7 +71,7 @@ export function initShoutout(deps) {
         if (window.showToast) {
           window.showToast('Please log in to send a shoutout');
         } else {
-          alert('Please log in to send a shoutout');
+          (window.showToast ? window.showToast('Please log in to send a shoutout', 'info') : alert('Please log in to send a shoutout'));
         }
         return;
       }

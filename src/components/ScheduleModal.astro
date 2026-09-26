@@ -358,7 +358,7 @@ import DailySchedule from './DailySchedule.astro';
     window.openBookingSchedule = function(userId: string, displayName: string, avatar?: string | null) {
       if (!userId) {
         console.error('[ScheduleModal] No userId provided!');
-        alert('You must be logged in to book a slot.');
+        (window.showToast ? window.showToast('You must be logged in to book a slot.', 'error') : alert('You must be logged in to book a slot.'));
         return;
       }
 

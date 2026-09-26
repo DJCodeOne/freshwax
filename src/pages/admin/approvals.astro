@@ -349,12 +349,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           container.innerHTML = '<div class="empty-state"><span>✅</span><p>No pending requests</p></div>';
         }
       } else {
-        alert('Action failed: ' + (data.error || 'Unknown error'));
+        (window.showToast ? window.showToast('Action failed: ' + (data.error || 'Unknown error'), 'error') : alert('Action failed: ' + (data.error || 'Unknown error')));
         if (card) card.style.opacity = '1';
       }
     } catch (err) {
       console.error('Error:', err);
-      alert('Action failed');
+      (window.showToast ? window.showToast('Action failed', 'error') : alert('Action failed'));
       if (card) card.style.opacity = '1';
     }
   }
@@ -419,12 +419,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           container.innerHTML = '<div class="empty-state"><span>✅</span><p>No pending applications</p></div>';
         }
       } else {
-        alert('Action failed: ' + (data.error || 'Unknown error'));
+        (window.showToast ? window.showToast('Action failed: ' + (data.error || 'Unknown error'), 'error') : alert('Action failed: ' + (data.error || 'Unknown error')));
         if (card) card.style.opacity = '1';
       }
     } catch (err) {
       console.error('Error:', err);
-      alert('Action failed');
+      (window.showToast ? window.showToast('Action failed', 'error') : alert('Action failed'));
       if (card) card.style.opacity = '1';
     }
   }
@@ -499,12 +499,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           container.innerHTML = '<div class="empty-state"><span>📦</span><p>No pending vinyl listings</p></div>';
         }
       } else {
-        alert('Action failed: ' + (data.error || 'Unknown error'));
+        (window.showToast ? window.showToast('Action failed: ' + (data.error || 'Unknown error'), 'error') : alert('Action failed: ' + (data.error || 'Unknown error')));
         if (card) card.style.opacity = '1';
       }
     } catch (err) {
       console.error('Error:', err);
-      alert('Action failed');
+      (window.showToast ? window.showToast('Action failed', 'error') : alert('Action failed'));
       if (card) card.style.opacity = '1';
     }
   }

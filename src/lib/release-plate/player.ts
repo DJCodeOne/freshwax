@@ -80,7 +80,7 @@ export function initReleasePlayer() {
 
       (button as HTMLElement).onclick = function() {
         if (!previewUrl) {
-          alert('Preview not available for this track');
+          (window.showToast ? window.showToast('Preview not available for this track', 'error') : alert('Preview not available for this track'));
           if (nowPlayingText) nowPlayingText.textContent = 'Preview not available';
           return;
         }
@@ -217,7 +217,7 @@ export function initReleasePlayer() {
           showToast('Playing 90 second preview');
         }).catch(function(err: unknown) {
           audio!.volume = currentVolume;
-          alert('Could not play preview. The file may be unavailable.');
+          (window.showToast ? window.showToast('Could not play preview. The file may be unavailable.', 'error') : alert('Could not play preview. The file may be unavailable.'));
           if (window.AudioManager) window.AudioManager.onTracklistPreviewStop(audio);
         });
       };

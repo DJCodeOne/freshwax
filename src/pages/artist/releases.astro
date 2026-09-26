@@ -1738,11 +1738,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           viewEl?.classList.remove('hidden');
           if (toggleBtn) toggleBtn.style.display = '';
         } else {
-          alert(result.error || 'Failed to save changes');
+          (window.showToast ? window.showToast(result.error || 'Failed to save changes', 'error') : alert(result.error || 'Failed to save changes'));
         }
       } catch (error) {
         console.error('Error saving:', error);
-        alert('Failed to save changes. Please try again.');
+        (window.showToast ? window.showToast('Failed to save changes. Please try again.', 'error') : alert('Failed to save changes. Please try again.'));
       }
 
       btn.textContent = 'Save Changes';
@@ -1832,9 +1832,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     applyGlobalSaleBtn.disabled = false;
 
     if (errorCount === 0) {
-      alert(`Sale applied to ${successCount} release${successCount !== 1 ? 's' : ''} successfully!`);
+      (window.showToast ? window.showToast(`Sale applied to ${successCount} release${successCount !== 1 ? 's' : ''} successfully!`, 'success') : alert(`Sale applied to ${successCount} release${successCount !== 1 ? 's' : ''} successfully!`));
     } else {
-      alert(`Applied to ${successCount} releases. ${errorCount} failed.`);
+      (window.showToast ? window.showToast(`Applied to ${successCount} releases. ${errorCount} failed.`, 'error') : alert(`Applied to ${successCount} releases. ${errorCount} failed.`));
     }
   });
 
@@ -1903,11 +1903,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
         setTimeout(() => { location.reload(); }, card ? 300 : 0);
       } else {
-        alert(result.error || 'Failed to delete release');
+        (window.showToast ? window.showToast(result.error || 'Failed to delete release', 'error') : alert(result.error || 'Failed to delete release'));
       }
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Failed to delete release. Please try again.');
+      (window.showToast ? window.showToast('Failed to delete release. Please try again.', 'error') : alert('Failed to delete release. Please try again.'));
     }
 
     confirmDeleteBtn.textContent = 'Delete';

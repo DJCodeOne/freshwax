@@ -550,7 +550,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   async function savePost(status: string) {
     const title = postTitle.value.trim();
     if (!title) {
-      alert('Please enter a title');
+      (window.showToast ? window.showToast('Please enter a title', 'error') : alert('Please enter a title'));
       postTitle.focus();
       return;
     }
@@ -590,7 +590,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       window.location.href = `/admin/blog/edit/${result.postId}/`;
     } catch (error) {
       console.error('Save failed:', error instanceof Error ? error.message : String(error));
-      alert('Failed to save: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Failed to save: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Failed to save: ' + (error instanceof Error ? error.message : String(error))));
     } finally {
       btn.disabled = false;
       btn.textContent = status === 'published' ? 'Publish' : 'Save Draft';

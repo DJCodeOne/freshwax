@@ -438,8 +438,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (!response.ok) throw new Error('User type fetch failed: ' + response.status);
       const data = await response.json();
       if (!data.isVinylSeller) {
-        alert('You need to be an approved vinyl seller to list records.');
-        window.location.href = '/artist/dashboard/';
+        (window.showToast ? window.showToast('You need to be an approved vinyl seller to list records.', 'error') : alert('You need to be an approved vinyl seller to list records.'));
+        setTimeout(function () { window.location.href = '/artist/dashboard/'; }, 1200); // let the toast show first
         return;
       }
       sellerInfo = { id: user.uid, name: data.displayName || user.displayName || 'Unknown' };
@@ -787,7 +787,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     } catch (error) {
       console.error('Failed to load audio:', error);
-      alert('Failed to load audio: ' + (error instanceof Error ? error.message : 'Unknown error. Please try a different file format.'));
+      (window.showToast ? window.showToast('Failed to load audio: ' + (error instanceof Error ? error.message : 'Unknown error. Please try a different file format.'), 'error') : alert('Failed to load audio: ' + (error instanceof Error ? error.message : 'Unknown error. Please try a different file format.')));
       audioLoading.style.display = 'none';
       audioLabel.style.display = 'flex';
     }
@@ -1074,7 +1074,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   async function submitListing(publish) {
     if (!currentUser || !sellerInfo) {
-      alert('Please wait for authentication to complete.');
+      (window.showToast ? window.showToast('Please wait for authentication to complete.', 'error') : alert('Please wait for authentication to complete.'));
       return;
     }
 
@@ -1083,22 +1083,22 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     // Validate required fields
     if (!formData.get('artist') || !formData.get('title')) {
-      alert('Please fill in artist and title.');
+      (window.showToast ? window.showToast('Please fill in artist and title.', 'error') : alert('Please fill in artist and title.'));
       return;
     }
     if (!formData.get('mediaCondition') || !formData.get('sleeveCondition')) {
-      alert('Please select media and sleeve condition.');
+      (window.showToast ? window.showToast('Please select media and sleeve condition.', 'error') : alert('Please select media and sleeve condition.'));
       return;
     }
     if (!formData.get('price') || parseFloat(formData.get('price')) <= 0) {
-      alert('Please enter a valid price.');
+      (window.showToast ? window.showToast('Please enter a valid price.', 'error') : alert('Please enter a valid price.'));
       return;
     }
 
     // Must have at least one image to publish
     const hasImages = uploadedImages.some(img => img && img.file);
     if (publish && !hasImages) {
-      alert('Please add at least one photo to publish your listing.');
+      (window.showToast ? window.showToast('Please add at least one photo to publish your listing.', 'error') : alert('Please add at least one photo to publish your listing.'));
       return;
     }
 
@@ -1248,7 +1248,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     } catch (error) {
       console.error('Submission error:', error);
       modal.style.display = 'none';
-      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error: ' + (error instanceof Error ? error.message : String(error))));
     }
   }
 </script>

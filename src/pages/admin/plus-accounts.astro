@@ -693,20 +693,20 @@ const nonce = Astro.locals.nonce || '';
       });
 
       if (!response.ok) {
-        alert('Failed to extend: server error ' + response.status);
+        (window.showToast ? window.showToast('Failed to extend: server error ' + response.status, 'error') : alert('Failed to extend: server error ' + response.status));
         return;
       }
       const result = await response.json();
 
       if (result.success) {
-        alert('Subscription extended successfully!');
+        (window.showToast ? window.showToast('Subscription extended successfully!', 'success') : alert('Subscription extended successfully!'));
         closeExtendModal();
         window.location.reload();
       } else {
-        alert('Failed to extend: ' + result.error);
+        (window.showToast ? window.showToast('Failed to extend: ' + result.error, 'error') : alert('Failed to extend: ' + result.error));
       }
     } catch (error) {
-      alert('Error extending subscription');
+      (window.showToast ? window.showToast('Error extending subscription', 'error') : alert('Error extending subscription'));
     } finally {
       btn.disabled = false;
       btn.textContent = 'Extend Subscription';

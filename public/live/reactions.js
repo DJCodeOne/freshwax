@@ -198,7 +198,7 @@ async function triggerReaction(e) {
     if (window.showToast) {
       window.showToast('Please log in to react to the stream');
     } else {
-      alert('Please log in to react to the stream');
+      (window.showToast ? window.showToast('Please log in to react to the stream', 'info') : alert('Please log in to react to the stream'));
     }
     return;
   }
@@ -316,7 +316,7 @@ function setupReactionButtons() {
           if (window.showToast) {
             window.showToast('Please log in to like the stream');
           } else {
-            alert('Please log in to like the stream');
+            (window.showToast ? window.showToast('Please log in to like the stream', 'info') : alert('Please log in to like the stream'));
           }
           return;
         }
@@ -394,7 +394,7 @@ function setupAnimationToggle() {
       if (window.showToast) {
         window.showToast('Please log in to toggle emoji animations');
       } else {
-        alert('Please log in to toggle emoji animations');
+        (window.showToast ? window.showToast('Please log in to toggle emoji animations', 'info') : alert('Please log in to toggle emoji animations'));
       }
       return;
     }

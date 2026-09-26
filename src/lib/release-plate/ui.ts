@@ -143,7 +143,7 @@ export function initShareSystem() {
     const d = window.currentReleaseShareData || {};
     const text = d.url;
     navigator.clipboard.writeText(text).then(function() {
-      alert('Link copied! Paste it in your Instagram story or bio.');
+      (window.showToast ? window.showToast('Link copied! Paste it in your Instagram story or bio.', 'success') : alert('Link copied! Paste it in your Instagram story or bio.'));
     });
   });
 
@@ -369,13 +369,13 @@ export function initCartListeners() {
         }
 
         if (cachedOwnership.ownsFullRelease) {
-          alert('You already own the full release that includes this track! Check your order history for download links.');
+          (window.showToast ? window.showToast('You already own the full release that includes this track! Check your order history for download links.', 'info') : alert('You already own the full release that includes this track! Check your order history for download links.'));
           return;
         }
 
         const ownsThisTrack = cachedOwnership.ownedTrackIds && cachedOwnership.ownedTrackIds.indexOf(trackId) !== -1;
         if (ownsThisTrack) {
-          alert('You already own this track! Check your order history for download links.');
+          (window.showToast ? window.showToast('You already own this track! Check your order history for download links.', 'info') : alert('You already own this track! Check your order history for download links.'));
           return;
         }
       }

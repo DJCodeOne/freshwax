@@ -337,7 +337,7 @@ function setupPlaylistSave() {
         if (window.showToast) {
           window.showToast('Please log in to add tracks to your playlist');
         } else {
-          alert('Please log in to add tracks to your playlist');
+          (window.showToast ? window.showToast('Please log in to add tracks to your playlist', 'info') : alert('Please log in to add tracks to your playlist'));
         }
         return;
       }

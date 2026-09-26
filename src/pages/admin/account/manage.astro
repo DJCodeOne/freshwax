@@ -802,7 +802,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       if (!isStillPartner) {
         // Remove from partners list - they should now appear in User Management
         allUsers = allUsers.filter(u => u.id !== currentEditUser.id);
-        alert('User has been downgraded and moved to User Management.');
+        (window.showToast ? window.showToast('User has been downgraded and moved to User Management.', 'info') : alert('User has been downgraded and moved to User Management.'));
         closeEditModal();
         renderUsers();
         // Update stats
@@ -827,7 +827,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       currentEditUser.canComment = permissions.permissions.canComment;
       currentEditUser.canRate = permissions.permissions.canRate;
 
-      alert('Partner updated!');
+      (window.showToast ? window.showToast('Partner updated!', 'success') : alert('Partner updated!'));
       closeEditModal();
       renderUsers();
       // Update stats
@@ -835,7 +835,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       document.getElementById('totalMerch').textContent = allUsers.filter(u => u.isMerchSupplier).length;
     } catch (error) {
       console.error('Error saving permissions:', error);
-      alert('Error saving: ' + (error instanceof Error ? error.message : String(error)));
+      (window.showToast ? window.showToast('Error saving: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error saving: ' + (error instanceof Error ? error.message : String(error))));
     }
   };
 

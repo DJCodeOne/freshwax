@@ -1278,7 +1278,7 @@ const merchItemList = {
         if (typeof window.FreshWaxCart !== 'undefined') {
           window.FreshWaxCart.add(item);
         } else {
-          alert('Added ' + item.name + ' to cart!');
+          (window.showToast ? window.showToast('Added ' + item.name + ' to cart!', 'success') : alert('Added ' + item.name + ' to cart!'));
         }
 
         closeModal();

@@ -1172,7 +1172,7 @@ const nonce = Astro.locals.nonce || '';
               btn.click();
             } else {
               console.error('[DJ-MIXES] Player still not ready');
-              alert('Audio player is loading. Please try again.');
+              (window.showToast ? window.showToast('Audio player is loading. Please try again.', 'info') : alert('Audio player is loading. Please try again.'));
             }
           }, 500);
           return;
@@ -1213,7 +1213,7 @@ const nonce = Astro.locals.nonce || '';
             }
           }).catch(function(err) {
             console.error('[DJ-MIXES] playMix failed:', err);
-            alert('Failed to play this mix. Please try again.');
+            (window.showToast ? window.showToast('Failed to play this mix. Please try again.', 'error') : alert('Failed to play this mix. Please try again.'));
           });
         }
       };

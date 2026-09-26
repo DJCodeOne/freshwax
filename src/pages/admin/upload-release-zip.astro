@@ -157,7 +157,7 @@ const nonce = Astro.locals.nonce || '';
       if (file && file.name.endsWith('.zip')) {
         handleZipFile(file);
       } else {
-        alert('Please drop a ZIP file');
+        (window.showToast ? window.showToast('Please drop a ZIP file', 'error') : alert('Please drop a ZIP file'));
       }
     });
 
@@ -200,7 +200,7 @@ const nonce = Astro.locals.nonce || '';
 
       } catch (error) {
         console.error('Error reading ZIP:', error);
-        alert('Error reading ZIP file: ' + (error instanceof Error ? error.message : String(error)));
+        (window.showToast ? window.showToast('Error reading ZIP file: ' + (error instanceof Error ? error.message : String(error)), 'error') : alert('Error reading ZIP file: ' + (error instanceof Error ? error.message : String(error))));
       }
     }
 
@@ -253,7 +253,7 @@ const nonce = Astro.locals.nonce || '';
 
     uploadBtn.addEventListener('click', async () => {
       if (extractedFiles.length === 0) {
-        alert('No files to upload');
+        (window.showToast ? window.showToast('No files to upload', 'error') : alert('No files to upload'));
         return;
       }
 
@@ -667,7 +667,7 @@ const nonce = Astro.locals.nonce || '';
         const zipErrMsg = error instanceof Error ? error.message : String(error);
         log(`✗ ERROR: ${zipErrMsg}`, 'error');
         log('═══════════════════════════════', 'error');
-        alert('Upload failed: ' + zipErrMsg);
+        (window.showToast ? window.showToast('Upload failed: ' + zipErrMsg, 'error') : alert('Upload failed: ' + zipErrMsg));
       }
     }
 

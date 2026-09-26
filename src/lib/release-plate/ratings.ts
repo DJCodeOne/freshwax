@@ -115,7 +115,7 @@ function setupRatingClickHandlers() {
 
       const user = await getAuthUser();
       if (!user) {
-        alert('Please log in to rate releases.');
+        (window.showToast ? window.showToast('Please log in to rate releases.', 'info') : alert('Please log in to rate releases.'));
         const currentPage = window.location.pathname;
         window.location.href = '/login/?redirect=' + encodeURIComponent(currentPage);
         return;

@@ -643,9 +643,9 @@ const nonce = Astro.locals.nonce || '';
       const report = reports.find(r => r.id === currentReportId);
       if (report) report.adminNotes = notes;
       
-      alert('Notes saved');
+      (window.showToast ? window.showToast('Notes saved', 'success') : alert('Notes saved'));
     } catch (error) {
-      alert('Failed to save notes');
+      (window.showToast ? window.showToast('Failed to save notes', 'error') : alert('Failed to save notes'));
     }
   }
 
@@ -661,7 +661,7 @@ const nonce = Astro.locals.nonce || '';
         loadReports();
       }
     } catch (error) {
-      alert('Failed to update status');
+      (window.showToast ? window.showToast('Failed to update status', 'error') : alert('Failed to update status'));
     }
   }
 

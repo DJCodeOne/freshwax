@@ -374,7 +374,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       document.getElementById('delete-modal')?.classList.add('hidden');
     } catch (error) {
       console.error('Delete failed:', error);
-      alert('Failed to delete post');
+      (window.showToast ? window.showToast('Failed to delete post', 'error') : alert('Failed to delete post'));
     } finally {
       btn.disabled = false;
       btn.textContent = 'Delete';

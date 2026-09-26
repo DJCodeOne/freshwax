@@ -176,7 +176,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
       if (window.showToast) {
         window.showToast('Please log in to send GIFs');
       } else {
-        alert('Please log in to send GIFs');
+        (window.showToast ? window.showToast('Please log in to send GIFs', 'info') : alert('Please log in to send GIFs'));
       }
       return;
     }
@@ -188,7 +188,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
     }
     if (!streamId) {
       console.error('[GIF] No current stream');
-      alert('No active stream');
+      (window.showToast ? window.showToast('No active stream', 'info') : alert('No active stream'));
       return;
     }
 
@@ -479,7 +479,7 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
         if (window.showToast) {
           window.showToast('Please log in to send messages');
         } else {
-          alert('Please log in to send messages');
+          (window.showToast ? window.showToast('Please log in to send messages', 'info') : alert('Please log in to send messages'));
         }
         return;
       }
@@ -505,11 +505,11 @@ function restoreFocusFromModal(modalEl: HTMLElement) {
           currentDmRecipient = null;
           restoreFocusFromModal(dmModal);
         } else {
-          alert('Failed to send message. Please try again.');
+          (window.showToast ? window.showToast('Failed to send message. Please try again.', 'error') : alert('Failed to send message. Please try again.'));
         }
       } catch (err) {
         console.error('[DM] Error sending:', err);
-        alert('Failed to send message. Please try again.');
+        (window.showToast ? window.showToast('Failed to send message. Please try again.', 'error') : alert('Failed to send message. Please try again.'));
       }
     });
 
