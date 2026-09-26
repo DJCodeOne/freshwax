@@ -27,6 +27,14 @@ export function isPublicListingStatus(status: unknown): boolean {
   return typeof status === 'string' && (PUBLIC_LISTING_STATUSES as readonly string[]).includes(status);
 }
 
+/**
+ * A listing anyone may read: a public status and not soft-deleted. Drafts,
+ * pending, rejected and removed listings are private to their seller.
+ */
+export function isPublicListing(listing: Record<string, unknown> | null | undefined): boolean {
+  return !!listing && listing.deleted !== true && isPublicListingStatus(listing.status);
+}
+
 /** A listing a buyer can currently add to their bag. */
 export function isPurchasableListing(listing: Record<string, unknown> | null | undefined): boolean {
   return !!listing && listing.status === 'published' && listing.deleted !== true;
@@ -50,8 +58,7 @@ export async function getPublicVinylListing(
   const projectId = (env.FIREBASE_PROJECT_ID as string | undefined) || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   try {
     const listing = await saGetDocument(serviceAccountKey, projectId, 'vinylListings', listingId);
-    if (!listing || listing.deleted === true || !isPublicListingStatus(listing.status)) return null;
-    return listing;
+    return isPublicListing(listing) ? listing : null;
   } catch (error: unknown) {
     log.error(`Failed to read vinyl listing ${listingId}:`, error);
     return null;

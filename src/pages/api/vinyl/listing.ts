@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, verifyRequestUser, queryCollection } from '../../../lib/firebase-rest';
 import { sortRowsByField } from '../../../lib/firebase/order-by';
-import { sanitizeListingImages } from '../../../lib/vinyl-listings';
+import { sanitizeListingImages, isPublicListing } from '../../../lib/vinyl-listings';
 import { d1GetVinylSeller } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
@@ -106,8 +106,11 @@ function validateListing(data: Record<string, unknown>): { valid: boolean; error
   return { valid: true };
 }
 
-// GET - Fetch seller's listings (efficient: single query)
-export const GET: APIRoute = async ({ request, locals }) => {
+// GET - Fetch one listing (?id=) or a seller's own listings (?sellerId=).
+// Drafts, pending, rejected and removed listings are private to their seller:
+// this used to return any listing — and a seller's whole list, drafts
+// included — to anyone who knew the id or the seller's uid (Sep 2026).
+export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const sellerId = url.searchParams.get('sellerId');
   const listingId = url.searchParams.get('id');
@@ -124,18 +127,33 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    // Single listing fetch
+    // Single listing fetch — public listings for anyone, private ones only for
+    // their seller. A non-owner gets the same 404 as a missing listing, so a
+    // draft's existence isn't revealed.
     if (listingId) {
       const listing = await getDocument('vinylListings', listingId);
       if (!listing) {
         return ApiErrors.notFound('Listing not found');
       }
+      if (!isPublicListing(listing)) {
+        const { userId } = await verifyRequestUser(request);
+        if (!userId || userId !== listing.sellerId) {
+          return ApiErrors.notFound('Listing not found');
+        }
+      }
       return successResponse({ listing });
     }
 
-    // Seller's listings
+    // Seller's listings — includes drafts, so only the seller themselves
     if (!sellerId) {
       return ApiErrors.badRequest('Seller ID or Listing ID required');
+    }
+    const { userId: verifiedUserId } = await verifyRequestUser(request);
+    if (!verifiedUserId) {
+      return ApiErrors.unauthorized('Authentication required');
+    }
+    if (verifiedUserId !== sellerId) {
+      return ApiErrors.forbidden('You can only view your own listings');
     }
 
     // Query listings by sellerId, newest first. Sorted in memory: the old

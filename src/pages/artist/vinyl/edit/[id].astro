@@ -190,9 +190,24 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     loadListing();
   });
 
+  function escapeHtml(s) {
+    if (typeof s !== 'string') return '';
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // Every call sends a fresh ID token: drafts are only readable by their
+  // seller, and the session cookie's token expires after an hour (Save and
+  // Delete used to fail once it did).
+  async function authHeaders(extra) {
+    const idToken = await currentUser.getIdToken();
+    return Object.assign({ 'Authorization': `Bearer ${idToken}` }, extra || {});
+  }
+
   async function loadListing() {
     try {
-      const response = await fetch(`/api/vinyl/listing/?id=${listingId}`);
+      const response = await fetch(`/api/vinyl/listing/?id=${encodeURIComponent(listingId)}`, {
+        headers: await authHeaders()
+      });
       if (!response.ok) throw new Error('Listing fetch failed: ' + response.status);
       const data = await response.json();
 
@@ -228,7 +243,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const imagesContainer = document.getElementById('currentImages');
       if (listing.images && listing.images.length > 0) {
         imagesContainer.innerHTML = listing.images.map(url =>
-          `<div class="image-thumb" style="background-image: url('${url}');"></div>`
+          `<div class="image-thumb" style="background-image: url('${escapeHtml(url)}');"></div>`
         ).join('');
       } else {
         imagesContainer.innerHTML = '<p class="text-muted">No images</p>';
@@ -280,7 +295,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       const response = await fetch('/api/vinyl/listing/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(updateData)
       });
 
@@ -311,7 +326,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     try {
       const response = await fetch('/api/vinyl/listing/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           action: 'delete',
           sellerId: currentUser.uid,

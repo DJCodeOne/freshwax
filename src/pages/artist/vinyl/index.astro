@@ -95,7 +95,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   async function loadListings() {
     try {
-      const response = await fetch(`/api/vinyl/listing/?sellerId=${currentUser.uid}`);
+      // The list includes drafts, so the API only returns it to the seller —
+      // send a fresh ID token (the session cookie's token expires after an hour).
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch(`/api/vinyl/listing/?sellerId=${encodeURIComponent(currentUser.uid)}`, {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
       if (!response.ok) throw new Error('Listings fetch failed: ' + response.status);
       const data = await response.json();
 
