@@ -4,7 +4,8 @@
 
 import type { APIRoute } from 'astro';
 
-import { saQueryCollection, saGetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-service-account';
+import { getPublicVinylListing } from '../../../lib/vinyl-listings';
 import { d1GetAllCollections } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
@@ -43,11 +44,13 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
       return ApiErrors.serverError('Service not configured');
     }
 
-    // Get single listing
+    // Get single listing — the listing page's source (Firestore is the single
+    // source of truth for Crates). Sold/reserved listings stay visible but
+    // unavailable; anything else is Not Found.
     if (type === 'single' && listingId) {
-      const listing = await saGetDocument(serviceAccountKey, projectId, 'vinylListings', listingId);
+      const listing = await getPublicVinylListing(env, listingId);
 
-      if (!listing || listing.status !== 'published') {
+      if (!listing) {
         return ApiErrors.notFound('Listing not found');
       }
 

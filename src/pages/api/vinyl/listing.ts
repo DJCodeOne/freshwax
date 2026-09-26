@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, verifyRequestUser, queryCollection } from '../../../lib/firebase-rest';
 import { sortRowsByField } from '../../../lib/firebase/order-by';
+import { sanitizeListingImages } from '../../../lib/vinyl-listings';
 import { d1GetVinylSeller } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
@@ -258,7 +259,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           dealDescription: (data.dealDescription || '').trim().slice(0, 200),
           shippingCost: Math.round((data.shippingCost || 0) * 100) / 100,
           description: (data.description || '').trim().slice(0, MAX_DESCRIPTION_LENGTH),
-          images: (data.images || []).slice(0, MAX_IMAGES),
+          // Seller-supplied URLs end up in public page markup — keep only safe ones
+          images: sanitizeListingImages(data.images, MAX_IMAGES),
           tracks: tracks,
           // Legacy fields for backward compatibility
           audioSampleUrl: tracks.length > 0 && tracks[0].audioSampleUrl ? tracks[0].audioSampleUrl : (data.audioSampleUrl || null),
@@ -321,6 +323,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
             audioSampleUrl: track.audioSampleUrl || null,
             audioSampleDuration: track.audioSampleDuration || null
           }));
+        }
+
+        // Seller-supplied image URLs end up in public page markup — keep only safe ones
+        if (data.images !== undefined) {
+          data.images = sanitizeListingImages(data.images, MAX_IMAGES);
         }
 
         for (const field of allowedFields) {

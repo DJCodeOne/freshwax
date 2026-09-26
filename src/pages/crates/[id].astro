@@ -4,17 +4,18 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import { getPublicVinylListing, PUBLIC_LISTING_STATUSES } from '../../lib/vinyl-listings';
 
 export const prerender = false;
 
 const { id } = Astro.params;
 const nonce = Astro.locals.nonce || '';
 
-// The vinyl-api worker's /listings/:id returns a listing in ANY status. Only
-// live listings (plus visibly sold/reserved ones) may render with Add to Bag;
-// draft, pending, rejected and removed listings are "Vinyl Not Found" (404).
-// Rejected test listings stayed reachable at their indexed URLs until Sep 2026.
-const PUBLIC_LISTING_STATUSES = ['published', 'sold', 'reserved'];
+// Listings are read from Firestore, the single source of truth that sellers,
+// admin, checkout and order processing all write (lib/vinyl-listings.ts). This
+// page used to read a D1 copy through the vinyl-api worker, which only changed
+// when an admin ran a manual sync. Only published, sold and reserved listings
+// render; draft, pending, rejected and removed ones are "Vinyl Not Found" (404).
 
 // Fetch listing data server-side for OG meta tags (social crawlers can't execute JS)
 let pageTitle = 'Vinyl Details - Crates';
@@ -27,47 +28,40 @@ let vinylArtist = '';
 let vinylPrice = '';
 let hasServerData = false;
 
-try {
-  const res = await fetch(`https://vinyl-api.davidhagon.workers.dev/listings/${id}`, {
-    signal: AbortSignal.timeout(3000)
-  });
-  if (res.ok) {
-    const data = await res.json();
-    if (data.success && data.listing && PUBLIC_LISTING_STATUSES.includes(data.listing.status)) {
-      const l = data.listing;
-      vinylTitle = l.title || 'Vinyl';
-      vinylArtist = l.artist || 'Unknown Artist';
-      hasServerData = true;
-      pageTitle = `${vinylTitle} by ${vinylArtist} - Crates`;
-      pageBreadcrumbName = `${vinylTitle} by ${vinylArtist}`;
-      pageDescription = `${vinylTitle} by ${vinylArtist}`;
-      if (l.format) pageDescription += ` (${l.format})`;
-      pageDescription += '. Available on Fresh Wax Crates.';
-      // Ensure description meets 50 character minimum
-      if (pageDescription.length < 50) {
-        pageDescription += ' Browse jungle, drum & bass, and breakbeat vinyl.';
-      }
-      if (l.images?.[0]) pageImage = l.images[0];
-      if (l.price) {
-        vinylPrice = `£${Number(l.price).toFixed(2)}`;
-        productMeta = {
-          price: l.price,
-          currency: 'GBP',
-          availability: l.status === 'sold' ? 'OutOfStock' as const : 'InStock' as const,
-          condition: l.mediaCondition === 'M' || l.mediaCondition === 'NM' ? 'NewCondition' as const : 'UsedCondition' as const,
-          brand: l.artist || 'Various',
-          category: 'Vinyl Records',
-          priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        };
-      }
-    }
+const listing = await getPublicVinylListing(Astro.locals.runtime?.env as Record<string, unknown> | undefined, id);
+if (listing) {
+  const l = listing as {
+    title?: string; artist?: string; format?: string; images?: unknown[];
+    price?: number; status?: string; mediaCondition?: string;
+  };
+  vinylTitle = l.title || 'Vinyl';
+  vinylArtist = l.artist || 'Unknown Artist';
+  hasServerData = true;
+  pageTitle = `${vinylTitle} by ${vinylArtist} - Crates`;
+  pageBreadcrumbName = `${vinylTitle} by ${vinylArtist}`;
+  pageDescription = `${vinylTitle} by ${vinylArtist}`;
+  if (l.format) pageDescription += ` (${l.format})`;
+  pageDescription += '. Available on Fresh Wax Crates.';
+  // Ensure description meets 50 character minimum
+  if (pageDescription.length < 50) {
+    pageDescription += ' Browse jungle, drum & bass, and breakbeat vinyl.';
   }
-} catch (_: unknown) {
-  // Timeout or network error — fall back to generic meta tags
-  Astro.response.status = 404;
+  if (typeof l.images?.[0] === 'string') pageImage = l.images[0] as string;
+  if (l.price) {
+    vinylPrice = `£${Number(l.price).toFixed(2)}`;
+    productMeta = {
+      price: l.price,
+      currency: 'GBP',
+      availability: l.status === 'sold' ? 'OutOfStock' as const : 'InStock' as const,
+      condition: l.mediaCondition === 'M' || l.mediaCondition === 'NM' ? 'NewCondition' as const : 'UsedCondition' as const,
+      brand: l.artist || 'Various',
+      category: 'Vinyl Records',
+      priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    };
+  }
 }
 
-// If the fetch succeeded but no listing was found, set 404
+// No public listing (missing, not live, or the read failed) → 404
 if (!productMeta) {
   Astro.response.status = 404;
 }
@@ -424,6 +418,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   .purchase-section-left .add-to-bag-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  /* Sold / reserved listings: grey, not the green buy button */
+  .purchase-section-left .add-to-bag-btn.is-unavailable,
+  .purchase-section-left .add-to-bag-btn.is-unavailable:hover {
+    background: #4b5563;
   }
 
   .purchase-section-left .seller-info {
@@ -1123,9 +1123,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
-  // Vinyl API Worker URL
-  const VINYL_API_URL = 'https://vinyl-api.davidhagon.workers.dev';
-
   let listing = null;
 
   async function loadListing() {
@@ -1134,7 +1131,16 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     const content = document.getElementById('vinylContent');
 
     try {
-      const res = await fetch(`${VINYL_API_URL}/listings/${listingId}`);
+      // The site's own public API reads Firestore — the same store sellers,
+      // checkout and order processing write (it used to be a D1 copy served
+      // by the vinyl-api worker, which went stale between manual syncs).
+      const res = await fetch('/api/vinyl/public/?type=single&id=' + encodeURIComponent(listingId));
+      if (res.status === 404) {
+        loadingState.style.display = 'none';
+        content.style.display = 'none';
+        errorState.style.display = 'block';
+        return;
+      }
       if (!res.ok) throw new Error('Listing fetch failed: ' + res.status);
       const data = await res.json();
 
@@ -1409,9 +1415,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
       if (listing.images.length > 1) {
         const thumbnailsEl = document.getElementById('imageThumbnails');
+        // Image URLs are seller-supplied — escape them like every other field
         thumbnailsEl.innerHTML = listing.images.map((img, i) => `
           <div class="thumbnail ${i === 0 ? 'active' : ''}" data-index="${i}">
-            <img src="${img}" alt="${escapeHtml(listing.title)} image ${i + 1}" width="80" height="80" loading="lazy" decoding="async" />
+            <img src="${escapeHtml(img)}" alt="${escapeHtml(listing.title)} image ${i + 1}" width="80" height="80" loading="lazy" decoding="async" />
           </div>
         `).join('');
 
@@ -1445,8 +1452,16 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       document.getElementById('dealSection').style.display = 'block';
     }
 
-    // Add to bag button
-    document.getElementById('addToBagBtn').addEventListener('click', addToBag);
+    // Add to bag button — only a live listing can be bought. Sold and reserved
+    // listings stay visible but can't be added (checkout would refuse them).
+    const addBtn = document.getElementById('addToBagBtn');
+    if (listing.status === 'published') {
+      addBtn.addEventListener('click', addToBag);
+    } else {
+      addBtn.disabled = true;
+      addBtn.classList.add('is-unavailable');
+      addBtn.textContent = listing.status === 'sold' ? 'Sold' : 'Reserved';
+    }
   }
 
   // Track player state

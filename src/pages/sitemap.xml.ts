@@ -340,8 +340,12 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
   // ===========================================
   for (const listing of vinylListings) {
     const lastmod = formatDate(listing.updatedAt || listing.createdAt);
-    const listingImages = listing.images as Array<Record<string, unknown>> | undefined;
-    const imageUrl = listingImages?.[0]?.url || listing.imageUrl;
+    // Listings store image URLs as plain strings (the old `images[0].url` read
+    // always missed them); tolerate a legacy { url } entry too.
+    const firstImage = (listing.images as unknown[] | undefined)?.[0];
+    const imageUrl = typeof firstImage === 'string'
+      ? firstImage
+      : ((firstImage as Record<string, unknown> | undefined)?.url || listing.imageUrl);
     const title = escapeXml(listing.title || listing.artist ? `${str(listing.artist)} - ${str(listing.title)}` : 'Vinyl Record');
     const condition = str(listing.mediaCondition || listing.condition);
 
