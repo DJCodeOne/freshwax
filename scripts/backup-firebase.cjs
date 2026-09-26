@@ -97,18 +97,19 @@ function getAccessToken() {
   });
 }
 
-function fetchCollection(collection, accessToken) {
-  return new Promise((resolve, reject) => {
+// One page of a collection listing. Firestore caps pageSize at 300 and returns
+// nextPageToken for the rest.
+function fetchCollectionPage(collection, accessToken, pageToken) {
+  return new Promise((resolve) => {
+    let path = `/v1/projects/${PROJECT_ID}/databases/(default)/documents/${collection}?pageSize=300`;
+    if (pageToken) path += `&pageToken=${encodeURIComponent(pageToken)}`;
+    if (!accessToken) path += `&key=${API_KEY}`;
     const options = {
       hostname: 'firestore.googleapis.com',
-      path: `/v1/projects/${PROJECT_ID}/databases/(default)/documents/${collection}?pageSize=1000`,
+      path,
       method: 'GET',
       headers: accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}
     };
-
-    if (!accessToken) {
-      options.path += `&key=${API_KEY}`;
-    }
 
     https.get(options, (res) => {
       let data = '';
@@ -116,24 +117,71 @@ function fetchCollection(collection, accessToken) {
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          if (json.error) {
-            console.log(`  ⚠ ${collection}: ${json.error.message}`);
-            resolve({ collection, documents: [], error: json.error.message });
-          } else {
-            const docs = json.documents || [];
-            console.log(`  ✓ ${collection}: ${docs.length} documents`);
-            resolve({ collection, documents: docs });
-          }
+          if (json.error) resolve({ error: json.error.message });
+          else resolve({ documents: json.documents || [], nextPageToken: json.nextPageToken || null });
         } catch (e) {
-          console.log(`  ✗ ${collection}: Parse error`);
-          resolve({ collection, documents: [], error: e.message });
+          resolve({ error: `Parse error: ${e.message}` });
         }
       });
-    }).on('error', (e) => {
-      console.log(`  ✗ ${collection}: ${e.message}`);
-      resolve({ collection, documents: [], error: e.message });
-    });
+    }).on('error', (e) => resolve({ error: e.message }));
   });
+}
+
+// Every top-level collection in the database (documents:listCollectionIds).
+// The hand-written COLLECTIONS list drifted: by Sep 2026 it missed 29 of 42
+// collections (salesLedger, payouts, pendingPayouts, treasury, consentLogs,
+// vinylListings, …) and named two that don't exist (vinyl-listings, blog).
+function listCollectionIds(accessToken) {
+  const fetchPage = (pageToken) => new Promise((resolve) => {
+    const body = JSON.stringify(pageToken ? { pageSize: 300, pageToken } : { pageSize: 300 });
+    const req = https.request({
+      hostname: 'firestore.googleapis.com',
+      path: `/v1/projects/${PROJECT_ID}/databases/(default)/documents:listCollectionIds`,
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); } catch (e) { resolve({ error: { message: e.message } }); }
+      });
+    });
+    req.on('error', (e) => resolve({ error: { message: e.message } }));
+    req.write(body);
+    req.end();
+  });
+  return (async () => {
+    const ids = [];
+    let pageToken = null;
+    do {
+      const page = await fetchPage(pageToken);
+      if (page.error) throw new Error(page.error.message || 'listCollectionIds failed');
+      ids.push(...(page.collectionIds || []));
+      pageToken = page.nextPageToken || null;
+    } while (pageToken);
+    return ids;
+  })();
+}
+
+// Every document in a collection, following nextPageToken. (Until Sep 2026 this
+// read ONE page, so every collection over 300 documents was backed up only in
+// part — e.g. livestreamSlots stopped at April 2026.)
+async function fetchCollection(collection, accessToken) {
+  const documents = [];
+  let pageToken = null;
+  let pages = 0;
+  do {
+    const page = await fetchCollectionPage(collection, accessToken, pageToken);
+    if (page.error) {
+      console.log(`  ⚠ ${collection}: ${page.error}${documents.length ? ` (after ${documents.length} documents)` : ''}`);
+      return { collection, documents, error: page.error };
+    }
+    documents.push(...page.documents);
+    pageToken = page.nextPageToken;
+    pages++;
+  } while (pageToken && pages < 1000);
+  console.log(`  ✓ ${collection}: ${documents.length} documents`);
+  return { collection, documents };
 }
 
 // Convert Firestore format to plain JSON
@@ -206,12 +254,27 @@ async function main() {
     }
   }
 
+  // Back up EVERY collection; the static list is only the fallback when
+  // discovery fails (e.g. API-key mode, which can't list collections).
+  let collections = COLLECTIONS;
+  if (accessToken) {
+    try {
+      const discovered = await listCollectionIds(accessToken);
+      if (discovered.length) {
+        collections = [...new Set([...COLLECTIONS.filter(c => discovered.includes(c)), ...discovered.sort()])];
+        console.log(`Discovered ${discovered.length} collections`);
+      }
+    } catch (e) {
+      console.log(`⚠ Could not list collections (${e.message}); using the static list`);
+    }
+  }
+
   console.log('Fetching collections...');
 
   const allData = {};
   let totalDocs = 0;
 
-  for (const collection of COLLECTIONS) {
+  for (const collection of collections) {
     const result = await fetchCollection(collection, accessToken);
     const simplified = result.documents.map(simplifyDocument).filter(Boolean);
     allData[collection] = simplified;
