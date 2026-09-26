@@ -528,6 +528,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    return ApiErrors.serverError('Failed to update product');
+    // Admin-only endpoint (auth checked above), so return the cause: the bare
+    // "Failed to update product" left every failure undiagnosable, in the
+    // response and in /admin/errors (the middleware logs this message).
+    return ApiErrors.serverError(`Failed to update product: ${errorMessage.slice(0, 300)}`);
   }
 };
