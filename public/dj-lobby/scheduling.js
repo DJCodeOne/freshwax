@@ -58,9 +58,14 @@ export async function loadMySlot() {
       return;
     }
     var result = await response.json();
+    // The schedule now includes slots already in progress (so a booking that
+    // has started is still "your slot"); only active bookings count here.
+    var bookable = (result.success && result.slots) ? result.slots.filter(function(s) {
+      return s.status === 'scheduled' || s.status === 'in_lobby' || s.status === 'queued';
+    }) : [];
 
-    if (result.success && result.slots && result.slots.length > 0) {
-      var sortedSlots = result.slots.sort(function(a, b) {
+    if (bookable.length > 0) {
+      var sortedSlots = bookable.sort(function(a, b) {
         return new Date(a.startTime) - new Date(b.startTime);
       });
       mySlot = sortedSlots[0];
@@ -90,7 +95,10 @@ export async function loadAllSlots() {
     }
     var result = await response.json();
     if (result.success && result.slots) {
-      allDjSlots = result.slots.sort(function(a, b) {
+      // Finished/cancelled slots must not count as a "next slot" or extend a session.
+      allDjSlots = result.slots.filter(function(s) {
+        return s.status !== 'cancelled' && s.status !== 'completed' && s.status !== 'expired' && s.status !== 'ended';
+      }).sort(function(a, b) {
         return new Date(a.startTime) - new Date(b.startTime);
       });
     }
@@ -596,10 +604,10 @@ export async function loadStreamKeyForGoLive() {
     clearTimeout(timeoutId);
     log('[GoLive] Step 5: Got response, status: ' + response.status);
 
+    var result = await response.json().catch(function() { return {}; });
     if (!response.ok) {
-      throw new Error('Server error: ' + response.status);
+      throw new Error(result.error || ('Server error: ' + response.status));
     }
-    var result = await response.json();
     log('[GoLive] Step 6: Parsed response: ' + (result.success ? 'success' : result.error));
 
     var elapsed = Date.now() - animationStart;
@@ -800,10 +808,12 @@ export async function handleGoLiveReady() {
   });
   clearTimeout(goLiveTimeout);
 
+  // Read the body even on 4xx/5xx: it says WHY (another DJ live, a booked
+  // hour, the busy lock, the relay booking rule). "Server error: 400" didn't.
+  var result = await response.json().catch(function() { return {}; });
   if (!response.ok) {
-    throw new Error('Server error: ' + response.status);
+    throw new Error(result.error || ('Server error: ' + response.status));
   }
-  var result = await response.json();
 
   if (result.success) {
     log('[GoLive] Successfully went live!');

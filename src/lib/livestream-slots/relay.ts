@@ -5,13 +5,15 @@ import { buildRtmpUrl } from '../red5';
 import { broadcastLiveStatus } from '../pusher';
 import { APPROVED_RELAY_STATIONS } from '../relay-stations';
 import { isAdmin } from '../admin';
-import { acquireCronLock, releaseCronLock } from '../cron-lock';
+import { acquireCronLock, releaseCronLock, REQUEST_LOCK_TTL_MS } from '../cron-lock';
 import { ApiErrors, successResponse } from '../api-utils';
 import {
   syncSlotToD1,
   invalidateCache,
   generateId,
+  getUpcomingSlots,
 } from './helpers';
+import { ACTIVE_BOOKING_STATUSES, EARLY_START_MS, planSession } from './session-window';
 
 export async function handleStartRelay(
   data: Record<string, unknown>,
@@ -38,7 +40,7 @@ export async function handleStartRelay(
   // slots.
   let relayLocked = false;
   if (db) {
-    relayLocked = await acquireCronLock(db, 'slot_go_live').catch(() => false);
+    relayLocked = await acquireCronLock(db, 'slot_go_live', REQUEST_LOCK_TTL_MS).catch(() => false);
     if (!relayLocked) {
       return ApiErrors.badRequest('Another go-live is in progress — please try again in a moment');
     }
@@ -78,42 +80,33 @@ export async function handleStartRelay(
   }
 
   let bookedSlot: Record<string, unknown> | null = null;
+  const upcoming = await getUpcomingSlots(now);
 
   if (!relayIsAdmin) {
-    const djSlots = await queryCollection('livestreamSlots', {
-      filters: [{ field: 'djId', op: 'EQUAL', value: djId }],
-      skipCache: true
-    });
-
-    bookedSlot = djSlots.find((slot: Record<string, unknown>) => {
-      if (slot.status !== 'scheduled' && slot.status !== 'in_lobby') return false;
-      const slotStart = new Date(slot.startTime).getTime();
-      const slotEnd = new Date(slot.endTime).getTime();
-      return slotStart <= now.getTime() && now.getTime() < slotEnd;
-    });
+    // The DJ's own booking covering now — or starting within EARLY_START_MS, so
+    // a DJ who is a minute or two early isn't refused.
+    bookedSlot = upcoming.find((slot: Record<string, unknown>) => {
+      if (slot.djId !== djId || slot.cancelled) return false;
+      if (!ACTIVE_BOOKING_STATUSES.has(String(slot.status))) return false;
+      const slotStart = new Date(slot.startTime as string).getTime();
+      const slotEnd = new Date(slot.endTime as string).getTime();
+      return slotStart - EARLY_START_MS <= now.getTime() && now.getTime() < slotEnd;
+    }) || null;
 
     if (!bookedSlot) {
-      return ApiErrors.forbidden('You must have a booked slot to start a relay stream');
+      return ApiErrors.forbidden('You must have a booked slot to start a relay stream (you can start up to 15 minutes early).');
     }
   }
 
-  // A relay covers the DJ's booked slot, just like a direct stream — it ends at
-  // the booking's end and the DJ can extend at the hour (the 5-min prompt) if
-  // nobody's booked next. With no booking (admin ad-hoc relay), default to the
-  // next hour boundary.
-  let endTime: Date;
-  let slotStart: Date;
-  if (bookedSlot && bookedSlot.endTime) {
-    endTime = new Date(bookedSlot.endTime as string);
-    // Use the booking's hour-aligned start so the schedule reads "22:00 – 23:00".
-    slotStart = bookedSlot.startTime ? new Date(bookedSlot.startTime as string) : new Date(now);
-  } else {
-    endTime = new Date(now);
-    endTime.setMinutes(0, 0, 0);
-    endTime.setHours(endTime.getHours() + 1);
-    if (now.getMinutes() >= 55) endTime.setHours(endTime.getHours() + 1);
-    slotStart = new Date(now);
-  }
+  // A relay covers the DJ's booked slot, just like a direct stream: it runs to
+  // the end of the booking (and any booking that follows straight on), never
+  // into another DJ's booking; the DJ can extend at the hour (the 5-min prompt)
+  // if nobody's booked next. With no booking (admin ad-hoc relay) it runs to
+  // the next hour boundary.
+  const endTime = planSession(upcoming, djId, now).endTime;
+  // Use the booking's hour-aligned start so the schedule reads "22:00 – 23:00".
+  const slotStart = bookedSlot?.startTime ? new Date(bookedSlot.startTime as string) : new Date(now);
+  if (slotStart.getTime() > now.getTime()) slotStart.setTime(now.getTime()); // started early
   slotStart.setMinutes(0, 0, 0); // snap start to the hour for display (actual = startedAt)
 
   // Generate a relay stream key

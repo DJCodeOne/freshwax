@@ -1097,7 +1097,9 @@ const firebaseConfig = {
 
         if (result.success && result.slots) {
           result.slots.forEach(slot => {
-            if (slot.status !== 'cancelled') {
+            // The API returns slots OVERLAPPING the day; this view places a
+            // booking by its start hour, so keep only those starting today.
+            if (slot.status !== 'cancelled' && new Date(slot.startTime) >= startOfDay) {
               // Convert API format to local format
               const booking = {
                 id: slot.id,
@@ -1377,8 +1379,10 @@ const firebaseConfig = {
         let activeBooking = null;
 
         // Sort by start time
+        // Only bookings that can still be streamed: finished, superseded and
+        // expired slots used to be listed (with Edit/Cancel buttons) too.
         const sortedSlots = result.slots
-          .filter(s => s.status !== 'cancelled')
+          .filter(s => ['scheduled', 'in_lobby', 'queued', 'live'].includes(s.status))
           .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
         sortedSlots.forEach(slot => {

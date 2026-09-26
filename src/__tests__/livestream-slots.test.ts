@@ -28,6 +28,7 @@ vi.mock('../lib/admin', () => ({
 vi.mock('../lib/cron-lock', () => ({
   acquireCronLock: vi.fn().mockResolvedValue(true),
   releaseCronLock: vi.fn().mockResolvedValue(undefined),
+  REQUEST_LOCK_TTL_MS: 60000,
 }));
 
 vi.mock('../lib/kv-cache', () => ({
@@ -234,9 +235,21 @@ describe('handleBook — successful booking', () => {
       'token123'
     );
 
-    // Verify lock was acquired and released
-    expect(mockAcquireCronLock).toHaveBeenCalledWith(null, 'slot_booking');
+    // Verify lock was acquired (with the short request TTL) and released
+    expect(mockAcquireCronLock).toHaveBeenCalledWith(null, 'slot_booking', 60000);
     expect(mockReleaseCronLock).toHaveBeenCalledWith(null, 'slot_booking');
+  });
+
+  it('checks clashes against every slot that has not ended, not the oldest 200 by id', async () => {
+    await handleBook(
+      { djId: 'dj1', djName: 'TestDJ', startTime: futureStart, duration: 60 },
+      'dj1', null, null, now, nowISO
+    );
+    expect(mockQueryCollection).toHaveBeenCalledWith('livestreamSlots', expect.objectContaining({
+      filters: [{ field: 'endTime', op: 'GREATER_THAN', value: nowISO }],
+      orderBy: { field: 'endTime', direction: 'ASCENDING' },
+      skipCache: true,
+    }), true);
   });
 
   it('uses default title and genre when not provided', async () => {
@@ -272,6 +285,46 @@ describe('handleBook — successful booking', () => {
     );
 
     expect(response.status).toBe(200);
+  });
+});
+
+// =============================================
+// Daily streaming limit (2 h/day)
+// =============================================
+describe('handleBook — daily limit counts the booking day', () => {
+  const usageToday = (minutes: number) => mockGetDocument.mockImplementation(async (collection: string) =>
+    collection === 'userUsage' ? { dayDate: '2025-06-15', streamMinutesToday: minutes } : null);
+
+  it("lets a DJ who streamed 2 hours today book tomorrow", async () => {
+    usageToday(120);
+    const response = await handleBook(
+      { djId: 'dj1', djName: 'TestDJ', startTime: '2025-06-16T20:00:00Z', duration: 60 },
+      'dj1', null, null, now, nowISO
+    );
+    expect(response.status).toBe(200);
+  });
+
+  it('still refuses more streaming today once the 2 hours are used', async () => {
+    usageToday(90);
+    const response = await handleBook(
+      { djId: 'dj1', djName: 'TestDJ', startTime: futureStart, duration: 60 },
+      'dj1', null, null, now, nowISO
+    );
+    expect(response.status).toBe(400);
+    expect((await parseResponse(response)).error).toContain('a day');
+    expect(mockReleaseCronLock).toHaveBeenCalledWith(null, 'slot_booking');
+  });
+
+  it("counts the DJ's existing bookings on that day", async () => {
+    mockQueryCollection.mockResolvedValueOnce([
+      { djId: 'dj1', djName: 'TestDJ', status: 'scheduled', startTime: '2025-06-16T18:00:00Z', endTime: '2025-06-16T20:00:00Z' },
+    ]);
+    const response = await handleBook(
+      { djId: 'dj1', djName: 'TestDJ', startTime: '2025-06-16T21:00:00Z', duration: 60 },
+      'dj1', null, null, now, nowISO
+    );
+    expect(response.status).toBe(400);
+    expect((await parseResponse(response)).error).toContain('on 2025-06-16');
   });
 });
 

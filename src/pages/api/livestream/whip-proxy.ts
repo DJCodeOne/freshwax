@@ -29,25 +29,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Stream key required');
     }
 
-    // Validate that stream key maps to a valid, current slot
+    // Validate that the stream key belongs to an active, current slot. Several
+    // slots can share a key — the booking, and the live slot go_live creates on
+    // the same key (the booking is then marked completed). This used to look at
+    // `limit: 1` (the OLDEST slot with the key = the completed booking), so a
+    // phone reconnecting mid-set was refused "Stream slot is not active".
     try {
       const slots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'streamKey', op: 'EQUAL', value: streamKey }],
-        limit: 1
+        limit: 50,
+        skipCache: true
       });
       if (slots.length === 0) {
         log.warn('WHIP proxy: no slot found for stream key');
         return ApiErrors.forbidden('Invalid stream key');
       }
-      const slot = slots[0];
-      // Only allow keys for slots that are active (in_lobby, live, scheduled within 15min)
       const validStatuses = ['scheduled', 'in_lobby', 'live', 'queued'];
-      if (!validStatuses.includes(slot.status as string)) {
-        log.warn('WHIP proxy: slot status not valid for streaming:', slot.status);
+      const nowMs = Date.now();
+      const active = slots.filter(s => validStatuses.includes(s.status as string) && !s.cancelled);
+      if (active.length === 0) {
+        log.warn('WHIP proxy: no active slot for stream key; statuses:', slots.map(s => s.status).join(','));
         return ApiErrors.forbidden('Stream slot is not active');
       }
-      // Reject if slot endTime has passed
-      if (slot.endTime && new Date(slot.endTime as string) < new Date()) {
+      // Reject if every active slot's endTime has passed
+      if (!active.some(s => !s.endTime || new Date(s.endTime as string).getTime() >= nowMs)) {
         log.warn('WHIP proxy: slot has expired');
         return ApiErrors.forbidden('Stream slot has expired');
       }
@@ -92,9 +97,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const location = mtxResponse.headers.get('Location');
     if (location) {
-      // Encode the original resource URL so DELETE goes through our proxy too
-      const proxyLocation = `/api/livestream/whip-proxy/?resource=${encodeURIComponent(location)}`;
-      headers['Location'] = proxyLocation;
+      // Encode the original resource URL so DELETE goes through our proxy too.
+      // MediaMTX may answer with a relative Location; make it absolute, or the
+      // DELETE handler's WHIP_BASE_URL check refuses it and the session is
+      // never closed explicitly.
+      let resource = location;
+      try { resource = new URL(location, targetUrl).toString(); } catch { /* keep as sent */ }
+      headers['Location'] = `/api/livestream/whip-proxy/?resource=${encodeURIComponent(resource)}`;
     }
 
     return new Response(sdpAnswer, { status: 201, headers });

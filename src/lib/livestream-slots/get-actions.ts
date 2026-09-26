@@ -172,9 +172,13 @@ export async function handleSchedule(
   // unordered limit:200 returns only the oldest docs and silently drops any
   // recent booking (its high id falls past the window), leaving the schedule
   // empty. A range filter on startTime needs an orderBy on the same field.
+  // Look back a day so slots already in progress at `start` are included
+  // (sessions run at most 24 h — relays).
   if (allSlots.length === 0) {
+    const startMs = Date.parse(startDate);
+    const lookbackStart = Number.isFinite(startMs) ? new Date(startMs - 24 * 60 * 60 * 1000).toISOString() : startDate;
     allSlots = await queryCollection('livestreamSlots', {
-      filters: [{ field: 'startTime', op: 'GREATER_THAN_OR_EQUAL', value: startDate }],
+      filters: [{ field: 'startTime', op: 'GREATER_THAN_OR_EQUAL', value: lookbackStart }],
       orderBy: { field: 'startTime', direction: 'ASCENDING' },
       skipCache: true,
       limit: 200
@@ -227,8 +231,15 @@ export async function handleSchedule(
     await autoEndExpiredSlots(db, env, now, invalidateStatusCacheFn);
   }
 
-  // Filter slots for the requested date range
-  slots = allSlots.filter((slot: Record<string, unknown>) => (slot.startTime as string) >= startDate && (slot.startTime as string) <= endDate);
+  // Slots that OVERLAP the requested range. This used to keep only slots that
+  // START inside it, so the DJ lobby (start=now) lost a booking the moment it
+  // began: "No slot booked", and Spawn booked a duplicate with a new key.
+  const overlaps = (slot: Record<string, unknown>) => {
+    const s = slot.startTime as string;
+    const e = (slot.endTime as string) || s;
+    return typeof s === 'string' && s <= endDate && e > startDate;
+  };
+  slots = allSlots.filter(overlaps);
   if (djId) slots = slots.filter((slot: Record<string, unknown>) => slot.djId === djId);
 
   const nowISO = now.toISOString();

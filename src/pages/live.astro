@@ -1876,7 +1876,8 @@ try {
     
     panel.classList.remove('hidden');
     document.getElementById('lobbySlotTime').textContent = `${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}`;
-    document.getElementById('lobbyStreamKey').textContent = slot.streamKey || 'Loading...';
+    // Public schedule data never includes stream keys (security) — the DJ Lobby shows it.
+    document.getElementById('lobbyStreamKey').textContent = slot.streamKey || 'Shown in the DJ Lobby';
     
     updateLobbyCountdown(slot);
   }
@@ -2855,36 +2856,12 @@ try {
   };
   
   // Lobby buttons
-  document.getElementById('goLiveBtn')?.addEventListener('click', async () => {
-    if (!myUpcomingSlot) return;
-
-    const goLiveBtn = document.getElementById('goLiveBtn');
-    if (goLiveBtn) goLiveBtn.disabled = true;
-
-    try {
-      const token = await currentUser.getIdToken();
-      const response = await fetch('/api/livestream/manage/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'go_live',
-          slotId: myUpcomingSlot.id,
-          token
-        })
-      });
-
-      if (!response.ok) throw new Error('Go live failed');
-      const result = await response.json();
-      if (result.success) {
-        scheduleCache = null;
-        await loadSchedule(true);
-      } else {
-        if (goLiveBtn) goLiveBtn.disabled = false;
-      }
-    } catch (err) {
-      console.error('Failed to go live:', err);
-      if (goLiveBtn) goLiveBtn.disabled = false;
-    }
+  // Going live happens in the DJ Lobby (OBS, BUTT, phone camera and relay all
+  // live there). This panel used to POST action 'go_live' to
+  // /api/livestream/manage/, which doesn't accept it — the button always
+  // failed (400) for a DJ opening /live shortly before their slot.
+  document.getElementById('goLiveBtn')?.addEventListener('click', () => {
+    window.location.href = '/account/dj-lobby/';
   });
   
   document.getElementById('leaveLobbyBtn')?.addEventListener('click', () => {
@@ -3050,7 +3027,7 @@ try {
 </script>
 
 <script is:inline src="/email-verify-check.js" defer nonce={nonce}></script>
-<script type="module" src="/live-stream.js?v=20260827"></script>
+<script type="module" src="/live-stream.js?v=20260926"></script>
 
 <script is:inline nonce={nonce}>
   // Auto-hide header on live page

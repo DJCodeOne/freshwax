@@ -311,7 +311,11 @@ export async function whipGetStats() {
  * @returns {boolean}
  */
 export function whipIsConnected() {
-  return pc !== null && pc.connectionState === 'connected';
+  if (!pc) return false;
+  // Older Safari has no connectionState; fall back to the ICE state.
+  return pc.connectionState === 'connected'
+    || pc.iceConnectionState === 'connected'
+    || pc.iceConnectionState === 'completed';
 }
 
 /**

@@ -2206,8 +2206,10 @@ const nonce = Astro.locals.nonce || '';
         alert('Stream kicked successfully');
         await loadActiveStreams();
       } else {
-        // Try alternative approach - the API might not support direct kick
-        alert('Stream kick requested. It may take a moment to disconnect.');
+        // MediaMTX has no /v3/paths/kick endpoint, and its real kick endpoints
+        // are deliberately not reachable through the tunnel (Sep 2026 lockdown),
+        // so this never succeeds. Say so instead of implying it worked.
+        alert(`The stream server did not disconnect "${pathName}" (HTTP ${response.status}). Kicking a publisher has to be done on the streaming PC (MediaMTX API on localhost:9997).`);
         await loadActiveStreams();
       }
     } catch (error) {

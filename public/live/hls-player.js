@@ -372,7 +372,13 @@ export async function setupHlsPlayer(streamData, deps) {
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
 
-    if (video.canPlayType('application/vnd.apple.mpegurl') === 'probably') {
+    // Native HLS when the browser is sure, or when hls.js can't run here.
+    // iPhone Safari answers "maybe" (not "probably") and has no MediaSource for
+    // this hls.js version, so the old strict === 'probably' check left iPhone
+    // listeners with "Your browser does not support HLS playback."
+    var nativeHls = video.canPlayType('application/vnd.apple.mpegurl');
+    var hlsJsOk = !!(window.Hls && Hls.isSupported());
+    if (nativeHls === 'probably' || (nativeHls && !hlsJsOk)) {
       // Native HLS support (Safari)
       video.src = hlsUrl;
       video.addEventListener('loadedmetadata', function() {
@@ -405,7 +411,7 @@ export async function setupHlsPlayer(streamData, deps) {
           }
         })();
       });
-    } else if (window.Hls && Hls.isSupported()) {
+    } else if (hlsJsOk) {
       if (hlsPlayer) hlsPlayer.destroy();
       hlsPlayer = new Hls({
         enableWorker: true,

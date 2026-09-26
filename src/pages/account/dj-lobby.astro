@@ -1380,7 +1380,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     sendDm,
     cleanup as cleanupPusher,
     getOnlineDjs
-  } from '/dj-lobby-pusher.js?v=20260926';
+  } from '/dj-lobby-pusher.js?v=20260926b';
 
   // Extracted modules (DJ lobby code split)
   // NOTE: ?v= bumped 2026-06-12 — several modules were edited on May 2 without a
@@ -1391,12 +1391,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as audioMeters from '/dj-lobby/audio-meters.js?v=20260613c';
   import * as lobbyChat from '/dj-lobby/chat.js?v=20260612a';
   import * as lobbyDm from '/dj-lobby/dm.js?v=20260612a';
-  import * as scheduling from '/dj-lobby/scheduling.js?v=20260827';
+  import * as scheduling from '/dj-lobby/scheduling.js?v=20260926';
   import * as shareModule from '/dj-lobby/share.js?v=20260827';
-  import * as videoPlayer from '/dj-lobby/video-player.js?v=20260613a';
-  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260827';
+  import * as videoPlayer from '/dj-lobby/video-player.js?v=20260926';
+  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js?v=20260926';
   import * as relayModule from '/dj-lobby/relay.js?v=20260827';
-  import * as initModalModule from '/dj-lobby/init-modal.js?v=20260614a';
+  import * as initModalModule from '/dj-lobby/init-modal.js?v=20260926';
   import * as eligibilityModule from '/dj-lobby/eligibility.js?v=20260827';
   import * as stereoMetersModule from '/dj-lobby/stereo-meters.js?v=20260612a';
 
@@ -4145,11 +4145,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             })
           });
 
-          if (!bookResponse.ok) throw new Error('Book slot failed: ' + bookResponse.status);
-          const bookResult = await bookResponse.json();
-
-          if (!bookResult.success) {
-            throw new Error(bookResult.error || 'Failed to spawn key');
+          // Parse the body even on 4xx: it carries the reason (daily limit,
+          // clash with a booking, busy lock) that a bare status code hides.
+          const bookResult = await bookResponse.json().catch(() => ({}));
+          if (!bookResponse.ok || !bookResult.success) {
+            throw new Error(bookResult.error || ('Book slot failed: ' + bookResponse.status));
           }
 
           // Update mySlot with the new booking
@@ -4188,7 +4188,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       } catch (error) {
         console.error('[DJ Lobby] Spawn key error:', error);
-        streamKeyEl.innerHTML = '<span class="key-error">Failed - try again</span>';
+        // Show the server's reason (e.g. daily limit, booking clash), not just "Failed".
+        const errSpan = document.createElement('span');
+        errSpan.className = 'key-error';
+        errSpan.textContent = (error instanceof Error && error.message) ? error.message : 'Failed - try again';
+        streamKeyEl.textContent = '';
+        streamKeyEl.appendChild(errSpan);
         btn.textContent = 'Spawn';
         btn.disabled = false;
         if (buttBtn) { buttBtn.textContent = 'Spawn'; buttBtn.disabled = false; }
@@ -4250,11 +4255,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             })
           });
 
-          if (!bookResponse.ok) throw new Error('Auto-book slot failed: ' + bookResponse.status);
-          const bookResult = await bookResponse.json();
-
-          if (!bookResult.success) {
-            throw new Error(bookResult.error || 'Failed to auto-book slot');
+          // Parse the body even on 4xx: it carries the reason (daily limit,
+          // clash with a booking, busy lock) that a bare status code hides.
+          const bookResult = await bookResponse.json().catch(() => ({}));
+          if (!bookResponse.ok || !bookResult.success) {
+            throw new Error(bookResult.error || ('Auto-book slot failed: ' + bookResponse.status));
           }
 
           // Update mySlot with the new booking
@@ -4651,10 +4656,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           })
         });
 
-        if (!bookResponse.ok) throw new Error('Book slot failed: ' + bookResponse.status);
-        var bookResult = await bookResponse.json();
-        if (!bookResult.success) {
-          throw new Error(bookResult.error || 'Failed to book slot');
+        // Parse the body even on 4xx: it carries the reason the booking failed.
+        var bookResult = await bookResponse.json().catch(function() { return {}; });
+        if (!bookResponse.ok || !bookResult.success) {
+          throw new Error(bookResult.error || ('Book slot failed: ' + bookResponse.status));
         }
 
         mySlot = bookResult.slot;
@@ -4819,6 +4824,24 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (btn) { btn.textContent = 'End Stream'; btn.disabled = false; }
     var statusText = document.getElementById('mobileStatusText');
     if (statusText) statusText.textContent = 'Stream ended';
+  });
+
+  // The site ended this DJ's phone stream (booked time over, an admin, another
+  // device): stop the camera/WHIP broadcast and drop back to offline, instead
+  // of the phone showing LIVE while nobody receives it. Called by the Pusher
+  // 'stream-ended' handler (dj-lobby-pusher.js) for the DJ's own stream; as a
+  // fallback when Pusher is down, mobile-broadcast.js stops itself after two
+  // 404 heartbeats. Either way it fires 'fw:mobile-stream-stopped'.
+  window.onMyStreamEnded = function() {
+    if (mobileBroadcast.getIsLive()) mobileBroadcast.stopForServerEnd();
+  };
+  window.addEventListener('fw:mobile-stream-stopped', function(ev) {
+    resetMobileToOffline();
+    if (typeof updateEndStreamButton === 'function') updateEndStreamButton(false, false);
+    var endedText = document.getElementById('mobileStatusText');
+    if (endedText) endedText.textContent = 'Stream ended';
+    var reason = ev && ev.detail ? ev.detail.reason : '';
+    showLobbyInfo(reason === 'connection' ? 'Connection lost, so your stream has ended.' : 'Your slot has ended, so the stream was stopped.');
   });
 
   // Mobile mic/camera/flip controls

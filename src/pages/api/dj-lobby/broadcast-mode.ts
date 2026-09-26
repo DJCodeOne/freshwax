@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { updateDocument, verifyUserToken, getDocument } from '../../../lib/firebase-rest';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { syncSlotStatusToD1 } from '../../../lib/livestream-slots/helpers';
 
 const log = createLogger('dj-lobby/broadcast-mode');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -17,7 +18,7 @@ const BroadcastModeSchema = z.object({
 export const prerender = false;
 
 // POST: Update broadcast mode for a livestream slot
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`broadcast-mode:${clientId}`, RateLimiters.standard);
   if (!rateLimit.allowed) {
@@ -53,11 +54,15 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Update the slot
-    await updateDocument('livestreamSlots', slotId, {
+    const modeUpdate = {
       broadcastMode: mode,
       hlsUrl: hlsUrl || null,
       updatedAt: new Date().toISOString()
-    });
+    };
+    await updateDocument('livestreamSlots', slotId, modeUpdate);
+    // Mirror to D1: /api/livestream/status reads D1 first, so without this
+    // listeners kept the old mode (placeholder vs video) after a switch.
+    await syncSlotStatusToD1(locals?.runtime?.env?.DB, slotId, String(slot.status || 'live'), modeUpdate);
 
     return successResponse({ message: 'Broadcast mode updated',
       mode,

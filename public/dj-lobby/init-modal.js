@@ -216,10 +216,22 @@ export function startConnectionChecks() {
     var buttCheck = document.getElementById('initCheckButt');
     if (buttCheck) buttCheck.classList.add('checking');
 
-    setTimeout(function() {
+    setTimeout(async function() {
       if (progressFill) progressFill.style.width = '70%';
 
-      var isButtConnected = ctx.getIcecastConnected() || ctx.getIcecastStreamConnected() || (ctx.getCurrentPreviewSource() === 'butt');
+      // Selecting BUTT as the preview source used to count as "connected", so a
+      // DJ could go live with nothing reaching Icecast (silent stream). Only a
+      // real source counts; ask the server if the lobby's poll hasn't seen one.
+      var isButtConnected = ctx.getIcecastConnected() || ctx.getIcecastStreamConnected();
+      if (!isButtConnected) {
+        try {
+          var icecastRes = await fetch('/api/icecast-status/', { cache: 'no-store' });
+          if (icecastRes.ok) {
+            var icecastStatus = await icecastRes.json();
+            isButtConnected = icecastStatus.streaming === true;
+          }
+        } catch (e) { /* offline — leave as not detected */ }
+      }
 
       if (buttCheck) buttCheck.classList.remove('checking');
       if (isButtConnected) {

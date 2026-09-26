@@ -4,10 +4,9 @@ import { queryCollection, setDocument, updateDocument } from '../firebase-rest';
 import { buildRtmpUrl, buildHlsUrl, findActiveRtmpStreamForDj } from '../red5';
 import { broadcastLiveStatus } from '../pusher';
 import { isAdmin } from '../admin';
-import { acquireCronLock, releaseCronLock } from '../cron-lock';
+import { acquireCronLock, releaseCronLock, REQUEST_LOCK_TTL_MS } from '../cron-lock';
 import { logActivity } from '../activity-feed';
-import { createLogger, ApiErrors, fetchWithTimeout, successResponse } from '../api-utils';
-import { TIMEOUTS } from '../timeouts';
+import { createLogger, ApiErrors, successResponse } from '../api-utils';
 import {
   syncSlotToD1,
   syncSlotStatusToD1,
@@ -16,9 +15,46 @@ import {
   invalidateCache,
   getSettings,
   generateId,
+  getUpcomingSlots,
 } from './helpers';
+import { findBlockingBooking, planSession, MIN_SESSION_MS } from './session-window';
 
 const log = createLogger('[livestream-slots]');
+
+type SlotDoc = Record<string, unknown>;
+
+/**
+ * When a session starting now should end and which of the DJ's bookings it
+ * covers — or why it can't start (another DJ owns this hour, or is booked to
+ * start within minutes). Rules: session-window.ts.
+ */
+async function planGoLiveSession(djId: string, now: Date): Promise<{ endTime: Date; absorbed: SlotDoc[] } | { error: string }> {
+  const upcoming = await getUpcomingSlots(now);
+  const blocking = findBlockingBooking(upcoming, djId, now);
+  if (blocking) {
+    const who = String(blocking.djName || 'Another DJ');
+    return { error: `${who} has booked this slot. If they haven't gone live 15 minutes in, it opens up; or book a free slot on the schedule.` };
+  }
+  const plan = planSession(upcoming, djId, now);
+  if (plan.endTime.getTime() - now.getTime() < MIN_SESSION_MS) {
+    return { error: 'Another DJ is booked to start in a few minutes. Book a free slot on the schedule instead.' };
+  }
+  return plan;
+}
+
+/** Mark the bookings a live session covers as completed (superseded by it). */
+async function supersedeBookings(bookings: SlotDoc[], liveSlotId: string, db: unknown, nowISO: string): Promise<void> {
+  for (const booking of bookings) {
+    const id = String(booking.id || '');
+    if (!id || id === liveSlotId) continue;
+    try {
+      await updateDocument('livestreamSlots', id, { status: 'completed', supersededBy: liveSlotId, updatedAt: nowISO });
+      await syncSlotStatusToD1(db, id, 'completed', { supersededBy: liveSlotId, updatedAt: nowISO });
+    } catch (e: unknown) {
+      log.warn(`Could not mark booking ${id} superseded:`, e);
+    }
+  }
+}
 
 export async function handleGoLive(
   data: Record<string, unknown>,
@@ -73,7 +109,7 @@ export async function handleGoLive(
   // Shares one lock name with the other go-live paths. Mirrors handleBook.
   let goLiveLocked = false;
   if (db) {
-    goLiveLocked = await acquireCronLock(db, 'slot_go_live').catch(() => false);
+    goLiveLocked = await acquireCronLock(db, 'slot_go_live', REQUEST_LOCK_TTL_MS).catch(() => false);
     if (!goLiveLocked) {
       return ApiErrors.badRequest('Another go-live is in progress — please try again in a moment');
     }
@@ -95,45 +131,13 @@ export async function handleGoLive(
       : 'Another DJ is currently live. Please wait until their session ends.');
   }
 
-  // Skip HLS check for browser mode — WebRTC->HLS transcode takes 10-15s for segments to appear
-  const isBrowserMode = broadcastMode === 'browser';
-
-  if (!isBrowserMode) {
-    // Validate that the stream is actually active before going live
-    const hlsCheckUrl = buildHlsUrl(streamKey);
-    let streamActive = false;
-    let streamCheckAttempts = 0;
-    const maxAttempts = 2;
-
-    while (streamCheckAttempts < maxAttempts && !streamActive) {
-      streamCheckAttempts++;
-      try {
-        const checkResponse = await fetchWithTimeout(hlsCheckUrl.replace('/index.m3u8', '/'), {
-          method: 'HEAD'
-        }, TIMEOUTS.SHORT);
-        streamActive = checkResponse.ok || checkResponse.status === 200;
-        if (!streamActive && streamCheckAttempts < maxAttempts) {
-          await new Promise(r => setTimeout(r, TIMEOUTS.TICK)); // Wait 1s before retry
-        }
-      } catch (e: unknown) {
-        log.warn(`Stream check attempt ${streamCheckAttempts} failed:`, e);
-        if (streamCheckAttempts < maxAttempts) {
-          await new Promise(r => setTimeout(r, TIMEOUTS.TICK));
-        }
-      }
-    }
-
-    // If stream check failed after retries, warn but allow (DJ clicked Ready)
-    if (!streamActive) {
-      log.warn('Could not verify stream, proceeding with DJ confirmation');
-    }
-  }
-
-  // Calculate end time (top of next hour)
-  const endTime = new Date(now);
-  endTime.setMinutes(0, 0, 0);
-  endTime.setHours(endTime.getHours() + 1);
-  if (now.getMinutes() >= 55) endTime.setHours(endTime.getHours() + 1);
+  // Respect bookings: refuse another DJ's booked hour, run to the end of this
+  // DJ's own booking (see session-window.ts). (A HEAD check on the HLS folder
+  // used to run here; the tunnel 404s that URL, so it never passed and only
+  // held the lock for a couple of seconds.)
+  const session = await planGoLiveSession(djId, now);
+  if ('error' in session) return ApiErrors.badRequest(session.error);
+  const { endTime, absorbed } = session;
 
   // Snap the slot's START to the hour for the schedule display (reads
   // "22:00 – 23:00", not "22:49 – …"). The actual go-live moment lives in
@@ -180,28 +184,9 @@ export async function handleGoLive(
   try {
     await setDocument('livestreamSlots', slotId, newSlot, idToken);
 
-    // Mark any existing scheduled/booked slots by this DJ as completed
-    // (go_live creates a new slot, so the original booking is now superseded)
-    try {
-      const djScheduledSlots = await queryCollection('livestreamSlots', {
-        filters: [
-          { field: 'djId', op: 'EQUAL', value: djId },
-          { field: 'status', op: 'EQUAL', value: 'scheduled' }
-        ],
-        skipCache: true
-      });
-      for (const oldSlot of djScheduledSlots) {
-        if (oldSlot.id !== slotId) {
-          await updateDocument('livestreamSlots', oldSlot.id, {
-            status: 'completed',
-            updatedAt: nowISO
-          });
-          await syncSlotStatusToD1(db, oldSlot.id, 'completed', { updatedAt: nowISO });
-        }
-      }
-    } catch (cleanupErr: unknown) {
-      log.warn('Could not clean up scheduled slots:', cleanupErr);
-    }
+    // The bookings this session covers are superseded by the live slot. Only
+    // those — later bookings stay (this used to complete ALL of them).
+    await supersedeBookings(absorbed, slotId, db, nowISO);
 
     invalidateCache();
 
@@ -275,28 +260,28 @@ export async function handleGoLiveNow(
   // can't interleave and produce two live slots.
   let goLiveNowLocked = false;
   if (db) {
-    goLiveNowLocked = await acquireCronLock(db, 'slot_go_live').catch(() => false);
+    goLiveNowLocked = await acquireCronLock(db, 'slot_go_live', REQUEST_LOCK_TTL_MS).catch(() => false);
     if (!goLiveNowLocked) {
       return ApiErrors.badRequest('Another go-live is in progress — please try again in a moment');
     }
   }
 
   try {
-  // Check if anyone is live
+  // Check if anyone is live. A 'live' slot whose endTime has passed is a stale
+  // leftover awaiting auto-end, not a stream — same rule as handleGoLive.
   const liveSlots = await queryCollection('livestreamSlots', {
     filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-    limit: 1,
+    limit: 5,
     skipCache: true
   });
 
-  if (liveSlots.length > 0) {
+  if (liveSlots.some(s => new Date(s.endTime) > now)) {
     return ApiErrors.badRequest('Someone is already streaming');
   }
 
-  const endTime = new Date(now);
-  endTime.setMinutes(0, 0, 0);
-  endTime.setHours(endTime.getHours() + 1);
-  if (now.getMinutes() >= 55) endTime.setHours(endTime.getHours() + 1);
+  const session = await planGoLiveSession(djId, now);
+  if ('error' in session) return ApiErrors.badRequest(session.error);
+  const { endTime, absorbed } = session;
 
   // Snap the slot's START to the hour for the schedule display (actual moment is startedAt).
   const slotStartHour = new Date(now); slotStartHour.setMinutes(0, 0, 0);
@@ -327,6 +312,7 @@ export async function handleGoLiveNow(
   };
 
   await setDocument('livestreamSlots', slotId, newSlot, idToken);
+  await supersedeBookings(absorbed, slotId, db, nowISO);
   invalidateCache();
 
   // Sync to D1 — awaited so the Worker can't drop it (status reads D1 first)

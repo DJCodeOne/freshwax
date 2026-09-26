@@ -2,7 +2,7 @@
 // Mobile WHIP broadcast logic for DJ Lobby — adapted from go-live.astro
 // Plain JS only (no TypeScript syntax — this is loaded via <script is:inline type="module">)
 
-import { whipConnect, whipDisconnect, whipReplaceTrack, whipGetStats, whipIsConnected } from '/whip-client.js?v=2';
+import { whipConnect, whipDisconnect, whipReplaceTrack, whipGetStats, whipIsConnected } from '/whip-client.js?v=3';
 
 var ctx = null;
 
@@ -26,6 +26,8 @@ var MAX_RECONNECT_ATTEMPTS = 5;
 var RECONNECT_BACKOFF = [5000, 10000, 20000, 40000, 60000]; // exponential backoff
 var heartbeatInterval = null;
 var cachedToken = null;
+var reconnecting = false;
+var missedHeartbeats = 0;
 
 export function init(context) {
   ctx = context;
@@ -43,10 +45,14 @@ export async function startCamera(videoEl) {
       width: { ideal: 1280 },
       height: { ideal: 720 }
     },
+    // DJ sets are music: voice-call noise suppression and auto gain mangle
+    // it (smeared highs, pumping levels). Echo cancellation stays on — with
+    // nothing playing back it's transparent, and it stops a feedback loop if
+    // the page ever plays the stream's own audio.
     audio: {
       echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true
+      noiseSuppression: false,
+      autoGainControl: false
     }
   };
 
@@ -175,6 +181,11 @@ export async function goLive(token, slotId, streamKey, djId, djName, djAvatar, t
     throw new Error('Server returned empty WHIP URL');
   }
 
+  // While this device's camera is broadcasting (connecting or live), the
+  // lobby's OBS preview must not find and play our own stream: it would come
+  // out of the speaker a few seconds late, straight into the live mic.
+  setBrowserBroadcasting(true);
+  try {
   // Step 2: Connect WHIP
   try {
     await whipConnect(whipData.whipUrl, mediaStream, {
@@ -213,8 +224,14 @@ export async function goLive(token, slotId, streamKey, djId, djName, djAvatar, t
     throw new Error('Stream server unreachable: ' + msg);
   }
 
-  // Step 3: Wait for ICE
-  await new Promise(function(resolve) { setTimeout(resolve, 1500); });
+  // Step 3: Wait until media is actually flowing (ICE + DTLS connected). A
+  // fixed 1.5 s used to mark the slot live even when the connection never
+  // came up — e.g. on a network that blocks UDP — leaving a dead stream.
+  var connected = await waitForMediaConnection(15000);
+  if (!connected) {
+    await whipDisconnect().catch(function() { /* non-critical: WHIP cleanup */ });
+    throw new Error('Could not connect to the stream server. This network may be blocking live video — try mobile data or another Wi-Fi, or stream with OBS.');
+  }
 
   // Step 4: Call go_live API
   var goLiveResp;
@@ -259,6 +276,15 @@ export async function goLive(token, slotId, streamKey, djId, djName, djAvatar, t
   acquireWakeLock();
   startTimer(timerEl);
   startHeartbeat(token);
+  } catch (goLiveErr) {
+    setBrowserBroadcasting(false);
+    throw goLiveErr;
+  }
+}
+
+/** Tell the lobby (video-player.js OBS preview) that this device is broadcasting. */
+function setBrowserBroadcasting(on) {
+  try { window.__fwBrowserBroadcasting = !!on; } catch (e) { /* no window */ }
 }
 
 /**
@@ -329,6 +355,8 @@ export async function endStream(token, force) {
   // Clean up
   if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
   reconnectAttempts = 0;
+  reconnecting = false;
+  setBrowserBroadcasting(false);
   releaseWakeLock();
   stopTimer();
   stopAudioMeter();
@@ -368,6 +396,8 @@ export function cleanup() {
 
   if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
   reconnectAttempts = 0;
+  reconnecting = false;
+  setBrowserBroadcasting(false);
   releaseWakeLock();
   stopTimer();
   stopAudioMeter();
@@ -380,6 +410,7 @@ export function cleanup() {
  */
 function startHeartbeat(token) {
   stopHeartbeat();
+  missedHeartbeats = 0;
   heartbeatInterval = setInterval(function() {
     if (!isLive || !currentSlotId) { stopHeartbeat(); return; }
     var authToken = token;
@@ -396,7 +427,17 @@ function startHeartbeat(token) {
       method: 'POST',
       headers: headers,
       body: JSON.stringify({ action: 'heartbeat', slotId: currentSlotId })
-    }).catch(function() { /* ignore heartbeat failures */ });
+    }).then(function(resp) {
+      // 404 = the site no longer has this slot live (booked time over, ended
+      // by an admin or on another device). Two in a row → stop sending, so the
+      // phone doesn't keep "LIVE" into the void.
+      if (resp.status === 404) {
+        missedHeartbeats++;
+        if (missedHeartbeats >= 2) stopForServerEnd();
+      } else if (resp.ok) {
+        missedHeartbeats = 0;
+      }
+    }).catch(function() { /* network blip — the WHIP reconnect logic handles real drops */ });
   }, 30000);
 }
 
@@ -428,76 +469,107 @@ export function getMediaStream() {
 }
 
 /**
- * Handle connection lost — prompt user to retry or end stream
+ * Stop broadcasting because the site ended this slot (its booked time is over,
+ * an admin ended it, or it was ended from another device). No-op when not live.
+ * The lobby listens for 'fw:mobile-stream-stopped' to reset its UI.
+ * @returns {Promise<boolean>} true if a live stream was stopped
+ */
+export function stopForServerEnd() {
+  if (!isLive) return Promise.resolve(false);
+  return endStream(cachedToken, true).then(function() {
+    try { window.dispatchEvent(new CustomEvent('fw:mobile-stream-stopped', { detail: { reason: 'server' } })); } catch (e) { /* old browsers */ }
+    return true;
+  });
+}
+
+/**
+ * Handle a lost connection: reconnect automatically with backoff, up to
+ * MAX_RECONNECT_ATTEMPTS, then end the stream. No blocking confirm(): it froze
+ * the page mid-set, and a browser auto-dismisses it in a background tab —
+ * which ended the stream. The DJ can still end it with the End button.
  * @param {string} token
  * @param {string} whipUrl
  * @param {HTMLElement} timerEl
  * @param {function} [onStats]
  */
 function handleConnectionLost(token, whipUrl, timerEl, onStats) {
-  if (!isLive) return;
+  // One failure fires both 'failed' and 'ice-failed' — reconnect once.
+  if (!isLive || reconnecting) return;
 
   reconnectAttempts++;
 
   // Too many retries — force end stream
   if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
     (window.showToast?window.showToast('Connection lost after ' + MAX_RECONNECT_ATTEMPTS + ' attempts. Ending stream.',"error"):alert('Connection lost after ' + MAX_RECONNECT_ATTEMPTS + ' attempts. Ending stream.'));
-    endStream(token, true);
+    endStream(token, true).then(function() {
+      try { window.dispatchEvent(new CustomEvent('fw:mobile-stream-stopped', { detail: { reason: 'connection' } })); } catch (e) { /* old browsers */ }
+    });
     return;
   }
 
   var backoffMs = RECONNECT_BACKOFF[Math.min(reconnectAttempts - 1, RECONNECT_BACKOFF.length - 1)];
-  var backoffSec = Math.round(backoffMs / 1000);
+  if (!mediaStream) { endStream(token, true); return; }
 
-  var shouldRetry = confirm(
-    'Connection lost (attempt ' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ').\n\n' +
-    'Press OK to reconnect, or Cancel to end your stream.'
-  );
+  reconnecting = true;
+  if (window.showToast) window.showToast('Connection lost. Reconnecting (attempt ' + reconnectAttempts + ' of ' + MAX_RECONNECT_ATTEMPTS + ')…', 'info');
 
-  if (shouldRetry && mediaStream) {
-    // Attempt reconnection with exponential backoff
-    whipDisconnect().catch(function() { /* non-critical: WHIP cleanup before reconnect */ }).then(function() {
-      return whipConnect(whipUrl, mediaStream, {
-        onStateChange: function(state) {
-          if (state === 'failed' || state === 'ice-failed') {
-            // Wait with backoff before next retry prompt
-            setTimeout(function() {
-              handleConnectionLost(token, whipUrl, timerEl, onStats);
-            }, backoffMs);
-          } else if (state === 'disconnected' || state === 'ice-disconnected') {
-            if (!reconnectTimeout) {
-              reconnectTimeout = setTimeout(function() {
-                reconnectTimeout = null;
-                if (isLive && !whipIsConnected()) {
-                  handleConnectionLost(token, whipUrl, timerEl, onStats);
-                }
-              }, backoffMs);
-            }
-          } else if (state === 'connected' || state === 'ice-connected') {
-            // Successfully reconnected — reset counter
-            reconnectAttempts = 0;
-            if (reconnectTimeout) {
-              clearTimeout(reconnectTimeout);
-              reconnectTimeout = null;
-            }
-          }
-        },
-        onStats: function(stats) {
-          if (onStats) onStats(stats);
-        },
-        onError: function() {}
-      });
-    }).catch(async function() {
-      var endNow = window.showConfirmToast
-        ? await window.showConfirmToast('Reconnection failed. End stream?', { confirmText: 'End Stream' })
-        : confirm('Reconnection failed. End stream?');
-      if (endNow) {
-        endStream(token, true);
-      }
-    });
-  } else {
-    endStream(token, true);
+  function retryLater() {
+    setTimeout(function() { handleConnectionLost(token, whipUrl, timerEl, onStats); }, backoffMs);
   }
+
+  whipDisconnect().catch(function() { /* non-critical: WHIP cleanup before reconnect */ }).then(function() {
+    return whipConnect(whipUrl, mediaStream, {
+      onStateChange: function(state) {
+        if (state === 'failed' || state === 'ice-failed') {
+          retryLater();
+        } else if (state === 'disconnected' || state === 'ice-disconnected') {
+          if (!reconnectTimeout) {
+            reconnectTimeout = setTimeout(function() {
+              reconnectTimeout = null;
+              if (isLive && !whipIsConnected()) {
+                handleConnectionLost(token, whipUrl, timerEl, onStats);
+              }
+            }, backoffMs);
+          }
+        } else if (state === 'connected' || state === 'ice-connected') {
+          // Successfully reconnected — reset counter
+          reconnectAttempts = 0;
+          if (reconnectTimeout) {
+            clearTimeout(reconnectTimeout);
+            reconnectTimeout = null;
+          }
+        }
+      },
+      onStats: function(stats) {
+        if (onStats) onStats(stats);
+      },
+      onError: function() {}
+    });
+  }).then(function() {
+    reconnecting = false;
+  }).catch(function() {
+    // Couldn't reach the server at all (offline, or it refused) — try again
+    // after the backoff until the attempts run out.
+    reconnecting = false;
+    retryLater();
+  });
+}
+
+/**
+ * Resolve true once the peer connection is up (media flowing), false after
+ * timeoutMs.
+ * @param {number} timeoutMs
+ * @returns {Promise<boolean>}
+ */
+function waitForMediaConnection(timeoutMs) {
+  return new Promise(function(resolve) {
+    var deadline = Date.now() + timeoutMs;
+    (function check() {
+      if (whipIsConnected()) { resolve(true); return; }
+      if (Date.now() >= deadline) { resolve(false); return; }
+      setTimeout(check, 250);
+    })();
+  });
 }
 
 // ---- Internal helpers ----

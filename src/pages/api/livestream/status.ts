@@ -212,7 +212,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       description: slot.description || '',
       isLive: true,
       status: 'live',
-      startedAt: slot.liveStartTime || slot.startTime,
+      // startedAt is the real go-live moment; startTime is snapped to the hour
+      // for the schedule display, so it made duration timers up to 59 min off.
+      startedAt: slot.startedAt || slot.liveStartTime || slot.startTime,
       startTime: slot.startTime,
       endTime: slot.endTime,
       duration: slot.duration,

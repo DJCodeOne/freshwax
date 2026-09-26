@@ -50,6 +50,22 @@ export async function syncSlotStatusToD1(db: unknown, slotId: string, status: st
   }
 }
 
+/**
+ * Every slot that hasn't ended yet (endTime > now), soonest first — the input
+ * for booking-clash and go-live checks. Range-filtered and ordered: slot ids
+ * start with a base-36 timestamp, so an UNORDERED limit returns the OLDEST
+ * slots, and the old `limit: 200` clash check only ever saw long-finished
+ * slots (double bookings went through).
+ */
+export async function getUpcomingSlots(now: Date, throwOnError = false): Promise<Record<string, unknown>[]> {
+  return queryCollection('livestreamSlots', {
+    filters: [{ field: 'endTime', op: 'GREATER_THAN', value: now.toISOString() }],
+    orderBy: { field: 'endTime', direction: 'ASCENDING' },
+    limit: 500,
+    skipCache: true,
+  }, throwOnError);
+}
+
 export const SLOT_DURATIONS = [30, 45, 60, 120, 180, 240];
 export const MAX_BOOKING_DAYS = 30;
 

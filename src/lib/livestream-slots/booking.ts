@@ -4,7 +4,7 @@ import { queryCollection, getDocument, setDocument, updateDocument } from '../fi
 import { buildRtmpUrl, buildHlsUrl } from '../red5';
 import { broadcastLiveStatus } from '../pusher';
 import { isAdmin } from '../admin';
-import { acquireCronLock, releaseCronLock } from '../cron-lock';
+import { acquireCronLock, releaseCronLock, REQUEST_LOCK_TTL_MS } from '../cron-lock';
 import { createLogger, ApiErrors, successResponse } from '../api-utils';
 import {
   syncSlotToD1,
@@ -14,9 +14,94 @@ import {
   invalidateCache,
   generateId,
   checkDjEligible,
+  getUpcomingSlots,
 } from './helpers';
+import { bookedMinutesOnDay } from './session-window';
 
 const log = createLogger('[livestream-slots]');
+
+const hoursText = (minutes: number) => {
+  const h = Math.round((minutes / 60) * 10) / 10;
+  return `${h} hour${h === 1 ? '' : 's'}`;
+};
+
+/**
+ * Advance-booking window and the daily streaming limit, for the booking's own
+ * day. Returns the refusal message, or null to allow. (The daily limit used to
+ * compare TODAY's usage against a booking on any date, so after 2 hours today a
+ * DJ couldn't book next week.) Fails open, as before, if the lookups fail.
+ */
+async function checkStreamingLimits(
+  djId: string,
+  slotStart: Date,
+  duration: number,
+  existingSlots: Record<string, unknown>[],
+  now: Date
+): Promise<string | null> {
+  try {
+    const usageDoc = await getDocument('userUsage', djId);
+    const userDoc = await getDocument('users', djId);
+    const subscription = userDoc?.subscription || { tier: 'free' };
+    // Tier value is 'pro' in database, displayed as "Plus" to users
+    const isPlus = subscription.tier === 'pro' && subscription.expiresAt && new Date(subscription.expiresAt) > now;
+
+    // Check advance booking limit: Standard = 7 days, Plus = 30 days
+    const maxAdvanceDays = isPlus ? 30 : 7;
+    const maxBookingDate = new Date(now.getTime() + maxAdvanceDays * 24 * 60 * 60 * 1000);
+    if (slotStart > maxBookingDate) {
+      const upgradeMsg = !isPlus ? ' Go Plus to book up to 1 month in advance.' : '';
+      return `Cannot book more than ${maxAdvanceDays} days in advance.${upgradeMsg}`;
+    }
+
+    // Days are UTC dates, matching userUsage.dayDate.
+    const bookingDate = slotStart.toISOString().split('T')[0];
+    const today = now.toISOString().split('T')[0];
+
+    // Check for approved event requests for this date
+    let approvedEventHours = 0;
+    if (isPlus) {
+      try {
+        const eventRequests = await queryCollection('event-requests', {
+          filters: [
+            { field: 'userId', op: 'EQUAL', value: djId },
+            { field: 'eventDate', op: 'EQUAL', value: bookingDate },
+            { field: 'status', op: 'EQUAL', value: 'approved' }
+          ],
+          limit: 1
+        });
+        if (eventRequests.length > 0) {
+          approvedEventHours = eventRequests[0].hoursRequested || 0;
+        }
+      } catch (eventErr: unknown) {
+        log.warn('Could not check event requests:', eventErr);
+      }
+    }
+
+    // Both tiers get 2 hours/day base. Plus can request extended hours for long events.
+    const baseMinutes = 120; // 2 hours for everyone
+    const maxMinutes = baseMinutes + (approvedEventHours * 60);
+
+    // Minutes already streamed count only against today; minutes already
+    // booked count against their own day.
+    const streamedMinutes = bookingDate === today
+      ? ((usageDoc?.dayDate === today ? usageDoc.streamMinutesToday : 0) || 0)
+      : 0;
+    const bookedMinutes = bookedMinutesOnDay(existingSlots, djId, bookingDate);
+
+    if (streamedMinutes + bookedMinutes + duration > maxMinutes) {
+      const upgradeMsg = !isPlus && approvedEventHours === 0
+        ? ' Go Plus to request extended hours for long events.'
+        : (isPlus && approvedEventHours === 0 ? ' Request extended hours for events.' : '');
+      const used = streamedMinutes + bookedMinutes;
+      const where = bookingDate === today ? 'today' : `on ${bookingDate}`;
+      return `That would take you past your ${hoursText(maxMinutes)} a day: you have ${hoursText(used)} streamed or booked ${where}.${upgradeMsg}`;
+    }
+    return null;
+  } catch (limitError: unknown) {
+    log.warn('Could not check streaming limits:', limitError);
+    return null; // Continue with booking if limit check fails
+  }
+}
 
 export async function handleBook(
   data: Record<string, unknown>,
@@ -80,75 +165,26 @@ export async function handleBook(
   // Admins bypass streaming limits
   const bookIsAdmin = await isAdmin(djId);
 
-  // Check subscription limits for streaming
-  if (!bookIsAdmin) try {
-    const usageDoc = await getDocument('userUsage', djId);
-    const userDoc = await getDocument('users', djId);
-    const subscription = userDoc?.subscription || { tier: 'free' };
-    // Tier value is 'pro' in database, displayed as "Plus" to users
-    const isPlus = subscription.tier === 'pro' && subscription.expiresAt && new Date(subscription.expiresAt) > now;
-
-    // Check advance booking limit: Standard = 7 days, Plus = 30 days
-    const maxAdvanceDays = isPlus ? 30 : 7;
-    const maxBookingDate = new Date(now.getTime() + maxAdvanceDays * 24 * 60 * 60 * 1000);
-    if (slotStart > maxBookingDate) {
-      const upgradeMsg = !isPlus ? ' Go Plus to book up to 1 month in advance.' : '';
-      return ApiErrors.badRequest(`Cannot book more than ${maxAdvanceDays} days in advance.${upgradeMsg}`);
-    }
-
-    // Get the date of the booking to check for approved events
-    const bookingDate = slotStart.toISOString().split('T')[0];
-    const today = now.toISOString().split('T')[0];
-
-    // Check for approved event requests for this date
-    let approvedEventHours = 0;
-    if (isPlus) {
-      try {
-        const eventRequests = await queryCollection('event-requests', {
-          filters: [
-            { field: 'userId', op: 'EQUAL', value: djId },
-            { field: 'eventDate', op: 'EQUAL', value: bookingDate },
-            { field: 'status', op: 'EQUAL', value: 'approved' }
-          ],
-          limit: 1
-        });
-        if (eventRequests.length > 0) {
-          approvedEventHours = eventRequests[0].hoursRequested || 0;
-        }
-      } catch (eventErr: unknown) {
-        log.warn('Could not check event requests:', eventErr);
-      }
-    }
-
-    // Both tiers get 2 hours/day base. Plus can request extended hours for long events.
-    const baseMinutes = 120; // 2 hours for everyone
-    const maxMinutes = baseMinutes + (approvedEventHours * 60);
-
-    const minutesToday = (usageDoc?.dayDate === today ? usageDoc.streamMinutesToday : 0) || 0;
-
-    if (minutesToday + duration > maxMinutes) {
-      const hoursUsed = Math.floor(minutesToday / 60);
-      const hoursLimit = maxMinutes / 60;
-      const upgradeMsg = !isPlus && approvedEventHours === 0
-        ? ' Go Plus to request extended hours for long events.'
-        : (isPlus && approvedEventHours === 0 ? ' Request extended hours for events.' : '');
-      return ApiErrors.badRequest(`You've used ${hoursUsed} of your ${hoursLimit} hour${hoursLimit > 1 ? 's' : ''} today.${upgradeMsg}`);
-    }
-  } catch (limitError: unknown) {
-    log.warn('Could not check streaming limits:', limitError);
-    // Continue with booking if limit check fails
-  }
-
   // Acquire distributed lock to prevent TOCTOU race condition
-  // (two DJs booking the same slot simultaneously)
-  const lockAcquired = await acquireCronLock(db, 'slot_booking');
+  // (two DJs booking the same slot simultaneously). Short TTL: see cron-lock.ts.
+  const lockAcquired = await acquireCronLock(db, 'slot_booking', REQUEST_LOCK_TTL_MS);
   if (!lockAcquired) {
     return ApiErrors.badRequest('Booking system busy — please try again in a moment');
   }
 
   try {
-    // Check for conflicts - limit to prevent runaway
-    const existingSlots = await queryCollection('livestreamSlots', { skipCache: true, limit: 200 });
+    // Every slot that hasn't ended yet. Throws on a query failure: an empty
+    // list would let a double booking through.
+    const existingSlots = await getUpcomingSlots(now, true);
+
+    // Check subscription limits for streaming
+    if (!bookIsAdmin) {
+      const limitError = await checkStreamingLimits(djId, slotStart, duration, existingSlots, now);
+      if (limitError) {
+        await releaseCronLock(db, 'slot_booking');
+        return ApiErrors.badRequest(limitError);
+      }
+    }
 
     const conflicts = existingSlots.filter(slot => {
       if (!['scheduled', 'in_lobby', 'live', 'queued'].includes(slot.status)) {
