@@ -57,6 +57,7 @@ interface Props {
   trackPrice?: number;
   vinylRelease?: boolean;
   vinylTBA?: boolean;
+  vinylOnly?: boolean;
   vinylRecordCount?: string;
   vinylPrice?: number;
   hasLimitedEdition?: boolean;
@@ -126,6 +127,7 @@ const {
   trackPrice = 1.00,
   vinylRelease = false,
   vinylTBA = false,
+  vinylOnly = false,
   vinylRecordCount = '',
   vinylPrice = 0,
   hasLimitedEdition = false,
@@ -348,7 +350,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       <div class="buy-actions-mobile flex flex-col">
       <div class="buy-container">
       {/* NYOP Purchase UI - Simplified with Modal */}
-      {nyopEnabled ? (
+      {nyopEnabled && !vinylOnly ? (
         <div class="w-64 nyop-container" data-release-id={id}>
           <div class="text-xs text-white uppercase tracking-wide font-bold mb-2 text-center">Name Your Price</div>
           <button
@@ -372,6 +374,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         </div>
       ) : (
         <div class="flex gap-2 w-64">
+          {!vinylOnly && (
           <button
             data-release-id={id}
             data-product-type="digital"
@@ -403,6 +406,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
               )}
             </span>
           </button>
+          )}
 
         {hasVinylParts && vinylAvailable ? (
           <a
@@ -460,7 +464,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       )}
 
       {/* Vinyl button for NYOP mode - shown separately below the NYOP box */}
-      {nyopEnabled && vinylAvailable && (
+      {nyopEnabled && !vinylOnly && vinylAvailable && (
         <div class="w-64 mt-2">
           {hasVinylParts ? (
             <a
@@ -582,7 +586,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
                   </div>
                   <div class="flex items-center gap-2">
                     <span class="text-gray-300">💿</span>
-                    <span class="truncate">{finalVinylAvailable ? 'Vinyl + Digital' : 'Digital Only'}</span>
+                    <span class="truncate">{vinylOnly ? 'Vinyl Only' : (finalVinylAvailable ? 'Vinyl + Digital' : 'Digital Only')}</span>
                   </div>
                   <div class="flex items-center gap-2">
                     <span class="text-gray-300">🔗</span>
@@ -610,7 +614,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         <h4 class="text-sm text-white uppercase tracking-wider font-heading">
           TRACKS ({tracksWithIds.length})
         </h4>
-        {finalTrackPrice > 0 && !nyopEnabled && (
+        {finalTrackPrice > 0 && !nyopEnabled && !vinylOnly && (
           <div class="text-sm text-white font-body">
             {hasSale ? (
               <Fragment>
@@ -654,7 +658,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
                   {track.artist && <span class="text-gray-300 font-normal"> - {track.artist}</span>}
                   {track.featured && <span class="text-gray-300 font-normal text-xs"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>}
                 </p>
-                {finalTrackPrice > 0 && !nyopEnabled && (
+                {finalTrackPrice > 0 && !nyopEnabled && !vinylOnly && (
                   <button
                     class="buy-track flex-shrink-0 text-sm font-bold text-white bg-green-700 hover:bg-green-800 transition-colors px-3 py-1 rounded font-body"
                     data-track-id={track.id}

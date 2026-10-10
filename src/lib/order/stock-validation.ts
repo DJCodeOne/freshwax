@@ -261,6 +261,10 @@ export async function validateAndGetPrices(
           const releaseId = item.releaseId || item.productId || item.id;
           if (releaseId) {
             const release = releaseMap.get(releaseId);
+            if (release && release.vinylOnly === true && itemType !== 'vinyl') {
+              // Physical-only release: its tracks are preview clips, not for sale
+              return { validatedItems: [], hasPriceMismatch: true, validationError: `${item.name} is only available on vinyl` };
+            }
             if (release) {
               if (itemType === 'vinyl') {
                 // Multi-part: prefer the part's price so each Part can carry
@@ -347,6 +351,11 @@ export async function processItemsWithDownloads(items: CartItem[]): Promise<Cart
 
         if (releaseData) {
           log.info('[order-utils] Release found:', releaseData?.releaseName);
+
+          // Vinyl-only releases carry preview clips, never downloads
+          if (releaseData.vinylOnly === true) {
+            return { ...item, releaseId, noDigital: true, artwork: releaseData.coverArtUrl || releaseData.artworkUrl, image: releaseData.coverArtUrl || releaseData.artworkUrl };
+          }
 
           // If it's a single track purchase, only include that track
           if (item.type === 'track') {

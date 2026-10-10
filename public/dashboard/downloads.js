@@ -454,6 +454,7 @@ export function renderDownloads(ordersList) {
   var nowMs = Date.now();
   (ordersList || []).forEach(function(order) {
     (order.items || []).forEach(function(item) {
+      if (item.noDigital) return; // vinyl-only release — record only, no files
       if (item.downloads?.tracks?.length > 0 || item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.type === 'vinyl') {
         // Pre-orders stay locked until their release date (server enforces this too)
         var lockDate = item.isPreOrder ? (item.releaseDate || order.preOrderDeliveryDate) : null;

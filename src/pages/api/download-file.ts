@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { verifyRequestUser, getDocument } from '../../lib/firebase-rest';
+import { isOrderItemAudioBlocked } from '../../lib/order/vinyl-only';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger } from '../../lib/api-utils';
 
@@ -132,6 +133,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (embargo && !isNaN(embargo.getTime()) && embargo.getTime() > Date.now()) {
         return ApiErrors.forbidden(`Pre-order locked until ${embargo.toISOString().split('T')[0]}`);
       }
+    }
+
+    // Vinyl-only releases: the record never unlocks audio (artwork is fine)
+    if (fileType !== 'artwork' && await isOrderItemAudioBlocked(item, id => getDocument('releases', id))) {
+      return ApiErrors.forbidden('This release is vinyl only — no digital download included');
     }
 
     // Resolve file URL

@@ -287,19 +287,19 @@ const releaseItemList = {
                         <button
                           class="buy-discography-btn flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-bold rounded-lg shadow-lg transition-colors text-sm"
                           data-label={label}
-                          data-releases={JSON.stringify(releasesByLabel[label].map(r => ({
+                          data-releases={JSON.stringify(releasesByLabel[label].filter(r => r.vinylOnly !== true).map(r => ({
                             id: r.id,
                             title: r.releaseName || 'Untitled',
                             artist: r.artistName || 'Unknown Artist',
                             price: r.pricing?.digital || r.pricePerSale || 0,
                             artwork: r.coverArtUrl || '/place-holder.webp'
                           })))}
-                          data-total-price={releasesByLabel[label].reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}
+                          data-total-price={releasesByLabel[label].filter(r => r.vinylOnly !== true).reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}
                         >
                           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                           </svg>
-                          <span>Buy All ({releasesByLabel[label].length}) - £{releasesByLabel[label].reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}</span>
+                          <span>Buy All ({releasesByLabel[label].filter(r => r.vinylOnly !== true).length}) - £{releasesByLabel[label].filter(r => r.vinylOnly !== true).reduce((sum, r) => sum + (r.pricing?.digital || r.pricePerSale || 0), 0).toFixed(2)}</span>
                         </button>
                       )}
                       {vinylByLabel[label].length > 0 && (

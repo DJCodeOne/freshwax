@@ -144,7 +144,7 @@ export const GET = async () => {
       title: `${artist ? artist + ' - ' : ''}${name} (Vinyl)`,
       description: cleanDescription(
         r.description,
-        `${name}${artist ? ' by ' + artist : ''} — jungle & drum and bass vinyl on ${str(r.label) || 'Fresh Wax'}. Includes digital download.`
+        `${name}${artist ? ' by ' + artist : ''} — jungle & drum and bass vinyl on ${str(r.label) || 'Fresh Wax'}.${r.vinylOnly === true ? '' : ' Includes digital download.'}`
       ),
       link: `${SITE_URL}/item/${str(r.id)}/`,
       imageLink: str(image),

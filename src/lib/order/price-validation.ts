@@ -147,6 +147,9 @@ export async function validateOrderPrices(items: Record<string, unknown>[]): Pro
           if (!release) {
             return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
           }
+          if (release.vinylOnly === true) {
+            return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `${item.name} is only available on vinyl` };
+          }
           const track = (release.tracks || []).find((t: TrackData) =>
             t.id === item.trackId || t.trackId === item.trackId
           );
@@ -159,6 +162,9 @@ export async function validateOrderPrices(items: Record<string, unknown>[]): Pro
           const release = releaseMap.get(releaseId);
           if (!release) {
             return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
+          }
+          if (release.vinylOnly === true) {
+            return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `${item.name} is only available on vinyl` };
           }
           // `pricePerSale` is the real digital price; `price`/`digitalPrice`
           // are null on every release, so reading only those rejected every

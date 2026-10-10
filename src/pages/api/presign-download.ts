@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { verifyRequestUser, getDocument } from '../../lib/firebase-rest';
+import { isOrderItemAudioBlocked } from '../../lib/order/vinyl-only';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 import { z } from 'zod';
@@ -121,6 +122,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (embargo && !isNaN(embargo.getTime()) && embargo.getTime() > Date.now()) {
         return ApiErrors.forbidden(`Pre-order locked until ${embargo.toISOString().split('T')[0]}`);
       }
+    }
+
+    // Vinyl-only releases: the record never unlocks audio (artwork is fine)
+    if (fileType !== 'artwork' && await isOrderItemAudioBlocked(item, id => getDocument('releases', id))) {
+      return ApiErrors.forbidden('This release is vinyl only — no digital download included');
     }
 
     // Validate trackIndex is a non-negative integer for non-artwork requests

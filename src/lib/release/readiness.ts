@@ -99,7 +99,7 @@ export function assessReleaseReadiness(release: Record<string, unknown>): Releas
   // --- Pricing -----------------------------------------------------------
   const albumPrice = Number(release.pricePerSale ?? release.price ?? 0) || 0;
   const trackPrice = Number(release.trackPrice ?? 0) || 0;
-  if (albumPrice <= 0 && trackPrice <= 0) {
+  if (albumPrice <= 0 && trackPrice <= 0 && release.vinylOnly !== true) {
     warnings.push('No digital price set — the release would be free');
   }
   // vinylTBA = vinyl announced but not yet purchasable (no buy button), so a

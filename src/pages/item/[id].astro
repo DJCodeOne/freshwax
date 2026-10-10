@@ -115,6 +115,8 @@ const {
   vinylTBA = false,
   // Partner only posts this record within the UK (checkout enforces it)
   vinylUkOnly = false,
+  // Physical-only: tracks are preview clips, no digital sale or download
+  vinylOnly = false,
   overallRating = { average: 0, count: 0, total: 0 },
   comments = [],
   notes = '',
@@ -402,7 +404,7 @@ const productAvailability = isPreOrder ? 'PreOrder' as const
   : 'InStock' as const;
 
 // Determine effective price for structured data (use digital price, fall back to track price * count)
-const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTrackPrice * tracksWithIds.length);
+const structuredPrice = vinylOnly ? (vinylPrice || 0) : (actualPricePerSale > 0 ? actualPricePerSale : (actualTrackPrice * tracksWithIds.length));
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 
 // Social-share image. Prefer the dedicated 1200x630 (1.91:1) OG card so Facebook
@@ -422,7 +424,7 @@ const shareImageHeight = hasOgCard ? 630 : (shareImage ? 800 : undefined);
 // tracksWithIds, which are const-declared above (TDZ if referenced earlier).
 const aboutFallback = release ? [
   `${releaseName}${artistName ? ` by ${artistName}` : ''} — a ${displayGenre || 'jungle / drum & bass'} release${labelName ? ` on ${labelName}` : ' on Fresh Wax'}${catalogNumber ? ` (cat. ${catalogNumber})` : ''}.`,
-  tracksWithIds.length ? `${tracksWithIds.length} track${tracksWithIds.length === 1 ? '' : 's'}${vinylRelease ? ', available on vinyl with digital download included' : ', available as digital download'}.` : '',
+  tracksWithIds.length ? `${tracksWithIds.length} track${tracksWithIds.length === 1 ? '' : 's'}${vinylOnly ? ', available on vinyl only' : (vinylRelease ? ', available on vinyl with digital download included' : ', available as digital download')}.` : '',
   formattedDate ? `Released ${formattedDate}.` : '',
 ].filter(Boolean).join(' ') : '';
 
@@ -475,7 +477,7 @@ if (release) {
 
 <Layout
   title={release ? `${releaseName} - ${artistName}` : 'Release Not Found'}
-  description={release ? `${releaseName} by ${artistName}${genre ? ` - ${genre}` : ''}${labelName ? ` on ${labelName}` : ''}. Stream, buy and download on Fresh Wax.` : 'Release not found'}
+  description={release ? `${releaseName} by ${artistName}${genre ? ` - ${genre}` : ''}${labelName ? ` on ${labelName}` : ''}. ${vinylOnly ? 'Preview and buy the vinyl' : 'Stream, buy and download'} on Fresh Wax.` : 'Release not found'}
   noindex={!release}
   image={shareImage}
   imageWidth={shareImageWidth}
@@ -487,7 +489,7 @@ if (release) {
     releaseDate: releaseDate,
     genre: genre ? [displayGenre] : undefined,
     label: labelName || undefined,
-    format: vinylRelease ? ['Vinyl', 'Digital'] : ['Digital'],
+    format: vinylOnly ? ['Vinyl'] : (vinylRelease ? ['Vinyl', 'Digital'] : ['Digital']),
     catalogNumber: catalogNumber || undefined,
     tracks: structuredTracks
   } : undefined}
@@ -496,7 +498,7 @@ if (release) {
     currency: 'GBP',
     availability: productAvailability,
     brand: labelName || artistName,
-    category: 'Music > Digital Downloads',
+    category: vinylOnly ? 'Media > Music & Sound Recordings > Vinyl' : 'Music > Digital Downloads',
     priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     validFrom: new Date(releaseDate).toISOString().split('T')[0],
     ...(overallRating.count > 0 ? { reviews: { rating: overallRating.average, count: overallRating.count } } : {})
@@ -579,7 +581,7 @@ if (release) {
                     </div>
                   )}
 
-                  {nyopEnabled ? (
+                  {!vinylOnly && (nyopEnabled ? (
                     <div class="nyop-container-item" data-release-id={id}>
                       <div class="text-sm text-white uppercase tracking-wide font-black mb-3 text-center">Name Your Price</div>
                       <button
@@ -635,7 +637,7 @@ if (release) {
                         ) : `Digital Download - £${digitalPrice.toFixed(2)}`
                       )}
                     </button>
-                  )}
+                  ))}
 
                   {tracklistGroups.length === 0 && (
                     <button
@@ -648,7 +650,7 @@ if (release) {
                       data-artist-id={artistId}
                       data-label-name={labelName}
                       data-artwork={coverArtUrl}
-                      data-includes-digital="true"
+                      data-includes-digital={vinylOnly ? 'false' : 'true'}
                       data-is-preorder={isPreOrder ? 'true' : 'false'}
                       disabled={!vinylRelease || !vinylAvailable}
                       class={`add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-colors font-black uppercase text-base w-full ${
@@ -667,7 +669,7 @@ if (release) {
                         <circle cx="12" cy="12" r="3" fill="currentColor"/>
                       </svg>
                       {vinylRelease && vinylAvailable
-                        ? (isPreOrder ? `Pre-order Vinyl + Digital - £${vinylPrice?.toFixed(2)}` : `Vinyl + Digital - £${vinylPrice?.toFixed(2)}`)
+                        ? (isPreOrder ? `Pre-order Vinyl${vinylOnly ? '' : ' + Digital'} - £${vinylPrice?.toFixed(2)}` : `Vinyl${vinylOnly ? '' : ' + Digital'} - £${vinylPrice?.toFixed(2)}`)
                         : (vinylRelease && vinylTBA ? 'Vinyl TBA — Price Coming Soon' : 'Vinyl Unavailable')}
                     </button>
                   )}
@@ -688,7 +690,7 @@ if (release) {
                         data-artist-id={artistId}
                         data-label-name={labelName}
                         data-artwork={coverArtUrl}
-                        data-includes-digital="true"
+                        data-includes-digital={vinylOnly ? 'false' : 'true'}
                         data-is-preorder={isPreOrder ? 'true' : 'false'}
                         disabled={!canBuy}
                         class={`add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-colors font-black uppercase text-base w-full ${
@@ -921,7 +923,7 @@ if (release) {
         <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-3 md:p-6 mb-4 md:mb-6" style="content-visibility: auto; contain-intrinsic-size: auto 600px;">
           <div class="flex items-center justify-between mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 border-red-600">
             <h2 class="text-xl md:text-3xl font-black text-white uppercase tracking-wider drop-shadow-lg">Tracklist</h2>
-            {actualTrackPrice > 0 && !nyopEnabled && (
+            {actualTrackPrice > 0 && !nyopEnabled && !vinylOnly && (
               <span class="text-xs md:text-sm font-black text-white">
                 {hasSale ? (
                   <><span class="line-through text-gray-300">£{actualTrackPrice.toFixed(2)}</span> <span class="text-green-400">£{saleTrackPrice.toFixed(2)}</span> per track</>
@@ -1006,7 +1008,7 @@ if (release) {
                           <span class="text-white font-black">{track.bpm && track.bpm !== '' && track.bpm !== '0' ? track.bpm : '--'}</span>
                         </div>
                       </div>
-                      {actualTrackPrice > 0 && !nyopEnabled && (
+                      {actualTrackPrice > 0 && !nyopEnabled && !vinylOnly && (
                         <button
                           class="buy-track flex-shrink-0 font-black text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 active:from-green-800 active:to-green-900 transition-colors px-4 md:px-8 py-2.5 border-2 border-white shadow-lg uppercase text-sm md:text-base"
                           data-track-id={track.id}
@@ -1092,7 +1094,7 @@ if (release) {
                     </div>
                   </div>
                   
-                  {actualTrackPrice > 0 && !nyopEnabled && (
+                  {actualTrackPrice > 0 && !nyopEnabled && !vinylOnly && (
                     <button
                       class="buy-track flex-shrink-0 font-black text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 active:from-green-800 active:to-green-900 transition-colors px-4 md:px-8 py-2.5 border-2 border-white shadow-lg uppercase text-sm md:text-base"
                       data-track-id={track.id}

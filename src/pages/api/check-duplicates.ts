@@ -55,8 +55,8 @@ async function getOwnershipData(userId: string): Promise<{
         const itemType = item.type || item.productType;
         const releaseId = item.releaseId || item.productId || item.id;
         
-        // Skip non-audio items
-        if (itemType === 'merch') return;
+        // Skip non-audio items (incl. vinyl-only records, which carry no files)
+        if (itemType === 'merch' || item.noDigital) return;
         
         if (itemType === 'digital' || itemType === 'release' || itemType === 'vinyl') {
           // Full release purchase (vinyl includes digital) - they own all tracks

@@ -91,9 +91,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const customer = (order.customer || {}) as Record<string, unknown>;
         const email = String(customer.email || '');
-        if (apiKey && email.includes('@')) {
+        // Vinyl-only records carry no files, so they're left out of the
+        // "downloads unlocked" email (and an order of only those gets none).
+        const items = ((order.items || []) as Record<string, unknown>[]).filter((i) => i.isPreOrder && !i.noDigital);
+        if (apiKey && email.includes('@') && items.length > 0) {
           const firstName = String(customer.firstName || '').trim();
-          const items = ((order.items || []) as Record<string, unknown>[]).filter((i) => i.isPreOrder);
           const itemList = items
             .map((i) => `<li style="color:#fff;font-size:14px;font-weight:600;margin:0 0 6px;">${String(i.name || i.title || 'Your release')}</li>`)
             .join('');

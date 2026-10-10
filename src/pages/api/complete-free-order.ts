@@ -112,6 +112,11 @@ async function validateAndGetPrices(items: Record<string, unknown>[]): Promise<{
           const releaseId = item.releaseId || item.productId || item.id;
           if (releaseId) {
             const release = releaseMap.get(releaseId);
+            if (release && release.vinylOnly === true && itemType !== 'vinyl') {
+              // Physical-only release — tracks are preview clips, not for sale
+              validatedItems.push({ ...item, price: item.price || 0, priceValidationFailed: true });
+              continue;
+            }
             if (release) {
               if (itemType === 'vinyl') {
                 serverPrice = release.vinylPrice || release.price || item.price;

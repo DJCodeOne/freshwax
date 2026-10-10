@@ -38,7 +38,9 @@ async function getOwnershipData(userId: string): Promise<{
       order.items.forEach((item: Record<string, unknown>) => {
         const itemReleaseId = item.releaseId || item.productId || item.id;
         const itemType = item.type || item.productType;
-        
+        // A vinyl-only record isn't a digital purchase — don't block buying another
+        if (item.noDigital) return;
+
         if (itemReleaseId) {
           // Full release ownership
           if (itemType === 'digital' || itemType === 'vinyl' || itemType === 'release') {
