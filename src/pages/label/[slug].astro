@@ -160,9 +160,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600, 
           <h2 id="label-catalogue-heading" class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-4 md:mb-6 pb-3 border-b-2 border-red-600 drop-shadow-lg">
             Releases
           </h2>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-6">
             {labelReleases.map((release) => (
-              <div>
+              <div id={release.id} class="scroll-mt-24 w-full">
                 <ReleasePlate {...release} />
               </div>
             ))}
