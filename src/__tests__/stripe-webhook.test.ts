@@ -284,6 +284,44 @@ describe('Stripe Webhook', () => {
     expect(orderArgs.orderData.paymentMethod).toBe('stripe');
   });
 
+  // Stripe no longer collects the address (we pass ours via payment_intent_data),
+  // so physical orders must take it from the pending checkout or the PaymentIntent.
+  describe('physical order shipping address', () => {
+    const physicalSession = {
+      id: 'cs_test_phys', mode: 'payment', payment_status: 'paid', payment_intent: 'pi_test_phys',
+      amount_total: 2999, currency: 'gbp', customer_email: 'buyer@test.com',
+      metadata: { customer_email: 'buyer@test.com', pending_checkout_id: 'pc_1', hasPhysicalItems: 'true' },
+    };
+    const post = async () => POST({
+      request: makeRequest(JSON.stringify(makeStripeEvent('checkout.session.completed', physicalSession)), { 'stripe-signature': 't=1234567890,v1=valid' }),
+      locals: makeLocals(),
+    } as unknown as Parameters<typeof POST>[0]);
+
+    it('uses the address stored on the pending checkout', async () => {
+      const addr = { address1: '1 Test St', address2: '', city: 'Romford', county: '', postcode: 'RM3 8YP', country: 'United Kingdom' };
+      mockGetDocument.mockImplementation(async (col: string) => col === 'pendingCheckouts'
+        ? { items: [{ id: 'rel_1', releaseId: 'rel_1', name: 'Red Handle 12"', type: 'vinyl', price: 25, quantity: 1 }], shipping: addr }
+        : null);
+      const response = await post();
+      expect(response.status).toBe(200);
+      expect(mockCreateOrder.mock.calls[0][0].orderData.shipping).toEqual(addr);
+    });
+
+    it('falls back to the PaymentIntent shipping when the pending checkout has none', async () => {
+      mockGetDocument.mockImplementation(async (col: string) => col === 'pendingCheckouts'
+        ? { items: [{ id: 'm_1', productId: 'm_1', name: 'Tee', type: 'merch', price: 20, quantity: 1 }] }
+        : null);
+      mockFetchWithTimeout.mockImplementation(async (url: string) => String(url).includes('/payment_intents/')
+        ? new Response(JSON.stringify({ shipping: { address: { line1: '2 Other Rd', city: 'Leeds', postal_code: 'LS1 1AA', country: 'GB' } } }), { status: 200 })
+        : new Response('{}', { status: 200 }));
+      const response = await post();
+      expect(response.status).toBe(200);
+      const shipping = mockCreateOrder.mock.calls[0][0].orderData.shipping;
+      expect(shipping.address1).toBe('2 Other Rd');
+      expect(shipping.postcode).toBe('LS1 1AA');
+    });
+  });
+
   // -----------------------------------------------------------------------
   // 5. checkout.session.completed (subscription) -> user subscription update
   // -----------------------------------------------------------------------

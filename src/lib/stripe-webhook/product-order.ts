@@ -149,6 +149,9 @@ export async function handleProductOrder(
   // Parse items from metadata or retrieve from pending checkout
   let items: Record<string, unknown>[] = [];
 
+  // Address the buyer gave on our checkout page (stored on the pending checkout)
+  let pendingShipping: Record<string, unknown> | null = null;
+
   // Track artist shipping breakdown for payouts (artist gets item price + their shipping fee)
   let artistShippingBreakdown: Record<string, { artistId: string; artistName: string; amount: number }> | null = null;
 
@@ -168,6 +171,7 @@ export async function handleProductOrder(
       const pendingCheckout = await getDocument('pendingCheckouts', metadata.pending_checkout_id);
       if (pendingCheckout && pendingCheckout.items) {
         items = pendingCheckout.items as Record<string, unknown>[];
+        if (pendingCheckout.shipping) pendingShipping = pendingCheckout.shipping as Record<string, unknown>;
 
         // Get artist shipping breakdown for payouts (artist receives their shipping fee)
         if (pendingCheckout.artistShippingBreakdown) {
@@ -231,17 +235,38 @@ export async function handleProductOrder(
   type ShippingDetailsShape = { address?: { line1?: string | null; line2?: string | null; city?: string | null; state?: string | null; postal_code?: string | null; country?: string | null } };
   const sessionShipping = (session.shipping_details as ShippingDetailsShape | null | undefined)
     || (session as unknown as { collected_information?: { shipping_details?: ShippingDetailsShape } }).collected_information?.shipping_details;
-  let shipping = null;
-  if (sessionShipping) {
-    const addr = sessionShipping.address;
-    shipping = {
-      address1: addr?.line1 || '',
-      address2: addr?.line2 || '',
-      city: addr?.city || '',
-      county: addr?.state || '',
-      postcode: addr?.postal_code || '',
-      country: getCountryName(addr?.country || '')
-    };
+  // Since Aug 2026 Stripe no longer collects the address (we pass ours via
+  // payment_intent_data[shipping]), so session shipping is normally empty.
+  // Prefer the pending checkout's copy — the same source verify-session uses —
+  // then the session, then the PaymentIntent's shipping as a last resort.
+  const fromStripeAddress = (addr: ShippingDetailsShape['address']) => ({
+    address1: addr?.line1 || '',
+    address2: addr?.line2 || '',
+    city: addr?.city || '',
+    county: addr?.state || '',
+    postcode: addr?.postal_code || '',
+    country: getCountryName(addr?.country || '')
+  });
+  let shipping: Record<string, unknown> | null = pendingShipping;
+  if (!shipping && sessionShipping?.address) {
+    shipping = fromStripeAddress(sessionShipping.address);
+  }
+  const needsAddress = items.some(i => i.type === 'vinyl' || i.type === 'merch');
+  if (!shipping && needsAddress && paymentIntentId && stripeSecretKey) {
+    try {
+      const piRes = await fetchWithTimeout(`https://api.stripe.com/v1/payment_intents/${paymentIntentId}`, {
+        headers: { 'Authorization': `Bearer ${stripeSecretKey}` }
+      });
+      if (piRes.ok) {
+        const pi = await piRes.json() as { shipping?: ShippingDetailsShape | null };
+        if (pi.shipping?.address) shipping = fromStripeAddress(pi.shipping.address);
+      }
+    } catch (piErr: unknown) {
+      log.error('[Stripe Webhook] Could not read PaymentIntent shipping:', piErr);
+    }
+  }
+  if (!shipping && needsAddress) {
+    log.error('[Stripe Webhook] Physical order has NO shipping address — session', session.id);
   }
 
   // P0 FIX: Validate stock BEFORE creating order to prevent overselling
