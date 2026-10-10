@@ -4,7 +4,7 @@
 
 import { getDocument } from '../firebase-rest';
 import { createLogger } from '../api-utils';
-import { resolveReleaseDigitalPrices } from './stock-validation';
+import { resolveReleaseDigitalPrices, nyopAlbumPrice } from './stock-validation';
 
 const log = createLogger('create-order');
 
@@ -169,9 +169,10 @@ export async function validateOrderPrices(items: Record<string, unknown>[]): Pro
           // `pricePerSale` is the real digital price; `price`/`digitalPrice`
           // are null on every release, so reading only those rejected every
           // legitimate full-album purchase through this endpoint.
+          const nyop = nyopAlbumPrice(release, item.price);
           const { albumPrice } = resolveReleaseDigitalPrices(release);
-          serverPrice = albumPrice;
-          if (serverPrice == null || serverPrice <= 0) {
+          serverPrice = nyop ?? albumPrice;
+          if (nyop === null && (serverPrice == null || serverPrice <= 0)) {
             return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Unable to verify price for ${item.name}. Please try again.` };
           }
         }

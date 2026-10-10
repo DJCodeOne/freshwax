@@ -135,6 +135,19 @@ export async function validateStock(items: CartItem[]): Promise<{ available: boo
  * nothing. Sale discounts are applied here too; without that, any release put
  * on sale would fail validation as a "mismatch" on every legitimate purchase.
  */
+/**
+ * Name-your-price album: the buyer's chosen amount stands, floored at the
+ * release's minimum (which may be 0). Returns null when NYOP is off.
+ * Without this the full-release branch repriced every NYOP purchase to the
+ * fixed pricePerSale — silently, as tamper protection.
+ */
+export function nyopAlbumPrice(release: Record<string, unknown>, clientPrice: unknown): number | null {
+  if (release.nyopEnabled !== true) return null;
+  const min = Math.max(0, Number(release.nyopMinPrice) || 0);
+  const chosen = Number(clientPrice);
+  return Number.isFinite(chosen) && chosen >= min ? Math.round(chosen * 100) / 100 : min;
+}
+
 export function resolveReleaseDigitalPrices(release: Record<string, unknown>): {
   albumPrice: number;
   trackPrice: number;
@@ -308,8 +321,13 @@ export async function validateAndGetPrices(
                 // Full-release digital. Falls back to the client price only if
                 // the release genuinely carries no price at all, so a priced
                 // release can never be bought for a tampered amount.
-                const { albumPrice } = resolveReleaseDigitalPrices(release);
-                serverPrice = albumPrice > 0 ? albumPrice : item.price;
+                const nyop = nyopAlbumPrice(release, item.price);
+                if (nyop !== null) {
+                  serverPrice = nyop;
+                } else {
+                  const { albumPrice } = resolveReleaseDigitalPrices(release);
+                  serverPrice = albumPrice > 0 ? albumPrice : item.price;
+                }
               }
             }
           }

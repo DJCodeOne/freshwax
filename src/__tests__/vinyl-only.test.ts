@@ -80,3 +80,28 @@ describe('download endpoints gate', () => {
     expect(await isOrderItemAudioBlocked({ type: 'digital', releaseId: 'rel_norm' }, getRelease)).toBe(false);
   });
 });
+
+describe('name-your-price albums', () => {
+  it('charges the amount the buyer chose, not the fixed price', async () => {
+    docs.rel_nyop = { id: 'rel_nyop', releaseName: 'Trance Out', nyopEnabled: true, nyopMinPrice: 0, pricePerSale: 14, tracks: [] };
+    const r = await validateAndGetPrices([{ id: 'rel_nyop', releaseId: 'rel_nyop', type: 'digital', name: 'Trance Out', price: 3, quantity: 1 }] as never);
+    expect(r.validatedItems[0].price).toBe(3);
+    expect(r.hasPriceMismatch).toBe(false);
+  });
+
+  it('allows £0 when the minimum is £0', async () => {
+    const r = await validateAndGetPrices([{ id: 'rel_nyop', releaseId: 'rel_nyop', type: 'digital', name: 'Trance Out', price: 0, quantity: 1 }] as never);
+    expect(r.validatedItems[0].price).toBe(0);
+  });
+
+  it('never goes below the minimum', async () => {
+    docs.rel_nyop_min = { id: 'rel_nyop_min', releaseName: 'Min £2', nyopEnabled: true, nyopMinPrice: 2, pricePerSale: 5, tracks: [] };
+    const r = await validateAndGetPrices([{ id: 'rel_nyop_min', releaseId: 'rel_nyop_min', type: 'digital', name: 'Min £2', price: 0.5, quantity: 1 }] as never);
+    expect(r.validatedItems[0].price).toBe(2);
+  });
+
+  it('still reprices normal releases to their fixed price', async () => {
+    const r = await validateAndGetPrices([{ id: 'rel_norm', releaseId: 'rel_norm', type: 'digital', name: 'Normal EP', price: 1, quantity: 1 }] as never);
+    expect(r.validatedItems[0].price).toBe(6);
+  });
+});

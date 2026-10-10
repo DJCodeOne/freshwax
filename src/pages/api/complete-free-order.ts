@@ -9,6 +9,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
 import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry, findUkOnlyVinylViolations } from '../../lib/order/shipping-rules';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
+import { nyopAlbumPrice } from '../../lib/order/stock-validation';
 const log = createLogger('complete-free-order');
 
 // Zod schemas for free/credit order
@@ -134,6 +135,9 @@ async function validateAndGetPrices(items: Record<string, unknown>[]): Promise<{
                   t.id === item.trackId || t.trackId === item.trackId
                 );
                 serverPrice = track?.price || release.trackPrice || 0.99;
+              } else if (release.nyopEnabled === true) {
+                // Name-your-price: a £0 choice is allowed when the minimum is £0
+                serverPrice = nyopAlbumPrice(release, item.price) ?? 0;
               } else {
                 serverPrice = release.price || release.digitalPrice;
               if (serverPrice == null || serverPrice <= 0) {
