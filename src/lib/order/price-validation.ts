@@ -125,6 +125,7 @@ export async function validateOrderPrices(items: Record<string, unknown>[]): Pro
             extraFields.serverVinylShippingEU = release.vinylShippingEU ?? null;
             extraFields.serverVinylShippingIntl = release.vinylShippingIntl ?? null;
             extraFields.serverVinylShippingAdditional = release.vinylShippingAdditional ?? null;
+            extraFields.vinylUkOnly = release.vinylUkOnly === true;
             // Fetch artist-level shipping defaults as fallback
             const artistId = item.artistId || release.artistId;
             if (artistId) {

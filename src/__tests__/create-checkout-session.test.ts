@@ -365,6 +365,31 @@ describe('Stripe Create Checkout Session', () => {
     expect((await response.json()).error).toMatch(/don't currently ship/i);
   });
 
+  describe('UK-only vinyl', () => {
+    const ukOnlyItem = { releaseId: 'rel_1', name: 'Red Handle 12"', type: 'vinyl', price: 25, quantity: 1, vinylUkOnly: true };
+    const body = (country: string) => ({
+      items: [{ id: 'rel_1', releaseId: 'rel_1', name: 'Red Handle 12"', type: 'vinyl', price: 25, quantity: 1 }],
+      customer: { email: 'buyer@test.com', firstName: 'Test', lastName: 'Buyer', userId: 'user_123' },
+      shipping: { address1: '1 Test St', city: 'Berlin', postcode: '10115', country },
+      hasPhysicalItems: true,
+    });
+
+    it('refuses a UK-only record going to the EU, before reserving stock', async () => {
+      mockValidateAndGetPrices.mockResolvedValue({ validatedItems: [ukOnlyItem], hasPriceMismatch: false });
+      const response = await POST({ request: makeRequest(body('Germany')), locals: makeLocals() } as unknown as Parameters<typeof POST>[0]);
+      expect(response.status).toBe(400);
+      expect((await response.json()).error).toMatch(/UK addresses only/i);
+      expect(mockReserveStock).not.toHaveBeenCalled();
+    });
+
+    it('allows a UK-only record going to the UK', async () => {
+      mockValidateAndGetPrices.mockResolvedValue({ validatedItems: [ukOnlyItem], hasPriceMismatch: false });
+      const response = await POST({ request: makeRequest(body('United Kingdom')), locals: makeLocals() } as unknown as Parameters<typeof POST>[0]);
+      expect(response.status).not.toBe(400);
+      expect(mockReserveStock).toHaveBeenCalled();
+    });
+  });
+
   // -----------------------------------------------------------------------
   // 3. Error: empty items array
   // -----------------------------------------------------------------------

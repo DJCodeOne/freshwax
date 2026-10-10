@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeReleaseVinylShipping, combineCrateShippingGroup } from '../lib/order/shipping-rules';
+import { computeReleaseVinylShipping, combineCrateShippingGroup, findUkOnlyVinylViolations } from '../lib/order/shipping-rules';
 import type { CartItem } from '../lib/order/types';
 
 function crate(shippingCost: number, qty = 1): CartItem {
@@ -189,5 +189,25 @@ describe('combineCrateShippingGroup — per-seller combined crate shipping', () 
     const crates = [crate(3.5), crate(4.0)];
     combineCrateShippingGroup(crates, 0.5, true);
     expect(relTotal + sum(crates)).toBe(5.99); // 4.99 + 0.50 + 0.50 — ONE base
+  });
+});
+
+describe('findUkOnlyVinylViolations', () => {
+  const ukOnly = { type: 'vinyl', name: 'Red Handle 12"', vinylUkOnly: true };
+  const normal = { type: 'vinyl', name: 'Other 12"' };
+
+  it('allows UK destinations in every spelling', () => {
+    for (const c of ['GB', 'UK', 'United Kingdom', '', null, undefined]) {
+      expect(findUkOnlyVinylViolations([ukOnly, normal], c)).toEqual([]);
+    }
+  });
+
+  it('names only the UK-only records for EU and international destinations', () => {
+    expect(findUkOnlyVinylViolations([ukOnly, normal], 'Germany')).toEqual(['Red Handle 12"']);
+    expect(findUkOnlyVinylViolations([ukOnly, normal], 'US')).toEqual(['Red Handle 12"']);
+  });
+
+  it('ignores digital items and records without the flag', () => {
+    expect(findUkOnlyVinylViolations([{ type: 'digital', vinylUkOnly: true }, normal], 'France')).toEqual([]);
   });
 });

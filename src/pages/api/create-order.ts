@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { getDocument, addDocument, atomicIncrement, updateDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
-import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry } from '../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry, findUkOnlyVinylViolations } from '../../lib/order/shipping-rules';
 import { successResponse, ApiErrors, createLogger, maskEmail } from '../../lib/api-utils';
 import { validateOrderPrices } from '../../lib/order/price-validation';
 import { updateMerchStockAfterOrder } from '../../lib/order/merch-stock-update';
@@ -162,6 +162,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const hasMerchItems = pricedItems.some((item: OrderItem) => item.type === 'merch');
     const hasVinylItems = pricedItems.some((item: OrderItem) => item.type === 'vinyl');
     const customerCountry = orderData.shipping?.country || 'GB';
+    const ukOnly = findUkOnlyVinylViolations(pricedItems as unknown as Array<Record<string, unknown>>, customerCountry);
+    if (ukOnly.length) {
+      return ApiErrors.badRequest(`${ukOnly.join(', ')} ships to UK addresses only`);
+    }
 
     let merchShipping = 0;
     let vinylShippingTotal = 0;

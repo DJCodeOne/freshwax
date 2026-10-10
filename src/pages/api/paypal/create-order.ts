@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
-import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry, countryToISO } from '../../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry, countryToISO, findUkOnlyVinylViolations } from '../../../lib/order/shipping-rules';
 import { SITE_URL } from '../../../lib/constants';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
@@ -123,6 +123,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (validationError) {
       if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
       return ApiErrors.badRequest(validationError);
+    }
+
+    // UK-only records
+    const ukOnly = findUkOnlyVinylViolations(validatedItems, orderData.shipping?.country || 'GB');
+    if (ukOnly.length) {
+      if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
+      return ApiErrors.badRequest(`${ukOnly.join(', ')} ships to UK addresses only`);
     }
 
     if (hasPriceMismatch) {

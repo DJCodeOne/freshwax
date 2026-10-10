@@ -7,7 +7,7 @@ import { createOrder, validateStock } from '../../lib/order-utils';
 import { getDocument, queryCollection, updateDocument, atomicIncrement, arrayUnion, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
-import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry } from '../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry, findUkOnlyVinylViolations } from '../../lib/order/shipping-rules';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 const log = createLogger('complete-free-order');
 
@@ -92,6 +92,8 @@ async function validateAndGetPrices(items: Record<string, unknown>[]): Promise<{
   for (const item of items) {
     let serverPrice = item.price;
     const itemType = item.type || 'digital';
+    delete item.vinylUkOnly; // release doc only
+
 
     try {
       if (itemType === 'merch' && item.productId) {
@@ -120,6 +122,7 @@ async function validateAndGetPrices(items: Record<string, unknown>[]): Promise<{
                 item.vinylShippingEU = release.vinylShippingEU;
                 item.vinylShippingIntl = release.vinylShippingIntl;
                 item.vinylShippingAdditional = release.vinylShippingAdditional;
+                item.vinylUkOnly = release.vinylUkOnly === true;
                 if (!item.artistId) item.artistId = release.artistId || release.userId;
               } else if (itemType === 'track' && item.trackId) {
                 const track = (release.tracks || []).find((t: Record<string, unknown>) =>
@@ -180,6 +183,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { validatedItems, validatedSubtotal } = await validateAndGetPrices(orderData.items);
     const hasPhysicalItems = validatedItems.some((item: Record<string, unknown>) =>
       item.type === 'vinyl' || item.type === 'merch');
+    const ukOnly = findUkOnlyVinylViolations(validatedItems, orderData.shipping?.country || 'GB');
+    if (ukOnly.length) {
+      return ApiErrors.badRequest(`${ukOnly.join(', ')} ships to UK addresses only`);
+    }
     // Shipping mirrors the paid checkouts EXACTLY: combine crate shipping per
     // seller (50p/additional, cross-system with a same-seller release base),
     // waive where a free-shipping threshold is met, merch flat £4.99 unless the

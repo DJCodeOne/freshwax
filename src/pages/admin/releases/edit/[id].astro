@@ -338,6 +338,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
               <div class="form-group">
                 <label class="checkbox-group">
+                  <input type="checkbox" name="vinylUkOnly" checked={release.vinylUkOnly === true} />
+                  <span>Vinyl ships to UK addresses only (checkout refuses EU/International)</span>
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-group">
                   <input type="checkbox" name="hasLimitedEdition" id="hasLimitedEdition" checked={release.hasLimitedEdition || release.vinyl?.limitedEdition !== null || false} />
                   <span class="checkbox-label">⭐ Limited Edition</span>
                 </label>
@@ -1067,6 +1074,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         vinylShippingUK: formData.get('vinylShippingUK') ? parseFloat(formData.get('vinylShippingUK')) : null,
         vinylShippingEU: formData.get('vinylShippingEU') ? parseFloat(formData.get('vinylShippingEU')) : null,
         vinylShippingIntl: formData.get('vinylShippingIntl') ? parseFloat(formData.get('vinylShippingIntl')) : null,
+        vinylUkOnly: formData.get('vinylUkOnly') === 'on',
         hasLimitedEdition: formData.get('hasLimitedEdition') === 'on',
         limitedEditionType: formData.get('limitedEditionType') || '',
         limitedEditionDetails: formData.get('limitedEditionDetails') || '',

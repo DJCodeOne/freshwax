@@ -113,6 +113,8 @@ const {
   vinylPrice = 0,
   // Vinyl announced but not yet purchasable (e.g. price awaiting confirmation)
   vinylTBA = false,
+  // Partner only posts this record within the UK (checkout enforces it)
+  vinylUkOnly = false,
   overallRating = { average: 0, count: 0, total: 0 },
   comments = [],
   notes = '',
@@ -713,6 +715,10 @@ if (release) {
                     );
                   })}
                 </div>
+
+                {vinylRelease && vinylUkOnly && (
+                  <p class="mt-2 text-sm font-semibold text-gray-300 text-center">📦 Vinyl ships to UK addresses only</p>
+                )}
 
                 {isPreOrder && (
                   <div class="notify-release-row mt-3" data-release-id={id}>

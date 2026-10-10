@@ -232,6 +232,8 @@ export async function validateAndGetPrices(
   for (const item of items) {
     let serverPrice = item.price;
     const itemType = item.type || 'digital';
+    // Only the release doc may set this (below) — never trust a client copy.
+    delete item.vinylUkOnly;
 
     try {
       if (itemType === 'merch' && item.productId) {
@@ -278,6 +280,7 @@ export async function validateAndGetPrices(
                 item.vinylShippingEU = release.vinylShippingEU;
                 item.vinylShippingIntl = release.vinylShippingIntl;
                 item.vinylShippingAdditional = release.vinylShippingAdditional;
+                item.vinylUkOnly = release.vinylUkOnly === true;
 
                 const artistId = release.artistId || release.userId || item.artistId;
                 if (artistId) {

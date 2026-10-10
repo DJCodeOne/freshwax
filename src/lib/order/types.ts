@@ -46,6 +46,7 @@ export interface CartItem {
   vinylShippingEU?: number;
   vinylShippingIntl?: number;
   vinylShippingAdditional?: number; // per additional record (50p default)
+  vinylUkOnly?: boolean; // partner only posts this record within the UK
   artistVinylShippingUK?: number;
   artistVinylShippingEU?: number;
   artistVinylShippingIntl?: number;

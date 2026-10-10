@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { addDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
-import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry, countryToISO } from '../../../lib/order/shipping-rules';
+import { applyCrateCombinedShipping, applyCrateFreeShipping, computeMerchShipping, computeReleaseVinylShipping, regionForCountry, countryToISO, findUkOnlyVinylViolations } from '../../../lib/order/shipping-rules';
 import { createLogger, fetchWithTimeout, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
 
 const log = createLogger('[stripe-checkout]');
@@ -122,6 +122,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (validationError) {
       return ApiErrors.badRequest(validationError);
+    }
+
+    // UK-only records — refuse before reserving so no stock is held
+    const ukOnly = findUkOnlyVinylViolations(validatedItems, orderData.shipping?.country || 'GB');
+    if (ukOnly.length) {
+      return ApiErrors.badRequest(`${ukOnly.join(', ')} ships to UK addresses only`);
     }
 
     // Reserve stock to prevent overselling (must happen after validation passes)

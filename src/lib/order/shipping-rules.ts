@@ -85,6 +85,22 @@ export function countryToISO(country: string | undefined | null): string | null 
 }
 
 /**
+ * Release vinyl the partner only posts within the UK (`vinylUkOnly` on the
+ * release). Returns the names of any such records in the cart when the
+ * destination isn't UK, so checkout can refuse before payment. The flag must
+ * come from the release doc (validateAndGetPrices overwrites it), never the client.
+ */
+export function findUkOnlyVinylViolations(
+  items: Array<Record<string, unknown>>,
+  country: string | undefined | null
+): string[] {
+  if (regionForCountry(country) === 'UK') return [];
+  return items
+    .filter(i => i.type === 'vinyl' && i.vinylUkOnly === true)
+    .map(i => String(i.name || i.title || 'Vinyl'));
+}
+
+/**
  * Combined crate shipping for ONE seller's crate items (mutates in place):
  * the first record keeps its listing's single rate; every additional record
  * (extra listings + extra quantity from that seller) is charged `additional`.

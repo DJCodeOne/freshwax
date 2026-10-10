@@ -443,6 +443,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       vinylShippingUK: metadata.vinylShippingUK ?? null,
       vinylShippingEU: metadata.vinylShippingEU ?? null,
       vinylShippingIntl: metadata.vinylShippingIntl ?? null,
+      vinylUkOnly: metadata.vinylUkOnly === true,
 
       // Status — overwritten below once completeness is known
       status: 'pending',
