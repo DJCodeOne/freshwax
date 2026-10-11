@@ -14,6 +14,7 @@ import { markAsPlayed, startTrackTimer, clearTrackTimer, calculateSyncPosition, 
 import { addItem as addItemHelper, removeItem as removeItemHelper, subscribeToPusher as subscribeToPusherHelper, handleRemoteUpdate as handleRemoteUpdateHelper, loadFromServer as loadFromServerHelper, addToPersonalPlaylist as addToPersonalPlaylistHelper, removeFromPersonalPlaylist as removeFromPersonalPlaylistHelper, clearPersonalPlaylist as clearPersonalPlaylistHelper } from './playlist/queue';
 import { renderPlaylistUI, getUserQueuePosition as getUserQueuePositionHelper, getUserTracksInQueue as getUserTracksInQueueHelper, isUsersTurn as isUsersTurnHelper, getCurrentDj as getCurrentDjHelper } from './playlist/ui';
 import type { PlaylistContext } from './playlist/types';
+import { cancelAutoplayUnlock } from './playlist/autoplay-unlock';
 
 const log = createClientLogger('PlaylistManager');
 
@@ -118,6 +119,7 @@ export class PlaylistManager {
   }
   async pause(): Promise<void> {
     this.isPausedLocally = true;
+    cancelAutoplayUnlock();
     clearTrackTimer(this.ctx); stopCountdown(this.ctx);
     if (this.player) await this.player.pause();
     stopPlaylistMeters(); disableEmojis();
@@ -185,6 +187,7 @@ export class PlaylistManager {
 
   // Cleanup
   destroy(): void {
+    cancelAutoplayUnlock();
     clearTrackTimer(this.ctx); stopCountdown(this.ctx);
     if (this.pusherChannel) { this.pusherChannel.unbind_all(); const p = window.pusherInstance; if (p) p.unsubscribe('live-playlist'); }
     stopPlaylistMeters(); this.player?.destroy();

@@ -485,6 +485,30 @@ export class EmbedPlayerManager {
     }
   }
 
+  /**
+   * True when the browser refused to start playback because the visitor
+   * hasn't interacted with the page yet (autoplay policy — e.g. after a
+   * refresh). Only detectable for YouTube and direct media.
+   */
+  isAutoplayBlocked(): boolean {
+    try {
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer && this.youtubePlayerReady) {
+        const state = this.youtubePlayer.getPlayerState?.();
+        return state === -1 || state === 5; // unstarted / cued — never began playing
+      } else if (this.currentPlatform === 'direct' && this.directVideo) {
+        return this.directVideo.paused && !this.directVideo.ended;
+      }
+    } catch (_e: unknown) { /* intentional: treat as not blocked */ }
+    return false;
+  }
+
+  /** Drop a queued initial seek (the caller is about to seek to a fresh position). */
+  clearPendingSeek(): void {
+    if (this.pendingSeekTimeout) { clearTimeout(this.pendingSeekTimeout); this.pendingSeekTimeout = null; }
+    this.pendingSeekPosition = null;
+    this.hasInitialSeekExecuted = true;
+  }
+
   private async cleanup(): Promise<void> {
     if (this.pendingSeekTimeout) { clearTimeout(this.pendingSeekTimeout); this.pendingSeekTimeout = null; }
     if (this.youtubePlayer) {

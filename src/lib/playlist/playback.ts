@@ -6,6 +6,7 @@ import type { EmbedPlayerManager } from '../embed-player';
 import type { PlaylistContext } from './types';
 import { createClientLogger } from '../client-logger';
 import { TIMEOUTS } from '../timeouts';
+import { armAutoplayUnlock } from './autoplay-unlock';
 import { MAX_CONSECUTIVE_ERRORS } from '../constants/limits';
 import {
   MAX_TRACK_DURATION_MS,
@@ -569,6 +570,7 @@ export async function playCurrent(
     if (syncPosition > 2) player.setPendingSeek(syncPosition);
 
     await player.loadItem(currentItem);
+    armAutoplayUnlock(ctx, player, calculateSyncPosition);
 
     try {
       await new Promise(resolve => setTimeout(resolve, TIMEOUTS.TICK));
