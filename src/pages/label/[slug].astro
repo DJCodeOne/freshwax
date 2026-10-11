@@ -84,8 +84,21 @@ const earliest = labelReleases.length
   : 0;
 const sinceYear = earliest ? new Date(earliest).getFullYear() : null;
 
+// Paginate the catalogue (?page=N) — every ReleasePlate carries its full
+// tracklist and player, so a big label on one page runs past a megabyte.
+const PER_PAGE = 10;
+const totalPages = Math.max(1, Math.ceil(releaseCount / PER_PAGE));
+const pageParam = Astro.url.searchParams.get('page');
+const requestedPage = pageParam === null ? 1 : Number(pageParam);
+if (labelName && pageParam !== null && (!Number.isInteger(requestedPage) || requestedPage < 2 || requestedPage > totalPages)) {
+  return Astro.redirect(`/label/${slug}/`, 301);
+}
+const currentPage = requestedPage;
+const pageReleases = labelReleases.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+const pageHref = (n: number) => (n === 1 ? `/label/${slug}/` : `/label/${slug}/?page=${n}`);
+
 const pageTitle = labelName
-  ? `${labelName} — Jungle & Drum and Bass Label`
+  ? `${labelName} — Jungle & Drum and Bass Label${currentPage > 1 ? ` (Page ${currentPage})` : ''}`
   : 'Label Not Found';
 const pageDescription = labelName
   ? `${labelName} on Fresh Wax: ${releaseCount} jungle & drum and bass release${releaseCount === 1 ? '' : 's'}${vinylCount ? ` including ${vinylCount} on vinyl` : ''}. Stream, download and buy direct — every sale supports the label.`
@@ -93,11 +106,11 @@ const pageDescription = labelName
 
 const itemList = labelName ? {
   name: `${labelName} releases on Fresh Wax`,
-  items: labelReleases.slice(0, 25).map((r, i) => ({
+  items: pageReleases.map((r, i) => ({
     name: String(r.releaseName || r.title || 'Release'),
     url: `${SITE_URL}/item/${r.id}/`,
     image: (r.coverArtUrl || r.artworkUrl) ? String(r.coverArtUrl || r.artworkUrl) : undefined,
-    position: i + 1,
+    position: (currentPage - 1) * PER_PAGE + i + 1,
   })),
 } : undefined;
 
@@ -121,6 +134,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600, 
   title={pageTitle}
   description={pageDescription}
   noindex={!labelName}
+  canonical={labelName && currentPage > 1 ? `${SITE_URL}${pageHref(currentPage)}` : undefined}
   itemList={itemList}
   breadcrumbs={labelName ? [
     { name: 'Releases', url: '/releases/' },
@@ -159,14 +173,33 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=600, 
         <section aria-labelledby="label-catalogue-heading">
           <h2 id="label-catalogue-heading" class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-4 md:mb-6 pb-3 border-b-2 border-red-600 drop-shadow-lg">
             Releases
+            {totalPages > 1 && <span class="text-sm md:text-base text-gray-400 font-semibold normal-case tracking-normal ml-2">Page {currentPage} of {totalPages}</span>}
           </h2>
           <div class="space-y-6">
-            {labelReleases.map((release) => (
+            {pageReleases.map((release) => (
               <div id={release.id} class="scroll-mt-24 w-full">
                 <ReleasePlate {...release} />
               </div>
             ))}
           </div>
+
+          {totalPages > 1 && (
+            <nav class="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Catalogue pages">
+              {currentPage > 1 && (
+                <a href={pageHref(currentPage - 1)} rel="prev" class="px-4 py-2 border-2 border-white bg-gray-800 text-white font-black uppercase text-sm hover:bg-red-600 transition-colors">← Prev</a>
+              )}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                n === currentPage ? (
+                  <span aria-current="page" class="min-w-[2.75rem] text-center px-3 py-2 border-2 border-white bg-red-600 text-white font-black text-sm">{n}</span>
+                ) : (
+                  <a href={pageHref(n)} class="min-w-[2.75rem] text-center px-3 py-2 border-2 border-gray-600 bg-gray-800 text-white font-black text-sm hover:bg-red-600 hover:border-white transition-colors">{n}</a>
+                )
+              ))}
+              {currentPage < totalPages && (
+                <a href={pageHref(currentPage + 1)} rel="next" class="px-4 py-2 border-2 border-white bg-gray-800 text-white font-black uppercase text-sm hover:bg-red-600 transition-colors">Next →</a>
+              )}
+            </nav>
+          )}
         </section>
 
         {labelMixes.length > 0 && (
