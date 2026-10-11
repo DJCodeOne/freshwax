@@ -22,6 +22,7 @@ vi.mock('../lib/client-logger', () => ({
 // Mock playlist-manager/history (saveRecentlyPlayedToStorage)
 vi.mock('../lib/playlist-manager/history', () => ({
   saveRecentlyPlayedToStorage: vi.fn(),
+  trackKey: (url: string) => (url.startsWith('https://playlist.freshwax.co.uk/') ? url.split('?')[0] : url),
 }));
 
 // Mock playlist-manager/metadata (isPlaceholderTitle)

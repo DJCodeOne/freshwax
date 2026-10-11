@@ -168,7 +168,7 @@ export async function pickRandomFromServerHistory(env?: Record<string, unknown>)
           // Autoplay fallback from KV history
           return {
             id: `auto_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`,
-            url: pick.url as string,
+            url: await refreshPlaylistServerUrl(pick.url as string, env),
             platform: (pick.platform as string) || 'direct',
             embedId: pick.embedId as string | undefined,
             title: pick.title as string | undefined,
@@ -312,4 +312,23 @@ export async function hmacSha256(key: string, message: string): Promise<string> 
   const signature = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
   const hashArray = Array.from(new Uint8Array(signature));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// The local playlist server signs /music/ links with HMAC(path:expires) under
+// PLAYLIST_ACCESS_TOKEN and refuses them 7 days later, so a track saved to a
+// personal playlist (or kept in history) stops playing after a week. Re-sign
+// such links whenever they go back into the queue. Must match
+// generateSignedUrl() in scripts/playlist-server.cjs: the payload is the path
+// exactly as encoded in the URL.
+const SIGNED_URL_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+export async function refreshPlaylistServerUrl(url: string, env?: Record<string, unknown>): Promise<string> {
+  const prefix = `${LOCAL_PLAYLIST_SERVER}/music/`;
+  if (!url || !url.startsWith(prefix)) return url;
+  const token = String(env?.PLAYLIST_ACCESS_TOKEN || import.meta.env.PLAYLIST_ACCESS_TOKEN || '');
+  if (!token) return url;
+  const path = url.slice(LOCAL_PLAYLIST_SERVER.length).split(/[?#]/)[0];
+  const expires = Math.floor(Date.now() / 1000) + SIGNED_URL_TTL_SECONDS;
+  const sig = await hmacSha256(token, `${path}:${expires}`);
+  return `${LOCAL_PLAYLIST_SERVER}${path}?expires=${expires}&sig=${sig}`;
 }

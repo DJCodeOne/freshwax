@@ -69,12 +69,22 @@ export function saveRecentlyPlayedToStorage(recentlyPlayed: Map<string, number>)
 }
 
 /**
+ * Identity of a track for cooldown/duplicate checks. Local playlist server
+ * links carry a signature that changes every time they're re-signed, so they
+ * are compared without their query string.
+ */
+export function trackKey(url: string): string {
+  return url.startsWith('https://playlist.freshwax.co.uk/') ? url.split('?')[0] : url;
+}
+
+/**
  * Check if a URL was played recently (within cooldown period)
  */
 export function wasPlayedRecently(
   recentlyPlayed: Map<string, number>,
-  url: string
+  rawUrl: string
 ): { recent: boolean; minutesRemaining?: number } {
+  const url = trackKey(rawUrl);
   const timestamp = recentlyPlayed.get(url);
   if (!timestamp) return { recent: false };
 

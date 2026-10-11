@@ -7,7 +7,7 @@ import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin as checkIsAdmin, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
-import { setKVCache, broadcastPlaylistUpdate } from '../../../lib/playlist/helpers';
+import { setKVCache, broadcastPlaylistUpdate, refreshPlaylistServerUrl } from '../../../lib/playlist/helpers';
 import { KV_TTL } from '../../../lib/timeouts';
 import { processPlaylistAction } from '../../../lib/playlist/actions';
 import type { GlobalPlaylist, PlaylistItem } from '../../../lib/playlist/actions';
@@ -158,9 +158,11 @@ export async function POST({ request, locals }: APIContext) {
       return ApiErrors.badRequest('You already have 2 tracks in the queue. Wait for one to play or remove it first.');
     }
 
-    // Add item with user info
+    // Add item with user info. Links to the local playlist server expire a
+    // week after signing — re-sign so tracks from saved playlists still play.
     const newItem: PlaylistItem = {
       ...item,
+      ...(item.url ? { url: await refreshPlaylistServerUrl(item.url, env) } : {}),
       addedBy: userId,
       addedByName: userName || 'Anonymous',
       addedAt: new Date().toISOString()

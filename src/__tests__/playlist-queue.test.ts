@@ -16,6 +16,7 @@ vi.mock('../lib/client-logger', () => ({
 
 vi.mock('../lib/playlist-manager/history', () => ({
   wasPlayedRecently: vi.fn(() => ({ recent: false })),
+  trackKey: (url: string) => (url.startsWith('https://playlist.freshwax.co.uk/') ? url.split('?')[0] : url),
   saveRecentlyPlayedToStorage: vi.fn(),
 }));
 

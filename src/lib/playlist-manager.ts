@@ -109,7 +109,7 @@ export class PlaylistManager {
   }
 
   // Queue operations
-  async addItem(url: string) { return addItemHelper(this.ctx, url, () => this.generateId(), () => this.getAuthToken(), (item) => this.logToHistory(item), () => this.playCurrent(), () => this.renderUI()); }
+  async addItem(url: string, known?: { title?: string; thumbnail?: string }) { return addItemHelper(this.ctx, url, () => this.generateId(), () => this.getAuthToken(), (item) => this.logToHistory(item), () => this.playCurrent(), () => this.renderUI(), known); }
   async removeItem(itemId: string) { return removeItemHelper(this.ctx, itemId, () => this.getAuthToken(), () => this.renderUI()); }
 
   // Playback controls
@@ -142,7 +142,7 @@ export class PlaylistManager {
   // Personal playlist
   async addToPersonalPlaylist(url: string, providedTitle?: string, providedThumbnail?: string) { return addToPersonalPlaylistHelper(this.ctx, url, () => this.generateId(), () => this.renderUI(), providedTitle, providedThumbnail); }
   removeFromPersonalPlaylist(itemId: string): void { removeFromPersonalPlaylistHelper(this.ctx, itemId, () => this.renderUI()); }
-  async addPersonalItemToQueue(itemId: string) { const item = this.personalPlaylist.find(i => i.id === itemId); if (!item) return { success: false, error: 'Track not found in your playlist' }; return this.addItem(item.url); }
+  async addPersonalItemToQueue(itemId: string) { const item = this.personalPlaylist.find(i => i.id === itemId); if (!item) return { success: false, error: 'Track not found in your playlist' }; return this.addItem(item.url, { title: item.title, thumbnail: item.thumbnail }); }
   getPersonalPlaylist(): PersonalPlaylistItem[] { return [...this.personalPlaylist]; }
   clearPersonalPlaylist(): void { clearPersonalPlaylistHelper(this.ctx, () => this.renderUI()); }
   /**

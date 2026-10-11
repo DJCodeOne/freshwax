@@ -16,6 +16,7 @@ import {
 } from '../playlist-manager/metadata';
 import {
   wasPlayedRecently,
+  trackKey,
 } from '../playlist-manager/history';
 import {
   addToPersonalPlaylistItems,
@@ -44,6 +45,7 @@ export async function addItem(
   logToHistory: (item: GlobalPlaylistItem) => void,
   playCurrent: () => Promise<void>,
   renderUI: () => void,
+  known?: { title?: string; thumbnail?: string },
 ): Promise<{ success: boolean; message?: string; error?: string }> {
   if (!url || !url.trim()) {
     return { success: false, error: 'Please enter a URL' };
@@ -63,7 +65,7 @@ export async function addItem(
   }
 
   // Check if URL is already in the current queue
-  const alreadyInQueue = ctx.playlist.queue.some(item => item.url === url.trim());
+  const alreadyInQueue = ctx.playlist.queue.some(item => trackKey(item.url) === trackKey(url.trim()));
   if (alreadyInQueue) {
     return { success: false, error: 'This track is already in the queue' };
   }
@@ -96,11 +98,14 @@ export async function addItem(
       }
     }
 
-    // Fetch metadata for thumbnail/title
-    const metadata = await fetchMetadata(url.trim());
+    // Title/artwork the caller already has (e.g. from a saved playlist) win —
+    // oEmbed can't describe the local playlist server's MP3s.
+    const knownTitle = known?.title && !isPlaceholderTitle(known.title) ? known.title : undefined;
+    const knownThumb = known?.thumbnail || undefined;
+    const metadata = knownTitle && knownThumb ? {} as { title?: string; thumbnail?: string } : await fetchMetadata(url.trim());
 
     // Get thumbnail - prefer oEmbed, fallback to YouTube direct
-    let thumbnail = metadata.thumbnail;
+    let thumbnail = knownThumb || metadata.thumbnail;
     if (!thumbnail && parsed.platform === 'youtube' && parsed.embedId) {
       thumbnail = `https://img.youtube.com/vi/${parsed.embedId}/mqdefault.jpg`;
     }
@@ -110,7 +115,7 @@ export async function addItem(
       url: url.trim(),
       platform: parsed.platform,
       embedId: parsed.embedId,
-      title: metadata.title,
+      title: knownTitle || metadata.title,
       thumbnail,
       addedAt: new Date().toISOString()
     };

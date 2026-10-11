@@ -15,6 +15,7 @@ import {
 import { isPlaceholderTitle } from '../playlist-manager/metadata';
 import {
   saveRecentlyPlayedToStorage,
+  trackKey,
 } from '../playlist-manager/history';
 import {
   enableEmojis,
@@ -48,7 +49,7 @@ async function buildPutHeaders(ctx: PlaylistContext): Promise<Record<string, str
 
 export function markAsPlayed(ctx: PlaylistContext, url: string): void {
   ctx.lastPlayedUrl = url;
-  ctx.recentlyPlayed.set(url, Date.now());
+  ctx.recentlyPlayed.set(trackKey(url), Date.now());
   saveRecentlyPlayedToStorage(ctx.recentlyPlayed);
 }
 
