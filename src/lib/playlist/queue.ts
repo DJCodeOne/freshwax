@@ -515,7 +515,7 @@ export async function addToPersonalPlaylist(
     if (!result.added) return { success: false, error: result.error };
 
     ctx.personalPlaylist = result.items;
-    savePersonalPlaylistToStorage(ctx.personalPlaylist);
+    savePersonalPlaylistToStorage(ctx.personalPlaylist, ctx.userId);
     if (ctx.userId) savePersonalPlaylistToServer(ctx.personalPlaylist, ctx.userId);
     renderUI();
     return { success: true, message: 'Added to your playlist' };
@@ -533,7 +533,7 @@ export function removeFromPersonalPlaylist(
   const newItems = removeFromPersonalPlaylistItems(ctx.personalPlaylist, itemId);
   if (newItems !== ctx.personalPlaylist) {
     ctx.personalPlaylist = newItems;
-    savePersonalPlaylistToStorage(ctx.personalPlaylist);
+    savePersonalPlaylistToStorage(ctx.personalPlaylist, ctx.userId);
     if (ctx.userId) savePersonalPlaylistToServer(ctx.personalPlaylist, ctx.userId);
     renderUI();
   }
@@ -544,7 +544,7 @@ export function clearPersonalPlaylist(
   renderUI: () => void,
 ): void {
   ctx.personalPlaylist = [];
-  savePersonalPlaylistToStorage(ctx.personalPlaylist);
+  savePersonalPlaylistToStorage(ctx.personalPlaylist, ctx.userId);
   if (ctx.userId) savePersonalPlaylistToServer(ctx.personalPlaylist, ctx.userId);
   renderUI();
 }

@@ -315,8 +315,12 @@ function setupPlaylistSave() {
       currentPlaylistTrack = detail.queue[currentIndex];
 
       if (nowPlayingSaveBtn && currentPlaylistTrack) {
-        var personalPlaylist = detail.personalPlaylist || [];
-        var isInPlaylist = personalPlaylist.some(function(item) { return item.url === currentPlaylistTrack.url; });
+        // Only a signed-in listener has a saved playlist; local-server links are
+        // re-signed when queued, so compare them without the signature.
+        var signedIn = !!(window.firebaseAuth && window.firebaseAuth.currentUser);
+        var personalPlaylist = signedIn ? (detail.personalPlaylist || []) : [];
+        var key = function(u) { u = u || ''; return u.indexOf('https://playlist.freshwax.co.uk/') === 0 ? u.split('?')[0] : u; };
+        var isInPlaylist = personalPlaylist.some(function(item) { return key(item.url) === key(currentPlaylistTrack.url); });
         nowPlayingSaveBtn.classList.toggle('saved', isInPlaylist);
         nowPlayingSaveBtn.title = isInPlaylist ? 'Already in My Playlist' : 'Save to My Playlist';
       }

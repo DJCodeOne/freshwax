@@ -646,7 +646,7 @@ describe('clearPersonalPlaylist', () => {
     clearPersonalPlaylist(ctx, renderUI);
 
     expect(ctx.personalPlaylist).toEqual([]);
-    expect(savePersonalPlaylistToStorage).toHaveBeenCalledWith([]);
+    expect(savePersonalPlaylistToStorage).toHaveBeenCalledWith([], 'user1');
     expect(savePersonalPlaylistToServer).toHaveBeenCalledWith([], 'user1');
     expect(renderUI).toHaveBeenCalled();
   });

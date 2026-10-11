@@ -4,17 +4,25 @@
 import { createClientLogger } from '../client-logger';
 import { PERSONAL_PLAYLIST_KEY } from './types';
 import type { PersonalPlaylistItem } from './types';
+import { trackKey } from './history';
 
 const log = createClientLogger('PersonalPlaylist');
 
-/**
- * Load personal playlist from localStorage (initial/fallback)
- */
-export function loadPersonalPlaylistFromStorage(): PersonalPlaylistItem[] {
+// The cached playlist is kept per account (plus one for logged-out visitors).
+// It used to live under a single shared key, so after logging out — or on a
+// shared PC — the next visitor saw the previous user's saved tracks (the
+// now-playing button showed "Already in My Playlist") and, on login, those
+// tracks were merged into whoever signed in next.
+const GUEST = 'guest';
+const storageKey = (userId?: string | null) => `${PERSONAL_PLAYLIST_KEY}:${userId || GUEST}`;
+const sameTrack = (a: string, b: string) => trackKey(a) === trackKey(b);
+
+function readItems(key: string): PersonalPlaylistItem[] {
   try {
-    const stored = localStorage.getItem(PERSONAL_PLAYLIST_KEY);
+    const stored = localStorage.getItem(key);
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
     }
   } catch (error: unknown) {
     log.error('Error loading personal playlist:', error);
@@ -23,11 +31,33 @@ export function loadPersonalPlaylistFromStorage(): PersonalPlaylistItem[] {
 }
 
 /**
- * Save personal playlist to localStorage
+ * Load the personal playlist cached for this user (or the guest list when
+ * logged out). On a signed-in load, the legacy shared list and any tracks
+ * saved while logged out are folded into the account and cleared.
  */
-export function savePersonalPlaylistToStorage(items: PersonalPlaylistItem[]): void {
+export function loadPersonalPlaylistFromStorage(userId?: string | null): PersonalPlaylistItem[] {
+  const items = readItems(storageKey(userId));
+  if (!userId) return items;
+
+  let merged = items;
+  for (const key of [PERSONAL_PLAYLIST_KEY, storageKey(null)]) {
+    const extra = readItems(key);
+    if (extra.length === 0) continue;
+    for (const item of extra) {
+      if (item?.url && !merged.some(m => sameTrack(m.url, item.url))) merged = [...merged, item];
+    }
+    try { localStorage.removeItem(key); } catch { /* storage disabled */ }
+  }
+  if (merged !== items) savePersonalPlaylistToStorage(merged, userId);
+  return merged;
+}
+
+/**
+ * Save personal playlist to localStorage for this user (guest when logged out)
+ */
+export function savePersonalPlaylistToStorage(items: PersonalPlaylistItem[], userId?: string | null): void {
   try {
-    localStorage.setItem(PERSONAL_PLAYLIST_KEY, JSON.stringify(items));
+    localStorage.setItem(storageKey(userId), JSON.stringify(items));
   } catch (error: unknown) {
     log.error('Error saving personal playlist to localStorage:', error);
   }
@@ -131,12 +161,12 @@ export async function loadPersonalPlaylistFromServer(
       const d1Items = result.playlist as PersonalPlaylistItem[];
 
       // Create a map of existing URLs from D1
-      const d1Urls = new Set(d1Items.map((item) => item.url));
+      const d1Urls = new Set(d1Items.map((item) => trackKey(item.url)));
 
       // Add local items that aren't in D1
       const mergedItems = [...d1Items];
       for (const localItem of localItems) {
-        if (!d1Urls.has(localItem.url)) {
+        if (!d1Urls.has(trackKey(localItem.url))) {
           mergedItems.push(localItem);
         }
       }
@@ -161,7 +191,7 @@ export function addToPersonalPlaylistItems(
   newItem: PersonalPlaylistItem
 ): { items: PersonalPlaylistItem[]; added: boolean; error?: string } {
   // Check if already in personal playlist
-  const alreadyInPlaylist = items.some(item => item.url === newItem.url);
+  const alreadyInPlaylist = items.some(item => sameTrack(item.url, newItem.url));
   if (alreadyInPlaylist) {
     return { items, added: false, error: 'This track is already in your playlist' };
   }

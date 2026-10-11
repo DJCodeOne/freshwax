@@ -49,7 +49,6 @@ export class PlaylistManager {
     this.playlist = { queue: [], currentIndex: 0, isPlaying: false, lastUpdated: new Date().toISOString() };
     this.playHistory = loadPlayHistoryFromStorage();
     this.recentlyPlayed = loadRecentlyPlayedFromStorage();
-    this.personalPlaylist = loadPersonalPlaylistFromStorage();
   }
 
   private get ctx(): PlaylistContext {
@@ -90,12 +89,13 @@ export class PlaylistManager {
     this.userId = userId || null;
     this.userName = userName || null;
     this.isAuthenticated = !!userId;
+    this.personalPlaylist = loadPersonalPlaylistFromStorage(this.userId);
     await loadFromServerHelper(this.ctx);
     if (this.isAuthenticated && this.userId) {
       const result = await loadPersonalPlaylistFromServer(this.userId, this.personalPlaylist);
       if (result.changed) {
         this.personalPlaylist = result.items;
-        savePersonalPlaylistToStorage(this.personalPlaylist);
+        savePersonalPlaylistToStorage(this.personalPlaylist, this.userId);
         savePersonalPlaylistToServer(this.personalPlaylist, this.userId);
       }
     }
@@ -152,7 +152,7 @@ export class PlaylistManager {
    * writes localStorage synchronously, fires the server save in background.
    */
   persistPersonalPlaylist(): void {
-    try { savePersonalPlaylistToStorage(this.personalPlaylist); } catch { /* storage full / disabled */ }
+    try { savePersonalPlaylistToStorage(this.personalPlaylist, this.userId); } catch { /* storage full / disabled */ }
     if (this.userId) {
       try { savePersonalPlaylistToServer(this.personalPlaylist, this.userId); } catch { /* best-effort */ }
     }
